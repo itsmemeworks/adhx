@@ -1,4 +1,5 @@
 import { and, eq, inArray, sql, type SQL } from 'drizzle-orm'
+import { POST_ID_PATTERN } from '@/lib/platform/networks'
 import { db } from '@/lib/db'
 import { postViews } from '@/lib/db/schema'
 import { markSendsSeen } from '@/lib/sends/sends'
@@ -15,7 +16,7 @@ export const MAX_VIEWS_PER_CALL = 50
 export type PostRef = { platform: string; id: string }
 
 const PLATFORM = /^[a-z]{1,16}$/
-const POST_ID = /^[A-Za-z0-9_-]{1,64}$/
+const POST_ID = POST_ID_PATTERN
 
 /**
  * `{ posts: [{ platform, id }] }` → the posts (deduplicated), or an error

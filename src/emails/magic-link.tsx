@@ -28,18 +28,18 @@ export interface MagicLinkEmailProps {
 }
 
 const STAGE = '#08070a'
-const INK = '#f3ece0'
+export const INK = '#f3ece0'
 const MUTED = '#857a69'
 const SUBTLE = '#b8ac99'
-const PANEL = '#201b16'
-const BORDER = '#322b23'
+export const PANEL = '#201b16'
+export const BORDER = '#322b23'
 const CLAY = '#e88a5e'
 const CLAY_GRAD = 'linear-gradient(135deg,#e88a5e,#d26b40)'
 /**
  * The dark-surface lockup, from the ADHX the link points at (absolute, so
  * email clients can fetch it).
  */
-function logoSrc(url: string): string {
+export function logoSrc(url: string): string {
   try {
     return `${new URL(url).origin}/logo-dark.png`
   } catch {
@@ -119,7 +119,7 @@ MagicLinkEmail.PreviewProps = {
 
 export default MagicLinkEmail
 
-const body: CSSProperties = {
+export const body: CSSProperties = {
   margin: 0,
   padding: '40px 16px',
   backgroundColor: STAGE,
@@ -127,27 +127,27 @@ const body: CSSProperties = {
   fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
 }
 
-const shell: CSSProperties = {
+export const shell: CSSProperties = {
   maxWidth: '420px',
   margin: '0 auto',
 }
 
-const brand: CSSProperties = {
+export const brand: CSSProperties = {
   padding: '0 4px 20px',
 }
 
-const logo: CSSProperties = {
+export const logo: CSSProperties = {
   display: 'block',
 }
 
-const card: CSSProperties = {
+export const card: CSSProperties = {
   backgroundColor: PANEL,
   border: `1px solid ${BORDER}`,
   borderRadius: '16px',
   padding: '28px',
 }
 
-const heading: CSSProperties = {
+export const heading: CSSProperties = {
   margin: '0 0 10px',
   fontFamily: "Georgia, 'Times New Roman', serif",
   fontSize: '24px',
@@ -156,7 +156,7 @@ const heading: CSSProperties = {
   color: INK,
 }
 
-const lede: CSSProperties = {
+export const lede: CSSProperties = {
   margin: '0 0 24px',
   fontSize: '14px',
   lineHeight: '1.5',
@@ -196,20 +196,20 @@ const pasteLink: CSSProperties = {
   wordBreak: 'break-all',
 }
 
-const rule: CSSProperties = {
+export const rule: CSSProperties = {
   border: 'none',
   borderTop: `1px solid ${BORDER}`,
   margin: '24px 0 16px',
 }
 
-const fine: CSSProperties = {
+export const fine: CSSProperties = {
   margin: 0,
   fontSize: '12px',
   lineHeight: '1.45',
   color: SUBTLE,
 }
 
-const tagline: CSSProperties = {
+export const tagline: CSSProperties = {
   margin: '20px 4px 0',
   fontSize: '12px',
   lineHeight: '1.4',

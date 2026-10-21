@@ -5,8 +5,8 @@ import SwiftUI
 struct PeopleListView: View {
     @ObservedObject var settings: SettingsModel
     let server: URL
-    let invite: () -> Void
     @State private var friend: Saver?
+    @State private var inviting = false
 
     var body: some View {
         ScrollView {
@@ -45,9 +45,8 @@ struct PeopleListView: View {
                 }
 
                 if settings.people?.canInvite == true {
-                    Button("Invite someone", action: invite)
+                    Button("Invite someone") { inviting = true }
                         .buttonStyle(PillButtonStyle(kind: .outline, height: 48))
-                        .accessibilityHint("Opens your ADHX in the browser")
                         .padding(.top, 4)
                 }
             }
@@ -58,6 +57,7 @@ struct PeopleListView: View {
         .refreshable { await settings.load() }
         .background(Theme.app.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
+        .inviteSheet(isPresented: $inviting)
         .fullScreenCover(item: $friend) { saver in
             FriendChannelScreen(friend: saver, server: server)
         }

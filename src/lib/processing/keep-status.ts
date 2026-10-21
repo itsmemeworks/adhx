@@ -1,4 +1,5 @@
 import { inArray, sql } from 'drizzle-orm'
+import { POST_ID_PATTERN } from '@/lib/platform/networks'
 import { db } from '@/lib/db'
 import { keepJobs } from '@/lib/db/schema'
 import { keepEnabled, keepMinFreeBytes } from '@/lib/keep/config'
@@ -53,7 +54,7 @@ export const MAX_STATUS_POSTS = 20
 export const MAX_PEOPLE_FACES = 4
 
 const PLATFORM = /^[a-z]{1,16}$/
-const POST_ID = /^[A-Za-z0-9_-]{1,64}$/
+const POST_ID = POST_ID_PATTERN
 
 /** `platform:id,platform:id` → posts (deduplicated, valid only), or null when too many. */
 export function parseStatusPosts(raw: string | null): { platform: string; id: string }[] | null {

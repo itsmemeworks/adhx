@@ -1,5 +1,6 @@
 package com.adhx.share.library
 
+import com.adhx.share.ui.KeepUpright
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -80,6 +81,7 @@ private val Tile = Color(0xFF3A352D)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDismiss: () -> Unit) {
+    KeepUpright()
     // A text post or article has no file: send its words, or straight to your people.
     if (remember(post.key, server) { ShareKept.files(post, server).isEmpty() }) {
         WordsSendSheet(post, server, onNotice, onDismiss)
@@ -197,6 +199,7 @@ fun SendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDis
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WordsSendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDismiss: () -> Unit) {
+    KeepUpright()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)

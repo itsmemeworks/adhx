@@ -20,7 +20,7 @@ object Copy {
     const val OFFLINE_TITLE = "Saved for later"
     const val OFFLINE_BODY = "Your ADHX can’t be reached right now. This goes as soon as it can."
     const val NOT_CONNECTED_TITLE = "Connect the app first"
-    const val NOT_CONNECTED_BODY = "Open ADHX Share and scan the code in Settings → Phone app on your ADHX."
+    const val NOT_CONNECTED_BODY = "Open ADHX Share and sign in with your email, or scan the code in Settings → Phone app on your ADHX."
     const val FAILED_TITLE = "Couldn’t save this"
     const val FAILED_BODY = "Something went wrong on your ADHX. Try again in a moment."
     const val GONE = "The post is gone, private or can’t be read."
@@ -363,6 +363,8 @@ object Copy {
     const val CLOSE_REACT = "Close reactions"
     const val QUICK_REACTIONS = "Quick reactions"
     const val SAY_SOMETHING = "Say something to everyone watching"
+    /** The prompt on a post’s React picker outside Live. */
+    const val SAY_SOMETHING_POST = "Say something"
     const val SEND = "Send"
     const val REACT_FAILED = "That reaction didn’t send. Try again."
     const val FLOATING_LABEL = "Reactions from people watching"

@@ -1,5 +1,6 @@
 package com.adhx.share.library
 
+import com.adhx.share.ui.KeepUpright
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
@@ -62,14 +63,13 @@ import com.adhx.share.net.PostKind
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
 import com.adhx.share.ui.NetworkMark
-import com.adhx.share.ui.openInAdhx
 import com.adhx.share.ui.openUrl
 import kotlinx.coroutines.launch
 
 /**
  * More: the post at a glance, "Just for me" (on your own saves), then Share the video (the kept file, not the
  * link), Copy link, Copy the words, Share an ADHX link (for people on the
- * same server) and Open in my ADHX.
+ * same server).
  */
 /**
  * The player's own switches, which live in More so the column on the right
@@ -97,6 +97,7 @@ fun MoreSheet(
     onDismiss: () -> Unit,
     controls: PlayerControls? = null,
 ) {
+    KeepUpright()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -275,17 +276,6 @@ fun MoreSheet(
                     onClick = {
                         val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, adhxLink)
                         context.startActivity(Intent.createChooser(send, null))
-                        close()
-                    },
-                )
-            }
-            post.openPath?.takeIf { it.isNotBlank() }?.let { path ->
-                MoreRow(
-                    icon = null,
-                    title = "Open in my ADHX",
-                    subtitle = "This post on your ADHX, in the browser",
-                    onClick = {
-                        openInAdhx(context, server, path)
                         close()
                     },
                 )

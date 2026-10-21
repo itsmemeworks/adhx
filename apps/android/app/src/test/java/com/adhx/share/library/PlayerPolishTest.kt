@@ -12,17 +12,6 @@ import org.junit.Test
 
 class PlayerPolishTest {
     @Test
-    fun bylineIsWhoPostedItElseTheNetwork() {
-        // The mark sits before it, so the network's name isn't repeated.
-        assertEquals("Saturday Night Live", bylineName(PhonePost(platform = "youtube", author = PhoneAuthor(name = " Saturday Night Live ", handle = "snl"))))
-        assertEquals("@snl", bylineName(PhonePost(platform = "youtube", author = PhoneAuthor(handle = "snl"))))
-        assertEquals("", bylineName(PhonePost(platform = "twitter")))
-        assertEquals("", bylineName(PhonePost(platform = "youtube", author = PhoneAuthor(name = "YouTube"))))
-        assertEquals("@someone", bylineName(PhonePost(platform = "web", author = PhoneAuthor(handle = "someone"))))
-        assertEquals("", bylineName(PhonePost(platform = "web")))
-    }
-
-    @Test
     fun aPhotoRunsForTenSecondsUnlessPausedOrHeld() {
         var timer = PhotoTimer()
         assertEquals(10_000L, PHOTO_MS)

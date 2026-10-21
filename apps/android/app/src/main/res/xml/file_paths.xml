@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- What the app may hand to other apps: videos fetched to share (library/PlayerScreen.kt, More). -->
+<!-- What the app may hand to other apps: videos fetched to share (library/PlayerScreen.kt, More), and where the camera app puts a selfie (main/PictureSheet.kt). -->
 <paths>
     <cache-path name="shared" path="shared/" />
+    <!-- A selfie for Change picture: the camera app writes it here, then it's cropped and deleted. -->
+    <cache-path name="camera" path="camera/" />
 </paths>

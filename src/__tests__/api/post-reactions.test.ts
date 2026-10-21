@@ -121,6 +121,17 @@ describe('reactions on a post', () => {
     expect((await remove(null, 'rabc')).status).toBe(401)
   })
 
+  it("takes link-network ids like SoundCloud's user~track", async () => {
+    save(ANA, 'forss~flickermood', { platform: 'soundcloud' })
+    const sound = { platform: 'soundcloud', id: 'forss~flickermood' }
+    expect((await react(PETE, { ...sound, emoji: '🔥' })).status).toBe(200)
+    const seen = await list(PETE, 'soundcloud', encodeURIComponent('forss~flickermood'))
+    expect(seen.status).toBe(200)
+    expect(seen.body.reactions.map((r: { emoji: string }) => r.emoji)).toEqual(['🔥'])
+    // Still refused: anything that isn't a post id.
+    expect((await react(PETE, { platform: 'soundcloud', id: 'a/b', emoji: '🔥' })).status).toBe(400)
+  })
+
   it('keeps them, oldest first, with names and faces', async () => {
     const first = await react(ANA, { ...pub, emoji: '😂' })
     expect(first.status).toBe(200)

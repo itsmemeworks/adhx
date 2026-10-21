@@ -210,7 +210,12 @@ describe('connected phones', () => {
     const me = await import('@/app/api/app/me/route')
     const meRes = await me.GET(get('/api/app/me', key))
     expect(meRes.status).toBe(200)
-    expect(await meRes.json()).toEqual({ username: 'one', name: 'iPhone', avatarUrl: null })
+    expect(await meRes.json()).toEqual({
+      username: 'one',
+      name: 'iPhone',
+      avatarUrl: null,
+      avatarSource: 'generated',
+    })
 
     // Your picture, so your own reactions wear it; none when you chose the generated icon.
     testInstance.db

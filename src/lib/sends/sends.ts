@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm'
+import { POST_ID_PATTERN } from '@/lib/platform/networks'
 import { db, runInTransaction } from '@/lib/db'
 import { readModeratedPostKeys } from '@/lib/admin/moderation'
 import { listMembers } from '@/lib/people/members'
@@ -22,7 +23,7 @@ export const MAX_SEND_TO = 20
 export const SEND_LIMIT = { windowMs: 60_000, max: 60 }
 
 const PLATFORM = /^[a-z]{1,16}$/
-const POST_ID = /^[A-Za-z0-9_-]{1,64}$/
+const POST_ID = POST_ID_PATTERN
 const USERNAME = /^[A-Za-z0-9_]{1,40}$/
 
 export interface SendPerson {

@@ -1,10 +1,14 @@
 import SwiftUI
 import UIKit
 
-/// Connect to your ADHX: scan the code from Settings → Phone app, or type it.
+/// Connect to your ADHX: sign in with your email (a 6-digit code), or scan
+/// or type the code from Settings → Phone app.
 struct ConnectView: View {
+    /// How this phone gets in.
+    enum Way { case camera, code, email }
+
     @EnvironmentObject private var model: AppModel
-    @State private var typing = false
+    @State private var way: Way = .camera
     @State private var camera = QRScannerView.availability
     @State private var scanNote: String?
 
@@ -36,30 +40,36 @@ struct ConnectView: View {
                     .foregroundStyle(.white)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
-                Text(typing
-                     ? "Type the address of your ADHX and the code from Settings → Phone app."
-                     : "On your computer, open your ADHX, go to Settings → Phone app and point the camera at the code.")
+                Text(intro)
                     .font(Theme.sans(15))
                     .foregroundStyle(Theme.muted)
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            if typing {
-                TypeAddressForm()
-                Spacer(minLength: 0)
-            } else {
+            switch way {
+            case .camera:
                 cameraPanel
                 statusRow
+                Spacer(minLength: 0)
+            case .code:
+                TypeAddressForm()
+                Spacer(minLength: 0)
+            case .email:
+                EmailSignInForm()
                 Spacer(minLength: 0)
             }
 
             VStack(spacing: 10) {
-                Button(typing ? "Use the camera instead" : "Type the address instead") {
-                    model.pairError = nil
-                    withAnimation(.easeInOut(duration: 0.2)) { typing.toggle() }
+                ForEach(otherWays, id: \.self) { other in
+                    Button(title(other)) {
+                        model.pairError = nil
+                        scanNote = nil
+                        withAnimation(.easeInOut(duration: 0.2)) { way = other }
+                    }
+                    .buttonStyle(PillButtonStyle(kind: other == .email ? .primary : .outline, height: 48,
+                                                 fullWidth: false))
                 }
-                .buttonStyle(PillButtonStyle(kind: .outline, height: 48, fullWidth: false))
 
                 Text("The app only talks to your ADHX.")
                     .font(Theme.sans(12))
@@ -73,13 +83,41 @@ struct ConnectView: View {
         .padding(.bottom, 16)
     }
 
+    private var intro: String {
+        switch way {
+        case .camera:
+            return "On your computer, open your ADHX, go to Settings → Phone app and point the camera at the code. Or sign in with your email."
+        case .code:
+            return "Type the address of your ADHX and the code from Settings → Phone app."
+        case .email:
+            return "Type the address of your ADHX and the email you sign in with. We’ll send you a 6-digit code."
+        }
+    }
+
+    /// The other ways in, email first.
+    private var otherWays: [Way] {
+        switch way {
+        case .camera: return [.email, .code]
+        case .code: return [.email, .camera]
+        case .email: return [.camera, .code]
+        }
+    }
+
+    private func title(_ other: Way) -> String {
+        switch other {
+        case .camera: return "Scan the code instead"
+        case .code: return "Type the code instead"
+        case .email: return "Sign in with email"
+        }
+    }
+
     // MARK: Camera
 
     private var cameraPanel: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 28, style: .continuous).fill(Theme.surface)
             if camera == .ready {
-                QRScannerView(paused: model.pairing) { value in scanned(value) }
+                QRScannerView(paused: model.pairing || way != .camera) { value in scanned(value) }
                     .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                     .accessibilityLabel("Camera view, looking for the code")
             }
@@ -118,7 +156,7 @@ struct ConnectView: View {
                         .foregroundStyle(Theme.accent)
                     }
                 case .noCamera:
-                    Text("There’s no camera here. Type the address instead.")
+                    Text("There’s no camera here. Sign in with your email or type the code instead.")
                         .foregroundStyle(Theme.muted)
                 }
             }

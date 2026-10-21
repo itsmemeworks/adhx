@@ -1,5 +1,6 @@
 package com.adhx.share.library
 
+import com.adhx.share.ui.KeepUpright
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,9 +38,12 @@ import com.adhx.share.ui.rememberLinked
  */
 @Composable
 fun Reader(post: PhonePost, onClose: () -> Unit) {
+    KeepUpright()
     BackHandler(onBack = onClose)
     val scroll = rememberScrollState()
     val article = post.article
+    // A kept X article's whole body replaces the summary and the post's own words.
+    val body = remember(article?.body) { ArticleBody.parse(article?.body) }
     Box(
         Modifier
             .fillMaxSize()
@@ -61,13 +66,17 @@ fun Reader(post: PhonePost, onClose: () -> Unit) {
             article?.title?.takeIf { it.isNotBlank() }?.let {
                 Text(it, fontFamily = SerifFamily, fontSize = 32.sp, lineHeight = 37.sp, color = AdhxColors.White)
             }
-            article?.description?.takeIf { it.isNotBlank() && it != post.text }?.let {
-                Text(it, fontSize = 17.sp, lineHeight = 26.sp, color = AdhxColors.Muted)
+            if (body.isEmpty()) {
+                article?.description?.takeIf { it.isNotBlank() && it != post.text }?.let {
+                    Text(it, fontSize = 17.sp, lineHeight = 26.sp, color = AdhxColors.Muted)
+                }
             }
             article?.url?.takeIf { it.isNotBlank() }?.let {
                 Text(Links.display(it), fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            if (post.text.isNotBlank()) {
+            if (body.isNotEmpty()) {
+                ArticleBodyText(body)
+            } else if (post.text.isNotBlank()) {
                 // Links in the words open in the browser.
                 Text(rememberLinked(post.text), fontFamily = SerifFamily, fontSize = 22.sp, lineHeight = 32.sp, color = AdhxColors.Cream)
             }

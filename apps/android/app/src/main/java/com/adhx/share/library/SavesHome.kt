@@ -26,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,9 +44,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.Dp
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.OutlineButton
-import com.adhx.share.ui.PrimaryButton
 import com.adhx.share.ui.Spinner
-import com.adhx.share.ui.openInAdhx
 import kotlinx.coroutines.delay
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeOut
@@ -70,7 +67,6 @@ fun SavesHome(
     contentTop: Dp = 76.dp,
     onSaver: ((Saver) -> Unit)? = null,
 ) {
-    val context = LocalContext.current
     val ui by vm.saves.collectAsStateWithLifecycle()
 
     // Back in the app at the top: show anything shared meanwhile.
@@ -96,13 +92,18 @@ fun SavesHome(
                 .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 20.dp),
         ) {
             bar()
-            // Only over the player: the empty page shows the whole card.
-            AnimatedVisibility(
-                visible = ui.preparing > 0 && ui.items.isNotEmpty(),
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically(),
-            ) {
-                OnTheirWayPill(ui.preparing.coerceAtLeast(1), Modifier.padding(top = 6.dp))
+            // Only over the player: the empty page shows the whole card. A short message
+            // from the player ("Link copied") takes the pill's place while it's up.
+            val toast = LocalPlayerToast.current
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                AnimatedVisibility(
+                    visible = ui.preparing > 0 && ui.items.isNotEmpty() && toast == null,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically(),
+                ) {
+                    OnTheirWayPill(ui.preparing.coerceAtLeast(1), Modifier.padding(top = 6.dp))
+                }
+                if (toast != null) ToastPill(toast, Modifier.padding(top = 6.dp, start = 24.dp, end = 24.dp))
             }
         }
     }
@@ -117,6 +118,7 @@ fun SavesHome(
             newOnTop = ui.newOnTop,
             onTop = vm::seenTop,
             onSaver = onSaver,
+            toastInTopBar = true,
         )
         return
     }
@@ -153,11 +155,6 @@ fun SavesHome(
                 )
             }
             Spacer(Modifier.weight(1f))
-            PrimaryButton(
-                "Open my ADHX",
-                onClick = { openInAdhx(context, connection.server) },
-                modifier = Modifier.fillMaxWidth(),
-            )
         }
         topBar()
     }

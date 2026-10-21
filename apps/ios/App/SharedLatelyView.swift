@@ -1,14 +1,16 @@
 import SwiftUI
+import UIKit
 
 /// Shared lately: the connection, recent shares and how their copies are
 /// coming along. A row opens that post in the player.
 struct SharedLatelyView: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject var library: LibraryModel
-    @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
     @State private var playing: PhonePost?
     @State private var opening: String?
+    /// Why a row didn't open (still on its way, or gone).
+    @State private var note: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -51,10 +53,13 @@ struct SharedLatelyView: View {
                 .refreshable { await model.refresh() }
             }
 
-            Button("Open my ADHX") {
-                if let server = model.server { openURL(server) }
+            if let note {
+                Text(note)
+                    .font(Theme.sans(13, .bold))
+                    .foregroundStyle(Theme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.updatesFrequently)
             }
-            .buttonStyle(PillButtonStyle(kind: .primary))
         }
         .padding(.horizontal, 20)
         .padding(.top, 16)
@@ -68,18 +73,24 @@ struct SharedLatelyView: View {
         }
     }
 
-    /// In the player when it's in your saves, else on your ADHX in the browser.
+    /// In the player, once it's in your saves.
     private func open(_ record: ShareRecord) async {
-        if let platform = record.platform, let id = record.postId, record.stage == .saved {
-            opening = record.id
-            let post = await library.post(platform: platform, id: id)
-            opening = nil
-            if let post {
-                playing = post
-                return
-            }
+        note = nil
+        guard let platform = record.platform, let id = record.postId else {
+            note = "That one’s still on its way. It opens here once it’s saved."
+            return
         }
-        if let url = model.openURL(for: record) { openURL(url) }
+        opening = record.id
+        let post = await library.post(platform: platform, id: id)
+        opening = nil
+        if let post {
+            playing = post
+        } else {
+            note = record.stage == .saved
+                ? "That one won’t open right now. Try again in a bit."
+                : "That one’s still on its way. It opens here once it’s ready."
+        }
+        if let note { UIAccessibility.post(notification: .announcement, argument: note) }
     }
 }
 
@@ -162,7 +173,7 @@ private struct ShareRow: View {
             .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(.plain)
-        .disabled(record.openPath == nil && record.postId == nil)
+        .disabled(record.postId == nil)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(Network.name(record.platform)), \(Format.title(record)), \(status)")
     }

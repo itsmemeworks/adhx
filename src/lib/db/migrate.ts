@@ -377,6 +377,22 @@ try {
   process.exit(1)
 }
 
+// login_tokens.attempts: wrong codes tried against a phone sign-in code
+// (intent 'phone'); five burn it (src/lib/auth/phone-signin.ts).
+try {
+  const tokenColumns = db.prepare('PRAGMA table_info(login_tokens)').all() as Array<{
+    name: string
+  }>
+  if (!tokenColumns.some((column) => column.name === 'attempts')) {
+    db.exec('ALTER TABLE login_tokens ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0')
+    console.log('[migrate] Added login_tokens.attempts')
+  }
+} catch (error) {
+  console.log('[migrate] FAILED adding login_tokens.attempts', error)
+  db.close()
+  process.exit(1)
+}
+
 // access_keys.platform: 'ios' | 'android' for a phone key, when its requests
 // say which (src/lib/people/last-seen.ts). Admins see it on People.
 try {
