@@ -15,7 +15,7 @@ struct PlayerExtras {
     /// Live: the moment's name, on a chip over the byline ("In Babies vs objects").
     var inMoment: String?
     /// Room between the rail's buttons (Live has one more, so they sit closer).
-    var railSpacing: CGFloat = 14
+    var railSpacing: CGFloat = 10
     /// The progress line's colour (Live's is yellow, the feed's cream).
     var progressColour: Color = Theme.ink
 
@@ -99,6 +99,8 @@ struct PlayerView: View {
             SendSheet(post: post, server: server, say: say)
         }
         .preference(key: PlayerSheetUp.self, value: sending != nil)
+        // Home swaps its "on their way" pill for the message while it's up.
+        .preference(key: PlayerToastUp.self, value: toast != nil && !clean)
         // Landscape is only for watching (OrientationGate).
         .mayTurnToWatch()
         .uprightWhile(friend != nil || sending != nil)
@@ -192,7 +194,7 @@ struct PlayerView: View {
         toastTask?.cancel()
         toast = text
         toastTask = Task {
-            try? await Task.sleep(nanoseconds: 2_200_000_000)
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
             guard !Task.isCancelled else { return }
             toast = nil
         }
@@ -235,8 +237,8 @@ private struct PostPage: View {
     @State private var photoTime: Double = 0
     /// Tapped to stay on this photo (like pausing a video).
     @State private var photoPaused = false
-    /// How wide the savers' faces are, so the line under them starts where their names do.
-    @State private var facesWidth: CGFloat = 30
+    /// The original post: who posted it, their words in full, and the way there.
+    @State private var original = false
 
     /// Words over a picture get a soft shadow; nothing else does.
     private var overMedia: Bool { post.kind != "text" && post.kind != "article" }
@@ -300,7 +302,13 @@ private struct PostPage: View {
                 .presentationDragIndicator(.visible)
                 .frostedSheet()
         }
-        .uprightWhile(more || savedSheet || sharing != nil || reading)
+        .uprightWhile(more || savedSheet || sharing != nil || reading || original)
+        .sheet(isPresented: $original) {
+            OriginalSheet(post: post, server: server, say: say)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .frostedSheet()
+        }
         .sheet(isPresented: $savedSheet) {
             SavedSheet(post: post, say: say)
                 .presentationDetents([.height(privacy.canSwitch(post) ? 300 : 220)])
@@ -419,10 +427,10 @@ private struct PostPage: View {
         return height
     }
 
-    /// Left (the boards' byline): why the feed picked it, a friend's note,
-    /// who saved it, where it's from and the first lines. Right: the rail of
-    /// round frosted buttons. Sound, Repeat, Dock, Hide and the
-    /// original are in More.
+    /// Left (the boards' byline): why the feed picked it, a friend's note and
+    /// who saved it. Right: the rail of round frosted buttons; the network's
+    /// mark opens the original post (who posted it, their words in full).
+    /// Sound, Repeat, Dock and Hide are in More.
     private var caption: some View {
         HStack(alignment: .bottom, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
@@ -455,16 +463,6 @@ private struct PostPage: View {
                     } else if privacy.isPrivate(post) {
                         PrivateLock()
                     }
-                    sourceLine
-                    if overMedia, !post.text.isEmpty {
-                        Text(LinkedText.attributed(post.text))
-                            .tint(Theme.cream)
-                            .font(Theme.sans(16))
-                            .foregroundStyle(Color(hex: 0xF4F1EA))
-                            .lineSpacing(5)
-                            .lineLimit(2)
-                            .overMediaShadow(overMedia)
-                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -476,49 +474,6 @@ private struct PostPage: View {
         }
         .padding(.leading, 16)
         .padding(.trailing, 12)
-    }
-
-    /// The network's mark, then who posted it ("[YouTube] Rick Astley"). Opens the original.
-    private var sourceLine: some View {
-        // Under the savers, the mark is centred under the first face and the
-        // name starts where theirs does: [faces] You and Ana saved this /
-        // [mark]      Cine Vichaar.
-        let line = HStack(spacing: post.savers.isEmpty ? 7 : 10) {
-            NetworkMark(platform: post.platform, size: 16)
-                .frame(width: post.savers.isEmpty ? 16 : 30)
-                .frame(width: post.savers.isEmpty ? 16 : max(facesWidth, 30), alignment: .leading)
-                .overMediaShadow(overMedia)
-            if let who = sourceWho {
-                Text(who)
-                    .font(Theme.sans(14))
-                    .foregroundStyle(Theme.muted)
-                    .lineLimit(1)
-                    .overMediaShadow(overMedia)
-            }
-        }
-        let spoken = sourceWho.map { "\(Network.name(post.platform)), \($0)" } ?? Network.name(post.platform)
-        return Group {
-            if let source = post.sourceUrl.flatMap(URL.init(string:)) {
-                Button { openURL(source) } label: { line }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("\(spoken). Open the original on \(Network.name(post.platform))")
-            } else {
-                line
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(spoken)
-            }
-        }
-    }
-
-    /// Who posted it; nil when there's no one to name (the mark says the network).
-    private var sourceWho: String? {
-        let network = Network.name(post.platform)
-        let name = post.author.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let who = name.isEmpty ? post.author.handle : name
-        if who.isEmpty || who.caseInsensitiveCompare(network) == .orderedSame || who.count <= 1 {
-            return nil
-        }
-        return who
     }
 
     /// Round frosted buttons, 52 across, 14 apart: React (Live), Share, Save, More.
@@ -573,6 +528,13 @@ private struct PostPage: View {
                     }
                 }
             }
+            // The network's own mark: who posted it and their words, in full.
+            RailButton(accessibility: "The original post on \(Network.name(post.platform))") {
+                original = true
+            } icon: {
+                NetworkMark(platform: post.platform, size: 22, color: Color(hex: 0xF4F1EA))
+            }
+            .accessibilityHint("Who posted it, and everything they wrote")
             RailButton(accessibility: "More for this post") {
                 more = true
             } icon: {
@@ -699,7 +661,6 @@ private struct PostPage: View {
         } label: {
             HStack(spacing: 10) {
                 FaceStack(savers: post.savers, server: server, size: 30, ring: .black)
-                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { facesWidth = $0 }
                 Text(line)
                     .font(Theme.sans(15, .bold))
                     .foregroundStyle(.white)
@@ -1200,6 +1161,12 @@ private struct NoteTail: Shape {
 }
 
 /// The player has a sheet of its own up (Home's bar steps aside).
+/// The player is showing a short message near the top.
+struct PlayerToastUp: PreferenceKey {
+    static var defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
+}
+
 struct PlayerSheetUp: PreferenceKey {
     static var defaultValue = false
     static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
@@ -1635,5 +1602,133 @@ private struct ArticleBody: View {
         let text = LinkedText.decodeEntities(words)
         let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
         return (try? AttributedString(markdown: text, options: options)) ?? AttributedString(text)
+    }
+}
+
+/// The original post, from the rail's network button: who posted it and
+/// when, everything they wrote (a kept article in full), and the way to it.
+private struct OriginalSheet: View {
+    let post: PhonePost
+    let server: URL
+    let say: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+
+    private var network: String { Network.name(post.platform) }
+
+    /// Their name, else their handle; nil when neither says more than the network.
+    private var who: String? {
+        let name = post.author.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let picked = name.isEmpty ? post.author.handle : name
+        if picked.isEmpty || picked.count <= 1 || picked.caseInsensitiveCompare(network) == .orderedSame { return nil }
+        return picked
+    }
+
+    private var handle: String? {
+        let raw = post.author.handle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty, raw.caseInsensitiveCompare(network) != .orderedSame else { return nil }
+        let at = raw.hasPrefix("@") ? raw : "@\(raw)"
+        return at.dropFirst().caseInsensitiveCompare(who ?? "") == .orderedSame ? nil : at
+    }
+
+    private var posted: String? {
+        guard let iso = post.postedAt, let date = Format.parseISO(iso) else { return nil }
+        return date.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .center, spacing: 12) {
+                    avatar
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(who ?? network)
+                            .font(Theme.sans(17, .heavy))
+                            .foregroundStyle(Theme.ink)
+                            .lineLimit(1)
+                        HStack(spacing: 6) {
+                            // The network's mark shows once: here only when their picture leads.
+                            if avatarURL != nil {
+                                NetworkMark(platform: post.platform, size: 13, color: Theme.muted)
+                            }
+                            Text([handle, posted.map { "Posted \($0)" } ?? network].compactMap { $0 }.joined(separator: " · "))
+                                .font(Theme.sans(13))
+                                .foregroundStyle(Theme.muted)
+                                .lineLimit(1)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 44, height: 44)
+                            .background(Circle().fill(Theme.raised))
+                    }
+                    .accessibilityLabel("Close")
+                }
+                .accessibilityElement(children: .contain)
+
+                if post.article != nil || !post.text.isEmpty {
+                    Words(post: post, reading: true)
+                        .textSelection(.enabled)
+                } else {
+                    Text("No words with this one, just the \(post.kind == "photo" ? "picture" : post.kind == "audio" ? "sound" : "video").")
+                        .font(Theme.sans(15))
+                        .foregroundStyle(Theme.muted)
+                }
+
+                if let source = post.sourceUrl.flatMap(URL.init(string:)) {
+                    VStack(spacing: 10) {
+                        Button {
+                            openURL(source)
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 8) {
+                                NetworkMark(platform: post.platform, size: 18, color: .black)
+                                Text("Open on \(network)")
+                            }
+                        }
+                        .buttonStyle(PillButtonStyle(kind: .primary))
+                        Button {
+                            UIPasteboard.general.url = source
+                            say("Link copied")
+                            dismiss()
+                        } label: {
+                            Text("Copy link")
+                        }
+                        .buttonStyle(PillButtonStyle(kind: .outline))
+                    }
+                    .padding(.top, 4)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 24)
+            .padding(.bottom, 24)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+    }
+
+    /// Their picture on the network, when it came with the post (X does; most don't).
+    private var avatarURL: URL? { ADHXClient.resolve(post.author.avatarUrl, against: server) }
+
+    @ViewBuilder
+    private var avatar: some View {
+        Group {
+            if let url = avatarURL {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image { image.resizable().scaledToFill() } else { mark }
+                }
+            } else {
+                mark
+            }
+        }
+        .frame(width: 48, height: 48)
+        .clipShape(Circle())
+        .accessibilityHidden(true)
+    }
+
+    private var mark: some View {
+        Circle().fill(Theme.raised).overlay(NetworkMark(platform: post.platform, size: 22, color: Theme.ink))
     }
 }
