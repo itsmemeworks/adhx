@@ -13,6 +13,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Player messages (`flash`) last 3 s, replace each other, and take the stage's top row: the pills there ("Shared with your people", "Kept on your ADHX", the via note, a moment's arrivals) step aside while one is up. Copy the text now also says "Words copied". `hasFullArticle` moved to `post.ts`.
 - Tests: `theater-original-sheet.component.test.tsx` (name/handle/day rules, mark once incl. a broken picture, article, focus trap), the overlay/rail/sheet path in `next-theater`, the toast/pill swap in `feed-theater`; e2e previews read the words from the sheet. Checked on a parity server at 1280×800 and 390×844. Not seen live: a poster with a picture (the parity world has none) and an article in the sheet; the browser pane blocks the clipboard, so "Link copied" was checked with a stubbed clipboard.
 
+## 2026-10-21 — Posters that aren't black (the History channel's black covers)
+
+- The owner's History channel showed four near-black cover tiles over bright canyon and forest videos. Covers are each post's kept poster, and those posters came out black: a network's own thumbnail of a black first frame, or our grab one second in, inside a fade. (Sampled the public moments snapshot: 2 of 29 posters dark, both genuinely dark screen recordings, so it's specific posts, not every poster.)
+- `posterFrame` (`src/lib/keep/poster.ts`) now tries a few moments (10% in, at least 1 s and at most 20 s, then 25%, 50%, then 1 s) and keeps the first that isn't dark (`brightness()` via sharp, ≥ 45/255), else the brightest; candidates are cleaned up.
+- `repairDarkPosters()` runs once per server in the background when keeping starts (`keep_settings.poster_repair_v1`): every kept poster under 30/255 whose post has a kept `video-1` is remade, and replaced only when the new one is clearly brighter.
+- Kept posters are now `max-age=3600` with an ETag (size + mtime → 304) instead of 7 days, so a remade poster reaches phones within the hour. Other kept files are unchanged.
+
 ## 2026-10-21 — Review the complete dependency upgrade set
 
 - Review six dependency PRs together: Actions, the Gradle wrapper, the Node container, Node typings, lint-staged and Vitest with its coverage provider.
