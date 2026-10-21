@@ -235,6 +235,8 @@ private struct PostPage: View {
     @State private var photoTime: Double = 0
     /// Tapped to stay on this photo (like pausing a video).
     @State private var photoPaused = false
+    /// How wide the savers' faces are, so the line under them starts where their names do.
+    @State private var facesWidth: CGFloat = 30
 
     /// Words over a picture get a soft shadow; nothing else does.
     private var overMedia: Bool { post.kind != "text" && post.kind != "article" }
@@ -478,11 +480,13 @@ private struct PostPage: View {
 
     /// The network's mark, then who posted it ("[YouTube] Rick Astley"). Opens the original.
     private var sourceLine: some View {
-        // The mark sits in a column as wide as the face above it, so the
-        // names line up: [face] You saved this / [mark] Cine Vichaar.
+        // Under the savers, the mark is centred under the first face and the
+        // name starts where theirs does: [faces] You and Ana saved this /
+        // [mark]      Cine Vichaar.
         let line = HStack(spacing: post.savers.isEmpty ? 7 : 10) {
             NetworkMark(platform: post.platform, size: 16)
                 .frame(width: post.savers.isEmpty ? 16 : 30)
+                .frame(width: post.savers.isEmpty ? 16 : max(facesWidth, 30), alignment: .leading)
                 .overMediaShadow(overMedia)
             if let who = sourceWho {
                 Text(who)
@@ -695,6 +699,7 @@ private struct PostPage: View {
         } label: {
             HStack(spacing: 10) {
                 FaceStack(savers: post.savers, server: server, size: 30, ring: .black)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { facesWidth = $0 }
                 Text(line)
                     .font(Theme.sans(15, .bold))
                     .foregroundStyle(.white)
