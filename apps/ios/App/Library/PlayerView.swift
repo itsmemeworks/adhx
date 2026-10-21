@@ -53,6 +53,10 @@ struct PlayerView: View {
     @State private var current: String?
     @State private var toast: String?
     @State private var toastTask: Task<Void, Never>?
+    /// Turned sideways: just the media, whole, nothing over it.
+    @State private var landscape = false
+    /// Whether the buttons were hidden before turning, to put back after.
+    @State private var cleanBeforeTurning = false
     @Environment(\.scenePhase) private var scenePhase
 
     init(posts: [PhonePost], server: URL, clean: Binding<Bool>,
@@ -95,6 +99,19 @@ struct PlayerView: View {
             SendSheet(post: post, server: server, say: say)
         }
         .preference(key: PlayerSheetUp.self, value: sending != nil)
+        // Landscape is only for watching (OrientationGate).
+        .mayTurnToWatch()
+        .uprightWhile(friend != nil || sending != nil)
+        .onGeometryChange(for: Bool.self) { $0.size.width > $0.size.height } action: { turned in
+            guard turned != landscape else { return }
+            landscape = turned
+            if turned {
+                cleanBeforeTurning = clean
+                clean = true
+            } else {
+                clean = cleanBeforeTurning
+            }
+        }
     }
 
     private var pager: some View {
@@ -105,7 +122,7 @@ struct PlayerView: View {
                              playback: playback, clean: $clean, extras: extras, say: say,
                              openFriend: { friend = $0 }, send: { sending = $0 },
                              advance: { next() },
-                             held: sending != nil || extras.react?.isOpen == true)
+                             held: sending != nil || extras.react?.isOpen == true, landscape: landscape)
                         .containerRelativeFrame([.horizontal, .vertical])
                         .id(post.key)
                 }
@@ -198,6 +215,8 @@ private struct PostPage: View {
     var advance: () -> Void = {}
     /// Something over the player (the send sheet, Live's picker): photos wait.
     var held = false
+    /// Turned sideways: the media whole, and taps only pause.
+    var landscape = false
     @Environment(\.openURL) private var openURL
     @ObservedObject private var privacy = PrivacyStore.shared
     @State private var choosingFriend = false
@@ -279,6 +298,7 @@ private struct PostPage: View {
                 .presentationDragIndicator(.visible)
                 .frostedSheet()
         }
+        .uprightWhile(more || savedSheet || sharing != nil || reading)
         .sheet(isPresented: $savedSheet) {
             SavedSheet(post: post, say: say)
                 .presentationDetents([.height(privacy.canSwitch(post) ? 300 : 220)])
@@ -294,10 +314,10 @@ private struct PostPage: View {
             ZStack {
                 // Full bleed like the boards (the picture covers the screen), or
                 // the whole video at its own shape when Fit video is on.
-                Poster(url: ADHXClient.resolve(post.posterUrl, against: server), fill: !playback.fitVideo)
+                Poster(url: ADHXClient.resolve(post.posterUrl, against: server), fill: !(playback.fitVideo || landscape))
                 if onScreen {
                     if post.kind == "video" {
-                        PlayerLayerView(player: playback.player, fill: !playback.fitVideo) { playback.attach($0) }
+                        PlayerLayerView(player: playback.player, fill: !(playback.fitVideo || landscape)) { playback.attach($0) }
                     }
                     if playback.problem != nil || !playback.ready {
                         // Still being kept on your ADHX: an animated card until it's ready.
@@ -313,7 +333,7 @@ private struct PostPage: View {
                 }
             }
             .contentShape(Rectangle())
-            .tapOrHold(tap: { if clean { clean = false } else { playback.togglePause() } }, hold: hideChrome)
+            .tapOrHold(tap: { if clean && !landscape { clean = false } else { playback.togglePause() } }, hold: hideChrome)
             .accessibilityAddTraits(.isButton)
             .accessibilityLabel(clean ? "Show buttons and caption" : playback.paused ? "Play" : "Pause")
             .accessibilityAction(named: "Hide buttons and caption") { hideChrome() }
@@ -329,7 +349,7 @@ private struct PostPage: View {
                         .allowsHitTesting(false)
                 }
             }
-            .tapOrHold(tap: { if clean { clean = false } else { photoPaused.toggle() } }, hold: hideChrome)
+            .tapOrHold(tap: { if clean && !landscape { clean = false } else { photoPaused.toggle() } }, hold: hideChrome)
             .accessibilityAction(named: photoPaused ? "Play" : "Pause") { photoPaused.toggle() }
             .accessibilityAction(named: "Hide buttons and caption") { hideChrome() }
             .task(id: photoTimerKey) { await runPhotoTimer() }
@@ -458,8 +478,11 @@ private struct PostPage: View {
 
     /// The network's mark, then who posted it ("[YouTube] Rick Astley"). Opens the original.
     private var sourceLine: some View {
-        let line = HStack(spacing: 7) {
+        // The mark sits in a column as wide as the face above it, so the
+        // names line up: [face] You saved this / [mark] Cine Vichaar.
+        let line = HStack(spacing: post.savers.isEmpty ? 7 : 10) {
             NetworkMark(platform: post.platform, size: 16)
+                .frame(width: post.savers.isEmpty ? 16 : 30)
                 .overMediaShadow(overMedia)
             if let who = sourceWho {
                 Text(who)
@@ -1431,13 +1454,15 @@ private struct Words: View {
                         .font(Theme.serif(34))
                         .foregroundStyle(.white)
                 }
-                if let description = article.description, !description.isEmpty {
+                if let body = article.body, !body.isEmpty {
+                    ArticleBody(markdown: body, reading: reading)
+                } else if let description = article.description, !description.isEmpty {
                     Text(description)
                         .font(Theme.sans(17))
                         .foregroundStyle(Theme.muted)
                 }
             }
-            if !post.text.isEmpty {
+            if !post.text.isEmpty, post.article?.body?.isEmpty ?? true {
                 Text(LinkedText.attributed(post.text))
                     .font(font)
                     .tint(Theme.accent)
@@ -1526,5 +1551,84 @@ extension View {
                 .onEnded { _ in hold() }
                 .exclusively(before: TapGesture().onEnded { tap() })
         )
+    }
+}
+
+/// A kept X article, whole: headings, paragraphs, lists and quotes from its
+/// markdown, with bold, italics and links inline. Pictures are left out (the
+/// words are what's kept).
+private struct ArticleBody: View {
+    let markdown: String
+    var reading = false
+
+    private enum Block: Hashable {
+        case heading(String, Int)
+        case paragraph(String)
+        case quote(String)
+        case rule
+    }
+
+    private var blocks: [Block] {
+        var out: [Block] = []
+        var paragraph: [String] = []
+        func flush() {
+            if !paragraph.isEmpty { out.append(.paragraph(paragraph.joined(separator: "\n"))); paragraph = [] }
+        }
+        for raw in markdown.components(separatedBy: "\n") {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            if line.isEmpty { flush(); continue }
+            if line.hasPrefix("![") { continue }
+            if line == "---" || line == "***" { flush(); out.append(.rule); continue }
+            if line.hasPrefix("#") {
+                flush()
+                let level = line.prefix(while: { $0 == "#" }).count
+                out.append(.heading(String(line.dropFirst(level)).trimmingCharacters(in: .whitespaces), level))
+                continue
+            }
+            if line.hasPrefix(">") {
+                flush()
+                out.append(.quote(String(line.dropFirst()).trimmingCharacters(in: .whitespaces)))
+                continue
+            }
+            paragraph.append(line.hasPrefix("- ") || line.hasPrefix("* ") ? "•  " + line.dropFirst(2) : line)
+        }
+        flush()
+        return out
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+                switch block {
+                case .heading(let words, let level):
+                    Text(inline(words))
+                        .font(level <= 1 ? Theme.serif(reading ? 30 : 26) : Theme.sans(reading ? 20 : 18, .heavy))
+                        .foregroundStyle(.white)
+                        .padding(.top, 4)
+                case .paragraph(let words):
+                    Text(inline(words))
+                        .font(Theme.sans(reading ? 18 : 16))
+                        .foregroundStyle(Theme.cream)
+                        .lineSpacing(5)
+                case .quote(let words):
+                    Text(inline(words))
+                        .font(Theme.serif(reading ? 24 : 21))
+                        .foregroundStyle(Theme.cream)
+                        .padding(.leading, 14)
+                        .overlay(alignment: .leading) { Capsule().fill(Theme.accent).frame(width: 3) }
+                case .rule:
+                    Rectangle().fill(Theme.hairline).frame(height: 1)
+                }
+            }
+        }
+        .tint(Theme.accent)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// **bold**, *italics* and [links](…), kept as written otherwise.
+    private func inline(_ words: String) -> AttributedString {
+        let text = LinkedText.decodeEntities(words)
+        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        return (try? AttributedString(markdown: text, options: options)) ?? AttributedString(text)
     }
 }

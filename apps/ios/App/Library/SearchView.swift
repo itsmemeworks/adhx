@@ -497,7 +497,7 @@ struct PostTile: View {
     /// words big in the serif, who saved it at the bottom. Nothing sits on
     /// the words.
     private var wordsTile: some View {
-        shape
+        shape(Theme.cream)
             .overlay {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 8) {
@@ -542,7 +542,6 @@ struct PostTile: View {
                 }
                 .padding(12)
             }
-            .background(Theme.cream)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay {
                 if post.match?.strength == "strong" && chip != "Related" {
@@ -572,7 +571,7 @@ struct PostTile: View {
     private var posterTile: some View {
         // The tile's shape sets its size; the picture only fills it. (A
         // filled image as the base would widen the tile past its column.)
-        shape
+        shape(Theme.surface)
             .overlay {
                 if let poster = ADHXClient.resolve(post.posterUrl, against: server) {
                     AsyncImage(url: poster) { phase in
@@ -654,12 +653,13 @@ struct PostTile: View {
             .accessibilityAddTraits(.isButton)
     }
 
+    /// The tile's size, in its base colour.
     @ViewBuilder
-    private var shape: some View {
+    private func shape(_ colour: Color) -> some View {
         if let height {
-            Theme.surface.frame(height: height)
+            colour.frame(height: height)
         } else {
-            Theme.surface.aspectRatio(aspect, contentMode: .fit)
+            colour.aspectRatio(aspect, contentMode: .fit)
         }
     }
 }

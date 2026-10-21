@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Landscape for watching; full articles, words and tiles on phones
+
+- Landscape is only for watching (iOS `App/Orientation.swift`): the plist allows landscape, `AppDelegate` answers from `OrientationGate`, where each player says "may turn" while it's showing (`mayTurnToWatch()`) and anything over it says "upright" while it's up (`uprightWhile`: board sheets, More, the reader, the send sheet, a friend's channel). Newest wins; losing landscape turns the phone back. Turned sideways the player hides its chrome, fits the media whole and taps only pause; turning back restores the chrome. Debug: `-adhxTurn landscape -adhxTurnAfter 6`.
+- Phones get the whole kept X article as markdown (`article.body`, from `articleContent` via `articleBlocksToMarkdown`); iOS draws it (headings, paragraphs, lists, quotes, inline bold/italic/links, pictures left out) in place of the summary. The save result and Shared lately decode entities too; iOS also decodes them itself for older servers.
+- Search words tiles were drawn under the opaque surface colour (dark on dark): the cream is now the tile's base. The byline's network mark sits in a column as wide as the face above, so the poster's name lines up with "You saved this".
+
 ## 2026-10-21 — Frosted sheets on iPhone; which build is installed, in Settings
 
 - Sheets over the player are frosted (`FrostedSheetBackground`: ultra-thin material under the surface colour at 72%), so the picture shows through softly: More and In your saves (system sheets, via `frostedSheet()`) and every board sheet. On iOS 26+ the system sheets no longer force a 28 pt radius, so their floating corners follow the screen's own curve. The two remaining non-continuous rounded rectangles are now continuous.

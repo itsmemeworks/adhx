@@ -1,4 +1,5 @@
 import { and, eq, sql } from 'drizzle-orm'
+import { postBody } from '@/lib/feed/post-body'
 import { db } from '@/lib/db'
 import { bookmarkMedia, bookmarks, keepJobs, keptFiles } from '@/lib/db/schema'
 import { previewPath } from '@/lib/activity/preview-path'
@@ -97,7 +98,8 @@ export function appPost(row: Bookmark, alreadySaved: boolean): AppPost {
     id: row.id,
     author: row.author,
     authorName: row.authorName ?? null,
-    text: row.text ?? '',
+    // Entities decoded; t.co links have nowhere known to go here, so they're dropped.
+    text: postBody({ text: row.text ?? '', links: null }),
     category: row.category ?? null,
     // A Just for me save's kept poster is its owner's alone (see file-access.ts).
     posterUrl: row.isPrivate ? withFileToken(posterFor(row), row.platform, row.id) : posterFor(row),

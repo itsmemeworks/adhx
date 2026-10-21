@@ -34,6 +34,7 @@ private struct BoardSheetHost<Sheet: View>: ViewModifier {
                            value: isPresented)
             }
             .onChange(of: isPresented) { _, _ in drag = 0 }
+            .uprightWhile(isPresented)
     }
 
     private var panel: some View {

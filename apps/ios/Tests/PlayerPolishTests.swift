@@ -31,6 +31,10 @@ struct PlayerPolishTests {
               "long addresses are cut")
         check(String(LinkedText.attributed("no links here").characters) == "no links here", "plain words stay")
 
+        check(String(LinkedText.attributed("saw it coming &amp; STILL &lt;3").characters) == "saw it coming & STILL <3",
+              "entities decoded")
+        check(LinkedText.decodeEntities("&amp;lt;") == "&lt;", "decoded once, not twice")
+
         print("PlayerPolishTests: \(checks) checks passed")
     }
 }

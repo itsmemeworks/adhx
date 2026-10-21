@@ -6,7 +6,8 @@ import Foundation
 enum LinkedText {
     private static let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
 
-    static func attributed(_ text: String) -> AttributedString {
+    static func attributed(_ raw: String) -> AttributedString {
+        let text = decodeEntities(raw)
         guard let detector else { return AttributedString(text) }
         let whole = text as NSString
         var out = AttributedString()
@@ -23,6 +24,18 @@ enum LinkedText {
             from = match.range.location + match.range.length
         }
         if from < whole.length { out += AttributedString(whole.substring(from: from)) }
+        return out
+    }
+
+    /// "&amp;" → "&" and friends, for words from an ADHX older than the one
+    /// that decodes them itself.
+    static func decodeEntities(_ text: String) -> String {
+        guard text.contains("&") else { return text }
+        var out = text
+        for (entity, char) in [("&lt;", "<"), ("&gt;", ">"), ("&quot;", "\""), ("&#39;", "'"), ("&apos;", "'"),
+                               ("&nbsp;", " "), ("&amp;", "&")] {
+            out = out.replacingOccurrences(of: entity, with: char)
+        }
         return out
     }
 
