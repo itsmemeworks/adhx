@@ -4,13 +4,19 @@ import SwiftUI
 import UIKit
 
 /// One player for the whole pager: it moves to whichever post is on screen,
-/// loops it, and starts muted (unless Sound on by default is on). Files stream from your ADHX (`/api/files/…`).
+/// loops it, and plays with sound when you've turned sound on (remembered for
+/// every video until you turn it off). Files stream from your ADHX (`/api/files/…`).
 @MainActor
 final class Playback: ObservableObject {
     let player = AVPlayer()
-    @Published var muted = true {
+    @Published private(set) var muted = true {
         didSet { player.isMuted = muted }
     }
+    /// Fit the video whole at its own shape, instead of filling the screen.
+    @Published private(set) var fitVideo = Prefs.fitVideo
+    /// Sound or fit changed somewhere (another player, Settings): follow it.
+    static let choicesChanged = Notification.Name("adhx.playback.choicesChanged")
+    private var choicesWatch: NSObjectProtocol?
     @Published private(set) var paused = false
     @Published private(set) var ready = false
     /// Why it can't play, in the server's words when it gave any.
@@ -42,9 +48,18 @@ final class Playback: ObservableObject {
     private var stallWatch: NSObjectProtocol?
 
     init() {
-        // Settings → "Sound on by default".
+        // Settings → "Sound on by default", or the last sound button you pressed.
         muted = !Prefs.soundOn
         player.isMuted = muted
+        choicesWatch = NotificationCenter.default.addObserver(
+            forName: Self.choicesChanged, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                if self.muted == Prefs.soundOn { self.muted = !Prefs.soundOn }
+                if self.fitVideo != Prefs.fitVideo { self.fitVideo = Prefs.fitVideo }
+            }
+        }
         player.automaticallyWaitsToMinimizeStalling = true
         // Sound plays with the ring/silent switch off, like other video apps.
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
@@ -59,6 +74,20 @@ final class Playback: ObservableObject {
                 }
             }
         }
+    }
+
+    /// Sound on or off for this video and every one after it, until changed.
+    func setSound(_ on: Bool) {
+        Prefs.soundOn = on
+        muted = !on
+        NotificationCenter.default.post(name: Self.choicesChanged, object: nil)
+    }
+
+    /// Fill the screen, or fit the video whole; remembered.
+    func setFitVideo(_ fit: Bool) {
+        Prefs.fitVideo = fit
+        fitVideo = fit
+        NotificationCenter.default.post(name: Self.choicesChanged, object: nil)
     }
 
     /// The on-screen video's layer, for the small window to take over.
@@ -203,6 +232,8 @@ struct PlayerLayerView: UIViewRepresentable {
 
     func updateUIView(_ view: LayerHost, context: Context) {
         if view.playerLayer.player !== player { view.playerLayer.player = player }
+        let gravity: AVLayerVideoGravity = fill ? .resizeAspectFill : .resizeAspect
+        if view.playerLayer.videoGravity != gravity { view.playerLayer.videoGravity = gravity }
     }
 
     final class LayerHost: UIView {

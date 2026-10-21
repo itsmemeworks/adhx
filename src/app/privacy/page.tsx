@@ -68,8 +68,11 @@ export default function PrivacyPage() {
           session cookie (30 days). Sign-in links are stored as a hash; when the server holds them
           for an admin to pass on, admins can see the link and the email it was asked for, and
           admins’ own links (or any before there is an admin) are also printed in the server’s log.
-          An uploaded picture is re-made as a 512-pixel JPEG without its photo metadata, shown only
-          to members, and deleted when you change it or delete your account. Saves, notes, tags,
+          The phone app can sign in with a 6-digit emailed code instead: sent only to an address
+          that already has an account, by email only, stored as a keyed hash, good once for 15
+          minutes and used up by five wrong tries; spending it adds a phone key to your account. An
+          uploaded picture is re-made as a 512-pixel JPEG without its photo metadata, shown only to
+          members, and deleted when you change it or delete your account. Saves, notes, tags,
           archive and preferences are keyed by your account. A “Just for me” save writes no public
           pulse, and making a save private removes its earlier ones. “Just for me by default” covers
           every new save: the web, the phone apps, X bookmark sync and Keep this channel. If X is
@@ -87,13 +90,25 @@ export default function PrivacyPage() {
           and only you see them.
         </Section>
 
+        <Section title="Reactions">
+          Members can react to any post with one of six emoji or up to 40 characters. Each reaction
+          is kept with the post (who, which post, what, when) and shown, with your name and face,
+          only to signed-in members who can see the post: anyone’s shared save of it, or their own
+          save. A post saved only “Just for me” keeps its reactions to its owner. Signed out,
+          reactions and their counts are never shown; a banned member’s reactions never are, and a
+          post an admin hid shows none. You can delete your own; they go when you clear your data or
+          delete your account. The Reactions row on Channels lists posts with reactions under the
+          same rule, with the newest reaction’s name and face. The admin area shows only how many
+          each member sends per day, by kind.
+        </Section>
+
         <Section title="Right now and watching together">
           Right now groups recent shared saves into moments in the server’s memory; “Just for me”
           saves are never counted or named, not even to you. Members see who is saving a moment and
-          who is watching, and can react; who is watching and what reactions say are never stored
-          and reach only members watching that moment. Only how many reactions each member sends per
-          day, by kind, is counted, for admins. Signed out, moments show counts only. “Tell me when
-          it’s live” stores your bell and the alert it fires (listed for 24 hours), for you alone.
+          who is watching, and can react; who is watching is never stored. A reaction sent while
+          watching reaches the members watching that moment at once and is kept on its post like any
+          other. Signed out, moments show counts only. “Tell me when it’s live” stores your bell and
+          the alert it fires (listed for 24 hours), for you alone.
         </Section>
 
         <Section title="Kept media and phones">
@@ -148,8 +163,8 @@ export default function PrivacyPage() {
           for me” save is only ever a count, never the post. Everything else is counts: opens and
           from which kind of device, plays and finishes, searches (by meaning or by words, and
           whether they found something; what you searched for is never stored), sends, shares,
-          reactions per day and kind (never the words, the post or the moment), how many posts each
-          member watched (never which), and a log of live moments with no account ids.
+          reactions per day and kind (no admin page shows the reactions), how many posts each member
+          watched (never which), and a log of live moments with no account ids.
         </Section>
 
         <Section title="Third parties">
@@ -162,11 +177,12 @@ export default function PrivacyPage() {
 
         <Section title="Clearing and deleting">
           Clear data deletes your saves, notes, tags, archive, preferences, viewing history, sends,
-          bells and alerts, reaction counts, X sync history, queued phone shares, Made for you
-          channels and your “saved” pulses, and keeps your account, keys and invites. Delete account
-          also removes your account, sign-in methods, tokens, keys, invites, picture, last-seen time
-          and public channel statistics; other pulse and analytics rows stay without your account
-          id, and the admin log remains. Search data made from a post goes once nobody has it saved.
+          bells and alerts, reactions and reaction counts, X sync history, queued phone shares, Made
+          for you channels and your “saved” pulses, and keeps your account, keys and invites. Delete
+          account also removes your account, sign-in methods, tokens, keys, invites, picture,
+          last-seen time and public channel statistics; other pulse and analytics rows stay without
+          your account id, and the admin log remains. Search data made from a post goes once nobody
+          has it saved.
         </Section>
 
         <Section title="Your choices">

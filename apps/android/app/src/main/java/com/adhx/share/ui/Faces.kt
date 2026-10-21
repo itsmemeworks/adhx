@@ -57,7 +57,8 @@ fun initial(label: String): String =
 /**
  * One person's face, in Gob's shape ([GobShape]): their photo (resolved
  * against [server]) over a coloured initial, which shows while it loads or
- * when there is none.
+ * when there is none. When it's you ([isYou], or your username), your own
+ * picture from [LocalMe] is drawn, so every "you" changes at once.
  * Decorative: say who it is on whatever holds it.
  */
 @Composable
@@ -69,8 +70,10 @@ fun Avatar(
     size: Dp,
     modifier: Modifier = Modifier,
     ring: Color? = null,
+    isYou: Boolean = false,
 ) {
-    val url = avatarUrl?.takeIf { it.isNotBlank() }?.let { AdhxApi.resolve(server, it)?.toString() }
+    val picture = LocalMe.current.pictureFor(username, isYou, avatarUrl)
+    val url = picture?.takeIf { it.isNotBlank() }?.let { AdhxApi.resolve(server, it)?.toString() }
     Box(
         modifier
             .size(size)
@@ -99,7 +102,7 @@ fun Avatar(
 
 @Composable
 fun Avatar(saver: Saver, server: String, size: Dp, modifier: Modifier = Modifier, ring: Color? = null) =
-    Avatar(saver.username, saver.label, saver.avatarUrl, server, size, modifier, ring)
+    Avatar(saver.username, saver.label, saver.avatarUrl, server, size, modifier, ring, isYou = saver.isYou)
 
 /**
  * Up to [max] overlapping faces. [onTap] makes each face a button that opens

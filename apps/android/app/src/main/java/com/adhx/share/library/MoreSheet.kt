@@ -1,5 +1,6 @@
 package com.adhx.share.library
 
+import com.adhx.share.ui.KeepUpright
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
@@ -62,23 +63,25 @@ import com.adhx.share.net.PostKind
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
 import com.adhx.share.ui.NetworkMark
-import com.adhx.share.ui.openInAdhx
 import com.adhx.share.ui.openUrl
 import kotlinx.coroutines.launch
 
 /**
  * More: the post at a glance, "Just for me" (on your own saves), then Share the video (the kept file, not the
  * link), Copy link, Copy the words, Share an ADHX link (for people on the
- * same server) and Open in my ADHX.
+ * same server).
  */
 /**
  * The player's own switches, which live in More so the column on the right
- * stays as on the boards: Sound and Repeat (null for photos and words), the
- * small window (null when it can't), and Hide.
+ * stays as on the boards: Sound (null for photos and words), Fit video (videos
+ * only), Repeat (null for words), Dock (the small window; null when it
+ * can't) and Hide. Sound and Fit video are remembered.
  */
 class PlayerControls(
     val muted: Boolean?,
     val onToggleMute: () -> Unit,
+    val fit: Boolean?,
+    val onToggleFit: () -> Unit,
     val repeat: Boolean?,
     val onToggleRepeat: () -> Unit,
     val onPip: (() -> Unit)?,
@@ -94,6 +97,7 @@ fun MoreSheet(
     onDismiss: () -> Unit,
     controls: PlayerControls? = null,
 ) {
+    KeepUpright()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -132,9 +136,20 @@ fun MoreSheet(
                     MoreRow(
                         icon = painterResource(if (muted) R.drawable.ic_sound_on else R.drawable.ic_sound_off),
                         title = if (muted) "Sound on" else "Sound off",
-                        subtitle = if (muted) "Playing without sound" else "Playing with sound",
+                        subtitle = if (muted) "Every video plays with sound until you turn it off" else "Every video plays without sound",
                         onClick = {
                             controls.onToggleMute()
+                            close()
+                        },
+                    )
+                }
+                controls.fit?.let { fit ->
+                    MoreRow(
+                        icon = painterResource(R.drawable.ic_fit_video),
+                        title = if (fit) "Fill the screen" else "Fit video",
+                        subtitle = if (fit) "Videos cover the whole screen" else "The whole video at its own shape",
+                        onClick = {
+                            controls.onToggleFit()
                             close()
                         },
                     )
@@ -153,8 +168,8 @@ fun MoreSheet(
                 controls.onPip?.let { pip ->
                     MoreRow(
                         icon = painterResource(R.drawable.ic_pip),
-                        title = "Keep playing in a small window",
-                        subtitle = "Carries on over your other apps",
+                        title = "Dock",
+                        subtitle = "Keeps playing in a small window over your other apps",
                         onClick = {
                             close()
                             pip()
@@ -164,7 +179,7 @@ fun MoreSheet(
                 MoreRow(
                     icon = painterResource(R.drawable.ic_hide_overlay),
                     title = "Hide controls",
-                    subtitle = "Tap the post to bring them back",
+                    subtitle = "Or hold the post. A tap brings them back",
                     onClick = {
                         controls.onHide()
                         close()
@@ -261,17 +276,6 @@ fun MoreSheet(
                     onClick = {
                         val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, adhxLink)
                         context.startActivity(Intent.createChooser(send, null))
-                        close()
-                    },
-                )
-            }
-            post.openPath?.takeIf { it.isNotBlank() }?.let { path ->
-                MoreRow(
-                    icon = null,
-                    title = "Open in my ADHX",
-                    subtitle = "This post on your ADHX, in the browser",
-                    onClick = {
-                        openInAdhx(context, server, path)
                         close()
                     },
                 )

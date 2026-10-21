@@ -310,6 +310,28 @@ export const reactionCounts = sqliteTable(
   }),
 )
 
+// Reactions kept on posts (`post_reactions`): an emoji or a few words a
+// member left on a post, shown (with names) only to members who can see the
+// post, and replayed when they watch it. Live reactions are kept here too,
+// with the id the room saw. User-linked; rows go with the account.
+// DDL: `src/lib/reactions/schema-sql.ts`.
+export const postReactions = sqliteTable(
+  'post_reactions',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    emoji: text('emoji'),
+    text: text('text'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    postIdx: index('post_reactions_post_idx').on(table.platform, table.postId, table.createdAt),
+    userIdx: index('post_reactions_user_idx').on(table.userId),
+  }),
+)
+
 // One row per live moment that formed. No user ids.
 export const momentLog = sqliteTable(
   'moment_log',
@@ -944,11 +966,12 @@ export const usernameAliases = sqliteTable('username_aliases', {
 export const loginTokens = sqliteTable('login_tokens', {
   tokenHash: text('token_hash').primaryKey(),
   email: text('email').notNull(), // lowercased
-  intent: text('intent').notNull(), // 'signin' | 'change'
-  userId: text('user_id'), // set for 'change' — the account confirming a new email
+  intent: text('intent').notNull(), // 'signin' | 'change' | 'phone' (an emailed 6-digit code)
+  userId: text('user_id'), // set for 'change' — the account confirming a new email; for 'phone', the account (null: no such account)
   returnTo: text('return_to'),
   expiresAt: integer('expires_at').notNull(), // epoch ms
   usedAt: text('used_at'),
+  attempts: integer('attempts').notNull().default(0), // wrong 'phone' codes tried
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 })
 

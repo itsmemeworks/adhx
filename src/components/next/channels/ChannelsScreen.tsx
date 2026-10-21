@@ -18,6 +18,7 @@ import {
   type FriendChannelCardData,
   type GroupChannelCardData,
 } from './PeopleRows'
+import { ReactionsRow } from './ReactionsRow'
 
 interface CoverItem {
   post: FeedItem
@@ -126,6 +127,7 @@ export function ChannelsScreen() {
                 friends={data ? (data.friends ?? []) : null}
                 canInvite={!!data?.canInvite}
               />
+              <ReactionsRow />
             </>
           )}
 

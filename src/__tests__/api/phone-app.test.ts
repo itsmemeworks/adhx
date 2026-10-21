@@ -210,7 +210,27 @@ describe('connected phones', () => {
     const me = await import('@/app/api/app/me/route')
     const meRes = await me.GET(get('/api/app/me', key))
     expect(meRes.status).toBe(200)
-    expect(await meRes.json()).toEqual({ username: 'one', name: 'iPhone' })
+    expect(await meRes.json()).toEqual({
+      username: 'one',
+      name: 'iPhone',
+      avatarUrl: null,
+      avatarSource: 'generated',
+    })
+
+    // Your picture, so your own reactions wear it; none when you chose the generated icon.
+    testInstance.db
+      .update(schema.users)
+      .set({ avatarUrl: '/api/avatars/user-1.webp' })
+      .where(eq(schema.users.id, 'user-1'))
+      .run()
+    expect((await (await me.GET(get('/api/app/me', key))).json()).avatarUrl).toBe(
+      '/api/avatars/user-1.webp',
+    )
+    testInstance.db
+      .insert(schema.userPreferences)
+      .values({ userId: 'user-1', key: 'avatarSource', value: 'generated' })
+      .run()
+    expect((await (await me.GET(get('/api/app/me', key))).json()).avatarUrl).toBeNull()
 
     // A Claude key can't remove a phone through the access-keys route, and vice versa.
     const { DELETE: deleteSearchKey } = await import('@/app/api/access-keys/[id]/route')

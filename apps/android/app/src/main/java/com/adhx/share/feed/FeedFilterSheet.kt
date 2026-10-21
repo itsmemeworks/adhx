@@ -1,5 +1,6 @@
 package com.adhx.share.feed
 
+import com.adhx.share.ui.KeepUpright
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
@@ -61,6 +62,7 @@ fun FeedFilterSheet(
     newCount: String? = null,
     hidden: Map<String, Int> = emptyMap(),
 ) {
+    KeepUpright()
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     var picked by remember { mutableStateOf(types) }

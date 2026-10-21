@@ -49,7 +49,9 @@ async function renderEmail(url: string, intent: 'signin' | 'change') {
   }
 }
 
-async function sendWithResend(to: string, message: Awaited<ReturnType<typeof renderEmail>>) {
+type Message = { subject: string; html: string; text: string }
+
+async function sendWithResend(to: string, message: Message) {
   const from = process.env.EMAIL_FROM || 'ADHX <login@adhx.com>'
   const response = await fetchWithTimeout('https://api.resend.com/emails', SEND_TIMEOUT_MS, {
     method: 'POST',
@@ -88,7 +90,7 @@ export function smtpOptions(raw: string) {
   }
 }
 
-async function sendWithSmtp(to: string, message: Awaited<ReturnType<typeof renderEmail>>) {
+async function sendWithSmtp(to: string, message: Message) {
   const nodemailer = await import('nodemailer')
   const transport = nodemailer.createTransport(smtpOptions(process.env['SMTP_URL'] ?? ''))
   try {
@@ -229,6 +231,37 @@ export async function sendMagicLinkEmail(params: {
     return { ok: true, delivery }
   } catch (error) {
     captureException(error, { endpoint: 'sendMagicLinkEmail' })
+    return { ok: false }
+  }
+}
+
+/**
+ * Email a phone sign-in code (`POST /api/app/signin`). Only by email (Resend
+ * or SMTP), or into the console in local development: a code can't wait on
+ * the admin page, so `admin` delivery (and no delivery) returns `ok: false`.
+ * HTML is `src/emails/sign-in-code.tsx`.
+ */
+export async function sendSignInCodeEmail(params: {
+  email: string
+  code: string
+}): Promise<SendMagicLinkResult> {
+  const { email, code } = params
+  const delivery = signInDelivery()
+  if (delivery === 'log') {
+    console.log(`[sign-in-code] Phone sign-in code for ${email}: ${code}`)
+    return { ok: true, delivery, devLogged: true }
+  }
+  if (delivery !== 'email') return { ok: false }
+  try {
+    const origin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const { SignInCodeEmail } = await import('@/emails/sign-in-code')
+    const html = await render(SignInCodeEmail({ code, origin }))
+    const message = { subject: `Your ADHX code: ${code}`, html, text: toPlainText(html) }
+    if (process.env.RESEND_API_KEY) await sendWithResend(email, message)
+    else await sendWithSmtp(email, message)
+    return { ok: true, delivery }
+  } catch (error) {
+    captureException(error, { endpoint: 'sendSignInCodeEmail' })
     return { ok: false }
   }
 }

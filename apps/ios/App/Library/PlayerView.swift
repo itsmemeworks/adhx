@@ -15,9 +15,12 @@ struct PlayerExtras {
     /// Live: the moment's name, on a chip over the byline ("In Babies vs objects").
     var inMoment: String?
     /// Room between the rail's buttons (Live has one more, so they sit closer).
-    var railSpacing: CGFloat = 14
+    var railSpacing: CGFloat = 10
     /// The progress line's colour (Live's is yellow, the feed's cream).
     var progressColour: Color = Theme.ink
+    /// The reactions feed: every post floats its reactions (fresh from the
+    /// server) each time it lands, even ones already replayed this run.
+    var replayReactions = false
 
     struct ReactButton {
         var isOpen: Bool
@@ -46,6 +49,14 @@ struct PlayerView: View {
     static let endKey = "adhx:end"
 
     @StateObject private var playback = Playback()
+    /// React on any post (Live brings its own room).
+    @StateObject private var reactions = PostReactionsModel()
+    @State private var picking = false
+    @State private var words = ""
+    @State private var reacting = false
+    @State private var reactNote: String?
+    @FocusState private var typing: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// A friend's channel, opened from the faces on a post.
     @State private var friend: Saver?
     /// The post whose file is being sent.
@@ -53,6 +64,10 @@ struct PlayerView: View {
     @State private var current: String?
     @State private var toast: String?
     @State private var toastTask: Task<Void, Never>?
+    /// Turned sideways: just the media, whole, nothing over it.
+    @State private var landscape = false
+    /// Whether the buttons were hidden before turning, to put back after.
+    @State private var cleanBeforeTurning = false
     @Environment(\.scenePhase) private var scenePhase
 
     init(posts: [PhonePost], server: URL, clean: Binding<Bool>,
@@ -69,9 +84,40 @@ struct PlayerView: View {
         _current = State(initialValue: start ?? posts.first?.key)
     }
 
+    /// Live passes its own React button; everywhere else the player has one.
+    private var ownReact: Bool { extras.react == nil }
+
+    /// What the pages get: the player's React button when the screen has none.
+    private var pageExtras: PlayerExtras {
+        guard ownReact else { return extras }
+        var page = extras
+        page.react = .init(isOpen: picking, toggle: togglePicker)
+        if picking { page.bottomInset += 146 }
+        return page
+    }
+
     var body: some View {
         ZStack(alignment: .top) {
             pager
+            if ownReact {
+                FloatingReactions(reactions: reactions.floating, server: server)
+                    .padding(.top, 200)
+                    .padding(.trailing, 80)
+                    .frame(height: 500, alignment: .top)
+                    .allowsHitTesting(false)
+                if picking && !clean {
+                    VStack {
+                        Spacer()
+                        ReactPicker(words: $words, typing: $typing, sending: reacting, note: reactNote,
+                                    hint: "Up to \(LiveSay.maxText) characters. People who can see this post see it when they watch it.",
+                                    onEmoji: { react(.emoji($0)) }, onWords: reactWords)
+                            .padding(.horizontal, 12)
+                            .padding(.bottom, typing ? 8 : 30)
+                    }
+                    .ignoresSafeArea(.container, edges: .bottom)
+                    .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+                }
+            }
             // Inside the safe area, under the top bar.
             if let toast, !clean {
                 Text(toast)
@@ -86,6 +132,7 @@ struct PlayerView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: toast)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: picking)
         .fullScreenCover(item: $friend) { saver in
             FriendChannelScreen(friend: saver, server: server)
         }
@@ -95,6 +142,22 @@ struct PlayerView: View {
             SendSheet(post: post, server: server, say: say)
         }
         .preference(key: PlayerSheetUp.self, value: sending != nil)
+        // Home swaps its "on their way" pill for the message while it's up.
+        .preference(key: PlayerToastUp.self, value: toast != nil && !clean)
+        // Landscape is only for watching (OrientationGate).
+        .mayTurnToWatch()
+        .uprightWhile(friend != nil || sending != nil || picking)
+        .onGeometryChange(for: Bool.self) { $0.size.width > $0.size.height } action: { turned in
+            guard turned != landscape else { return }
+            landscape = turned
+            if turned {
+                cleanBeforeTurning = clean
+                clean = true
+                picking = false
+            } else {
+                clean = cleanBeforeTurning
+            }
+        }
     }
 
     private var pager: some View {
@@ -102,8 +165,10 @@ struct PlayerView: View {
             LazyVStack(spacing: 0) {
                 ForEach(posts, id: \.key) { post in
                     PostPage(post: post, server: server, onScreen: post.key == current,
-                             playback: playback, clean: $clean, extras: extras, say: say,
-                             openFriend: { friend = $0 }, send: { sending = $0 })
+                             playback: playback, clean: $clean, extras: pageExtras, say: say,
+                             openFriend: { friend = $0 }, send: { sending = $0 },
+                             advance: { next() },
+                             held: sending != nil || pageExtras.react?.isOpen == true, landscape: landscape)
                         .containerRelativeFrame([.horizontal, .vertical])
                         .id(post.key)
                 }
@@ -146,6 +211,12 @@ struct PlayerView: View {
     }
 
     private func showCurrent(_ key: String?) {
+        if ownReact {
+            picking = false
+            typing = false
+            reactNote = nil
+            reactions.arrive(key.flatMap { key in posts.first { $0.key == key } }?.ref, again: extras.replayReactions)
+        }
         if key == Self.endKey {
             playback.show(nil)
             onShow(posts.count)
@@ -160,7 +231,7 @@ struct PlayerView: View {
         playback.show(post.plays ? ADHXClient.resolve(post.media.first?.url, against: server) : nil)
     }
 
-    /// A video ended with Repeat off: on to the next save.
+    /// A video ended with Repeat off (or a photo's time ran out): on to the next save.
     private func next() {
         guard let current, let index = posts.firstIndex(where: { $0.key == current }) else { return }
         let next = index + 1 < posts.count ? posts[index + 1].key : extras.endPage != nil ? Self.endKey : nil
@@ -168,12 +239,45 @@ struct PlayerView: View {
         withAnimation(.easeInOut(duration: 0.35)) { self.current = next }
     }
 
+    private func togglePicker() {
+        picking.toggle()
+        if !picking { typing = false }
+        reactNote = nil
+    }
+
+    private func reactWords() {
+        let text = words.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        react(.text(text))
+    }
+
+    /// Floats at once with your face; kept for whoever watches it next.
+    private func react(_ say: LiveSay) {
+        guard !reacting, let current, let post = posts.first(where: { $0.key == current }) else { return }
+        reacting = true
+        reactNote = nil
+        let you = YourFace.shared.you(from: post.savers.first(where: \.isYou))
+        Task {
+            let sent = await reactions.react(say, you: you, to: post.ref)
+            reacting = false
+            if sent {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                if case .text(let text) = say, words.trimmingCharacters(in: .whitespacesAndNewlines) == text { words = "" }
+                typing = false
+                picking = false
+            } else {
+                reactNote = "Couldn’t send that. Try again."
+                UIAccessibility.post(notification: .announcement, argument: reactNote)
+            }
+        }
+    }
+
     /// A short message near the top.
     private func say(_ text: String) {
         toastTask?.cancel()
         toast = text
         toastTask = Task {
-            try? await Task.sleep(nanoseconds: 2_200_000_000)
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
             guard !Task.isCancelled else { return }
             toast = nil
         }
@@ -192,6 +296,12 @@ private struct PostPage: View {
     var openFriend: (Saver) -> Void = { _ in }
     /// Opens the send sheet for this post's file.
     var send: (PhonePost) -> Void = { _ in }
+    /// A photo's time ran out: on to the next post.
+    var advance: () -> Void = {}
+    /// Something over the player (the send sheet, Live's picker): photos wait.
+    var held = false
+    /// Turned sideways: the media whole, and taps only pause.
+    var landscape = false
     @Environment(\.openURL) private var openURL
     @ObservedObject private var privacy = PrivacyStore.shared
     @State private var choosingFriend = false
@@ -206,6 +316,12 @@ private struct PostPage: View {
     @State private var keeping = false
     /// "In your saves": Just for me and your note, from the bookmark.
     @State private var savedSheet = false
+    /// How long the photo on screen has shown, of `PhotoTimer.seconds`.
+    @State private var photoTime: Double = 0
+    /// Tapped to stay on this photo (like pausing a video).
+    @State private var photoPaused = false
+    /// The original post: who posted it, their words in full, and the way there.
+    @State private var original = false
 
     /// Words over a picture get a soft shadow; nothing else does.
     private var overMedia: Bool { post.kind != "text" && post.kind != "article" }
@@ -248,8 +364,9 @@ private struct PostPage: View {
                 }
                 bottomRow
                     .padding(.bottom, 16)
-            } else if post.kind == "video" && onScreen {
-                ProgressLine(fraction: playback.duration > 0 ? playback.time / playback.duration : 0,
+            } else if (post.kind == "video" || post.kind == "photo") && onScreen {
+                ProgressLine(fraction: post.kind == "photo" ? photoFraction
+                                : playback.duration > 0 ? playback.time / playback.duration : 0,
                              colour: extras.progressColour)
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
@@ -266,15 +383,20 @@ private struct PostPage: View {
                       hide: { clean = true })
                 .presentationDetents([.height(moreHeight)])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(Theme.surface)
-                .presentationCornerRadius(28)
+                .frostedSheet()
+        }
+        .uprightWhile(more || savedSheet || sharing != nil || reading || original)
+        .sheet(isPresented: $original) {
+            OriginalSheet(post: post, server: server, say: say)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .frostedSheet()
         }
         .sheet(isPresented: $savedSheet) {
             SavedSheet(post: post, say: say)
                 .presentationDetents([.height(privacy.canSwitch(post) ? 300 : 220)])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(Theme.surface)
-                .presentationCornerRadius(28)
+                .frostedSheet()
         }
     }
 
@@ -283,11 +405,12 @@ private struct PostPage: View {
         switch post.kind {
         case "video", "audio":
             ZStack {
-                // Full bleed, like the boards: the picture covers the screen.
-                Poster(url: ADHXClient.resolve(post.posterUrl, against: server), fill: true)
+                // Full bleed like the boards (the picture covers the screen), or
+                // the whole video at its own shape when Fit video is on.
+                Poster(url: ADHXClient.resolve(post.posterUrl, against: server), fill: !(playback.fitVideo || landscape))
                 if onScreen {
                     if post.kind == "video" {
-                        PlayerLayerView(player: playback.player, fill: true) { playback.attach($0) }
+                        PlayerLayerView(player: playback.player, fill: !(playback.fitVideo || landscape)) { playback.attach($0) }
                     }
                     if playback.problem != nil || !playback.ready {
                         // Still being kept on your ADHX: an animated card until it's ready.
@@ -303,18 +426,78 @@ private struct PostPage: View {
                 }
             }
             .contentShape(Rectangle())
-            .onTapGesture { if clean { clean = false } else { playback.togglePause() } }
+            .tapOrHold(tap: { if clean && !landscape { clean = false } else { playback.togglePause() } }, hold: hideChrome)
             .accessibilityAddTraits(.isButton)
             .accessibilityLabel(clean ? "Show buttons and caption" : playback.paused ? "Play" : "Pause")
+            .accessibilityAction(named: "Hide buttons and caption") { hideChrome() }
         case "photo":
-            Album(urls: post.media.compactMap { ADHXClient.resolve($0.url, against: server) }, page: $photo)
-                .onTapGesture { if clean { clean = false } }
+            ZStack {
+                Album(urls: post.media.compactMap { ADHXClient.resolve($0.url, against: server) }, page: $photo)
+                if photoPaused && onScreen {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 32))
+                        .foregroundStyle(.white)
+                        .frame(width: 76, height: 76)
+                        .background(Circle().fill(.black.opacity(0.5)))
+                        .allowsHitTesting(false)
+                }
+            }
+            .tapOrHold(tap: { if clean && !landscape { clean = false } else { photoPaused.toggle() } }, hold: hideChrome)
+            .accessibilityAction(named: photoPaused ? "Play" : "Pause") { photoPaused.toggle() }
+            .accessibilityAction(named: "Hide buttons and caption") { hideChrome() }
+            .task(id: photoTimerKey) { await runPhotoTimer() }
+            .onChange(of: photo) { _, _ in photoTime = 0 }
+            .onChange(of: onScreen) { _, now in
+                if !now {
+                    photoTime = 0
+                    photoPaused = false
+                }
+            }
         default:
             WordsCard(post: post) { reading = true }
                 .contentShape(Rectangle())
-                .onTapGesture { if clean { clean = false } }
+                .tapOrHold(tap: { if clean { clean = false } }, hold: hideChrome)
+                .accessibilityAction(named: "Hide buttons and caption") { hideChrome() }
                 .sheet(isPresented: $reading) { ReaderView(post: post) }
         }
+    }
+
+    /// Hold the picture: everything but the media goes; a tap brings it back.
+    private func hideChrome() {
+        guard !clean else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        clean = true
+    }
+
+    /// The photo timer runs while this photo is on screen and nothing is over it.
+    private var photoTimerKey: String {
+        let running = onScreen && !photoPaused && !held && !more && !savedSheet && sharing == nil
+        return "\(running)-\(photo)"
+    }
+
+    /// Photos move on by themselves, `PhotoTimer.seconds` each: the next photo
+    /// in an album, then the next post.
+    private func runPhotoTimer() async {
+        guard onScreen, !photoPaused, !held, !more, !savedSheet, sharing == nil else { return }
+        let step = 0.1
+        while !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: UInt64(step * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            photoTime += step
+            guard photoTime >= PhotoTimer.seconds else { continue }
+            photoTime = 0
+            switch PhotoTimer.next(page: photo, count: post.media.count, repeatOne: playback.repeatOne) {
+            case .page(let page): withAnimation(.easeInOut(duration: 0.3)) { photo = page }
+            case .post: advance()
+            }
+            return
+        }
+    }
+
+    /// How far through the post's photos the timer is, for the line at the bottom.
+    private var photoFraction: Double {
+        let count = max(post.media.count, 1)
+        return min((Double(photo) + photoTime / PhotoTimer.seconds) / Double(count), 1)
     }
 
     /// The More sheet grows with what it offers.
@@ -327,10 +510,10 @@ private struct PostPage: View {
         return height
     }
 
-    /// Left (the boards' byline): why the feed picked it, a friend's note,
-    /// who saved it, where it's from and the first lines. Right: the rail of
-    /// round frosted buttons. Sound, Repeat, the small window, Hide and the
-    /// original are in More.
+    /// Left (the boards' byline): why the feed picked it, a friend's note and
+    /// who saved it. Right: the rail of round frosted buttons; the network's
+    /// mark opens the original post (who posted it, their words in full).
+    /// Sound, Repeat, Dock and Hide are in More.
     private var caption: some View {
         HStack(alignment: .bottom, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
@@ -348,7 +531,7 @@ private struct PostPage: View {
                     .padding(.bottom, 8)
                     .accessibilityElement(children: .combine)
                 }
-                if let why = post.why, let onWhy = extras.onWhy {
+                if let why = post.why, let onWhy = extras.onWhy, !WhyChip.repeatsByline(post) {
                     WhyChip(text: WhyChip.label(post, why: why), kind: post.whyReasons.first?.kind,
                             face: WhyChip.face(post), server: server) { onWhy(post) }
                         .padding(.bottom, 12)
@@ -363,16 +546,6 @@ private struct PostPage: View {
                     } else if privacy.isPrivate(post) {
                         PrivateLock()
                     }
-                    // Live puts the network on the savers' line instead.
-                    if extras.inMoment == nil || post.savers.isEmpty { sourceLine }
-                    if overMedia, !post.text.isEmpty {
-                        Text(post.text)
-                            .font(Theme.sans(16))
-                            .foregroundStyle(Color(hex: 0xF4F1EA))
-                            .lineSpacing(5)
-                            .lineLimit(2)
-                            .overMediaShadow(overMedia)
-                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -384,34 +557,6 @@ private struct PostPage: View {
         }
         .padding(.leading, 16)
         .padding(.trailing, 12)
-    }
-
-    /// "YouTube · Rick Astley": the network and who posted it. Opens the original.
-    private var sourceLine: some View {
-        let line = Text(sourceWords)
-            .font(Theme.sans(14))
-            .foregroundStyle(Theme.muted)
-            .lineLimit(1)
-            .overMediaShadow(overMedia)
-        return Group {
-            if let source = post.sourceUrl.flatMap(URL.init(string:)) {
-                Button { openURL(source) } label: { line }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("\(sourceWords). Open the original on \(Network.name(post.platform))")
-            } else {
-                line
-            }
-        }
-    }
-
-    private var sourceWords: String {
-        let network = Network.name(post.platform)
-        let name = post.author.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let who = name.isEmpty ? post.author.handle : name
-        if who.isEmpty || who.caseInsensitiveCompare(network) == .orderedSame || who.count <= 1 {
-            return network
-        }
-        return "\(network) · \(who)"
     }
 
     /// Round frosted buttons, 52 across, 14 apart: React (Live), Share, Save, More.
@@ -466,6 +611,13 @@ private struct PostPage: View {
                     }
                 }
             }
+            // The network's own mark: who posted it and their words, in full.
+            RailButton(accessibility: "The original post on \(Network.name(post.platform))") {
+                original = true
+            } icon: {
+                NetworkMark(platform: post.platform, size: 22, color: Color(hex: 0xF4F1EA))
+            }
+            .accessibilityHint("Who posted it, and everything they wrote")
             RailButton(accessibility: "More for this post") {
                 more = true
             } icon: {
@@ -486,6 +638,9 @@ private struct PostPage: View {
         } else if post.plays {
             // The track is there before the video is: no jump when it starts.
             ProgressLine(fraction: 0, colour: extras.progressColour).padding(.horizontal, 16)
+        } else if post.kind == "photo" {
+            ProgressLine(fraction: onScreen ? photoFraction : 0, colour: extras.progressColour)
+                .padding(.horizontal, 16)
         }
     }
 
@@ -597,10 +752,8 @@ private struct PostPage: View {
                     .layoutPriority(1)
                     .overMediaShadow(overMedia)
                 if let when = liveWhen {
-                    // Live: "· 4 min ago · Reddit" (the boards' tuned-in byline);
-                    // the network goes first when the names leave no room.
+                    // Live: "· 4 min ago"; the network's mark is on the line below.
                     ViewThatFits(in: .horizontal) {
-                        Text("· \(when) · \(Network.name(post.platform))")
                         Text("· \(when)")
                         if let short = liveWhenShort { Text("· \(short)") }
                     }
@@ -647,7 +800,7 @@ private struct MoreSheet: View {
     let say: (String) -> Void
     /// "Why this one" (the feed): opens the why sheet.
     var onWhy: (() -> Void)?
-    /// The video or sound on screen: Sound, Repeat and the small window.
+    /// The video or sound on screen: Sound, Fit, Repeat and Dock.
     var playback: Playback?
     /// Hides the buttons and caption.
     var hide: () -> Void = {}
@@ -752,17 +905,6 @@ private struct MoreSheet: View {
                         say("Words copied")
                     }
                 }
-                if let open = ADHXClient.resolve(post.openPath, against: server) {
-                    Button {
-                        openURL(open)
-                        dismiss()
-                    } label: {
-                        rowFace(title: "Open in my ADHX", detail: "This post on your ADHX, in the browser") {
-                            Gob(size: 24)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
             }
             Spacer(minLength: 0)
         }
@@ -778,8 +920,10 @@ private struct MoreSheet: View {
     private var networkLine: String {
         let name = Network.name(post.platform)
         var parts = name.count > 1 ? [name] : []
-        if post.kind == "video", let height = post.media.first?.height, height > 0 {
-            parts.append("\(height)p")
+        // Video sizes are named by the short side: an upright 720×1280 is 720p.
+        if post.kind == "video", let media = post.media.first {
+            let sides = [media.width, media.height].compactMap { $0 }.filter { $0 > 0 }
+            if let short = sides.min() { parts.append("\(short)p") }
         }
         return parts.joined(separator: " · ")
     }
@@ -914,7 +1058,7 @@ private struct SavedSheet: View {
     }
 }
 
-/// Sound, Repeat, the small window and Hide, for the video on screen (More).
+/// Sound, Fit, Repeat, Dock and Hide, for the video on screen (More).
 private struct PlayingControls: View {
     @ObservedObject var playback: Playback
     let say: (String) -> Void
@@ -925,20 +1069,26 @@ private struct PlayingControls: View {
             toggle(playback.muted ? "Sound off" : "Sound on",
                    icon: playback.muted ? "speaker.slash.fill" : "speaker.wave.2.fill",
                    on: !playback.muted,
-                   accessibility: playback.muted ? "Turn sound on" : "Turn sound off") {
-                playback.muted.toggle()
+                   accessibility: playback.muted ? "Turn sound on for every video" : "Turn sound off") {
+                playback.setSound(playback.muted)
+                say(playback.muted ? "Sound off" : "Sound on for every video")
+            }
+            toggle("Fit video", icon: "aspectratio", on: playback.fitVideo,
+                   accessibility: playback.fitVideo ? "Fill the screen" : "Fit the whole video") {
+                playback.setFitVideo(!playback.fitVideo)
+                say(playback.fitVideo ? "Videos fit the screen whole" : "Videos fill the screen")
             }
             toggle("Repeat", icon: "repeat.1", on: playback.repeatOne, accessibility: "Repeat this one") {
                 playback.repeatOne.toggle()
                 say(playback.repeatOne ? "Repeating this one" : "Plays the next save when this ends")
             }
             if playback.pipSupported {
-                toggle("Small window", icon: "pip.enter", on: false,
-                       accessibility: "Keep playing in a small window") {
+                toggle("Dock", icon: "pip.enter", on: false,
+                       accessibility: "Dock the video and keep it playing") {
                     if playback.pipPossible {
                         playback.startSmallWindow()
                     } else {
-                        say("The small window isn’t ready yet. Try again in a moment.")
+                        say("The dock isn’t ready yet. Try again in a moment.")
                     }
                 }
             }
@@ -982,6 +1132,12 @@ private struct WhyChip: View {
     /// "Saved together" when it's saved together, else the why line (the web's `whyLabel`).
     static func label(_ post: PhonePost, why: String) -> String {
         post.whyReasons.first?.kind == "together" ? "Saved together" : why
+    }
+
+    /// "Ana saved this · 1d" alone is already the byline under it (the web's rule).
+    static func repeatsByline(_ post: PhonePost) -> Bool {
+        guard let kind = post.whyReasons.first?.kind else { return false }
+        return (kind == "fresh" || kind == "yours") && !post.savers.isEmpty
     }
 
     /// Who sent it, when that's why it's here.
@@ -1077,6 +1233,12 @@ private struct NoteTail: Shape {
 }
 
 /// The player has a sheet of its own up (Home's bar steps aside).
+/// The player is showing a short message near the top.
+struct PlayerToastUp: PreferenceKey {
+    static var defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
+}
+
 struct PlayerSheetUp: PreferenceKey {
     static var defaultValue = false
     static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
@@ -1094,8 +1256,8 @@ private struct SharedFile: Identifiable {
     var id: URL { url }
 }
 
-/// The system share sheet, for a file.
-private struct ActivitySheet: UIViewControllerRepresentable {
+/// The system share sheet, for a file or a link.
+struct ActivitySheet: UIViewControllerRepresentable {
     let items: [Any]
     var onComplete: (() -> Void)? = nil
     func makeUIViewController(context: Context) -> UIActivityViewController {
@@ -1336,15 +1498,18 @@ private struct Words: View {
                         .font(Theme.serif(34))
                         .foregroundStyle(.white)
                 }
-                if let description = article.description, !description.isEmpty {
+                if let body = article.body, !body.isEmpty {
+                    ArticleBody(markdown: body, reading: reading)
+                } else if let description = article.description, !description.isEmpty {
                     Text(description)
                         .font(Theme.sans(17))
                         .foregroundStyle(Theme.muted)
                 }
             }
-            if !post.text.isEmpty {
-                Text(post.text)
+            if !post.text.isEmpty, post.article?.body?.isEmpty ?? true {
+                Text(LinkedText.attributed(post.text))
                     .font(font)
+                    .tint(Theme.accent)
                     .foregroundStyle(Theme.cream)
                     .lineSpacing(post.article == nil && !reading ? 2 : 5)
             }
@@ -1421,3 +1586,221 @@ struct ReaderView: View {
     }
 }
 
+
+extension View {
+    /// A tap, or a hold (a hold never also counts as a tap).
+    func tapOrHold(tap: @escaping () -> Void, hold: @escaping () -> Void) -> some View {
+        gesture(
+            LongPressGesture(minimumDuration: 0.35)
+                .onEnded { _ in hold() }
+                .exclusively(before: TapGesture().onEnded { tap() })
+        )
+    }
+}
+
+/// A kept X article, whole: headings, paragraphs, lists and quotes from its
+/// markdown, with bold, italics and links inline. Pictures are left out (the
+/// words are what's kept).
+private struct ArticleBody: View {
+    let markdown: String
+    var reading = false
+
+    private enum Block: Hashable {
+        case heading(String, Int)
+        case paragraph(String)
+        case quote(String)
+        case rule
+    }
+
+    private var blocks: [Block] {
+        var out: [Block] = []
+        var paragraph: [String] = []
+        func flush() {
+            if !paragraph.isEmpty { out.append(.paragraph(paragraph.joined(separator: "\n"))); paragraph = [] }
+        }
+        for raw in markdown.components(separatedBy: "\n") {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            if line.isEmpty { flush(); continue }
+            if line.hasPrefix("![") { continue }
+            if line == "---" || line == "***" { flush(); out.append(.rule); continue }
+            if line.hasPrefix("#") {
+                flush()
+                let level = line.prefix(while: { $0 == "#" }).count
+                out.append(.heading(String(line.dropFirst(level)).trimmingCharacters(in: .whitespaces), level))
+                continue
+            }
+            if line.hasPrefix(">") {
+                flush()
+                out.append(.quote(String(line.dropFirst()).trimmingCharacters(in: .whitespaces)))
+                continue
+            }
+            paragraph.append(line.hasPrefix("- ") || line.hasPrefix("* ") ? "•  " + line.dropFirst(2) : line)
+        }
+        flush()
+        return out
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+                switch block {
+                case .heading(let words, let level):
+                    Text(inline(words))
+                        .font(level <= 1 ? Theme.serif(reading ? 30 : 26) : Theme.sans(reading ? 20 : 18, .heavy))
+                        .foregroundStyle(.white)
+                        .padding(.top, 4)
+                case .paragraph(let words):
+                    Text(inline(words))
+                        .font(Theme.sans(reading ? 18 : 16))
+                        .foregroundStyle(Theme.cream)
+                        .lineSpacing(5)
+                case .quote(let words):
+                    Text(inline(words))
+                        .font(Theme.serif(reading ? 24 : 21))
+                        .foregroundStyle(Theme.cream)
+                        .padding(.leading, 14)
+                        .overlay(alignment: .leading) { Capsule().fill(Theme.accent).frame(width: 3) }
+                case .rule:
+                    Rectangle().fill(Theme.hairline).frame(height: 1)
+                }
+            }
+        }
+        .tint(Theme.accent)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// **bold**, *italics* and [links](…), kept as written otherwise.
+    private func inline(_ words: String) -> AttributedString {
+        let text = LinkedText.decodeEntities(words)
+        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        return (try? AttributedString(markdown: text, options: options)) ?? AttributedString(text)
+    }
+}
+
+/// The original post, from the rail's network button: who posted it and
+/// when, everything they wrote (a kept article in full), and the way to it.
+private struct OriginalSheet: View {
+    let post: PhonePost
+    let server: URL
+    let say: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+
+    private var network: String { Network.name(post.platform) }
+
+    /// Their name, else their handle; nil when neither says more than the network.
+    private var who: String? {
+        let name = post.author.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let picked = name.isEmpty ? post.author.handle : name
+        if picked.isEmpty || picked.count <= 1 || picked.caseInsensitiveCompare(network) == .orderedSame { return nil }
+        return picked
+    }
+
+    private var handle: String? {
+        let raw = post.author.handle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty, raw.caseInsensitiveCompare(network) != .orderedSame else { return nil }
+        let at = raw.hasPrefix("@") ? raw : "@\(raw)"
+        return at.dropFirst().caseInsensitiveCompare(who ?? "") == .orderedSame ? nil : at
+    }
+
+    private var posted: String? {
+        guard let iso = post.postedAt, let date = Format.parseISO(iso) else { return nil }
+        return date.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .center, spacing: 12) {
+                    avatar
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(who ?? network)
+                            .font(Theme.sans(17, .heavy))
+                            .foregroundStyle(Theme.ink)
+                            .lineLimit(1)
+                        HStack(spacing: 6) {
+                            // The network's mark shows once: here only when their picture leads.
+                            if avatarURL != nil {
+                                NetworkMark(platform: post.platform, size: 13, color: Theme.muted)
+                            }
+                            Text([handle, posted.map { "Posted \($0)" } ?? network].compactMap { $0 }.joined(separator: " · "))
+                                .font(Theme.sans(13))
+                                .foregroundStyle(Theme.muted)
+                                .lineLimit(1)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 44, height: 44)
+                            .background(Circle().fill(Theme.raised))
+                    }
+                    .accessibilityLabel("Close")
+                }
+                .accessibilityElement(children: .contain)
+
+                if post.article != nil || !post.text.isEmpty {
+                    Words(post: post, reading: true)
+                        .textSelection(.enabled)
+                } else {
+                    Text("No words with this one, just the \(post.kind == "photo" ? "picture" : post.kind == "audio" ? "sound" : "video").")
+                        .font(Theme.sans(15))
+                        .foregroundStyle(Theme.muted)
+                }
+
+                if let source = post.sourceUrl.flatMap(URL.init(string:)) {
+                    VStack(spacing: 10) {
+                        Button {
+                            openURL(source)
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 8) {
+                                NetworkMark(platform: post.platform, size: 18, color: .black)
+                                Text("Open on \(network)")
+                            }
+                        }
+                        .buttonStyle(PillButtonStyle(kind: .primary))
+                        Button {
+                            UIPasteboard.general.url = source
+                            say("Link copied")
+                            dismiss()
+                        } label: {
+                            Text("Copy link")
+                        }
+                        .buttonStyle(PillButtonStyle(kind: .outline))
+                    }
+                    .padding(.top, 4)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 24)
+            .padding(.bottom, 24)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+    }
+
+    /// Their picture on the network, when it came with the post (X does; most don't).
+    private var avatarURL: URL? { ADHXClient.resolve(post.author.avatarUrl, against: server) }
+
+    @ViewBuilder
+    private var avatar: some View {
+        Group {
+            if let url = avatarURL {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image { image.resizable().scaledToFill() } else { mark }
+                }
+            } else {
+                mark
+            }
+        }
+        .frame(width: 48, height: 48)
+        .clipShape(Circle())
+        .accessibilityHidden(true)
+    }
+
+    private var mark: some View {
+        Circle().fill(Theme.raised).overlay(NetworkMark(platform: post.platform, size: 22, color: Theme.ink))
+    }
+}

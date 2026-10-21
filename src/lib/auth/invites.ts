@@ -26,6 +26,12 @@ const TOKEN_SHAPE = /^[A-Za-z0-9_-]{43}$/
 
 const hash = (token: string) => crypto.createHash('sha256').update(token).digest('hex')
 
+/** The join link people open (`/invite/<token>`), on this ADHX's address. */
+export function inviteUrl(token: string): string {
+  const base = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '')
+  return `${base}/invite/${token}`
+}
+
 /**
  * Who can invite (Settings → Your people, admins only):
  * - `admin`: only admins make invites.

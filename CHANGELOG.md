@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.3.0](https://github.com/itsmemeworks/adhx/compare/v2.2.0...v2.3.0) (2026-10-21)
+
+
+### Features
+
+* **android:** change your picture, invites, email sign-in and the reactions feed without the web ([#599](https://github.com/itsmemeworks/adhx/issues/599)) ([5f56a38](https://github.com/itsmemeworks/adhx/commit/5f56a3839009bade351b5d90a3a75f19ed3bf304))
+* **android:** reactions on every post, landscape for watching, full articles and the original-post button ([#596](https://github.com/itsmemeworks/adhx/issues/596)) ([c3d6e8a](https://github.com/itsmemeworks/adhx/commit/c3d6e8ae78d63ab7102a611c4531a2b711628001))
+* **apps:** frosted sheets, landscape for watching, full articles and the build's version ([#592](https://github.com/itsmemeworks/adhx/issues/592)) ([cabf5c5](https://github.com/itsmemeworks/adhx/commit/cabf5c56c48937a7a9e7e42b04c743d3b037f4c0))
+* **ios:** change your picture, invites, email sign-in and reactions feed, nothing opening the web ([#598](https://github.com/itsmemeworks/adhx/issues/598)) ([c786402](https://github.com/itsmemeworks/adhx/commit/c786402ead767c60cbb072889964ff8dd96127e0))
+* **ios:** react on every post and replay what people said ([#590](https://github.com/itsmemeworks/adhx/issues/590)) ([7c38743](https://github.com/itsmemeworks/adhx/commit/7c387438d655e22173012f8cd2c6390f9c9fc651))
+* **ios:** remember sound and fit for every video ([#586](https://github.com/itsmemeworks/adhx/issues/586)) ([8161349](https://github.com/itsmemeworks/adhx/commit/8161349c35f3ed9a7ee649c15adefb08efcacdc9))
+* **ios:** the network button opens the original post, and toasts take the pill's place ([#594](https://github.com/itsmemeworks/adhx/issues/594)) ([89dee0b](https://github.com/itsmemeworks/adhx/commit/89dee0b44345989bcd85e2efc5031677f5f3fc28))
+* keep reactions on every post and replay them ([#589](https://github.com/itsmemeworks/adhx/issues/589)) ([bc657ab](https://github.com/itsmemeworks/adhx/commit/bc657ab168a1c3c85935c0c9824ae28cc13ce36f))
+* phone routes so the apps never need the web, and a reactions feed ([#597](https://github.com/itsmemeworks/adhx/issues/597)) ([d1eece5](https://github.com/itsmemeworks/adhx/commit/d1eece57846558e9ceb9d8d0aef0c67dc58b12f6))
+
+
+### Bug Fixes
+
+* **android:** drop the header row from the connected screen ([#581](https://github.com/itsmemeworks/adhx/issues/581)) ([85ce6f5](https://github.com/itsmemeworks/adhx/commit/85ce6f5f1cb158940908a7ff4b328be9e49f8796))
+* **android:** fit and dock, logo bylines, tappable links, hold to hide, photo timer ([#591](https://github.com/itsmemeworks/adhx/issues/591)) ([21b1455](https://github.com/itsmemeworks/adhx/commit/21b1455d6f2f19275612d3311799723bc6b51f8d))
+* **android:** include you in the connected faces row ([#582](https://github.com/itsmemeworks/adhx/issues/582)) ([0d47fa5](https://github.com/itsmemeworks/adhx/commit/0d47fa53b43b494ceeccee80dfb662bd27494b3d))
+* **android:** use the one-row header on every home screen ([#580](https://github.com/itsmemeworks/adhx/issues/580)) ([e51efef](https://github.com/itsmemeworks/adhx/commit/e51efef1c611956fbd6a44ddc3f52f7e1d64b302))
+* **apps:** keep posts sent to you past the phone's kind filter ([#579](https://github.com/itsmemeworks/adhx/issues/579)) ([344e27c](https://github.com/itsmemeworks/adhx/commit/344e27c7ab7363bfd8fd8dad9eb8e6aafc205968))
+* **apps:** stop the why chip repeating the byline and show your face on reactions ([#587](https://github.com/itsmemeworks/adhx/issues/587)) ([6e1d997](https://github.com/itsmemeworks/adhx/commit/6e1d9979f0bd6d4b4e940aa89de2be00e1489233))
+* **ios:** hold to hide, photo timer, logo bylines, tappable links, words tiles and send via whatsapp ([#588](https://github.com/itsmemeworks/adhx/issues/588)) ([d2c97df](https://github.com/itsmemeworks/adhx/commit/d2c97df5fa816c4d5d17df31680e387c0c2afd1d))
+* **ios:** let a swipe move past a single photo ([#577](https://github.com/itsmemeworks/adhx/issues/577)) ([be2733b](https://github.com/itsmemeworks/adhx/commit/be2733bb360e79f53fe02a6a8350168d218213b7))
+* match moment titles to the boards on phone web, iphone and android ([#583](https://github.com/itsmemeworks/adhx/issues/583)) ([1c69725](https://github.com/itsmemeworks/adhx/commit/1c697258ad99f3148aa01d7889a79b8e06e7a50c))
+* **web:** keep the right now lead card its size on a busy server ([#584](https://github.com/itsmemeworks/adhx/issues/584)) ([a676c14](https://github.com/itsmemeworks/adhx/commit/a676c14c85a38b3f17297462166e1e9bc6595888))
+
 ## [2.2.0](https://github.com/itsmemeworks/adhx/compare/v2.1.2...v2.2.0) (2026-10-20)
 
 

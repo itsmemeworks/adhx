@@ -15,6 +15,7 @@ import { UNDERSTANDING_DDL } from '../semantic/schema-sql'
 import { BOARD_FEATURES_DDL } from '../sends/schema-sql'
 import { CHANNEL_VISUAL_DDL } from '../channels/visual-schema'
 import { ADMIN_COUNTS_DDL } from '../admin/schema-sql'
+import { POST_REACTIONS_DDL } from '../reactions/schema-sql'
 
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
 const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH || './drizzle'
@@ -372,6 +373,22 @@ try {
   }
 } catch (error) {
   console.log('[migrate] FAILED adding access_keys.scope', error)
+  db.close()
+  process.exit(1)
+}
+
+// login_tokens.attempts: wrong codes tried against a phone sign-in code
+// (intent 'phone'); five burn it (src/lib/auth/phone-signin.ts).
+try {
+  const tokenColumns = db.prepare('PRAGMA table_info(login_tokens)').all() as Array<{
+    name: string
+  }>
+  if (!tokenColumns.some((column) => column.name === 'attempts')) {
+    db.exec('ALTER TABLE login_tokens ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0')
+    console.log('[migrate] Added login_tokens.attempts')
+  }
+} catch (error) {
+  console.log('[migrate] FAILED adding login_tokens.attempts', error)
   db.close()
   process.exit(1)
 }
@@ -1219,13 +1236,18 @@ try {
 }
 
 // Admin counts: reactions per member per day (counts only) and the live
-// moment log (no user ids). reaction_counts is user-linked, so it exists
-// before the account guards below are installed.
+// moment log (no user ids), and the reactions kept on posts. reaction_counts
+// and post_reactions are user-linked, so they exist before the account guards
+// below are installed.
 try {
   db.exec(ADMIN_COUNTS_DDL)
-  console.log('[migrate] Ensured reaction_counts / moment_log tables')
+  db.exec(POST_REACTIONS_DDL)
+  console.log('[migrate] Ensured reaction_counts / moment_log / post_reactions tables')
 } catch (error) {
-  console.log('[migrate] FAILED creating reaction_counts / moment_log tables', error)
+  console.log(
+    '[migrate] FAILED creating reaction_counts / moment_log / post_reactions tables',
+    error,
+  )
   db.close()
   process.exit(1)
 }

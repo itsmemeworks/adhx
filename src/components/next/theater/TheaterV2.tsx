@@ -169,9 +169,12 @@ import { useBusyLogo } from '../logo-busy'
 import { POST_KEPT, POST_SAVED as NX_POST_SAVED } from '@/lib/theater/client-events'
 import { GettingReadyStage, KeptChip, SharedWithChip } from './GettingReady'
 import { onItsWay, useKeepStatus } from './useKeepStatus'
+import { useReactionReplay } from './useReactionReplay'
 
 /** How long a reaction floats on screen. */
 const REACTION_MS = 4_400
+/** At most this many float at once (a replay sends up to 12). */
+const MAX_FLOATS = 12
 
 /** X articles carry their whole body; other links only have a preview. */
 function hasFullArticle(post: FeedItem): boolean {
@@ -247,6 +250,13 @@ function emptyState(
     return {
       title: 'No saves to show here',
       body: 'They may have left, or kept everything just for themselves.',
+      action: 'Channels',
+      href: '/channels',
+    }
+  if (source.reacted && !(load.status === 'error' && !missing))
+    return {
+      title: 'No reactions yet',
+      body: 'React to a post in the player and it plays here, with everyone else’s.',
       action: 'Channels',
       href: '/channels',
     }
@@ -473,6 +483,19 @@ export function TheaterV2({
   const [reactionError, setReactionError] = useState<string | null>(null)
   const reactionTarget = useRef<FeedItem | null>(null)
   const reactionRequest = useRef<AbortController | null>(null)
+  /** Reactions already floated this visit (Live arrivals, yours, replays), so none floats twice. */
+  const shownReactions = useRef<Set<string>>(new Set())
+  const showFloat = useCallback((float: FloatingReaction) => {
+    shownReactions.current.add(float.id)
+    setFloats((list) =>
+      list.some((r) => r.id === float.id) ? list : [...list, float].slice(-MAX_FLOATS),
+    )
+    window.setTimeout(() => setFloats((list) => list.filter((r) => r.id !== float.id)), REACTION_MS)
+  }, [])
+  const dropFloats = useCallback((ids: readonly string[]) => {
+    const gone = new Set(ids)
+    setFloats((list) => list.filter((r) => !gone.has(r.id)))
+  }, [])
   useEffect(() => {
     setReactOpen(false)
     setReactionError(null)
@@ -640,6 +663,15 @@ export function TheaterV2({
     }
   }, [currentKey, caughtUp, markSeen])
   const member = !!me?.user
+  // What people left on this post floats up once it settles (members only, once per visit).
+  useReactionReplay({
+    enabled: member && !caughtUp && !!current,
+    platform: current ? (current.post.platform ?? 'twitter') : null,
+    id: current?.post.id ?? null,
+    isShown: (id) => shownReactions.current.has(id),
+    onFloat: showFloat,
+    onCancel: dropFloats,
+  })
   // Still being kept? "Getting it ready" covers the stage until the copy is here (j1-4).
   const keep = useKeepStatus(
     current && kind !== 'post' && kind !== 'article'
@@ -796,18 +828,11 @@ export function TheaterV2({
         if (event.watchers) setWatchers(event.watchers)
       }
       if (event.type === 'reaction' && event.slug === source.moment) {
-        const float: FloatingReaction = {
+        showFloat({
           id: event.id,
           saver: event.saver,
           ...(event.emoji ? { emoji: event.emoji } : { text: event.text }),
-        }
-        setFloats((list) =>
-          list.some((r) => r.id === float.id) ? list : [...list, float].slice(-8),
-        )
-        window.setTimeout(
-          () => setFloats((list) => list.filter((r) => r.id !== float.id)),
-          REACTION_MS,
-        )
+        })
         return
       }
       if (event.type !== 'save' || event.item.to?.kind !== 'moment') return
@@ -864,37 +889,80 @@ export function TheaterV2({
     }
   }, [source.moment, replaceItems])
 
-  /** Keep the draft and its original post until the server acknowledges it. */
+  /**
+   * React to the post that was on screen when the picker opened. Live goes to
+   * the room (which echoes it back to you, and keeps it on the post); any
+   * other post floats yours at once and keeps it (`/api/posts/reactions`).
+   * Words stay in the picker until the server has them.
+   */
   const sendReaction = useCallback(
     async (reaction: { emoji: ReactionEmoji } | { text: string }): Promise<boolean> => {
       const post = reactionTarget.current ?? itemsRef.current[indexRef.current]?.post
-      if (!source.moment || !post || reactionRequest.current) return false
+      if (!post || reactionRequest.current) return false
       const controller = new AbortController()
       reactionRequest.current = controller
       setReacting(true)
       setReactionError(null)
-      try {
-        const response = await fetch(`/api/moments/${encodeURIComponent(source.moment)}/react`, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)]),
-          body: JSON.stringify({ ...reaction, platform: post.platform ?? 'twitter', id: post.id }),
+      const live = !!source.moment
+      const body = JSON.stringify({
+        ...reaction,
+        platform: post.platform ?? 'twitter',
+        id: post.id,
+      })
+      // Yours floats at once, with your face (Live waits for the room's echo).
+      const draftId = `mine-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+      if (!live && me?.user) {
+        showFloat({
+          id: draftId,
+          saver: {
+            username: me.user.username,
+            name: me.user.displayName || null,
+            avatarUrl: me.user.avatarUrl,
+            savedAt: new Date().toISOString(),
+            isYou: true,
+          },
+          ...reaction,
         })
-        if (controller.signal.aborted) return false
-        if (!response.ok) {
+        if ('emoji' in reaction) setReactOpen(false)
+      }
+      const failed = (status?: number) => {
+        if (live) {
           setReactionError(
-            response.status === 429
+            status === 429
               ? 'Easy there. Try again in a moment.'
               : 'That didn’t send. Your words are still here. Try again.',
           )
+          return
+        }
+        dropFloats([draftId])
+        flash(
+          status === 429 ? 'Easy there. Try again in a moment.' : 'Couldn’t send that. Try again.',
+        )
+      }
+      try {
+        const response = await fetch(
+          live
+            ? `/api/moments/${encodeURIComponent(source.moment!)}/react`
+            : '/api/posts/reactions',
+          {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)]),
+            body,
+          },
+        )
+        if (controller.signal.aborted) return false
+        if (!response.ok) {
+          failed(response.status)
           return false
         }
+        const kept = (await response.json().catch(() => null)) as { id?: string } | null
+        if (kept?.id) shownReactions.current.add(kept.id)
         setReactOpen(false)
         return true
       } catch {
-        if (!controller.signal.aborted)
-          setReactionError('That didn’t send. Your words are still here. Try again.')
+        if (!controller.signal.aborted) failed()
         return false
       } finally {
         if (reactionRequest.current === controller) {
@@ -903,7 +971,7 @@ export function TheaterV2({
         }
       }
     },
-    [source.moment],
+    [source.moment, me, showFloat, dropFloats, flash],
   )
 
   const toggleWander = useCallback(
@@ -1822,11 +1890,13 @@ export function TheaterV2({
   const cover = postCoverSrc(current.post)
   const channelKind = source.groupChannel
     ? 'From everyone'
-    : source.auto
-      ? 'Made for you'
-      : source.friend
-        ? 'Your people'
-        : 'Channel'
+    : source.reacted
+      ? 'Your people'
+      : source.auto
+        ? 'Made for you'
+        : source.friend
+          ? 'Your people'
+          : 'Channel'
   const inQueue = queueSavers(items)
 
   const muteButton = (
@@ -2030,7 +2100,13 @@ export function TheaterV2({
               <div className="absolute left-6 top-5 max-w-[calc(50%-24px)]">
                 <ChannelChip
                   href={back}
-                  label={source.groupChannel || source.auto || source.channel ? 'Channel' : 'Saves'}
+                  label={
+                    source.groupChannel || source.auto || source.channel
+                      ? 'Channel'
+                      : source.reacted
+                        ? 'Your people'
+                        : 'Saves'
+                  }
                   name={title ?? 'Channel'}
                   position={`${position.n} of ${Math.max(position.of, feedTotal)}`}
                   covers={items}
@@ -2324,7 +2400,7 @@ export function TheaterV2({
                   </div>
                   {muteOnFrame && !gettingReady && muteButton}
 
-                  {source.moment && member && !wide && (
+                  {member && !(wide && layout === 'panel' && source.moment) && (
                     // Rising from just above the byline, clear of the rail.
                     <ReactionFloats
                       reactions={floats}
@@ -2679,11 +2755,12 @@ export function TheaterV2({
                       </div>
                     </div>
                   )}
-                  {source.moment && member && reactOpen && (
+                  {member && reactOpen && (
                     <ReactionPicker
                       onEmoji={(emoji) => sendReaction({ emoji })}
                       onText={(text) => sendReaction({ text })}
                       onClose={() => setReactOpen(false)}
+                      live={!!source.moment}
                       disabled={reacting}
                       error={reactionError}
                       className="absolute inset-x-3 bottom-[max(16px,env(safe-area-inset-bottom))] z-40"
@@ -2714,19 +2791,33 @@ export function TheaterV2({
                       : 'absolute bottom-[34px] right-3 max-h-[calc(100%-150px)] gap-3 overflow-y-auto overscroll-contain [scrollbar-width:none]',
                 )}
               >
-                {source.moment && member && (
-                  <ReactButton
-                    open={reactOpen}
-                    className={railStyle(false, reactOpen).replace('pointer-events-auto ', '')}
-                    onToggle={() => {
-                      if (!reactOpen) {
-                        reactionTarget.current = itemsRef.current[indexRef.current]?.post ?? null
-                        setReactionError(null)
-                      }
-                      setReactOpen((o) => !o)
-                    }}
-                  />
-                )}
+                {current &&
+                  railItem(
+                    <ReactButton
+                      open={reactOpen}
+                      className={railStyle(false, reactOpen).replace('pointer-events-auto ', '')}
+                      onToggle={() => {
+                        if (!member) {
+                          if (authLoading) return
+                          // Signed out: sign in, then back to this post's own page (like Save).
+                          const returnTo = previewPath(
+                            current.post.platform ?? 'twitter',
+                            current.post.author,
+                            current.post.id,
+                            kind === 'photo' ? 'photo' : null,
+                          )
+                          window.location.assign(`/start?${new URLSearchParams({ returnTo })}`)
+                          return
+                        }
+                        if (!reactOpen) {
+                          reactionTarget.current = itemsRef.current[indexRef.current]?.post ?? null
+                          setReactionError(null)
+                        }
+                        setReactOpen((o) => !o)
+                      }}
+                    />,
+                    'React',
+                  )}
                 {railItem(
                   <button
                     type="button"
@@ -2950,7 +3041,7 @@ export function TheaterV2({
                   )}
                   <span>
                     {[
-                      `${Math.max(position.of, feedTotal)} saves`,
+                      `${Math.max(position.of, feedTotal)} ${source.reacted ? 'posts with reactions' : 'saves'}`,
                       inQueue.length > 0 ? bylineLine(inQueue, false) : null,
                     ]
                       .filter(Boolean)
@@ -3006,7 +3097,7 @@ export function TheaterV2({
                     className="flex h-[52px] items-center justify-center gap-2 whitespace-nowrap rounded-full border border-white/[0.22] px-[18px] text-[15px] font-extrabold text-nx-cream"
                   >
                     <Share aria-hidden className="h-[18px] w-[18px]" />
-                    <span>Share channel</span>
+                    <span>{source.reacted ? 'Copy link' : 'Share channel'}</span>
                   </button>
                 </div>
                 <PanelDivider />

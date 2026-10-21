@@ -1,5 +1,6 @@
 package com.adhx.share.feed
 
+import com.adhx.share.ui.KeepUpright
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -200,6 +201,7 @@ fun NewTab(
             },
             topBar = { header(badge, page >= ui.items.size) },
             hideTopBarWhileSending = true,
+            toastInTopBar = true,
             onSaver = actions.openPerson,
             aboveCaption = { post -> WhyChip(post, server) { why = post } },
             end = if (ui.ended) end else null,
@@ -281,6 +283,8 @@ private fun WhyChip(post: PhonePost, server: String, onClick: () -> Unit) {
 /** The chip's short words: "Saved together", "Close to you", else the headline itself. */
 internal fun whyChipLabel(post: PhonePost): String? {
     val headline = post.headline ?: return null
+    // "Ana saved this · 1d" alone is already the byline under it (the web's rule).
+    if ((post.whyKind == "fresh" || post.whyKind == "yours") && post.savers.isNotEmpty()) return null
     return when (post.whyKind) {
         "together" -> Copy.WHY_TOGETHER
         "close" -> Copy.WHY_CLOSE
@@ -339,6 +343,7 @@ private fun WhySheet(
     /** The thumbnail beside "Like … you kept": that post of yours. */
     onOpenPost: (platform: String, id: String) -> Unit = { _, _ -> },
 ) {
+    KeepUpright()
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val others = post.savers.filterNot { it.isYou }

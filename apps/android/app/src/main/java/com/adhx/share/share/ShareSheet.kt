@@ -116,7 +116,7 @@ fun ShareSheetScreen(
     vm: ShareViewModel,
     frosted: Boolean,
     onFinish: () -> Unit,
-    /** Opens the post in this app's player (the website only as a fallback). */
+    /** Opens the post in this app's player (or just the app); never the website. */
     onOpenInAdhx: (server: String, post: SaveResponse?) -> Unit,
     onOpenApp: () -> Unit,
 ) {

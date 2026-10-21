@@ -11,6 +11,10 @@ struct PairResult: Decodable {
 struct MeResult: Decodable {
     let username: String?
     let name: String?
+    /// Your picture; older servers don't send it.
+    let avatarUrl: String?
+    /// upload · gob · x · generated (newer servers).
+    var avatarSource: String? = nil
 }
 
 struct KeptCounts: Codable, Equatable {
@@ -119,6 +123,8 @@ struct PhoneArticle: Decodable, Hashable {
     let title: String?
     let description: String?
     let url: String
+    /// The whole X article as markdown, when your ADHX kept it (newer servers).
+    var body: String? = nil
 }
 
 struct PhoneMatch: Decodable, Hashable {
@@ -501,6 +507,19 @@ struct ADHXClient {
                                     body: [String: Any]? = nil,
                                     headers: [String: String] = [:],
                                     timeout: TimeInterval = Self.timeout) async throws -> T {
+        let data = try body.map { try JSONSerialization.data(withJSONObject: $0) }
+        return try await send(method, path, query: query, data: data,
+                              contentType: body == nil ? nil : "application/json",
+                              headers: headers, timeout: timeout)
+    }
+
+    /// One request with a body that's already made (a photo's multipart form).
+    func send<T: Decodable>(_ method: String, _ path: String,
+                            query: [URLQueryItem] = [],
+                            data body: Data?,
+                            contentType: String?,
+                            headers: [String: String] = [:],
+                            timeout: TimeInterval = Self.timeout) async throws -> T {
         guard var comps = URLComponents(url: server, resolvingAgainstBaseURL: false) else {
             throw APIError.server(status: 0, code: "bad_address", message: "That address doesn’t look right.")
         }
@@ -518,8 +537,8 @@ struct ADHXClient {
         if let key { request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization") }
         for (name, value) in headers { request.setValue(value, forHTTPHeaderField: name) }
         if let body {
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            request.setValue(contentType ?? "application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = body
         }
 
         let data: Data
@@ -642,6 +661,9 @@ enum Links {
               !code.isEmpty else { return nil }
         return (server, normalizedCode(code))
     }
+
+    /// `adhx://open`: the app, on Home.
+    static let app = URL(string: "adhx://open")!
 
     /// `adhx://post?platform=…&id=…`: open one of your saves in the app.
     static func post(platform: String, id: String) -> URL? {

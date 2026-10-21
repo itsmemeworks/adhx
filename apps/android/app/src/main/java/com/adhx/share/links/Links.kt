@@ -11,16 +11,34 @@ object Links {
     private const val TRAILING = ".,;:!?)]}>'\"…»”’"
 
     /** The first http(s) link in [text], without trailing punctuation. */
-    fun firstLink(text: String?): String? {
-        if (text.isNullOrBlank()) return null
-        val match = LINK.find(text) ?: return null
-        var link = match.value
-        while (link.isNotEmpty() && link.last() in TRAILING) {
-            // Keep a closing bracket that closes one inside the link (Wikipedia-style).
-            if (link.last() == ')' && link.count { it == '(' } >= link.count { it == ')' }) break
-            link = link.dropLast(1)
-        }
-        return link.takeIf { it.toHttpUrlOrNull() != null }
+    fun firstLink(text: String?): String? = spans(text).firstOrNull()?.url
+
+    /** A link found in a post's words: where it sits in the text ([start] until [end]) and the link itself. */
+    data class Span(val start: Int, val end: Int, val url: String)
+
+    /** Every http(s) link in [text], in order, each without trailing punctuation. */
+    fun spans(text: String?): List<Span> {
+        if (text.isNullOrBlank()) return emptyList()
+        return LINK.findAll(text).mapNotNull { match ->
+            var link = match.value
+            while (link.isNotEmpty() && link.last() in TRAILING) {
+                // Keep a closing bracket that closes one inside the link (Wikipedia-style).
+                if (link.last() == ')' && link.count { it == '(' } >= link.count { it == ')' }) break
+                link = link.dropLast(1)
+            }
+            link.takeIf { it.toHttpUrlOrNull() != null }?.let { Span(match.range.first, match.range.first + it.length, it) }
+        }.toList()
+    }
+
+    /**
+     * A link as it reads in a post: the site and path, without the scheme,
+     * "www.", query or trailing slash ("youtube.com/watch"), cut with "…"
+     * past [max] characters.
+     */
+    fun short(link: String, max: Int = 32): String {
+        val url = link.toHttpUrlOrNull() ?: return display(link)
+        val text = url.host.removePrefix("www.") + url.encodedPath.trimEnd('/')
+        return if (text.length > max) text.take(max - 1).trimEnd('/', '.', '-') + "…" else text
     }
 
     /** The link without "https://" and "www.", for showing under the post. */

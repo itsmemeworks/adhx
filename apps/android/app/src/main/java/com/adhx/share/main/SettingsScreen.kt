@@ -1,7 +1,7 @@
 package com.adhx.share.main
 
+import androidx.compose.foundation.text.selection.SelectionContainer
 import android.content.Context
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -80,7 +80,6 @@ import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.SettingsCopy
 import com.adhx.share.ui.faceColor
-import com.adhx.share.ui.openInAdhx
 
 /** The red of Remove and Decline. */
 private val Danger = Color(0xFFFF8F7A)
@@ -101,9 +100,8 @@ class SettingsActions(
  * Invite, the feed filter, Just for me and Sound by default, what your ADHX
  * is doing, Shared lately, and this phone's connection.
  *
- * Changing your picture and inviting open Settings on your ADHX: the phone
- * routes for them (`/api/account/avatar`, `/api/invites`) take a signed-in
- * browser, not a phone key.
+ * Change picture ([PictureFlow]) and Invite someone ([InviteSheet]) happen
+ * here on the phone, through `/api/app/me/avatar` and `/api/app/invites`.
  */
 @Composable
 fun SettingsScreen(
@@ -134,10 +132,8 @@ fun SettingsScreen(
     val list = peopleUi.people
     val you = list?.you
     val username = you?.username ?: connection.username?.trim()?.trimStart('@')?.takeIf { it.isNotEmpty() }
-    val openWeb: (String, String) -> Unit = { anchor, note ->
-        Toast.makeText(context, note, Toast.LENGTH_SHORT).show()
-        openInAdhx(context, connection.server, "/settings#$anchor")
-    }
+    var pictureOpen by rememberSaveable { mutableStateOf(false) }
+    var inviteOpen by rememberSaveable { mutableStateOf(false) }
 
     Column(
         Modifier
@@ -173,7 +169,7 @@ fun SettingsScreen(
                         onClickLabel = SettingsCopy.CHANGE_PICTURE,
                         interactionSource = null,
                         indication = null,
-                    ) { openWeb("you", SettingsCopy.CHANGE_PICTURE_NOTE) },
+                    ) { pictureOpen = true },
                 ) {
                     Avatar(
                         username = username.orEmpty(),
@@ -182,6 +178,7 @@ fun SettingsScreen(
                         server = connection.server,
                         size = 64.dp,
                         ring = faceColor(username.orEmpty()),
+                        isYou = true,
                     )
                     Box(
                         Modifier
@@ -222,7 +219,7 @@ fun SettingsScreen(
                     SettingsCopy.CHANGE_PICTURE,
                     filled = false,
                     enabled = true,
-                    onClick = { openWeb("you", SettingsCopy.CHANGE_PICTURE_NOTE) },
+                    onClick = { pictureOpen = true },
                     height = 40,
                     fontSize = 14,
                 )
@@ -257,7 +254,7 @@ fun SettingsScreen(
             }
             if (list == null || list.canInvite) {
                 Divider()
-                NavRow(SettingsCopy.INVITE, onClick = { openWeb("invite", SettingsCopy.INVITE_NOTE) })
+                NavRow(SettingsCopy.INVITE, onClick = { inviteOpen = true })
             }
             Divider()
             NavRow(SettingsCopy.FEED, onClick = { filterOpen = true }) {
@@ -342,12 +339,25 @@ fun SettingsScreen(
             notice?.let { Text(it, fontSize = 13.sp, color = AdhxColors.Faint) }
         }
 
+        // Which release this phone runs, to match against the GitHub tags.
+        versionName(context)?.let {
+            SelectionContainer {
+                Text(
+                    "ADHX Share $it",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AdhxColors.Muted,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                )
+            }
+        }
         Text(
-            listOfNotNull(versionName(context)?.let { "ADHX Share $it" }, SettingsCopy.TAGLINE).joinToString(" · "),
+            SettingsCopy.TAGLINE,
             fontSize = 12.sp,
             color = AdhxColors.Faint,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 
@@ -360,6 +370,19 @@ fun SettingsScreen(
                 feed.applyFilter(types, mode)
             },
         )
+    }
+
+    if (pictureOpen) {
+        PictureFlow(
+            vm = vm,
+            connection = connection,
+            onChanged = { people.load() },
+            onClose = { pictureOpen = false },
+        )
+    }
+
+    if (inviteOpen) {
+        InviteSheet(connection = connection, onClose = { inviteOpen = false })
     }
 
     if (confirmRemove) {

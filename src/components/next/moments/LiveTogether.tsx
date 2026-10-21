@@ -125,14 +125,16 @@ export function ReactButton({
 }
 
 /**
- * Pick an emoji (sends it and closes) or say a few words to everyone
- * watching. The words are sent as typed; the server cleans them and they are
- * only ever shown as text.
+ * Pick an emoji (sends it and closes) or say a few words: to everyone
+ * watching in Live (`live`), else on the post for the people who can see it.
+ * The words are sent as typed; the server cleans them and they are only ever
+ * shown as text.
  */
 export function ReactionPicker({
   onEmoji,
   onText,
   onClose,
+  live = false,
   disabled = false,
   error,
   className,
@@ -140,6 +142,8 @@ export function ReactionPicker({
   onEmoji: (emoji: ReactionEmoji) => void | Promise<boolean>
   onText: (text: string) => void | Promise<boolean>
   onClose: () => void
+  /** Tuned in to a moment: the words go to everyone watching too. */
+  live?: boolean
   disabled?: boolean
   error?: string | null
   className?: string
@@ -206,7 +210,7 @@ export function ReactionPicker({
           aria-describedby={`${inputId}-hint`}
           autoComplete="off"
           enterKeyHint="send"
-          placeholder="Say something to everyone watching"
+          placeholder={live ? 'Say something to everyone watching' : 'Say something'}
           className="h-11 min-w-0 flex-1 rounded-full border border-[#4a453e] bg-[#0f0e0c] px-4 text-[15px] text-nx-cream placeholder:text-nx-muted"
         />
         <button
@@ -218,7 +222,9 @@ export function ReactionPicker({
         </button>
       </form>
       <p id={`${inputId}-hint`} className="m-0 text-xs text-nx-soft">
-        Live reactions disappear after a few seconds.
+        {live
+          ? 'Everyone watching sees it now. It stays on the post for people who can see it.'
+          : 'People who can see this post see it when they watch it.'}
       </p>
       {error && (
         <p role="status" className="m-0 text-sm text-[#ffb891]">

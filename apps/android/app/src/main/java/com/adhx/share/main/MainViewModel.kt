@@ -15,6 +15,10 @@ import com.adhx.share.data.SettingsPrefs
 import com.adhx.share.links.Links
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.ApiResult
+import com.adhx.share.net.AvatarRequest
+import com.adhx.share.net.AvatarResponse
+import com.adhx.share.net.AvatarSource
+import com.adhx.share.net.PairResponse
 import com.adhx.share.net.KeepStatus
 import com.adhx.share.net.QueuedState
 import com.adhx.share.ui.Copy
@@ -103,28 +107,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val name = Build.MODEL?.trim()?.take(40)?.ifBlank { null }
             when (val result = AdhxApi(server, null).pair(code, name)) {
                 is ApiResult.Ok -> {
-                    val next = Connection(
-                        server = server,
-                        key = result.value.key,
-                        username = result.value.username,
-                        phoneName = result.value.name ?: name,
-                    )
-                    val changedAccount = store.changesAccount(next)
-                    val saved = store.save(next)
-                    if (!saved) {
-                        showError(store.storageError.value ?: "Couldn’t keep your connection. Free some space and try a new code.")
-                        return@launch
-                    }
-                    if (changedAccount) {
-                        SettingsPrefs.get(getApplication<Application>()).forgetAccount()
-                        SaveQueue.cancelAll(getApplication<Application>())
-                        try { history.clear() } catch (_: HistoryWriteException) {
-                            showError("Connected, but couldn’t clear the old history. Free some space and reopen ADHX.")
-                        }
-                    }
-                    _reach.value = Reach.Connected
-                    _connect.value = ConnectUi()
-                    Welcome.pending = true
+                    val problem = connectWith(server, result.value, name)
+                    if (problem != null) showError(problem) else _connect.value = ConnectUi()
                 }
                 is ApiResult.Failed -> showError(
                     result.message?.takeIf { it.isNotBlank() }
@@ -133,6 +117,167 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 is ApiResult.Offline -> showError(
                     "Can’t reach ${Links.host(server)}. Check the address and that your phone is online.",
                 )
+            }
+        }
+    }
+
+    /**
+     * Keep a new phone key (from a pairing code or an emailed code): a
+     * different account starts this phone over. Null when it's kept, else
+     * what to say.
+     */
+    private fun connectWith(server: String, value: PairResponse, name: String?): String? {
+        val next = Connection(
+            server = server,
+            key = value.key,
+            username = value.username,
+            phoneName = value.name ?: name,
+        )
+        val changedAccount = store.changesAccount(next)
+        if (!store.save(next)) {
+            return store.storageError.value ?: "Couldn’t keep your connection. Free some space and try again."
+        }
+        var problem: String? = null
+        if (changedAccount) {
+            SettingsPrefs.get(getApplication<Application>()).forgetAccount()
+            SaveQueue.cancelAll(getApplication<Application>())
+            try { history.clear() } catch (_: HistoryWriteException) {
+                problem = "Connected, but couldn’t clear the old history. Free some space and reopen ADHX."
+            }
+        }
+        _reach.value = Reach.Connected
+        _avatarSource.value = null
+        Welcome.pending = true
+        return problem
+    }
+
+    // Sign in with email
+
+    private val _email = MutableStateFlow(EmailSignInUi())
+    val email: StateFlow<EmailSignInUi> = _email.asStateFlow()
+
+    private fun phoneName(): String? = Build.MODEL?.trim()?.take(40)?.ifBlank { null }
+
+    /** Email a 6-digit code for [emailInput]'s account on [serverInput]. */
+    fun sendEmailCode(serverInput: String, emailInput: String) {
+        if (_email.value.busy) return
+        val server = Links.normalizeServer(serverInput)
+        if (server == null) {
+            _email.value = _email.value.copy(error = EmailSignIn.BAD_ADDRESS)
+            return
+        }
+        val address = EmailSignIn.cleanEmail(emailInput)
+        if (address == null) {
+            _email.value = _email.value.copy(error = EmailSignIn.BAD_EMAIL)
+            return
+        }
+        _email.value = _email.value.copy(server = server, email = address, busy = true, error = null)
+        viewModelScope.launch {
+            val result = AdhxApi(server, null).signIn(address, phoneName())
+            val now = _email.value
+            if (now.server != server || now.email != address) return@launch
+            _email.value = when (result) {
+                is ApiResult.Ok -> now.copy(step = SignInStep.Code, busy = false, sentAt = System.currentTimeMillis())
+                // A code already went to this address in the last minute: type that one.
+                is ApiResult.Failed -> if (EmailSignIn.codeAlreadySent(result.code)) {
+                    now.copy(step = SignInStep.Code, busy = false, sentAt = if (now.step == SignInStep.Code) now.sentAt else System.currentTimeMillis(),
+                        error = EmailSignIn.sendError(result.status, result.code, result.message, server))
+                } else {
+                    now.copy(busy = false, error = EmailSignIn.sendError(result.status, result.code, result.message, server))
+                }
+                ApiResult.Offline -> now.copy(busy = false, error = EmailSignIn.sendError(0, null, null, server, offline = true))
+            }
+        }
+    }
+
+    /** "Send a new code", once a minute has passed. */
+    fun resendEmailCode() {
+        val now = _email.value
+        val server = now.server ?: return
+        if (EmailSignIn.resendIn(now.sentAt, System.currentTimeMillis()) > 0) return
+        sendEmailCode(server, now.email)
+    }
+
+    /** Spend the emailed code; on success the phone is connected exactly as after pairing. */
+    fun verifyEmailCode(codeInput: String) {
+        val now = _email.value
+        val server = now.server ?: return
+        if (now.busy) return
+        val code = EmailSignIn.cleanCode(codeInput)
+        if (code.length != EmailSignIn.CODE_LENGTH) return
+        _email.value = now.copy(busy = true, error = null)
+        viewModelScope.launch {
+            val name = phoneName()
+            val result = AdhxApi(server, null).verifySignIn(now.email, code, name)
+            val current = _email.value
+            _email.value = when (result) {
+                is ApiResult.Ok -> {
+                    val problem = connectWith(server, result.value, name)
+                    if (problem == null) EmailSignInUi() else current.copy(busy = false, error = problem)
+                }
+                is ApiResult.Failed -> current.copy(busy = false, error = EmailSignIn.verifyError(result.status, result.code, result.message, server))
+                ApiResult.Offline -> current.copy(busy = false, error = EmailSignIn.verifyError(0, null, null, server, offline = true))
+            }
+        }
+    }
+
+    /** Back from the code to the address and email. */
+    fun emailBack() {
+        _email.value = _email.value.copy(step = SignInStep.Email, busy = false, error = null)
+    }
+
+    // Your picture
+
+    private val _avatarSource = MutableStateFlow<String?>(null)
+
+    /** Where your picture comes from, as `/api/app/me` last said ([com.adhx.share.net.AvatarSource]); null until it says. */
+    val avatarSource: StateFlow<String?> = _avatarSource.asStateFlow()
+
+    private val _picture = MutableStateFlow(PictureUi())
+    val picture: StateFlow<PictureUi> = _picture.asStateFlow()
+
+    fun clearPictureError() {
+        if (_picture.value.error != null) _picture.value = _picture.value.copy(error = null)
+    }
+
+    /** A photo, already cropped square, as your picture. */
+    fun uploadPicture(jpeg: ByteArray, onDone: () -> Unit = {}) =
+        changePicture(onDone) { it.uploadAvatar(jpeg) }
+
+    /** A Gob face in [colour] ([GobColours]). */
+    fun useGob(colour: String, onDone: () -> Unit = {}) =
+        changePicture(onDone) { it.setAvatar(AvatarRequest(source = AvatarSource.GOB, colour = colour)) }
+
+    /** Your X photo. 409 `no_x_picture` says there isn't one. */
+    fun useXPhoto(onDone: () -> Unit = {}) =
+        changePicture(onDone) { it.setAvatar(AvatarRequest(source = AvatarSource.X)) }
+
+    /** No picture: the face drawn from your username. */
+    fun removePicture(onDone: () -> Unit = {}) =
+        changePicture(onDone) { it.removeAvatar() }
+
+    private fun changePicture(onDone: () -> Unit, call: suspend (AdhxApi) -> ApiResult<AvatarResponse>) {
+        if (_picture.value.busy) return
+        val connection = store.current() ?: return
+        _picture.value = PictureUi(busy = true)
+        viewModelScope.launch {
+            val result = call(AdhxApi(connection))
+            if (!connection.sameCredential(store.current())) return@launch
+            when (result) {
+                is ApiResult.Ok -> {
+                    val source = result.value.source ?: if (result.value.avatarUrl == null) AvatarSource.GENERATED else AvatarSource.UPLOAD
+                    // Every "you" face reads the connection, so they all change at once.
+                    store.updateIdentity(connection, null, null, result.value.avatarUrl)
+                    _avatarSource.value = source
+                    _picture.value = PictureUi()
+                    checkMe()
+                    onDone()
+                }
+                is ApiResult.Failed -> {
+                    if (result.status == 401 || result.code == "bad_key") store.clear(removedByServer = true, expected = connection)
+                    _picture.value = PictureUi(error = PictureCopy.error(result.status, result.code, result.message))
+                }
+                ApiResult.Offline -> _picture.value = PictureUi(error = PictureCopy.OFFLINE)
             }
         }
     }
@@ -147,7 +292,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             when (result) {
                 is ApiResult.Ok -> {
                     _reach.value = Reach.Connected
-                    store.updateIdentity(connection, result.value.username, result.value.name)
+                    store.updateIdentity(connection, result.value.username, result.value.name, result.value.avatarUrl)
+                    _avatarSource.value = result.value.avatarSource
                 }
                 is ApiResult.Failed -> {
                     if (result.status == 401 || result.code == "bad_key") {
@@ -230,6 +376,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Forget the key and the history, and drop links still waiting. */
     fun disconnect(): Boolean {
         if (!store.clear()) return false
+        _avatarSource.value = null
+        _email.value = EmailSignInUi()
         SaveQueue.cancelAll(getApplication<Application>())
         try { history.clear() } catch (_: HistoryWriteException) {
             showError("Disconnected, but couldn’t clear the old history. Free some space and reopen ADHX.")

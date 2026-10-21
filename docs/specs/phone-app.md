@@ -26,13 +26,18 @@ Offline, Shared lately, Android sheet).
 4. The card polls `GET /api/app/phones` while the code is up and shows the new
    phone as soon as it appears.
 
+The other way in needs no website: **Sign in with email** on Connect asks
+`POST /api/app/signin` for a 6-digit code by email and spends it at
+`POST /api/app/signin/verify` for the same phone key (see API below). The
+pairing code and QR stay for servers that don't send email.
+
 ## Phone keys
 
 Phone keys are rows in `access_keys` with `scope = 'phone'` (the Search from
 Claude keys are `scope = 'search'`). Same shape (`adhx_` + 43 URL-safe
 characters), only the SHA-256 is kept, up to 10 per account. A phone key is
-accepted by `/api/app/save`, `/api/app/private`, `/api/app/note`, `/api/app/status`,
-`/api/app/me`, `/api/app/saves`, `/api/app/search`, the friends feed
+accepted by `/api/app/save`, `/api/app/private`, `/api/app/note`, `/api/app/reactions`, `/api/app/reacted`, `/api/app/status`,
+`/api/app/me` (and `/api/app/me/avatar`), `/api/app/invites`, `/api/app/saves`, `/api/app/search`, the friends feed
 endpoints below (`feed`, `seen`, `channels`, `live`), Settings' `people` and
 `doing`, members' pictures (`/api/files/avatar/<hash>`) and the owner's own
 Just for me files (`/api/files/...`) only; a search key is not accepted
@@ -43,8 +48,15 @@ its key.
 
 ## API
 
-All app endpoints take `Authorization: Bearer <phone key>` (except `pair`) and
-answer JSON. Errors are `{ error: string, code: string }`, where `error` is
+All app endpoints take `Authorization: Bearer <phone key>` (except `pair`,
+`signin` and `signin/verify`) and answer JSON, `Cache-Control: no-store`.
+
+**Faces.** Every person object the server sends (savers, reactors, Live
+watchers and `reaction` events, people, send targets, forming groups) is
+`{ username, name, avatarUrl, … }` with `avatarUrl` from `memberAvatar`: null
+only when that member chose the generated icon (draw their letter then). An
+uploaded or Gob picture is `/api/files/avatar/<hash>`, a members-only address:
+fetch it with the phone key, or it 401s and the letter shows by mistake. Errors are `{ error: string, code: string }`, where `error` is
 plain words fit to show.
 
 ### `POST /api/app/pair` — `{ code, name? }`
@@ -55,10 +67,96 @@ The code is case-insensitive and may contain a dash or spaces.
 - `201 { key, name, username }`
 - `400 { code: 'bad_code' }` unknown, used or expired code (same answer for all)
 
+### `POST /api/app/signin` — `{ email, name? }`
+
+Emails a 6-digit code to sign this phone in (no key; the email is the
+proof). Existing accounts only, and it answers `200 { ok: true }` for every
+well-formed address: an address with no account, a banned one, or one still
+waiting to be let in gets a stand-in code nobody receives, so asking (and
+guessing, below) looks the same either way. A new code replaces the address's
+previous one. In development without email the code is printed in the server
+log (`[sign-in-code] …`), like magic links.
+
+- `400 bad_email`
+- `429 too_soon` — one code a minute per address (shared with the magic link)
+- `429 busy` with `Retry-After` — 20 asks per 10 minutes per network, 6 an
+  hour per address
+- `503 no_email` — this ADHX doesn't send email (no `RESEND_API_KEY` /
+  `SMTP_URL`, or links go to the admin page): use the pairing code instead.
+  The same answer for every address.
+- `503 send_failed` — the email didn't go; the code is dropped, so asking
+  again doesn't wait a minute
+
+### `POST /api/app/signin/verify` — `{ email, code, name? }`
+
+`code` may contain spaces or a dash. `name` is the phone's name, as for `pair`.
+The code is stored only as an HMAC (`login_tokens`, intent `phone`), works
+**once**, for **15 minutes**.
+
+- `201 { key, name, username }` — exactly what `pair` returns
+- `400 bad_code` — wrong code (also for an address with no account, or one
+  banned since the code went). The **fifth** wrong try burns the code.
+- `410 expired` — no live code: past 15 minutes, already used, or burned.
+  Ask for a new one.
+- `409 too_many` — 10 phones already
+- `400 bad_email`, `429 busy` (60 tries per 10 minutes per network)
+
 ### `GET /api/app/me`
 
-- `200 { username, name }` — who the key saves for, and the phone's name
+- `200 { username, name, avatarUrl, avatarSource }` — who the key saves for,
+  the phone's name, your picture (`memberAvatar`: null for the generated
+  icon) and where it came from: `'upload' | 'gob' | 'x' | 'generated'`
+  (`generated` whenever `avatarUrl` is null). Refetch it after changing your
+  picture; use `avatarUrl` for "you" everywhere (your own reactions, Live
+  included).
 - `401 { code: 'bad_key' }` the key was removed (the app goes back to Connect)
+
+### Your picture — `/api/app/me/avatar`
+
+The same handler as the web's `POST /api/account/avatar`
+(`src/lib/avatar/handler.ts`): the same bodies, the same 30-an-hour budget
+(shared with the web) and the same errors.
+
+- `POST` `multipart/form-data`: `file` (JPEG, PNG, WebP, GIF or AVIF, ≤5 MB;
+  HEIC is not read, so send a JPEG; a file sent with no type or
+  `application/octet-stream` is judged by its bytes) plus the crop `x`, `y`
+  (the square's centre, 0–1 across the photo) and `zoom` (1–4). The server
+  turns it upright, crops (clamped inside the photo), resizes to a 512px JPEG
+  and strips its metadata. Either send the original with the crop, or an
+  already-square JPEG with `x=0.5, y=0.5, zoom=1`.
+- `POST` JSON `{ "source": "gob", "colour": "blue" | "teal" | "coral" | "lime" }`
+  or `{ "source": "x" }`.
+- → `200 { "avatarUrl": "/api/files/avatar/<hash>", "source": "upload" }`
+  (`gob`, or the X photo's URL with `x`). `/api/files/avatar/<hash>` is
+  members only: load it with the phone key.
+- Errors: `429 busy`, `413 too_big`, `415 bad_type`, `422 unreadable`,
+  `400 no_file` / `bad_colour` / `bad_request`, `409 no_x_picture`,
+  `500 failed`.
+- `DELETE` → `200 { "avatarUrl": null, "source": "generated" }`.
+
+### Invites — `/api/app/invites`
+
+Mirrors the web's `/api/invites` (`src/lib/auth/invites.ts`), your own invites
+only (admins too: everyone's list stays on the web).
+
+- `GET` → `{ canInvite, invites: [{ id, url, code, nameHint, createdAt,
+expiresAt, uses }] }`, newest first, only links that still work. `url` is
+  always **null**: only a link's hash is kept, so a link is shown once, when
+  it's made (use `/link` below to share one again). `uses` is 0 (an invite
+  lets one person in, then leaves this list). `code` is a short non-secret
+  label for telling them apart.
+- `POST` `{ nameHint? }` → `201 { id, url, expiresAt }`. `url` is the join
+  page (`<origin>/invite/<token>`, for the invitee's browser: they don't have
+  the app yet), good once, for 7 days. Errors: `403 not_allowed` (only
+  admins invite on this server: `canInvite` false), `409 too_many` (20
+  waiting), `429 busy` (30 an hour, shared with the web).
+- `POST /api/app/invites/{id}/link` → `{ id, url, expiresAt }`: a fresh link
+  for one of yours (the old link stops working; same id and expiry).
+  `404 not_found`, `429 busy` (60 an hour).
+- `DELETE /api/app/invites/{id}` → `{ "ok": true }`; `404 not_found` unless
+  it's your own unused invite.
+
+Join requests are unchanged (`/api/app/people`).
 
 ### `POST /api/app/save` — `{ url, private?, note? }`
 
@@ -182,6 +280,96 @@ Set or clear the note on one of your saves ("Add a note"). `note` is a string
 - `200 { note }` — the note as stored, or `null`
 - `400 { code: 'bad_request' }` · `401 { code: 'bad_key' }` ·
   `404 { code: 'not_saved' }`
+
+### Reactions on any post — `/api/app/reactions`
+
+Reactions are kept on posts (`post_reactions`) and shown, with names and
+faces, only to members who can see the post (anyone's shared save, or your
+own save; a post saved only Just for me keeps its reactions to its owner).
+Banned members' reactions are never returned; a post an admin hid has none.
+The web uses the same handlers at `/api/posts/reactions` (session).
+
+- `GET /api/app/reactions?platform=&id=` → oldest first, the newest 100,
+  `no-store`:
+
+  ```json
+  {
+    "reactions": [
+      {
+        "id": "rmh2k3x9a1b2c3d4e5f6",
+        "emoji": "😂",
+        "text": null,
+        "at": "2026-10-21T09:12:03.000Z",
+        "saver": {
+          "username": "ana",
+          "name": "Ana",
+          "avatarUrl": "/api/files/avatar/…",
+          "isYou": false
+        }
+      }
+    ]
+  }
+  ```
+
+  Exactly one of `emoji` / `text` is set. `avatarUrl` is null when they chose
+  the generated icon. 404 `not_found` when you can't see any save of the post.
+
+- `POST /api/app/reactions` `{ platform, id, emoji }` (😂 🔥 😭 👀 💀 ❤️) or
+  `{ platform, id, text }` (at most 40 characters, cleaned; show it as text,
+  never HTML) → `{ "id", "at" }`. Errors: 400 `bad_reaction` / `bad_text` /
+  `bad_post`, 404 `not_found` (you can't see the post), 429 `busy` with
+  `Retry-After` (the same per-person budget as Live: 20 a minute, 6 of them
+  words).
+- `DELETE /api/app/reactions/{id}` → `{ "ok": true }` for your own reaction,
+  404 `not_found` otherwise.
+- **Replay**: when a post settles on screen, fetch its reactions once per
+  post per visit (keep the answer for the session) and float the newest 12,
+  oldest first, ~350 ms apart, starting ~600 ms after it settles, each with
+  the reactor's face. Don't replay a post again in the same session. Yours
+  floats at once (your face from `/api/app/me` `avatarUrl`); on failure a
+  quiet "Couldn't send that. Try again." and nothing is kept.
+
+### The reactions feed — `GET /api/app/reacted?offset&limit`
+
+"Play all posts that have had reactions": every post you can see (`seenBy`:
+anyone's shared save, or your own) with at least one reaction you can see,
+**newest reaction first**. `limit` 1–50 (default 20). Banned reactors are
+never counted or shown; admin-hidden posts and posts gone from their network
+are left out; when moderation can't be read it fails (`500 failed`) rather
+than show anything. Members only, named, like the reactions themselves.
+120 reads a minute per person (`429 busy`).
+
+```json
+{
+  "items": [
+    {
+      "…": "a PhonePost",
+      "reactions": {
+        "count": 3,
+        "last": {
+          "emoji": "🔥",
+          "text": null,
+          "at": "2026-10-21T09:12:03.000Z",
+          "saver": {
+            "username": "ana",
+            "name": "Ana",
+            "avatarUrl": "/api/files/avatar/…",
+            "isYou": false
+          }
+        }
+      }
+    }
+  ],
+  "total": 12,
+  "nextOffset": 20
+}
+```
+
+`total` is how many posts in all ("12 posts with reactions"); `nextOffset` is
+null at the end. Play them in the player: the replay floats each post's
+reactions (`GET /api/app/reactions`) and React works as on any post. The web
+reads the same feed at `GET /api/posts/reacted` (session) and plays it at
+`/play?reacted=1`, from the Reactions row on `/channels`.
 
 ### `GET /api/app/saves?offset&limit`
 
@@ -436,7 +624,9 @@ watching, watchers?, covers, live, recentSaves, windowMinutes }] }`; a 404
   disconnected/background phones expire after 15 s. Accounts count once across
   web tabs and phones. `GET /api/app/live/{slug}/stream` remains available.
 - `POST /api/app/live/{slug}/react { emoji } | { text }, platform, id` (text at
-  most 40 characters).
+  most 40 characters). It goes to the room and is also kept on the post under
+  the same `id`, so `GET /api/app/reactions` replays it later; skip ids you
+  already floated live.
 - `GET /api/app/people` → `{ members: [{ username, name, avatarUrl, saves,
 lastSavedAt, role: owner|admin|member, banned, isYou }], isAdmin, canInvite,
 inviteMode, requests? }`; `requests` (admins only) are
@@ -537,8 +727,8 @@ freeBytes, processing, remoteConnected } }`. `thumbnail` (like Shared lately's
   each as the sender's face ringed in their colour, with the emoji as a
   sticker on its corner or the words in a bubble of their colour. Yours shows
   after acknowledgement; failed words stay in the composer with Retry, bound
-  to the original post even if playback advances. Reactions are ephemeral, not
-  stored chat. Ones that arrive together rise 0.7 s apart.
+  to the original post even if playback advances. Reactions are kept on the
+  post (see Reactions on any post) and replay when someone watches it later. Ones that arrive together rise 0.7 s apart.
 - **Faces**: up to 3 overlapping avatars (their photo, or their initial on
   their colour) and "Ana and Ben saved this" / "Ana and 3 others saved this"
   on the player byline and search tiles. Tapping a face opens that friend's
@@ -556,16 +746,22 @@ freeBytes, processing, remoteConnected } }`. `thumbnail` (like Shared lately's
 Gob opens Settings, in this order:
 
 - **You**: your face (Gob shaped, ringed in your colour, with a pencil),
-  name, "@pete · 214 saves" and **Change picture**. There's no phone route
-  for pictures yet (`/api/account/avatar` takes a signed-in browser), so it
-  opens Settings on your ADHX in the browser (`/settings#you`).
+  name, "@pete · 214 saves" and **Change picture**: a sheet with **Choose a
+  photo**, **Take a selfie** (the front camera), four Gob faces, **Use my X
+  photo** (409 `no_x_picture` says to connect X first) and **Remove
+  picture**. A photo is cropped on the phone (a square, pan and pinch, round
+  preview) and sent as a square JPEG to `POST /api/app/me/avatar` with
+  `x=0.5, y=0.5, zoom=1`; Gobs and X send JSON; Remove is `DELETE`. Then
+  `/api/app/me` is read again and every face of yours changes at once.
 - **Waiting for you** (admins with someone waiting): "Ben wants in",
   "Invited by Jo · 10m ago", **Let Ben in**, **Not now** (hides it for a few
   days) and **Decline** (asks first: "Keep Ben out?").
 - Rows: **Your people** (faces and a count; the list has everyone with their
   saves, role and when they last saved, and opens a friend's channel),
-  **Invite someone** (when you may invite; no phone route makes invites yet,
-  so it opens `/settings#people` in the browser), **What's in your feed**
+  **Invite someone** (when you may invite: a sheet that makes a link with
+  `POST /api/app/invites` and opens the system share sheet, and lists your
+  links still waiting with Revoke; Channels' Invite opens the same sheet),
+  **What's in your feed**
   (the New filter sheet), **Just for me by default**, **Sound on by
   default** (videos start with sound), **What your ADHX is doing** ("3 on
   their way · 1 needs you", opening the full list).
