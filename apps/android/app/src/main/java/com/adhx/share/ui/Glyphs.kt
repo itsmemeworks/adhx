@@ -46,6 +46,9 @@ object Glyphs {
     val Bell = stroke("M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4")
     val Pencil = stroke("M4 20h4L19 9l-4-4L4 16z", width = 2.6f)
     val Chat = stroke("M4 5h16v11H9l-5 4z")
+    /** WhatsApp's mark, drawn as an outline: a round bubble with a handset. */
+    val WhatsApp = stroke("M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3z" + "M9 8.5c0 3.6 2.9 6.5 6.5 6.5l1-1.6-2-1-1 .9a5 5 0 0 1-2.8-2.8l.9-1-1-2z", width = 1.8f)
+    val Copy = stroke(rect(8f, 8f, 12f, 12f, 2f) + "M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3")
     val Mail = stroke(rect(3f, 5f, 18f, 14f, 2f) + "M3 7l9 6 9-6")
     val Folder = stroke("M3 6h6l2 2h10v11H3z")
     val Photo = stroke(rect(3f, 5f, 18f, 14f, 2f) + circle(9f, 10f, 2f) + "M21 16l-5-5-9 8")
