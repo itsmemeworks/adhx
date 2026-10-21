@@ -54,6 +54,11 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Search words tiles: serif words on a surface card below the pills (no more clipped first line), author and savers at the bottom. Channels → Your people: fewer than five sit left with a 14dp gap. Send sheet: "Send via" with WhatsApp (falls back to the share sheet), Copy (the ADHX link) and More.
 - Unit tests in `PlayerPolishTest`. Checked on the emulator against a parity server: mark bylines, hold/tap/tap on a video and a photo, album advance and pause, Fit and Sound kept in prefs, Dock row, send sheet (Copy, WhatsApp falls back to the share sheet), search words tiles, five people spread. Not seen there: links in post words (no linked posts in the seed) and fewer than five people.
 
+## 2026-10-21 — iPhone: the network button opens the original post; toasts take the pill's place
+
+- Owner: "in most cases, the user doesn't care about the original post". The overlay now has only the why chip, a friend's note and who saved it; the network line and the caption are gone. A rail button with the network's mark (above More) opens `OriginalSheet`: who posted it (picture, name, handle), when, their words in full (a kept article whole, selectable, links tappable), Open on {network} and Copy link. Default rail spacing is 10 now there's one more button.
+- On New and My saves, a player message ("Words copied") takes the "on their way" pill's place for 3 s instead of stacking under it (`PlayerToastUp` preference; toasts last 3 s everywhere).
+
 ## 2026-10-21 — Landscape for watching; full articles, words and tiles on phones
 
 - Landscape is only for watching (iOS `App/Orientation.swift`): the plist allows landscape, `AppDelegate` answers from `OrientationGate`, where each player says "may turn" while it's showing (`mayTurnToWatch()`) and anything over it says "upright" while it's up (`uprightWhile`: board sheets, More, the reader, the send sheet, a friend's channel). Newest wins; losing landscape turns the phone back. Turned sideways the player hides its chrome, fits the media whole and taps only pause; turning back restores the chrome. Debug: `-adhxTurn landscape -adhxTurnAfter 6`.
@@ -64,6 +69,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 - Sheets over the player are frosted (`FrostedSheetBackground`: ultra-thin material under the surface colour at 72%), so the picture shows through softly: More and In your saves (system sheets, via `frostedSheet()`) and every board sheet. On iOS 26+ the system sheets no longer force a 28 pt radius, so their floating corners follow the screen's own curve. The two remaining non-continuous rounded rectangles are now continuous.
 - Settings on both apps shows which release the build is, on its own line: "ADHX Share 2.2.0" on a tag, else "2.2.0 +3 · abc1234" (commits after the tag), " · edited" with uncommitted changes, the commit alone without tags. iOS: the "Stamp version" build phase runs `apps/ios/Config/stamp-version.sh` (git describe → `build-info.txt` in the app's resources; user-script sandboxing is off for the app target so it can read git). Android: `gitBuildName()` in `app/build.gradle.kts` sets `versionName` unless `ADHX_VERSION_NAME` is given (the release APK workflow).
+
+## 2026-10-21 — iPhone: React on every post, replayed when you watch it
+
+- The player has its own React button (smiley at the top of the rail) on every post outside Live, with the same picker as Live (`ReactPicker`, moved with `FloatingReactions` into `App/Library/Reactions.swift`). Yours floats at once with your picture (`Store.avatarUrl`), posts to `POST /api/app/reactions`, and is taken back with "Couldn’t send that. Try again." on failure.
+- `PostReactionsModel` replays a post's stored reactions when it settles (`GET /api/app/reactions`): the newest 12, oldest first, 350 ms apart after 600 ms, once per post per run of the app. Live keeps its own room and doesn't replay (its reactions are stored by the server since #589).
+- Verified in the simulator against the parity server: the replay request, the picker, and your 😂 floating with your face.
 
 ## 2026-10-21 — iPhone player polish from on-device testing
 
