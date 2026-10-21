@@ -637,6 +637,18 @@ enum LiveSay: Equatable {
     }
 }
 
+/// `GET /api/app/reactions`: `{ reactions: [...] }`; one that won't read is skipped.
+struct PostReactionsPage: Decodable {
+    let reactions: [LiveReactionEvent]
+
+    private enum Keys: String, CodingKey { case reactions }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        reactions = (try? c.decode(Lossy<LiveReactionEvent>.self, forKey: .reactions))?.items ?? []
+    }
+}
+
 /// Someone's reaction, from the live poll. The shape is still settling: the
 /// person is a `saver` (or `by`/`from`/`user`), or their fields inline.
 struct LiveReactionEvent: Decodable, Hashable, Identifiable {
@@ -983,6 +995,24 @@ struct KeepAnswer: Decodable {
 
 extension ADHXClient {
     /// Who you can send a post to (`GET /api/app/send`).
+    /// Everyone's reactions to a post, oldest first (`GET /api/app/reactions`).
+    func reactions(to post: PostRef) async throws -> [LiveReactionEvent] {
+        let page: PostReactionsPage = try await send(
+            "GET", "/api/app/reactions",
+            query: [URLQueryItem(name: "platform", value: post.platform), URLQueryItem(name: "id", value: post.id)])
+        return page.reactions
+    }
+
+    /// Reacts to any post; it's kept, and replays for people who watch it later.
+    func react(_ say: LiveSay, to post: PostRef) async throws {
+        var body: [String: Any] = ["platform": post.platform, "id": post.id]
+        switch say {
+        case .emoji(let emoji): body["emoji"] = emoji
+        case .text(let text): body["text"] = LiveSay.clip(text)
+        }
+        let _: Nothing = try await send("POST", "/api/app/reactions", body: body)
+    }
+
     func sendTargets(_ post: PostRef) async throws -> SendTargets {
         try await send("GET", "/api/app/send", query: [URLQueryItem(name: "platform", value: post.platform),
                                                         URLQueryItem(name: "id", value: post.id)])
