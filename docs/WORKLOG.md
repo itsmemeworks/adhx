@@ -13,6 +13,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Skips with a notice until seven secrets exist; `docs/releasing.md` lists them plus the one-time Apple portal steps (App IDs, App Group, one App Store Connect record).
 - Validation: actionlint, shell syntax of every step, export-options plist lint, and a local Release build proving the command-line version/build reach both Info.plists. Never run against Apple (no secrets): signing and upload are unverified.
 
+## 2026-10-21 — Remove this phone works without the web
+
+- Add `DELETE /api/app/me` (phone key): revokes only the calling key with the same `deleteAccessKey` as Settings → Phone app; afterwards that key is `401 bad_key`, other phones untouched.
+- iOS and Android Remove this phone call it, then forget the key whatever the answer; a 401 counts as already removed. If the server can't be reached (offline, timeout, older ADHX), Connect says plainly the phone may still show in Settings → Phone app there.
+- The "remove it on the web as well" dialog copy is gone. Spec and both app READMEs updated.
+- Validation: phone-app API tests (own key only, repeat answers 401, other phones and accounts unaffected), Android unit tests + debug APK, iOS simulator build. Not exercised on a device.
+
 ## 2026-10-21 — Web theater matches the phones: original-post sheet, a quieter overlay, toasts in the pill's place
 
 - Owner ask: the website should match the phone apps (iOS #592/#594, Android #596). Over a video or photo the overlay keeps only the why chip, a friend's note and who saved it ("You and Mum saved this · 1h"); the author/network line and the caption are gone. Text and article stages still show their words.

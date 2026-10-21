@@ -34,6 +34,29 @@ struct ConnectView: View {
         VStack(alignment: .leading, spacing: 22) {
             Wordmark(markSize: 34, textSize: 30)
 
+            if let note = model.removedNote {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Image(systemName: "exclamationmark.circle")
+                        .accessibilityHidden(true)
+                    Text(note).fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Button {
+                        model.removedNote = nil
+                    } label: {
+                        Image(systemName: "xmark")
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Dismiss")
+                }
+                .font(Theme.sans(14))
+                .foregroundStyle(Theme.warn)
+                .padding(.leading, 14)
+                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.surface))
+                .accessibilityElement(children: .contain)
+            }
+
             VStack(alignment: .leading, spacing: 8) {
                 Text("Connect to your ADHX")
                     .font(Theme.serif(40))

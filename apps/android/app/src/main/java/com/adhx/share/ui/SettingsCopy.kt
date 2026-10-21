@@ -1,5 +1,6 @@
 package com.adhx.share.ui
 
+import com.adhx.share.net.ApiResult
 import com.adhx.share.net.DoingItem
 import com.adhx.share.net.DoingStatus
 import com.adhx.share.net.DoingSummary
@@ -31,8 +32,9 @@ object SettingsCopy {
     const val SEND_WAITING = "Send waiting links now"
     const val REMOVE_PHONE = "Remove this phone"
     const val REMOVE_TITLE = "Remove this phone?"
-    const val REMOVE_BODY = "This phone forgets its key, the list of shared posts and links still waiting. " +
-        "To take it off your ADHX’s list of phones too, use Settings → Phone app there."
+    const val REMOVE_BODY = "Your ADHX stops accepting this phone, and it forgets its key, the list of shared posts " +
+        "and links still waiting. Your saves stay on your ADHX."
+    const val REMOVING = "Removing…"
     const val REMOVE = "Remove"
     const val CANCEL = "Cancel"
     const val TAGLINE = "Your friends have better taste than the algorithm."
@@ -55,6 +57,18 @@ object SettingsCopy {
     const val COULDNT_KEEP = "Couldn’t keep it"
     const val YOUR_SAVE = "Your save"
     val DOING_FILTERS = listOf("On their way", "Needs you", "Ready")
+
+    /**
+     * After Remove this phone, on Connect: null when the server dropped the
+     * key (a 401 means it already had), else plainly that it may still be
+     * listed there. The phone forgets its key either way.
+     */
+    fun removedNote(result: ApiResult<Unit>, host: String?): String? = when {
+        result is ApiResult.Ok -> null
+        result is ApiResult.Failed && result.status == 401 -> null
+        else -> "This phone forgot its key, but it couldn’t reach ${host ?: "your ADHX"}. " +
+            "It may still show in Settings → Phone app there; remove it there too."
+    }
 
     /** Under Shared lately: links waiting on this phone. */
     fun waitingLinks(count: Int): String? = when (count) {
