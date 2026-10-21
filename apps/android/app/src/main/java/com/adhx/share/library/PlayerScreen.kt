@@ -3,6 +3,16 @@ package com.adhx.share.library
 import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
+import android.content.res.Configuration
+import android.app.Activity
+import android.content.ContextWrapper
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import com.adhx.share.ui.MayTurn
+import com.adhx.share.ui.KeepUpright
 import android.view.LayoutInflater
 import android.widget.Toast
 import androidx.annotation.OptIn
@@ -57,6 +67,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -93,6 +105,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -121,6 +134,10 @@ import com.adhx.share.links.Links
 import com.adhx.share.links.Networks
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.feed.Privacy
+import com.adhx.share.feed.FloatingReactions
+import com.adhx.share.feed.ReactPicker
+import com.adhx.share.data.ConnectionStore
+import com.adhx.share.net.ApiResult
 import com.adhx.share.data.SettingsPrefs
 import com.adhx.share.net.PhonePost
 import com.adhx.share.net.PostKind
@@ -185,8 +202,11 @@ private val OverMedia = TextStyle(fontFamily = SansFamily, shadow = Shadow(Color
  * The friends feed adds to it: [onSaver] makes the faces on the byline open
  * that person's channel; [aboveCaption] and [belowCaption] put something
  * over the post (the why chip, the live reactions); [end] is one last page
- * after the posts (You're all caught up). [onReact] adds React at the top
- * of the button column (Live); [reacting] lights it while its picker is open.
+ * after the posts (You're all caught up). React sits at the top of the
+ * button column on every post: [onReact] hands it to Live's room ([reacting]
+ * lights it while Live's picker is open); without it the player has its own
+ * picker, keeps reactions on the post and replays the kept ones when a post
+ * settles ([PostReactionsMemory], once per post per run of the app).
  */
 @Composable
 fun PlayerScreen(
@@ -207,6 +227,11 @@ fun PlayerScreen(
     preservePlaybackOnRefresh: Boolean = false,
     /** [topBar] steps aside while the send sheet is up (home's row, as on iPhone). */
     hideTopBarWhileSending: Boolean = false,
+    /**
+     * [topBar] shows the short messages ("Link copied") itself, in place of
+     * its "N on their way" pill, through [LocalPlayerToast] (New, My saves).
+     */
+    toastInTopBar: Boolean = false,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -235,12 +260,45 @@ fun PlayerScreen(
     val playback = remember { Playback() }
     var reading by remember { mutableStateOf<PhonePost?>(null) }
     var more by remember { mutableStateOf<PhonePost?>(null) }
+    // The original post's sheet (the rail's network button).
+    var original by remember { mutableStateOf<PhonePost?>(null) }
     var sendingPost by remember { mutableStateOf<PhonePost?>(null) }
+    // Outside Live, the player has its own React: the post whose picker is open, what's typed, and how sending went.
+    val ownReact = onReact == null
+    var picking by remember { mutableStateOf<PhonePost?>(null) }
+    var reactWords by rememberSaveable { mutableStateOf("") }
+    var reactSending by remember { mutableStateOf(false) }
+    var reactError by remember { mutableStateOf<String?>(null) }
+    val floats = remember { PostFloats() }
+    val reactingNow = reacting || picking != null
     // Where the scrub line is being dragged to (0–1), or null: the controls fade out meanwhile.
     var scrub by remember { mutableStateOf<Float?>(null) }
     val chrome by animateFloatAsState(if (scrub == null) 1f else 0f, label = "chrome")
     val pip = LocalPip.current
     val inPip = pip?.inPip == true
+    // Turned sideways on playing media: the media alone, whole, with no bars (see [MayTurn] below).
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE && !inPip
+    val view = LocalView.current
+    DisposableEffect(landscape) {
+        val window = view.context.findActivity()?.window
+        val bars = window?.let { WindowCompat.getInsetsController(it, view) }
+        fun place() {
+            if (landscape) {
+                bars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                bars?.hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                bars?.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+        place()
+        // A sheet that was closing when the phone turned still had the focus: hide them again once it's gone.
+        val focus = android.view.ViewTreeObserver.OnWindowFocusChangeListener { focused -> if (focused) place() }
+        view.viewTreeObserver.addOnWindowFocusChangeListener(focus)
+        onDispose {
+            view.viewTreeObserver.removeOnWindowFocusChangeListener(focus)
+            bars?.show(WindowInsetsCompat.Type.systemBars())
+        }
+    }
 
     // While the app can be seen (full screen or as a small window): the
     // decoder is let go once it can't.
@@ -265,6 +323,9 @@ fun PlayerScreen(
 
     val settled = pager.settledPage
     val current = posts.getOrNull(settled)
+    // Only playing media turns sideways: a video, a sound or photos, with nothing over them
+    // (sheets, the picker and the reader keep the phone upright). Words and the end page stay upright.
+    MayTurn(current != null && (PostKind.plays(current.kind) || current.kind == PostKind.PHOTO))
     val mediaUrl = current?.takeIf { PostKind.plays(it.kind) }?.media?.firstOrNull()?.url
         ?.let { AdhxApi.resolve(server, it)?.toString() }
 
@@ -274,6 +335,60 @@ fun PlayerScreen(
         if (end != null && settled == posts.size) hidden = false
         onPage(settled)
         if (settled == 0) onTop()
+    }
+
+    // A post that settles replays the reactions kept on it (once per post per run
+    // of the app): the newest few, oldest first, each with the face of who sent
+    // it. Moving on cancels the rest. Live has its own room and doesn't replay.
+    LaunchedEffect(current?.key, inPip) {
+        floats.clear()
+        val post = current ?: return@LaunchedEffect
+        if (!ownReact || inPip) return@LaunchedEffect
+        val settledAt = SystemClock.uptimeMillis()
+        val connection = ConnectionStore.get(context).current() ?: return@LaunchedEffect
+        val key = PostReactionsMemory.key(connection.server, connection.username, post.key)
+        if (PostReactionsMemory.replayed(key)) return@LaunchedEffect
+        val kept = PostReactionsMemory.fetched(key)
+            ?: when (val got = AdhxApi(connection).postReactions(post.platform, post.id)) {
+                is ApiResult.Ok -> got.value.reactions.also { PostReactionsMemory.remember(key, it) }
+                // Not visible to you (404) has nothing to replay; anything else can try again next time.
+                is ApiResult.Failed -> if (got.status == 404) emptyList<com.adhx.share.net.LiveReaction>().also { PostReactionsMemory.remember(key, it) } else return@LaunchedEffect
+                else -> return@LaunchedEffect
+            }
+        val plan = replayPlan(kept)
+        if (plan.isEmpty()) {
+            PostReactionsMemory.markReplayed(key)
+            return@LaunchedEffect
+        }
+        delay(replayWait(SystemClock.uptimeMillis() - settledAt))
+        if (!PostReactionsMemory.markReplayed(key)) return@LaunchedEffect
+        plan.forEach { step -> floats.add(step.reaction.emoji, step.reaction.text, step.reaction.who, step.afterMs) }
+    }
+
+    // Yours floats at once with your face, then it's kept on the post; if it
+    // doesn't go, it's taken back and the picker says so.
+    fun sendReaction(post: PhonePost, emoji: String?, text: String?) {
+        if (reactSending) return
+        val connection = ConnectionStore.get(context).current()
+        if (connection == null) {
+            reactError = POST_REACT_FAILED
+            return
+        }
+        val me = Saver(username = connection.username ?: "you", name = Copy.YOU, avatarUrl = connection.avatarUrl, isYou = true)
+        val id = floats.add(emoji, text, me)
+        reactSending = true
+        reactError = null
+        scope.launch {
+            val sent = AdhxApi(connection).reactToPost(post.platform, post.id, emoji = emoji, text = text) is ApiResult.Ok
+            reactSending = false
+            if (sent) {
+                if (text != null) reactWords = ""
+                picking = null
+            } else {
+                floats.remove(id)
+                reactError = POST_REACT_FAILED
+            }
+        }
     }
 
     // Something new on top (saved while the app was away, or a save that was
@@ -303,7 +418,7 @@ fun PlayerScreen(
 
     LaunchedEffect(notice) {
         if (notice != null) {
-            delay(2_200)
+            delay(TOAST_MS)
             notice = null
         }
     }
@@ -430,13 +545,16 @@ fun PlayerScreen(
                 onScreen = page == settled,
                 player = player,
                 playback = playback,
-                fit = fit,
+                // Sideways, the whole video, whatever Fit video says.
+                fit = fit || landscape,
+                landscape = landscape,
                 repeat = repeat,
                 // A photo's timer waits while a sheet or picker is up, in the small window and while the app is away.
-                held = more != null || sendingPost != null || reading != null || reacting || inPip || player == null,
+                held = more != null || original != null || sendingPost != null || reading != null || reactingNow || inPip || player == null,
                 onPhotosDone = { following()?.let { scope.launch { goTo(it) } } },
                 onHide = { hidden = true },
-                hidden = hidden,
+                // Sideways hides everything, without touching what upright had.
+                hidden = hidden || landscape,
                 saving = saving == post.key,
                 sharing = sharing == post.key,
                 shareProgress = shareProgress,
@@ -446,17 +564,25 @@ fun PlayerScreen(
                 onScrub = { scrub = it },
                 onTap = {
                     when {
+                        // Sideways, a tap only pauses or plays.
+                        landscape -> if (PostKind.plays(post.kind)) togglePlay()
                         hidden -> hidden = false
                         PostKind.plays(post.kind) -> togglePlay()
                     }
                 },
                 onRead = { reading = post },
                 onMore = { more = post },
+                onOriginal = { original = post },
                 onSaver = onSaver,
                 aboveCaption = aboveCaption,
                 belowCaption = belowCaption,
-                onReact = onReact?.let { react -> { react(post) } },
-                reacting = reacting,
+                // Live's React (its room), or the player's own on every other post.
+                onReact = onReact?.let { react -> { react(post) } } ?: {
+                    reactError = null
+                    picking = if (picking == null) post else null
+                },
+                reacting = reactingNow,
+                live = !ownReact,
                 onKeep = if (post.yours || post.sourceUrl.isNullOrBlank()) null else {
                     {
                         if (keeping == null) {
@@ -488,20 +614,51 @@ fun PlayerScreen(
                 onSeek = { ms -> player?.seekTo(ms) },
             )
         }
-        if (!hidden && !inPip && !(hideTopBarWhileSending && sendingPost != null)) {
-            Box(Modifier.fillMaxSize().graphicsLayer { alpha = chrome }) { topBar() }
+        val topBarShown = !hidden && !landscape && !inPip && !(hideTopBarWhileSending && sendingPost != null)
+        if (topBarShown) {
+            Box(Modifier.fillMaxSize().graphicsLayer { alpha = chrome }) {
+                CompositionLocalProvider(LocalPlayerToast provides notice?.text) { topBar() }
+            }
         }
-        if (newOnTop > 0 && !hidden && !inPip && scrub == null) {
+        if (newOnTop > 0 && !hidden && !landscape && !inPip && scrub == null) {
             NewSavesPill(
                 count = newOnTop,
                 onClick = { scope.launch { goTo(0) } },
                 modifier = Modifier.align(Alignment.TopCenter),
             )
         }
-        if (!inPip) notice?.let { NoticePill(it.text, Modifier.align(Alignment.TopCenter)) }
+        if (ownReact && !inPip) {
+            // Over the post, left of the button column, between the top bar and the caption (as in Live).
+            FloatingReactions(
+                items = floats.items,
+                server = server,
+                onLanded = floats::remove,
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .padding(start = 16.dp, end = 84.dp, top = 170.dp, bottom = 300.dp),
+            )
+        }
+        if (!inPip && !landscape && !(toastInTopBar && topBarShown)) notice?.let { NoticePill(it.text, Modifier.align(Alignment.TopCenter)) }
+        if (!inPip) {
+            picking?.let { post ->
+                ReactPicker(
+                    words = reactWords,
+                    onWordsChange = { reactWords = it },
+                    sending = reactSending,
+                    error = reactError,
+                    onEmoji = { sendReaction(post, it, null) },
+                    onText = { sendReaction(post, null, it) },
+                    onDismiss = { picking = null },
+                    prompt = Copy.SAY_SOMETHING_POST,
+                )
+            }
+        }
         reading?.let { Reader(it, onClose = { reading = null }) }
         if (!inPip) {
             sendingPost?.let { post -> SendSheet(post, server, onNotice = { text -> notice = Notice(text) }, onDismiss = { sendingPost = null }) }
+        }
+        if (!inPip) {
+            original?.let { post -> OriginalSheet(post, server, onNotice = { text -> notice = Notice(text) }, onDismiss = { original = null }) }
         }
         if (!inPip) {
             more?.let { post ->
@@ -583,7 +740,22 @@ private fun NewSavesPill(count: Int, onClick: () -> Unit, modifier: Modifier = M
 }
 
 @Composable
-private fun NoticePill(text: String, modifier: Modifier = Modifier) {
+private fun NoticePill(text: String, modifier: Modifier = Modifier) =
+    ToastPill(text, modifier.statusBarsPadding().padding(top = 64.dp, start = 24.dp, end = 24.dp))
+
+/** How long a short message ("Link copied") stays up. */
+private const val TOAST_MS = 3_000L
+
+/**
+ * The player's short message while one is up ("Words copied", "Link copied"),
+ * for a [PlayerScreen] top bar that shows it in place of its pill
+ * (`toastInTopBar`); null otherwise.
+ */
+val LocalPlayerToast = compositionLocalOf<String?> { null }
+
+/** A short message: dark words on a cream pill. */
+@Composable
+fun ToastPill(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
         fontSize = 14.sp,
@@ -591,11 +763,10 @@ private fun NoticePill(text: String, modifier: Modifier = Modifier) {
         color = AdhxColors.Black,
         textAlign = TextAlign.Center,
         modifier = modifier
-            .statusBarsPadding()
-            .padding(top = 64.dp, start = 24.dp, end = 24.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(AdhxColors.Cream)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite },
     )
 }
 
@@ -607,6 +778,7 @@ private fun PostPage(
     player: ExoPlayer?,
     playback: Playback,
     fit: Boolean,
+    landscape: Boolean,
     repeat: Boolean,
     held: Boolean,
     onPhotosDone: () -> Unit,
@@ -622,11 +794,13 @@ private fun PostPage(
     onTap: () -> Unit,
     onRead: () -> Unit,
     onMore: () -> Unit,
+    onOriginal: () -> Unit,
     onSaver: ((Saver) -> Unit)?,
     aboveCaption: (@Composable (PhonePost) -> Unit)?,
     belowCaption: (@Composable (PhonePost) -> Unit)?,
     onReact: (() -> Unit)?,
     reacting: Boolean,
+    live: Boolean,
     onKeep: (() -> Unit)?,
     keeping: Boolean,
     onSave: () -> Unit,
@@ -697,11 +871,11 @@ private fun PostPage(
                 },
                 onLongClickLabel = if (hidden) null else "Hide controls",
                 onLongClick = { if (!hidden && !pip) onHide() },
-                onClick = { if (!hidden && timed && onScreen) timer = timer.toggled() else onTap() },
+                onClick = { if ((!hidden || landscape) && timed && onScreen) timer = timer.toggled() else onTap() },
             ),
     ) {
         when {
-            plays -> MediaPage(post, server, onScreen, player, playback, pip, fit)
+            plays -> MediaPage(post, server, onScreen, player, playback, pip, fit, whole = landscape)
             timed -> Album(photos, album, hidden || pip)
             else -> WordsCard(post, onRead)
         }
@@ -775,6 +949,7 @@ private fun PostPage(
                 onSave = if (canSave) onSave else null,
                 onShare = onShare,
                 onMore = onMore,
+                onOriginal = onOriginal,
                 onReact = onReact,
                 reacting = reacting,
                 modifier = Modifier
@@ -786,7 +961,7 @@ private fun PostPage(
                 playback = if (onScreen && plays) playback else null,
                 photo = if (timed && onScreen) { { timerState.value.fraction } } else null,
                 // Live's line is yellow, as on the boards; New's is cream.
-                color = if (onReact != null) AdhxColors.Accent else AdhxColors.White,
+                color = if (live) AdhxColors.Accent else AdhxColors.White,
                 scrub = scrub,
                 onScrub = onScrub,
                 onSeek = onSeek,
@@ -818,12 +993,14 @@ private fun MediaPage(
     playback: Playback,
     pip: Boolean,
     fit: Boolean,
+    /** Sideways: everything shows whole, a sound's cover too. */
+    whole: Boolean = false,
 ) {
     val media = post.media.firstOrNull()
     val poster = media?.posterUrl?.let { AdhxApi.resolve(server, it)?.toString() }
     // Full bleed, as on the boards (the picture covers the screen), or the whole
     // video at its own shape with Fit video on. A sound's cover always fills.
-    val fills = post.kind == PostKind.AUDIO || !fit
+    val fills = !whole && (post.kind == PostKind.AUDIO || !fit)
     // The page's own size, clipped: a sound's cover fills it (cropped) and never pushes past it.
     Box(Modifier.fillMaxSize().clipToBounds(), contentAlignment = Alignment.Center) {
         if (poster != null) {
@@ -995,7 +1172,9 @@ private fun Dots(count: Int, current: Int) {
 private fun WordsCard(post: PhonePost, onRead: () -> Unit) {
     val article = post.article
     val title = article?.title?.takeIf { it.isNotBlank() }
-    val short = (title.orEmpty().length + post.text.length) < SHORT_WORDS
+    // A kept X article has its whole body: shown instead of the post's own words (usually just its link) and the summary.
+    val body = remember(article?.body) { ArticleBody.parse(article?.body) }
+    val short = body.isEmpty() && (title.orEmpty().length + post.text.length) < SHORT_WORDS
     val type = if (short) 38.sp else 28.sp
     val line = if (short) 44.sp else 34.sp
     val scroll = rememberScrollState()
@@ -1036,17 +1215,21 @@ private fun WordsCard(post: PhonePost, onRead: () -> Unit) {
             article?.url?.takeIf { it.isNotBlank() }?.let {
                 Text(Links.display(it), fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            if (post.text.isNotBlank()) {
-                Text(
-                    rememberLinked(post.text),
-                    fontFamily = SerifFamily,
-                    fontSize = if (title != null) 22.sp else type,
-                    lineHeight = if (title != null) 30.sp else line,
-                    color = if (title != null) AdhxColors.Cream else AdhxColors.White,
-                )
-            }
-            article?.description?.takeIf { it.isNotBlank() && it != post.text }?.let {
-                Text(it, fontSize = 16.sp, lineHeight = 24.sp, color = AdhxColors.Muted)
+            if (body.isNotEmpty()) {
+                ArticleBodyText(body, size = 20.sp, lineHeight = 29.sp)
+            } else {
+                if (post.text.isNotBlank()) {
+                    Text(
+                        rememberLinked(post.text),
+                        fontFamily = SerifFamily,
+                        fontSize = if (title != null) 22.sp else type,
+                        lineHeight = if (title != null) 30.sp else line,
+                        color = if (title != null) AdhxColors.Cream else AdhxColors.White,
+                    )
+                }
+                article?.description?.takeIf { it.isNotBlank() && it != post.text }?.let {
+                    Text(it, fontSize = 16.sp, lineHeight = 24.sp, color = AdhxColors.Muted)
+                }
             }
         }
         // Too long to show: the whole of it is a button away (taps on the words don't open it).
@@ -1071,89 +1254,44 @@ private fun WordsCard(post: PhonePost, onRead: () -> Unit) {
 private const val SHORT_WORDS = 140
 
 /**
- * Who posted it, for the byline after the network's mark: their name, else
- * the network's ("YouTube"), else their handle.
- */
-/** Who posted it, beside the network's mark; "" (just the mark) when no one's named, like iOS. */
-internal fun bylineName(post: PhonePost): String {
-    val who = post.author.name?.trim()?.takeIf { it.isNotEmpty() }
-        ?: Copy.handle(post.author.handle)
-        ?: return ""
-    val network = Networks.name(post.platform)
-    return if (who.length <= 1 || (network != null && who.equals(network, ignoreCase = true))) "" else who
-}
-
-/**
  * Bottom left, over the post: who of your people saved it (faces and "Ana and
- * Ben saved this · 2h", a lock when it's just for you), where it's from (the
- * network's mark and who posted it: [YouTube] Rick Astley) and the first
- * lines of text (words posts show them in the page).
+ * Ben saved this · 2h", a lock when it's just for you), or just the lock. Who
+ * posted it and their words are behind the network's button on the rail
+ * ([OriginalSheet]).
  */
 @Composable
 private fun CaptionText(post: PhonePost, server: String, onSaver: ((Saver) -> Unit)?, modifier: Modifier = Modifier) {
-    val words = post.kind == PostKind.TEXT || post.kind == PostKind.ARTICLE
-    val source = bylineName(post)
     val justYou = Privacy.isPrivate(post)
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        val line = Copy.saversLine(post.savers)
-        if (line != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Faces(
-                    savers = post.savers,
-                    server = server,
-                    size = 30.dp,
-                    description = line,
-                    onTap = onSaver,
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    line,
-                    style = OverMedia,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AdhxColors.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Copy.shortAgoIso(post.savers.firstOrNull()?.savedAt)?.let {
-                    Text(" · $it", style = OverMedia, fontSize = 14.sp, color = AdhxColors.Muted, maxLines = 1, softWrap = false)
-                }
-                if (justYou) {
-                    Spacer(Modifier.width(8.dp))
-                    PrivateLock(size = 15.dp)
-                }
-            }
+    val line = Copy.saversLine(post.savers)
+    if (line == null) {
+        if (justYou) PrivateLock(size = 15.dp, modifier = modifier)
+        return
+    }
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Faces(
+            savers = post.savers,
+            server = server,
+            size = 30.dp,
+            description = line,
+            onTap = onSaver,
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            line,
+            style = OverMedia,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            color = AdhxColors.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        Copy.shortAgoIso(post.savers.firstOrNull()?.savedAt)?.let {
+            Text(" · $it", style = OverMedia, fontSize = 14.sp, color = AdhxColors.Muted, maxLines = 1, softWrap = false)
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (justYou && line == null) {
-                PrivateLock(size = 14.dp)
-                Spacer(Modifier.width(6.dp))
-            }
-            // The network's mark, then who posted it: [YouTube] Saturday Night Live.
-            NetworkMark(post.platform, size = 15.dp, tint = if (line != null) AdhxColors.Muted else AdhxColors.White)
-            if (source.isNotEmpty()) Spacer(Modifier.width(7.dp))
-            if (source.isNotEmpty()) Text(
-                source,
-                style = OverMedia,
-                fontSize = 14.sp,
-                fontWeight = if (line != null) FontWeight.Normal else FontWeight.Bold,
-                color = if (line != null) AdhxColors.Muted else AdhxColors.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        if (!words && post.text.isNotBlank()) {
-            Text(
-                // One run of words: paragraph breaks would leave the second line empty. Links open in the browser.
-                rememberLinked(Copy.oneLine(post.text)),
-                style = OverMedia,
-                fontSize = 16.sp,
-                lineHeight = 22.sp,
-                color = AdhxColors.White,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+        if (justYou) {
+            Spacer(Modifier.width(8.dp))
+            PrivateLock(size = 15.dp)
         }
     }
 }
@@ -1226,13 +1364,14 @@ private fun ActionColumn(
     onSave: (() -> Unit)?,
     onShare: () -> Unit,
     onMore: () -> Unit,
+    onOriginal: () -> Unit,
     onReact: (() -> Unit)?,
     reacting: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier.width(52.dp),
-        // Live's extra React button tightens the column, as on the boards.
+        // Six buttons at most (React, Save, Share, Save to phone, the network, More): tight, as on Live's board.
         verticalArrangement = Arrangement.spacedBy(if (onReact != null) 8.dp else 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -1297,6 +1436,10 @@ private fun ActionColumn(
             ) {
                 if (saving) Spinner(size = 20.dp, stroke = 2.dp) else ActionIcon(rememberVectorPainter(Glyphs.Download))
             }
+        }
+        // The network's own mark: who posted it, all their words, and the way to the original.
+        ActionButton(description = "The original post on ${Networks.name(post.platform) ?: "the web"}", onClick = onOriginal) {
+            NetworkMark(post.platform, size = 22.dp, tint = AdhxColors.Cream)
         }
         ActionButton(description = "More options", onClick = onMore) {
             ActionIcon(rememberVectorPainter(Glyphs.More))
@@ -1536,3 +1679,10 @@ fun BarButton(painter: Painter, label: String, onClick: () -> Unit, background: 
 @Composable
 fun BarButton(icon: ImageVector, label: String, onClick: () -> Unit, background: Color = Color.Black.copy(alpha = 0.45f)) =
     BarButton(rememberVectorPainter(icon), label, onClick, background)
+
+/** The activity behind a [Context], unwrapping themes and the like. */
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}

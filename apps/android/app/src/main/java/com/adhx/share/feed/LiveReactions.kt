@@ -1,5 +1,6 @@
 package com.adhx.share.feed
 
+import com.adhx.share.ui.KeepUpright
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -71,12 +72,24 @@ import com.adhx.share.ui.faceColor
 import com.adhx.share.ui.rememberReducedMotion
 
 /**
- * The React picker: six quick emoji, or a few words for everyone watching
- * (at most [Reaction.MAX_TEXT] characters) with Send. Tapping outside, or
+ * The React picker: six quick emoji, or a few words (at most
+ * [Reaction.MAX_TEXT] characters) with Send. Live's go to everyone watching;
+ * every reaction is kept on the post. Tapping outside, or
  * back, closes it.
  */
 @Composable
-fun ReactPicker(words: String, onWordsChange: (String) -> Unit, sending: Boolean, error: String?, onEmoji: (String) -> Unit, onText: (String) -> Unit, onDismiss: () -> Unit) {
+fun ReactPicker(
+    words: String,
+    onWordsChange: (String) -> Unit,
+    sending: Boolean,
+    error: String?,
+    onEmoji: (String) -> Unit,
+    onText: (String) -> Unit,
+    onDismiss: () -> Unit,
+    /** The field's prompt: Live says who hears it; a post just says "Say something". */
+    prompt: String = Copy.SAY_SOMETHING,
+) {
+    KeepUpright()
     BackHandler(onBack = onDismiss)
     Box(
         Modifier
@@ -142,7 +155,7 @@ fun ReactPicker(words: String, onWordsChange: (String) -> Unit, sending: Boolean
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     if (words.isEmpty()) {
-                        Text(Copy.SAY_SOMETHING, fontSize = 15.sp, color = AdhxColors.Faint, maxLines = 1, modifier = Modifier.clearAndSetSemantics { })
+                        Text(prompt, fontSize = 15.sp, color = AdhxColors.Faint, maxLines = 1, modifier = Modifier.clearAndSetSemantics { })
                     }
                     BasicTextField(
                         value = words,
@@ -154,7 +167,7 @@ fun ReactPicker(words: String, onWordsChange: (String) -> Unit, sending: Boolean
                         keyboardActions = KeyboardActions(onSend = { send() }),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .semantics { contentDescription = Copy.SAY_SOMETHING },
+                            .semantics { contentDescription = prompt },
                     )
                 }
                 Box(
@@ -169,7 +182,7 @@ fun ReactPicker(words: String, onWordsChange: (String) -> Unit, sending: Boolean
                     Text(if (sending) "Sending…" else if (error != null) "Retry" else Copy.SEND, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = if (words.isBlank()) AdhxColors.Faint else Color.Black)
                 }
             }
-            Text("Live reactions disappear. These aren’t saved messages.", fontSize = 12.sp, color = AdhxColors.Muted)
+            Text("Kept on the post. Your people see it when they watch.", fontSize = 12.sp, color = AdhxColors.Muted)
             if (error != null) {
                 Text(error, color = AdhxColors.Warn, fontSize = 13.sp, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             }

@@ -363,6 +363,8 @@ object Copy {
     const val CLOSE_REACT = "Close reactions"
     const val QUICK_REACTIONS = "Quick reactions"
     const val SAY_SOMETHING = "Say something to everyone watching"
+    /** The prompt on a post’s React picker outside Live. */
+    const val SAY_SOMETHING_POST = "Say something"
     const val SEND = "Send"
     const val REACT_FAILED = "That reaction didn’t send. Try again."
     const val FLOATING_LABEL = "Reactions from people watching"
