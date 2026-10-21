@@ -1,4 +1,5 @@
 import { and, count, desc, eq, sql } from 'drizzle-orm'
+import { articleBlocksToMarkdown, normalizeEntityMap } from '@/lib/utils/article-text'
 import { postBody } from '@/lib/feed/post-body'
 import { db } from '@/lib/db'
 import { archivedPosts, bookmarks, phoneSaveQueue } from '@/lib/db/schema'
@@ -32,7 +33,8 @@ export interface PhonePost {
   /** The post on this ADHX (relative). */
   openPath: string
   media: PhoneMedia[]
-  article: { title: string | null; description: string | null; url: string } | null
+  /** `body`: the whole X article as markdown, when it was kept (else just the summary). */
+  article: { title: string | null; description: string | null; url: string; body?: string } | null
   /** Why a search found it. Only on search results. */
   match?: { strength: SearchItem['strength']; on: SearchItem['matched'] }
   /** Its picture or video isn't understood yet, so it matched on words. */
@@ -105,6 +107,7 @@ export function toPhonePost(
           title: post.articlePreview.title,
           description: post.articlePreview.description,
           url: post.articlePreview.url,
+          ...articleBody(post.articleContent),
         }
       : null,
     ...(search ? { match: { strength, on: matched } } : {}),
@@ -185,4 +188,22 @@ export async function savedPhonePost(
 ): Promise<PhonePost | null> {
   const [item] = await loadSearchItems(keysToHits([`${platform}:${id}`]), userId)
   return item?.saved ? toPhonePost(item, false) : null
+}
+
+/** The whole kept X article (FxTwitter's `{ blocks, entityMap }`) as markdown. */
+function articleBody(content: unknown): { body: string } | Record<string, never> {
+  const c = content as { blocks?: unknown; entityMap?: unknown } | null
+  if (!c || !Array.isArray(c.blocks) || c.blocks.length === 0) return {}
+  try {
+    const body = articleBlocksToMarkdown(
+      c.blocks as Parameters<typeof articleBlocksToMarkdown>[0],
+      normalizeEntityMap(c.entityMap as Parameters<typeof normalizeEntityMap>[0]) as Record<
+        string,
+        never
+      >,
+    ).trim()
+    return body ? { body } : {}
+  } catch {
+    return {}
+  }
 }

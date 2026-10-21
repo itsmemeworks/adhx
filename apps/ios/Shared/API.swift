@@ -121,6 +121,8 @@ struct PhoneArticle: Decodable, Hashable {
     let title: String?
     let description: String?
     let url: String
+    /// The whole X article as markdown, when your ADHX kept it (newer servers).
+    var body: String? = nil
 }
 
 struct PhoneMatch: Decodable, Hashable {

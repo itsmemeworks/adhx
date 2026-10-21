@@ -1,5 +1,6 @@
 package com.adhx.share.main
 
+import androidx.compose.foundation.text.selection.SelectionContainer
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -342,12 +343,25 @@ fun SettingsScreen(
             notice?.let { Text(it, fontSize = 13.sp, color = AdhxColors.Faint) }
         }
 
+        // Which release this phone runs, to match against the GitHub tags.
+        versionName(context)?.let {
+            SelectionContainer {
+                Text(
+                    "ADHX Share $it",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AdhxColors.Muted,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                )
+            }
+        }
         Text(
-            listOfNotNull(versionName(context)?.let { "ADHX Share $it" }, SettingsCopy.TAGLINE).joinToString(" · "),
+            SettingsCopy.TAGLINE,
             fontSize = 12.sp,
             color = AdhxColors.Faint,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 
