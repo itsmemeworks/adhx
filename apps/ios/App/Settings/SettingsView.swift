@@ -80,10 +80,12 @@ struct SettingsView: View {
             NotificationCenter.default.post(name: Playback.choicesChanged, object: nil)
         }
         .confirmationDialog("Remove this phone?", isPresented: $confirmRemove, titleVisibility: .visible) {
-            Button("Remove this phone", role: .destructive) { model.disconnect() }
+            Button("Remove this phone", role: .destructive) {
+                Task { await model.removeThisPhone() }
+            }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This phone forgets its key and Shared lately. Your saves stay on your ADHX. To remove it there too, open Settings → Phone app on your ADHX.")
+            Text("Your ADHX stops accepting this phone, and it forgets its key and Shared lately. Your saves stay on your ADHX.")
         }
         .confirmationDialog(declining.map { "Keep \($0.shownName) out?" } ?? "",
                             isPresented: Binding(get: { declining != nil }, set: { if !$0 { declining = nil } }),
@@ -359,7 +361,8 @@ struct SettingsView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
-            Button("Remove this phone") { confirmRemove = true }
+            Button(model.removing ? "Removing…" : "Remove this phone") { confirmRemove = true }
+                .disabled(model.removing)
                 .font(Theme.sans(13, .bold))
                 .foregroundStyle(Theme.warn)
                 .lineLimit(1)

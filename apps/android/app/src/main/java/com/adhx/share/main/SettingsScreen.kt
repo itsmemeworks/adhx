@@ -116,6 +116,7 @@ fun SettingsScreen(
     val prefs = remember { SettingsPrefs.get(context) }
     val items by vm.items.collectAsStateWithLifecycle()
     val reach by vm.reach.collectAsStateWithLifecycle()
+    val removing by vm.removing.collectAsStateWithLifecycle()
     val peopleUi by people.ui.collectAsStateWithLifecycle()
     val doingUi by doing.ui.collectAsStateWithLifecycle()
     val feedUi by feed.feed.collectAsStateWithLifecycle()
@@ -318,7 +319,9 @@ fun SettingsScreen(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                QuietButton(SettingsCopy.REMOVE_PHONE) { confirmRemove = true }
+                QuietButton(if (removing) SettingsCopy.REMOVING else SettingsCopy.REMOVE_PHONE, enabled = !removing) {
+                    confirmRemove = true
+                }
             }
         }
 
@@ -396,7 +399,7 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = {
                     confirmRemove = false
-                    if (vm.disconnect()) prefs.forgetAccount()
+                    vm.removeThisPhone(onForgotten = prefs::forgetAccount)
                 }) {
                     Text(SettingsCopy.REMOVE, color = AdhxColors.Warn, fontWeight = FontWeight.ExtraBold)
                 }
@@ -486,12 +489,12 @@ private fun WaitingCard(
 
 /** A quiet red text action at a row's end (Remove this phone, Decline): 36dp tall, as on the boards. */
 @Composable
-private fun QuietButton(text: String, onClick: () -> Unit) {
+private fun QuietButton(text: String, enabled: Boolean = true, onClick: () -> Unit) {
     Box(
         Modifier
             .height(36.dp)
             .clip(RoundedCornerShape(50))
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
     ) {

@@ -85,6 +85,7 @@ fun ConnectScreen(vm: MainViewModel) {
     val ui by vm.connect.collectAsStateWithLifecycle()
     val email by vm.email.collectAsStateWithLifecycle()
     val removed by vm.removedNotice.collectAsStateWithLifecycle()
+    val removedNote by vm.removedNote.collectAsStateWithLifecycle()
     val storageError by vm.storageError.collectAsStateWithLifecycle()
     var modeName by rememberSaveable { mutableStateOf(ConnectMode.Email.name) }
     val mode = ConnectMode.valueOf(modeName)
@@ -143,6 +144,14 @@ fun ConnectScreen(vm: MainViewModel) {
                     fontSize = 15.sp,
                     lineHeight = 22.sp,
                     color = AdhxColors.Muted,
+                )
+            }
+            removedNote?.let { note ->
+                Text(
+                    note,
+                    fontSize = 14.sp,
+                    color = AdhxColors.Warn,
+                    modifier = Modifier.clickable(onClickLabel = "Dismiss") { vm.dismissRemovedNote() },
                 )
             }
             if (removed && ui.error == null && !ui.busy && email.error == null && !email.busy) {
