@@ -219,13 +219,19 @@ struct PlayerScreen: View {
     var group: GroupChannelRef? = nil
     /// The reactions feed: each post floats its reactions every time.
     var replayReactions = false
+    /// A queue that says where you are ("Reactions · 1 of 12"), beside Close.
+    var position: ((Int) -> String)? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var clean = false
     @State private var scrubbing = false
+    @State private var index = 0
 
     var body: some View {
         PlayerView(posts: posts, server: server, clean: $clean, scrubbing: $scrubbing, start: start,
-                   extras: PlayerExtras(replayReactions: replayReactions), onShow: onShow)
+                   extras: PlayerExtras(replayReactions: replayReactions), onShow: { shown in
+                       index = shown
+                       onShow(shown)
+                   })
             .overlay(alignment: .top) {
                 if !clean && !scrubbing {
                     HStack(spacing: 10) {
@@ -241,6 +247,16 @@ struct PlayerScreen: View {
                         .accessibilityLabel("Close")
                         if let group {
                             KeepChannelBar(group: group, server: server)
+                        } else if let position, index < posts.count {
+                            Text(position(index))
+                                .font(Theme.sans(14, .bold))
+                                .foregroundStyle(Theme.ink)
+                                .lineLimit(1)
+                                .padding(.horizontal, 14)
+                                .frame(height: 40)
+                                .frosted(Capsule(), dim: 0.5)
+                                .accessibilityAddTraits(.updatesFrequently)
+                            Spacer(minLength: 0)
                         } else {
                             Spacer(minLength: 0)
                         }

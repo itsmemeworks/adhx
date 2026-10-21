@@ -40,6 +40,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Workflows install pnpm with `pnpm/action-setup`, so Node 26 shipping without Corepack does not affect CI.
 - Follow-up: the Mac worker docs still say ARM64 Node 24 (any version the engines allow works); bump them once the worker has been measured on 26.
 
+## 2026-10-21 — iPhone matches boards 11.1 and 11.4
+
+- Compared the built screens on the owner's iPhone (via iPhone Mirroring, against their 2.3.0 server) with design pages 11 and 12. Two board details were missing on iOS and are now in: the React picker's footnote "Kept on the post. Your people see it when they watch." (11.1; Android already had it) and the reactions queue's "Reactions · 1 of 12" pill beside Close (11.4; `PlayerScreen.position`, using the server's `total` from `/api/app/reacted`, which `ReactedPage` now decodes; Channels' count line uses it too). The other differences (Play all as a text link, the invite sheet sharing straight away) were judged better as built; the boards were updated to match instead.
+
 ## 2026-10-21 — Posters that aren't black (the History channel's black covers)
 
 - The owner's History channel showed four near-black cover tiles over bright canyon and forest videos. Covers are each post's kept poster, and those posters came out black: a network's own thumbnail of a black first frame, or our grab one second in, inside a fade. (Sampled the public moments snapshot: 2 of 29 posters dark, both genuinely dark screen recordings, so it's specific posts, not every poster.)
