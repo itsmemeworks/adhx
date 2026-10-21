@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.4.0](https://github.com/itsmemeworks/adhx/compare/v2.3.0...v2.4.0) (2026-10-21)
+
+
+### Features
+
+* **ios:** the picker's footnote and the reactions queue position, as on the boards ([#609](https://github.com/itsmemeworks/adhx/issues/609)) ([144b401](https://github.com/itsmemeworks/adhx/commit/144b4012c6d3c7a438964233960729bf25dc95dd))
+* let a phone remove its own key from the server ([#602](https://github.com/itsmemeworks/adhx/issues/602)) ([3d44a33](https://github.com/itsmemeworks/adhx/commit/3d44a334939e6581266ee44ac55a31edaac559ce))
+* **site:** show real posts from the owner's adhx on adhx.com ([#607](https://github.com/itsmemeworks/adhx/issues/607)) ([b564c26](https://github.com/itsmemeworks/adhx/commit/b564c26669ebc75468807e77f14195745640656c))
+* **web:** match the phones' player overlay, original-post sheet and toasts ([#606](https://github.com/itsmemeworks/adhx/issues/606)) ([3d126af](https://github.com/itsmemeworks/adhx/commit/3d126affa98fb7922d4f2272ca6a214c27ff494f))
+
+
+### Bug Fixes
+
+* **apps:** no quote marks inside speech bubbles ([#608](https://github.com/itsmemeworks/adhx/issues/608)) ([6b9279a](https://github.com/itsmemeworks/adhx/commit/6b9279ab0cf2a0068cce69504bce21e2fe68b89c))
+* **ios:** keep the crop screen's title clear of the dynamic island ([#604](https://github.com/itsmemeworks/adhx/issues/604)) ([2c70ab0](https://github.com/itsmemeworks/adhx/commit/2c70ab0d9a704462256154f7991f79ab41fbfec5))
+* **keep:** posters that aren't black, and remake the black ones once ([#600](https://github.com/itsmemeworks/adhx/issues/600)) ([fe2ee99](https://github.com/itsmemeworks/adhx/commit/fe2ee994a075c29fea0365c1d97c7d0b3705e6ba))
+
 ## [2.3.0](https://github.com/itsmemeworks/adhx/compare/v2.2.0...v2.3.0) (2026-10-21)
 
 
