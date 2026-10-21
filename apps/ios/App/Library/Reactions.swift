@@ -12,6 +12,8 @@ struct ReactPicker: View {
     var note: String?
     var prompt = "Say something"
     var hint = "Up to \(LiveSay.maxText) characters"
+    /// Under the picker (board 11.1): where what you say goes.
+    var footnote: String? = "Kept on the post. Your people see it when they watch."
     let onEmoji: (String) -> Void
     let onWords: () -> Void
     @State private var height: CGFloat = 126
@@ -66,6 +68,11 @@ struct ReactPicker: View {
                     .foregroundStyle(Theme.warn)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityAddTraits(.updatesFrequently)
+            } else if let footnote {
+                Text(footnote)
+                    .font(Theme.sans(12))
+                    .foregroundStyle(Theme.faint)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(12)
