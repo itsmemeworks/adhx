@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — iPhone: React on every post, replayed when you watch it
+
+- The player has its own React button (smiley at the top of the rail) on every post outside Live, with the same picker as Live (`ReactPicker`, moved with `FloatingReactions` into `App/Library/Reactions.swift`). Yours floats at once with your picture (`Store.avatarUrl`), posts to `POST /api/app/reactions`, and is taken back with "Couldn’t send that. Try again." on failure.
+- `PostReactionsModel` replays a post's stored reactions when it settles (`GET /api/app/reactions`): the newest 12, oldest first, 350 ms apart after 600 ms, once per post per run of the app. Live keeps its own room and doesn't replay (its reactions are stored by the server since #589).
+- Verified in the simulator against the parity server: the replay request, the picker, and your 😂 floating with your face.
+
 ## 2026-10-21 — iPhone player polish from on-device testing
 
 - Hold the stage to hide everything but the media; a tap brings it back; a tap with the chrome showing pauses (`tapOrHold`: the hold never also counts as a tap). Photos move on by themselves after 10 s each (`PhotoTimer`: next photo in an album, then the next post; Repeat loops), with the bottom progress line, paused while a sheet or Live's picker is open or after a tap.
