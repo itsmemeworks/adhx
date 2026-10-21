@@ -177,10 +177,18 @@ enum Prefs {
         set { d.set(newValue, forKey: "justForMeByDefault") }
     }
 
-    /// "Sound on by default": videos start with sound instead of muted.
+    /// Sound for every video: Settings' "Sound on by default", and the
+    /// player's sound button, which changes it until you change it back.
     static var soundOn: Bool {
         get { d.bool(forKey: "soundOn") }
         set { d.set(newValue, forKey: "soundOn") }
+    }
+
+    /// Videos fill the screen (the default, cropped like the boards), or fit
+    /// it whole at their own shape (`fitVideo`).
+    static var fitVideo: Bool {
+        get { d.bool(forKey: "fitVideo") }
+        set { d.set(newValue, forKey: "fitVideo") }
     }
 }
 

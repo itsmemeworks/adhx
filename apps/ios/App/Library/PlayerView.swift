@@ -283,11 +283,12 @@ private struct PostPage: View {
         switch post.kind {
         case "video", "audio":
             ZStack {
-                // Full bleed, like the boards: the picture covers the screen.
-                Poster(url: ADHXClient.resolve(post.posterUrl, against: server), fill: true)
+                // Full bleed like the boards (the picture covers the screen), or
+                // the whole video at its own shape when Fit video is on.
+                Poster(url: ADHXClient.resolve(post.posterUrl, against: server), fill: !playback.fitVideo)
                 if onScreen {
                     if post.kind == "video" {
-                        PlayerLayerView(player: playback.player, fill: true) { playback.attach($0) }
+                        PlayerLayerView(player: playback.player, fill: !playback.fitVideo) { playback.attach($0) }
                     }
                     if playback.problem != nil || !playback.ready {
                         // Still being kept on your ADHX: an animated card until it's ready.
@@ -778,8 +779,10 @@ private struct MoreSheet: View {
     private var networkLine: String {
         let name = Network.name(post.platform)
         var parts = name.count > 1 ? [name] : []
-        if post.kind == "video", let height = post.media.first?.height, height > 0 {
-            parts.append("\(height)p")
+        // Video sizes are named by the short side: an upright 720×1280 is 720p.
+        if post.kind == "video", let media = post.media.first {
+            let sides = [media.width, media.height].compactMap { $0 }.filter { $0 > 0 }
+            if let short = sides.min() { parts.append("\(short)p") }
         }
         return parts.joined(separator: " · ")
     }
@@ -925,8 +928,14 @@ private struct PlayingControls: View {
             toggle(playback.muted ? "Sound off" : "Sound on",
                    icon: playback.muted ? "speaker.slash.fill" : "speaker.wave.2.fill",
                    on: !playback.muted,
-                   accessibility: playback.muted ? "Turn sound on" : "Turn sound off") {
-                playback.muted.toggle()
+                   accessibility: playback.muted ? "Turn sound on for every video" : "Turn sound off") {
+                playback.setSound(playback.muted)
+                say(playback.muted ? "Sound off" : "Sound on for every video")
+            }
+            toggle("Fit video", icon: "aspectratio", on: playback.fitVideo,
+                   accessibility: playback.fitVideo ? "Fill the screen" : "Fit the whole video") {
+                playback.setFitVideo(!playback.fitVideo)
+                say(playback.fitVideo ? "Videos fit the screen whole" : "Videos fill the screen")
             }
             toggle("Repeat", icon: "repeat.1", on: playback.repeatOne, accessibility: "Repeat this one") {
                 playback.repeatOne.toggle()
