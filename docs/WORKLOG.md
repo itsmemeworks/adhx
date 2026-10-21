@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Android: React on every post, replayed when you watch it
+
+- The player has its own React (smiley at the top of the rail) on every post outside Live, with Live's `ReactPicker` (prompt "Say something"). Yours floats at once with your picture (`Connection.avatarUrl`), posts to `POST /api/app/reactions`, and is taken back with "Couldn’t send that. Try again." in the picker on failure (`PostFloats`).
+- When a post settles, `GET /api/app/reactions` (once per post per run, `PostReactionsMemory`) and Live's floating faces replay the newest 12, oldest first, 350 ms apart from 600 ms after settling (`replayPlan`, `replayWait`); moving on cancels them. Live keeps its own room and doesn't replay. The photo timer waits while the picker is open.
+- The picker's footnote now says reactions are kept ("Kept on the post. Your people see it when they watch."), since the server stores Live's too.
+- Tests in `PostReactionsTest`. Checked on the emulator against a parity server with six seeded reactions: the replay, your 😂 stored with your face, the timer held under the picker, and the failure (server stopped) taking yours back with the message.
+
 ## 2026-10-21 — Reactions kept on every post, and replayed
 
 - Owner ask: react on any post, not just Live, and see them again when you watch it. New `post_reactions` table (account-guarded, gone with Clear data / account delete) and `src/lib/reactions/` (parse shared with Live, one rate budget). Web `GET|POST /api/posts/reactions`, phone `/api/app/reactions`, `DELETE …/{id}` own only; shapes in `docs/specs/phone-app.md` → Reactions on any post.

@@ -594,6 +594,16 @@ data class LiveDetail(
 @Serializable
 data class LiveSaverUpdate(val key: String, val savers: List<Saver> = emptyList(), val isPrivate: Boolean = false)
 
+/**
+ * The reactions kept on a post (`GET /api/app/reactions`): each `{ id, emoji,
+ * text, at, saver }`, oldest first. Read like Live's; ones that won't read are skipped.
+ */
+@Serializable
+data class PostReactionsResponse(
+    @Serializable(with = LiveReactionsSerializer::class)
+    val reactions: List<LiveReaction> = emptyList(),
+)
+
 /** One reaction someone sent while tuned in: an emoji, or a few words. */
 @Serializable
 data class LiveReaction(

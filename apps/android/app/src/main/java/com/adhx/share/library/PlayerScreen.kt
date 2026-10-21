@@ -121,6 +121,10 @@ import com.adhx.share.links.Links
 import com.adhx.share.links.Networks
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.feed.Privacy
+import com.adhx.share.feed.FloatingReactions
+import com.adhx.share.feed.ReactPicker
+import com.adhx.share.data.ConnectionStore
+import com.adhx.share.net.ApiResult
 import com.adhx.share.data.SettingsPrefs
 import com.adhx.share.net.PhonePost
 import com.adhx.share.net.PostKind
@@ -185,8 +189,11 @@ private val OverMedia = TextStyle(fontFamily = SansFamily, shadow = Shadow(Color
  * The friends feed adds to it: [onSaver] makes the faces on the byline open
  * that person's channel; [aboveCaption] and [belowCaption] put something
  * over the post (the why chip, the live reactions); [end] is one last page
- * after the posts (You're all caught up). [onReact] adds React at the top
- * of the button column (Live); [reacting] lights it while its picker is open.
+ * after the posts (You're all caught up). React sits at the top of the
+ * button column on every post: [onReact] hands it to Live's room ([reacting]
+ * lights it while Live's picker is open); without it the player has its own
+ * picker, keeps reactions on the post and replays the kept ones when a post
+ * settles ([PostReactionsMemory], once per post per run of the app).
  */
 @Composable
 fun PlayerScreen(
@@ -236,6 +243,14 @@ fun PlayerScreen(
     var reading by remember { mutableStateOf<PhonePost?>(null) }
     var more by remember { mutableStateOf<PhonePost?>(null) }
     var sendingPost by remember { mutableStateOf<PhonePost?>(null) }
+    // Outside Live, the player has its own React: the post whose picker is open, what's typed, and how sending went.
+    val ownReact = onReact == null
+    var picking by remember { mutableStateOf<PhonePost?>(null) }
+    var reactWords by rememberSaveable { mutableStateOf("") }
+    var reactSending by remember { mutableStateOf(false) }
+    var reactError by remember { mutableStateOf<String?>(null) }
+    val floats = remember { PostFloats() }
+    val reactingNow = reacting || picking != null
     // Where the scrub line is being dragged to (0–1), or null: the controls fade out meanwhile.
     var scrub by remember { mutableStateOf<Float?>(null) }
     val chrome by animateFloatAsState(if (scrub == null) 1f else 0f, label = "chrome")
@@ -274,6 +289,60 @@ fun PlayerScreen(
         if (end != null && settled == posts.size) hidden = false
         onPage(settled)
         if (settled == 0) onTop()
+    }
+
+    // A post that settles replays the reactions kept on it (once per post per run
+    // of the app): the newest few, oldest first, each with the face of who sent
+    // it. Moving on cancels the rest. Live has its own room and doesn't replay.
+    LaunchedEffect(current?.key, inPip) {
+        floats.clear()
+        val post = current ?: return@LaunchedEffect
+        if (!ownReact || inPip) return@LaunchedEffect
+        val settledAt = SystemClock.uptimeMillis()
+        val connection = ConnectionStore.get(context).current() ?: return@LaunchedEffect
+        val key = PostReactionsMemory.key(connection.server, connection.username, post.key)
+        if (PostReactionsMemory.replayed(key)) return@LaunchedEffect
+        val kept = PostReactionsMemory.fetched(key)
+            ?: when (val got = AdhxApi(connection).postReactions(post.platform, post.id)) {
+                is ApiResult.Ok -> got.value.reactions.also { PostReactionsMemory.remember(key, it) }
+                // Not visible to you (404) has nothing to replay; anything else can try again next time.
+                is ApiResult.Failed -> if (got.status == 404) emptyList<com.adhx.share.net.LiveReaction>().also { PostReactionsMemory.remember(key, it) } else return@LaunchedEffect
+                else -> return@LaunchedEffect
+            }
+        val plan = replayPlan(kept)
+        if (plan.isEmpty()) {
+            PostReactionsMemory.markReplayed(key)
+            return@LaunchedEffect
+        }
+        delay(replayWait(SystemClock.uptimeMillis() - settledAt))
+        if (!PostReactionsMemory.markReplayed(key)) return@LaunchedEffect
+        plan.forEach { step -> floats.add(step.reaction.emoji, step.reaction.text, step.reaction.who, step.afterMs) }
+    }
+
+    // Yours floats at once with your face, then it's kept on the post; if it
+    // doesn't go, it's taken back and the picker says so.
+    fun sendReaction(post: PhonePost, emoji: String?, text: String?) {
+        if (reactSending) return
+        val connection = ConnectionStore.get(context).current()
+        if (connection == null) {
+            reactError = POST_REACT_FAILED
+            return
+        }
+        val me = Saver(username = connection.username ?: "you", name = Copy.YOU, avatarUrl = connection.avatarUrl, isYou = true)
+        val id = floats.add(emoji, text, me)
+        reactSending = true
+        reactError = null
+        scope.launch {
+            val sent = AdhxApi(connection).reactToPost(post.platform, post.id, emoji = emoji, text = text) is ApiResult.Ok
+            reactSending = false
+            if (sent) {
+                if (text != null) reactWords = ""
+                picking = null
+            } else {
+                floats.remove(id)
+                reactError = POST_REACT_FAILED
+            }
+        }
     }
 
     // Something new on top (saved while the app was away, or a save that was
@@ -433,7 +502,7 @@ fun PlayerScreen(
                 fit = fit,
                 repeat = repeat,
                 // A photo's timer waits while a sheet or picker is up, in the small window and while the app is away.
-                held = more != null || sendingPost != null || reading != null || reacting || inPip || player == null,
+                held = more != null || sendingPost != null || reading != null || reactingNow || inPip || player == null,
                 onPhotosDone = { following()?.let { scope.launch { goTo(it) } } },
                 onHide = { hidden = true },
                 hidden = hidden,
@@ -455,8 +524,13 @@ fun PlayerScreen(
                 onSaver = onSaver,
                 aboveCaption = aboveCaption,
                 belowCaption = belowCaption,
-                onReact = onReact?.let { react -> { react(post) } },
-                reacting = reacting,
+                // Live's React (its room), or the player's own on every other post.
+                onReact = onReact?.let { react -> { react(post) } } ?: {
+                    reactError = null
+                    picking = if (picking == null) post else null
+                },
+                reacting = reactingNow,
+                live = !ownReact,
                 onKeep = if (post.yours || post.sourceUrl.isNullOrBlank()) null else {
                     {
                         if (keeping == null) {
@@ -498,7 +572,32 @@ fun PlayerScreen(
                 modifier = Modifier.align(Alignment.TopCenter),
             )
         }
+        if (ownReact && !inPip) {
+            // Over the post, left of the button column, between the top bar and the caption (as in Live).
+            FloatingReactions(
+                items = floats.items,
+                server = server,
+                onLanded = floats::remove,
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .padding(start = 16.dp, end = 84.dp, top = 170.dp, bottom = 300.dp),
+            )
+        }
         if (!inPip) notice?.let { NoticePill(it.text, Modifier.align(Alignment.TopCenter)) }
+        if (!inPip) {
+            picking?.let { post ->
+                ReactPicker(
+                    words = reactWords,
+                    onWordsChange = { reactWords = it },
+                    sending = reactSending,
+                    error = reactError,
+                    onEmoji = { sendReaction(post, it, null) },
+                    onText = { sendReaction(post, null, it) },
+                    onDismiss = { picking = null },
+                    prompt = Copy.SAY_SOMETHING_POST,
+                )
+            }
+        }
         reading?.let { Reader(it, onClose = { reading = null }) }
         if (!inPip) {
             sendingPost?.let { post -> SendSheet(post, server, onNotice = { text -> notice = Notice(text) }, onDismiss = { sendingPost = null }) }
@@ -627,6 +726,7 @@ private fun PostPage(
     belowCaption: (@Composable (PhonePost) -> Unit)?,
     onReact: (() -> Unit)?,
     reacting: Boolean,
+    live: Boolean,
     onKeep: (() -> Unit)?,
     keeping: Boolean,
     onSave: () -> Unit,
@@ -786,7 +886,7 @@ private fun PostPage(
                 playback = if (onScreen && plays) playback else null,
                 photo = if (timed && onScreen) { { timerState.value.fraction } } else null,
                 // Live's line is yellow, as on the boards; New's is cream.
-                color = if (onReact != null) AdhxColors.Accent else AdhxColors.White,
+                color = if (live) AdhxColors.Accent else AdhxColors.White,
                 scrub = scrub,
                 onScrub = onScrub,
                 onSeek = onSeek,
