@@ -41,4 +41,12 @@ class CopyFacesTest {
         assertEquals("A", initial("ana"))
         assertEquals("?", initial("  "))
     }
+
+    @Test
+    fun connectedMembersLine() {
+        assertEquals("You", Copy.youAnd(emptyList()))
+        assertEquals("You, Ana, Mum and Jo", Copy.youAnd(listOf("Ana", "Mum", "Jo")))
+        assertEquals("You, Ana, Jo, Ben and 1 other", Copy.youAnd(listOf("Ana", "Jo", "Ben", "Mum")))
+        assertEquals("You, Ana, Jo, Ben and 2 others", Copy.youAnd(listOf("Ana", "Jo", "Ben", "Mum", "Sam")))
+    }
 }

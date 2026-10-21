@@ -181,7 +181,7 @@ function Header() {
 function HeroComposition() {
   return (
     <Mock
-      label="ADHX on a laptop, playing an elephant video you, Ana and two others saved, with the meme caption: First video ever uploaded. Still better than your For You page. Next to it, ADHX on a phone playing a toy hamster video Ana and Ben saved, with reactions floating up from Jo, Ben and Ana, and a note that Mum just saved one."
+      label="ADHX on a laptop, playing an elephant video you, Ana and two others saved, with the meme caption: First video ever uploaded. Still better than your For You page. Next to it, ADHX on a phone playing a Reel Ana and Ben saved, of someone screaming at their first bite of dark chocolate, with reactions floating up from Jo, Ben and Ana, and a note that Mum just saved one."
       className="mx-auto w-full max-w-[740px]"
     >
       <div className="relative aspect-[358/300] md:aspect-[740/488]">
@@ -189,12 +189,12 @@ function HeroComposition() {
         <WebFrame className="absolute left-0 top-[6.7%] w-[67%] md:top-[7.4%] md:w-[83.8%]" />
         <PhoneFrame className="absolute left-[64%] top-0 w-[36%] md:left-[68.6%] md:w-[31.4%]">
           <PlayerScreen
-            art="hamster"
+            art="chocolate"
             savers={['ana', 'ben']}
             savedLine="Ana and Ben saved this"
             ago="2h"
-            network="Reddit video"
-            caption="The hamster repeats everything he says. He has not made peace with this."
+            network="Instagram Reel"
+            caption="Trying dark chocolate for the first time. It did not go well."
             newCount={12}
             saved
           />

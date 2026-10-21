@@ -217,12 +217,15 @@ struct PlayerScreen: View {
     var onShow: (Int) -> Void = { _ in }
     /// A From everyone channel: its name and "Keep this channel" on top.
     var group: GroupChannelRef? = nil
+    /// The reactions feed: each post floats its reactions every time.
+    var replayReactions = false
     @Environment(\.dismiss) private var dismiss
     @State private var clean = false
     @State private var scrubbing = false
 
     var body: some View {
-        PlayerView(posts: posts, server: server, clean: $clean, scrubbing: $scrubbing, start: start, onShow: onShow)
+        PlayerView(posts: posts, server: server, clean: $clean, scrubbing: $scrubbing, start: start,
+                   extras: PlayerExtras(replayReactions: replayReactions), onShow: onShow)
             .overlay(alignment: .top) {
                 if !clean && !scrubbing {
                     HStack(spacing: 10) {
@@ -480,10 +483,98 @@ struct PostTile: View {
         return min(max(CGFloat(w) / CGFloat(h), 0.6), 1)
     }
 
+    /// No picture to show: the words are the tile (a cream card, like the web's).
+    private var isWords: Bool {
+        ADHXClient.resolve(post.posterUrl, against: server) == nil
+    }
+
     var body: some View {
+        if isWords {
+            wordsTile
+        } else {
+            posterTile
+        }
+    }
+
+    /// The boards' text tile: who wrote it and how close it is on top, the
+    /// words big in the serif, who saved it at the bottom. Nothing sits on
+    /// the words.
+    private var wordsTile: some View {
+        shape(Theme.cream)
+            .overlay {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Text(chip)
+                            .font(Theme.sans(10, .heavy))
+                            .foregroundStyle(Theme.cream)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(Self.creamInk))
+                            .fixedSize()
+                        Spacer(minLength: 0)
+                        if privacy.isPrivate(post) {
+                            PrivateLock(size: 22)
+                        } else if post.isNew == true {
+                            Text("New")
+                                .font(Theme.sans(10, .heavy))
+                                .foregroundStyle(.black)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Capsule().fill(Theme.accent))
+                        } else if let strength = post.match?.strength {
+                            MatchMeter(level: strength == "strong" ? 3 : strength == "good" ? 2 : 1, onCream: true)
+                        }
+                    }
+                    Text(post.article?.title ?? post.text)
+                        .font(Theme.serif(wordsSize))
+                        .foregroundStyle(Self.creamInk)
+                        .lineSpacing(1)
+                        .lineLimit(7)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Spacer(minLength: 0)
+                    HStack(spacing: 6) {
+                        if !shownSavers.isEmpty {
+                            FaceStack(savers: shownSavers, server: server, size: 18, ring: Theme.cream)
+                        }
+                        Text(saversLine ?? authorLine)
+                            .font(Theme.sans(11, .bold))
+                            .foregroundStyle(Self.creamInk)
+                            .lineLimit(1)
+                    }
+                }
+                .padding(12)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                if post.match?.strength == "strong" && chip != "Related" {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Theme.accent, lineWidth: 2)
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(accessibilityText)
+            .accessibilityAddTraits(.isButton)
+    }
+
+    /// Dark words on the cream card.
+    fileprivate static let creamInk = Color(hex: 0x0F0E0C)
+
+    /// Short posts big, long ones smaller (the web's sizes).
+    private var wordsSize: CGFloat {
+        let count = (post.article?.title ?? post.text).count
+        return count < 60 ? 24 : count < 140 ? 19 : 16
+    }
+
+    /// "@ana · X" when nobody you know saved it.
+    private var authorLine: String {
+        let handle = post.author.handle.isEmpty ? "" : (post.author.handle.hasPrefix("@") ? post.author.handle : "@\(post.author.handle)")
+        return handle.isEmpty ? Network.name(post.platform) : "\(handle) · \(Network.name(post.platform))"
+    }
+
+    private var posterTile: some View {
         // The tile's shape sets its size; the picture only fills it. (A
         // filled image as the base would widen the tile past its column.)
-        shape
+        shape(Theme.surface)
             .overlay {
                 if let poster = ADHXClient.resolve(post.posterUrl, against: server) {
                     AsyncImage(url: poster) { phase in
@@ -565,12 +656,13 @@ struct PostTile: View {
             .accessibilityAddTraits(.isButton)
     }
 
+    /// The tile's size, in its base colour.
     @ViewBuilder
-    private var shape: some View {
+    private func shape(_ colour: Color) -> some View {
         if let height {
-            Theme.surface.frame(height: height)
+            colour.frame(height: height)
         } else {
-            Theme.surface.aspectRatio(aspect, contentMode: .fit)
+            colour.aspectRatio(aspect, contentMode: .fit)
         }
     }
 }
@@ -578,18 +670,23 @@ struct PostTile: View {
 /// Three little bars: how close a search result is.
 private struct MatchMeter: View {
     let level: Int
+    /// On the cream words card: dark bars on a soft plate instead of frost.
+    var onCream = false
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 2) {
             ForEach(0..<3) { index in
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(index < level ? Theme.accent : .white.opacity(0.3))
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(index < level ? (onCream ? PostTile.creamInk : Theme.accent)
+                          : (onCream ? PostTile.creamInk.opacity(0.2) : .white.opacity(0.3)))
                     .frame(width: 3, height: CGFloat(6 + index * 3))
             }
         }
         .padding(.horizontal, 7)
         .padding(.vertical, 5)
-        .frosted(Capsule(), dim: 0.55)
+        .background {
+            if onCream { Capsule().fill(PostTile.creamInk.opacity(0.08)) } else { Color.clear.frosted(Capsule(), dim: 0.55) }
+        }
         .accessibilityHidden(true)
     }
 }
@@ -608,8 +705,10 @@ extension PostTile {
         Text(post.article?.title ?? post.text)
             .font(Theme.sans(13))
             .foregroundStyle(Theme.cream)
-            .lineLimit(7)
-            .padding(12)
+            .lineLimit(5)
+            .padding(.horizontal, 12)
+            // Under the chip and the meter, never behind them.
+            .padding(.top, 42)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }

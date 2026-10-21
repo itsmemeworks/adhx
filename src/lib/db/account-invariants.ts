@@ -27,12 +27,16 @@ const ACCOUNT_GUARDS: AccountGuard[] = [
   { table: 'app_pair_codes', references: [{ column: 'user_id' }] },
   { table: 'phone_save_queue', references: [{ column: 'user_id' }] },
   { table: 'post_views', references: [{ column: 'user_id' }] },
+  { table: 'channel_visual_jobs', references: [{ column: 'user_id', nullable: true }] },
   {
     table: 'post_sends',
     references: [{ column: 'from_user_id' }, { column: 'to_user_id' }],
   },
   { table: 'moment_alert_subs', references: [{ column: 'user_id' }] },
   { table: 'moment_alerts', references: [{ column: 'user_id' }] },
+  { table: 'reaction_counts', references: [{ column: 'user_id' }] },
+  { table: 'post_reactions', references: [{ column: 'user_id' }] },
+  { table: 'auto_channels', references: [{ column: 'user_id' }] },
   {
     table: 'invites',
     references: [{ column: 'created_by' }, { column: 'used_by', nullable: true }],

@@ -101,7 +101,7 @@ struct ShareSheetScreen: View {
             MessageContent(
                 flow: flow,
                 title: "Connect the app first",
-                message: "Open ADHX Share and scan the code in Settings → Phone app on your ADHX.",
+                message: "Open ADHX Share and sign in with your email, or scan the code in Settings → Phone app on your ADHX.",
                 button: "OK",
                 showWordmark: true)
         case .problem(let title, let message):
@@ -420,7 +420,7 @@ private struct SavedContent: View {
                     Wordmark(markSize: 20, textSize: 20)
                     Text(flow.justForMe ? "Saved, just for you" : "Saved for your people")
                         .font(Theme.serif(34))
-                        .lineSpacing(-3)
+                        .tightLines(34)
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityAddTraits(.isHeader)
                     Text(flow.networkName)

@@ -63,6 +63,9 @@ The runner uses native Node.js, ONNX Runtime and FFmpeg. VideoToolbox provides
 hardware decoding/encoding where supported, with software fallbacks. CPU is the
 inference baseline; CoreML is opt-in and needs latency and memory tests.
 Docker and Apple Container are not required on the Mac.
+The optional `SEMANTIC_MEMORY_PROFILE=compact` allocation policy reduces retained
+CPU arenas without changing model inputs or stored vectors. See the
+[Mac performance measurements](mac-processing-performance.md) before tuning.
 
 ## A shared link becomes a playable save
 
@@ -92,8 +95,8 @@ sequenceDiagram
     M->>A: Claim, download source, encode and upload
     A->>Q: Validate and commit retained-file replacement
   end
-  P->>A: Read the playable feed
-  A-->>P: Ready posts and pending-save count
+  P->>A: Read My saves and On their way
+  A-->>P: Ready posts, pending saves and keep progress
   Note over Q,M: Understanding continues independently of playback
 ```
 
@@ -108,8 +111,11 @@ interruption. Older clients without `Prefer: respond-async` use the synchronous
 save path. X imports and browser saves join the downstream media/understanding
 stages without using phone receipts.
 
-The phone feed accounts for pending saves, downloads and conversions. It does
-not wait for semantic understanding to finish before showing a playable save.
+The phone's My saves (`GET /api/app/saves`) counts pending saves, downloads
+and conversions, and On their way (`GET /api/app/doing`, the phone twin of
+`/doing`) lists each post's step. A post on stage that is still being kept
+shows Getting it ready on the web. None of this waits for semantic
+understanding to finish before showing a playable save.
 Word search and already-computed vectors can be useful while the rest of the
 library is still being understood.
 
@@ -236,6 +242,9 @@ Search stays on the NAS: its query child embeds the query, then search combines
 word matches with text, image and video scores under account and moderation
 filters. Optional Jev refinement receives query and candidate public text, not
 media files. It is separate from the Mac processing protocol.
+The separately enabled [channel image pass](channel-image-curation.md) uploads
+selected retained public-post thumbnails for curation. It uses no Mac job lease
+and adds no NAS video extraction or local inference.
 
 ## Original quality, conversion and cleanup
 
@@ -260,8 +269,9 @@ flowchart TD
   Local --> Temp
 ```
 
-With `KEEP_H264=on`, non-H.264 slots queue for conversion before inference; all
-required video slots must finish before phone-feed readiness. The NAS preserves
+Unless `KEEP_H264=off`, non-H.264 slots queue for conversion before inference; all
+required video slots must finish before the post counts as kept (the keep job
+stays `converting` until then). The NAS preserves
 the source until validation and the database swap commit. Upload size, free
 space, concurrency and deadline limits apply even if the proxy accepts a request.
 Verify promoted-file playback too: an upload log alone is insufficient evidence.

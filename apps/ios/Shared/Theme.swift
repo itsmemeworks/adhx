@@ -102,6 +102,29 @@ enum BundledFonts {
 }
 
 extension View {
+    /// The boards' serif headings that wrap (`line-height: 0.95`): lines that
+    /// nearly touch. Text can only tighten its leading from iOS 26; earlier it
+    /// keeps the font's own.
+    /// The API only exists in newer SDKs, so older Xcodes (CI's `macos-15`
+    /// image) build without it and keep the font's own leading.
+    @ViewBuilder
+    func tightLines(_ size: CGFloat, factor: CGFloat = 0.95) -> some View {
+        #if compiler(>=6.4)
+        if #available(iOS 26.0, *) {
+            // An exact line height keeps the font's full ascent above the first
+            // line, where CSS splits the cut between top and bottom: move the
+            // glyphs back to where the boards put them (measured at 34 pt).
+            lineHeight(.exact(points: size * factor))
+                .padding(.top, -size * 0.29)
+                .padding(.bottom, size * 0.15)
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
+    }
+
     /// The boards' frosted glass: a blur of what's behind, darkened
     /// (`background: rgba(0,0,0,dim); backdrop-filter: blur(12px)`).
     func frosted<S: Shape>(_ shape: S, dim: Double = 0.45) -> some View {
@@ -131,6 +154,8 @@ struct Gob: View {
 
     var size: CGFloat = 30
     var mood: Mood = .idle
+    /// Its body colour (the Gob faces you can pick for your picture).
+    var colour: Color = Theme.accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var bobUp = false
 
@@ -146,10 +171,10 @@ struct Gob: View {
             context.rotate(-4, around: CGPoint(x: 48, y: 50))
 
             context.fill(Path(roundedRect: CGRect(x: 10, y: 14, width: 76, height: 72), cornerRadius: 28),
-                         with: .color(Theme.accent))
+                         with: .color(colour))
             context.fill(Path(ellipseIn: Self.circle(36, 46, 7)), with: .color(Self.ink))
             context.fill(Path(ellipseIn: Self.circle(63, 42, 11)), with: .color(Self.ink))
-            context.fill(Path(ellipseIn: Self.circle(66, 39, 3.5)), with: .color(Theme.accent))
+            context.fill(Path(ellipseIn: Self.circle(66, 39, 3.5)), with: .color(colour))
 
             if mood == .busy {
                 context.fill(Path(ellipseIn: Self.circle(49, 69, 5)), with: .color(Self.ink))
@@ -187,11 +212,12 @@ struct Gob: View {
             path.addQuadCurve(to: CGPoint(x: x + w, y: y), control: CGPoint(x: x + w / 2, y: y - rise))
             context.stroke(path, with: .color(ink), style: StrokeStyle(lineWidth: line, lineCap: .round))
         }
-        arc(10.5, 17.5, 6, 8, 2.4)
-        arc(21.5, 17, 9, 12, 2.6)
+        // The board's own quadratic control points (`q3 -4 6 0`, `q4.5 -6 9 0`, `q6.5 6 13 -0.5`).
+        arc(10.5, 17.5, 6, 4, 2.4)
+        arc(21.5, 17, 9, 6, 2.6)
         var mouth = Path()
         mouth.move(to: CGPoint(x: 13.5, y: 25))
-        mouth.addQuadCurve(to: CGPoint(x: 26.5, y: 24.5), control: CGPoint(x: 20, y: 37))
+        mouth.addQuadCurve(to: CGPoint(x: 26.5, y: 24.5), control: CGPoint(x: 20, y: 31))
         mouth.closeSubpath()
         context.fill(mouth, with: .color(ink))
         context.stroke(mouth, with: .color(ink), style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round))

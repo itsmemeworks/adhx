@@ -2,6 +2,17 @@ package com.adhx.share.library
 
 import android.content.Context
 import android.content.Intent
+import android.os.SystemClock
+import android.content.res.Configuration
+import android.app.Activity
+import android.content.ContextWrapper
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import com.adhx.share.ui.MayTurn
+import com.adhx.share.ui.KeepUpright
 import android.view.LayoutInflater
 import android.widget.Toast
 import androidx.annotation.OptIn
@@ -20,6 +31,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,8 +67,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -90,6 +105,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -118,6 +134,10 @@ import com.adhx.share.links.Links
 import com.adhx.share.links.Networks
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.feed.Privacy
+import com.adhx.share.feed.FloatingReactions
+import com.adhx.share.feed.ReactPicker
+import com.adhx.share.data.ConnectionStore
+import com.adhx.share.net.ApiResult
 import com.adhx.share.data.SettingsPrefs
 import com.adhx.share.net.PhonePost
 import com.adhx.share.net.PostKind
@@ -130,9 +150,11 @@ import com.adhx.share.ui.Faces
 import com.adhx.share.ui.PrivateLock
 import com.adhx.share.ui.rememberReducedMotion
 import com.adhx.share.ui.NetworkMark
+import com.adhx.share.ui.SansFamily
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.Spinner
 import com.adhx.share.ui.openUrl
+import com.adhx.share.ui.rememberLinked
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -148,6 +170,10 @@ private class Playback {
     var positionMs by mutableLongStateOf(0L)
     var durationMs by mutableLongStateOf(0L)
 
+    /** How far through it is, 0–1 (0 until the length is known). */
+    val fraction: Float
+        get() = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
+
     fun reset() {
         ready = false
         drawn = false
@@ -162,7 +188,7 @@ private class Playback {
 private data class Notice(val text: String, val at: Long = System.nanoTime())
 
 /** A soft dark shadow, only for words laid over a picture or video. */
-private val OverMedia = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.6f), Offset(0f, 1f), 6f))
+private val OverMedia = TextStyle(fontFamily = SansFamily, shadow = Shadow(Color.Black.copy(alpha = 0.6f), Offset(0f, 1f), 6f))
 
 /**
  * The player: one post at a time, full screen. Swipe up for the next save,
@@ -176,8 +202,11 @@ private val OverMedia = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.6f)
  * The friends feed adds to it: [onSaver] makes the faces on the byline open
  * that person's channel; [aboveCaption] and [belowCaption] put something
  * over the post (the why chip, the live reactions); [end] is one last page
- * after the posts (You're all caught up). [onReact] adds React at the top
- * of the button column (Live); [reacting] lights it while its picker is open.
+ * after the posts (You're all caught up). React sits at the top of the
+ * button column on every post: [onReact] hands it to Live's room ([reacting]
+ * lights it while Live's picker is open); without it the player has its own
+ * picker, keeps reactions on the post and replays the kept ones when a post
+ * settles ([PostReactionsMemory], once per post per run of the app).
  */
 @Composable
 fun PlayerScreen(
@@ -196,6 +225,13 @@ fun PlayerScreen(
     reacting: Boolean = false,
     /** Live privacy/metadata refreshes keep the keyed page rather than jumping to New's top. */
     preservePlaybackOnRefresh: Boolean = false,
+    /** [topBar] steps aside while the send sheet is up (home's row, as on iPhone). */
+    hideTopBarWhileSending: Boolean = false,
+    /**
+     * [topBar] shows the short messages ("Link copied") itself, in place of
+     * its "N on their way" pill, through [LocalPlayerToast] (New, My saves).
+     */
+    toastInTopBar: Boolean = false,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -205,7 +241,11 @@ fun PlayerScreen(
     // With animations off (Remove animations), pages jump instead of sliding.
     val still = rememberReducedMotion()
     suspend fun goTo(page: Int) = if (still) pager.scrollToPage(page) else pager.animateScrollToPage(page)
-    var muted by rememberSaveable { mutableStateOf(!SettingsPrefs.get(context).soundOn) }
+    // Sound and Fit video are remembered on the phone: once sound is on, every
+    // video plays with it until it's turned off (Settings shows the same switch).
+    val prefs = SettingsPrefs.get(context)
+    val muted = !prefs.soundOn
+    val fit = prefs.fitVideo
     var repeat by rememberSaveable { mutableStateOf(false) }
     var hidden by rememberSaveable { mutableStateOf(false) }
     var notice by remember { mutableStateOf<Notice?>(null) }
@@ -220,12 +260,45 @@ fun PlayerScreen(
     val playback = remember { Playback() }
     var reading by remember { mutableStateOf<PhonePost?>(null) }
     var more by remember { mutableStateOf<PhonePost?>(null) }
+    // The original post's sheet (the rail's network button).
+    var original by remember { mutableStateOf<PhonePost?>(null) }
     var sendingPost by remember { mutableStateOf<PhonePost?>(null) }
+    // Outside Live, the player has its own React: the post whose picker is open, what's typed, and how sending went.
+    val ownReact = onReact == null
+    var picking by remember { mutableStateOf<PhonePost?>(null) }
+    var reactWords by rememberSaveable { mutableStateOf("") }
+    var reactSending by remember { mutableStateOf(false) }
+    var reactError by remember { mutableStateOf<String?>(null) }
+    val floats = remember { PostFloats() }
+    val reactingNow = reacting || picking != null
     // Where the scrub line is being dragged to (0–1), or null: the controls fade out meanwhile.
     var scrub by remember { mutableStateOf<Float?>(null) }
     val chrome by animateFloatAsState(if (scrub == null) 1f else 0f, label = "chrome")
     val pip = LocalPip.current
     val inPip = pip?.inPip == true
+    // Turned sideways on playing media: the media alone, whole, with no bars (see [MayTurn] below).
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE && !inPip
+    val view = LocalView.current
+    DisposableEffect(landscape) {
+        val window = view.context.findActivity()?.window
+        val bars = window?.let { WindowCompat.getInsetsController(it, view) }
+        fun place() {
+            if (landscape) {
+                bars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                bars?.hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                bars?.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+        place()
+        // A sheet that was closing when the phone turned still had the focus: hide them again once it's gone.
+        val focus = android.view.ViewTreeObserver.OnWindowFocusChangeListener { focused -> if (focused) place() }
+        view.viewTreeObserver.addOnWindowFocusChangeListener(focus)
+        onDispose {
+            view.viewTreeObserver.removeOnWindowFocusChangeListener(focus)
+            bars?.show(WindowInsetsCompat.Type.systemBars())
+        }
+    }
 
     // While the app can be seen (full screen or as a small window): the
     // decoder is let go once it can't.
@@ -250,6 +323,9 @@ fun PlayerScreen(
 
     val settled = pager.settledPage
     val current = posts.getOrNull(settled)
+    // Only playing media turns sideways: a video, a sound or photos, with nothing over them
+    // (sheets, the picker and the reader keep the phone upright). Words and the end page stay upright.
+    MayTurn(current != null && (PostKind.plays(current.kind) || current.kind == PostKind.PHOTO))
     val mediaUrl = current?.takeIf { PostKind.plays(it.kind) }?.media?.firstOrNull()?.url
         ?.let { AdhxApi.resolve(server, it)?.toString() }
 
@@ -259,6 +335,60 @@ fun PlayerScreen(
         if (end != null && settled == posts.size) hidden = false
         onPage(settled)
         if (settled == 0) onTop()
+    }
+
+    // A post that settles replays the reactions kept on it (once per post per run
+    // of the app): the newest few, oldest first, each with the face of who sent
+    // it. Moving on cancels the rest. Live has its own room and doesn't replay.
+    LaunchedEffect(current?.key, inPip) {
+        floats.clear()
+        val post = current ?: return@LaunchedEffect
+        if (!ownReact || inPip) return@LaunchedEffect
+        val settledAt = SystemClock.uptimeMillis()
+        val connection = ConnectionStore.get(context).current() ?: return@LaunchedEffect
+        val key = PostReactionsMemory.key(connection.server, connection.username, post.key)
+        if (PostReactionsMemory.replayed(key)) return@LaunchedEffect
+        val kept = PostReactionsMemory.fetched(key)
+            ?: when (val got = AdhxApi(connection).postReactions(post.platform, post.id)) {
+                is ApiResult.Ok -> got.value.reactions.also { PostReactionsMemory.remember(key, it) }
+                // Not visible to you (404) has nothing to replay; anything else can try again next time.
+                is ApiResult.Failed -> if (got.status == 404) emptyList<com.adhx.share.net.LiveReaction>().also { PostReactionsMemory.remember(key, it) } else return@LaunchedEffect
+                else -> return@LaunchedEffect
+            }
+        val plan = replayPlan(kept)
+        if (plan.isEmpty()) {
+            PostReactionsMemory.markReplayed(key)
+            return@LaunchedEffect
+        }
+        delay(replayWait(SystemClock.uptimeMillis() - settledAt))
+        if (!PostReactionsMemory.markReplayed(key)) return@LaunchedEffect
+        plan.forEach { step -> floats.add(step.reaction.emoji, step.reaction.text, step.reaction.who, step.afterMs) }
+    }
+
+    // Yours floats at once with your face, then it's kept on the post; if it
+    // doesn't go, it's taken back and the picker says so.
+    fun sendReaction(post: PhonePost, emoji: String?, text: String?) {
+        if (reactSending) return
+        val connection = ConnectionStore.get(context).current()
+        if (connection == null) {
+            reactError = POST_REACT_FAILED
+            return
+        }
+        val me = Saver(username = connection.username ?: "you", name = Copy.YOU, avatarUrl = connection.avatarUrl, isYou = true)
+        val id = floats.add(emoji, text, me)
+        reactSending = true
+        reactError = null
+        scope.launch {
+            val sent = AdhxApi(connection).reactToPost(post.platform, post.id, emoji = emoji, text = text) is ApiResult.Ok
+            reactSending = false
+            if (sent) {
+                if (text != null) reactWords = ""
+                picking = null
+            } else {
+                floats.remove(id)
+                reactError = POST_REACT_FAILED
+            }
+        }
     }
 
     // Something new on top (saved while the app was away, or a save that was
@@ -288,7 +418,7 @@ fun PlayerScreen(
 
     LaunchedEffect(notice) {
         if (notice != null) {
-            delay(2_200)
+            delay(TOAST_MS)
             notice = null
         }
     }
@@ -334,13 +464,13 @@ fun PlayerScreen(
         }
     }
 
+    // Where a post that's done moves on to: the next save, or the end page after the last one.
+    fun following(): Int? = step(1) ?: pager.settledPage.plus(1).takeIf { end != null && !inPip && it == posts.size }
+
     // With Repeat off, a video that ends moves on to the next save.
     var ended by remember { mutableIntStateOf(0) }
     LaunchedEffect(ended) {
-        if (ended > 0 && !repeat) {
-            // The last video ends onto the end page, when there is one.
-            (step(1) ?: settled.plus(1).takeIf { end != null && !inPip && it == posts.size })?.let { goTo(it) }
-        }
+        if (ended > 0 && !repeat) following()?.let { goTo(it) }
     }
 
     // A video on screen can go in a small window.
@@ -415,7 +545,16 @@ fun PlayerScreen(
                 onScreen = page == settled,
                 player = player,
                 playback = playback,
-                hidden = hidden,
+                // Sideways, the whole video, whatever Fit video says.
+                fit = fit || landscape,
+                landscape = landscape,
+                repeat = repeat,
+                // A photo's timer waits while a sheet or picker is up, in the small window and while the app is away.
+                held = more != null || original != null || sendingPost != null || reading != null || reactingNow || inPip || player == null,
+                onPhotosDone = { following()?.let { scope.launch { goTo(it) } } },
+                onHide = { hidden = true },
+                // Sideways hides everything, without touching what upright had.
+                hidden = hidden || landscape,
                 saving = saving == post.key,
                 sharing = sharing == post.key,
                 shareProgress = shareProgress,
@@ -425,17 +564,25 @@ fun PlayerScreen(
                 onScrub = { scrub = it },
                 onTap = {
                     when {
+                        // Sideways, a tap only pauses or plays.
+                        landscape -> if (PostKind.plays(post.kind)) togglePlay()
                         hidden -> hidden = false
                         PostKind.plays(post.kind) -> togglePlay()
                     }
                 },
                 onRead = { reading = post },
                 onMore = { more = post },
+                onOriginal = { original = post },
                 onSaver = onSaver,
                 aboveCaption = aboveCaption,
                 belowCaption = belowCaption,
-                onReact = onReact?.let { react -> { react(post) } },
-                reacting = reacting,
+                // Live's React (its room), or the player's own on every other post.
+                onReact = onReact?.let { react -> { react(post) } } ?: {
+                    reactError = null
+                    picking = if (picking == null) post else null
+                },
+                reacting = reactingNow,
+                live = !ownReact,
                 onKeep = if (post.yours || post.sourceUrl.isNullOrBlank()) null else {
                     {
                         if (keeping == null) {
@@ -461,36 +608,57 @@ fun PlayerScreen(
                     }
                 },
                 onShare = {
-                    // Videos, sounds and photos go through the send sheet; words straight to the share sheet.
-                    if (ShareKept.files(post, server).isNotEmpty()) {
-                        sendingPost = post
-                    } else if (sharing == null) {
-                        sharing = post.key
-                        shareProgress = null
-                        scope.launch {
-                            val problem = ShareKept.share(context, server, post) { shareProgress = it }
-                            sharing = null
-                            problem?.let { notice = Notice(it) }
-                        }
-                    }
+                    // Every post goes through the send sheet: files or words, and straight to your people.
+                    sendingPost = post
                 },
                 onSeek = { ms -> player?.seekTo(ms) },
             )
         }
-        if (!hidden && !inPip) {
-            Box(Modifier.fillMaxSize().graphicsLayer { alpha = chrome }) { topBar() }
+        val topBarShown = !hidden && !landscape && !inPip && !(hideTopBarWhileSending && sendingPost != null)
+        if (topBarShown) {
+            Box(Modifier.fillMaxSize().graphicsLayer { alpha = chrome }) {
+                CompositionLocalProvider(LocalPlayerToast provides notice?.text) { topBar() }
+            }
         }
-        if (newOnTop > 0 && !hidden && !inPip && scrub == null) {
+        if (newOnTop > 0 && !hidden && !landscape && !inPip && scrub == null) {
             NewSavesPill(
                 count = newOnTop,
                 onClick = { scope.launch { goTo(0) } },
                 modifier = Modifier.align(Alignment.TopCenter),
             )
         }
-        if (!inPip) notice?.let { NoticePill(it.text, Modifier.align(Alignment.TopCenter)) }
+        if (ownReact && !inPip) {
+            // Over the post, left of the button column, between the top bar and the caption (as in Live).
+            FloatingReactions(
+                items = floats.items,
+                server = server,
+                onLanded = floats::remove,
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .padding(start = 16.dp, end = 84.dp, top = 170.dp, bottom = 300.dp),
+            )
+        }
+        if (!inPip && !landscape && !(toastInTopBar && topBarShown)) notice?.let { NoticePill(it.text, Modifier.align(Alignment.TopCenter)) }
+        if (!inPip) {
+            picking?.let { post ->
+                ReactPicker(
+                    words = reactWords,
+                    onWordsChange = { reactWords = it },
+                    sending = reactSending,
+                    error = reactError,
+                    onEmoji = { sendReaction(post, it, null) },
+                    onText = { sendReaction(post, null, it) },
+                    onDismiss = { picking = null },
+                    prompt = Copy.SAY_SOMETHING_POST,
+                )
+            }
+        }
         reading?.let { Reader(it, onClose = { reading = null }) }
         if (!inPip) {
             sendingPost?.let { post -> SendSheet(post, server, onNotice = { text -> notice = Notice(text) }, onDismiss = { sendingPost = null }) }
+        }
+        if (!inPip) {
+            original?.let { post -> OriginalSheet(post, server, onNotice = { text -> notice = Notice(text) }, onDismiss = { original = null }) }
         }
         if (!inPip) {
             more?.let { post ->
@@ -502,8 +670,17 @@ fun PlayerScreen(
                     onDismiss = { more = null },
                     controls = PlayerControls(
                         muted = muted.takeIf { plays },
-                        onToggleMute = { muted = !muted },
-                        repeat = repeat.takeIf { plays },
+                        onToggleMute = {
+                            prefs.soundOn = muted
+                            notice = Notice(if (muted) "Sound on for every video" else "Sound off")
+                        },
+                        fit = fit.takeIf { post.kind == PostKind.VIDEO },
+                        onToggleFit = {
+                            prefs.fitVideo = !fit
+                            notice = Notice(if (fit) "Videos fill the screen" else "Videos fit the screen whole")
+                        },
+                        // Photos play for a while too, so they can repeat.
+                        repeat = repeat.takeIf { plays || post.kind == PostKind.PHOTO },
                         onToggleRepeat = {
                             repeat = !repeat
                             notice = Notice(if (repeat) "Repeating this one" else "Plays the next save when this ends")
@@ -563,7 +740,22 @@ private fun NewSavesPill(count: Int, onClick: () -> Unit, modifier: Modifier = M
 }
 
 @Composable
-private fun NoticePill(text: String, modifier: Modifier = Modifier) {
+private fun NoticePill(text: String, modifier: Modifier = Modifier) =
+    ToastPill(text, modifier.statusBarsPadding().padding(top = 64.dp, start = 24.dp, end = 24.dp))
+
+/** How long a short message ("Link copied") stays up. */
+private const val TOAST_MS = 3_000L
+
+/**
+ * The player's short message while one is up ("Words copied", "Link copied"),
+ * for a [PlayerScreen] top bar that shows it in place of its pill
+ * (`toastInTopBar`); null otherwise.
+ */
+val LocalPlayerToast = compositionLocalOf<String?> { null }
+
+/** A short message: dark words on a cream pill. */
+@Composable
+fun ToastPill(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
         fontSize = 14.sp,
@@ -571,11 +763,10 @@ private fun NoticePill(text: String, modifier: Modifier = Modifier) {
         color = AdhxColors.Black,
         textAlign = TextAlign.Center,
         modifier = modifier
-            .statusBarsPadding()
-            .padding(top = 64.dp, start = 24.dp, end = 24.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(AdhxColors.Cream)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite },
     )
 }
 
@@ -586,6 +777,12 @@ private fun PostPage(
     onScreen: Boolean,
     player: ExoPlayer?,
     playback: Playback,
+    fit: Boolean,
+    landscape: Boolean,
+    repeat: Boolean,
+    held: Boolean,
+    onPhotosDone: () -> Unit,
+    onHide: () -> Unit,
     hidden: Boolean,
     saving: Boolean,
     sharing: Boolean,
@@ -597,11 +794,13 @@ private fun PostPage(
     onTap: () -> Unit,
     onRead: () -> Unit,
     onMore: () -> Unit,
+    onOriginal: () -> Unit,
     onSaver: ((Saver) -> Unit)?,
     aboveCaption: (@Composable (PhonePost) -> Unit)?,
     belowCaption: (@Composable (PhonePost) -> Unit)?,
     onReact: (() -> Unit)?,
     reacting: Boolean,
+    live: Boolean,
     onKeep: (() -> Unit)?,
     keeping: Boolean,
     onSave: () -> Unit,
@@ -617,35 +816,83 @@ private fun PostPage(
     }
     val album = rememberPagerState { photos.size }
     val plays = PostKind.plays(post.kind)
+    val timed = post.kind == PostKind.PHOTO && photos.isNotEmpty()
 
     // Save keeps the video, sound or every photo; a text post's words are copied.
     val canSave = remember(post.key, server) { ShareKept.files(post, server).isEmpty() || SaveToPhone.supported }
 
+    // A photo on screen shows for PHOTO_MS, then the album's next photo
+    // or (after the last) the next save; Repeat starts it over.
+    // Read through [photoPaused] or the progress lambdas, so the page itself doesn't recompose on every tick.
+    val timerState = remember(post.key) { mutableStateOf(PhotoTimer()) }
+    var timer by timerState
+    val photoPaused by remember(timerState) { derivedStateOf { timerState.value.paused } }
+    if (timed && onScreen) {
+        val scope = rememberCoroutineScope()
+        val still = rememberReducedMotion()
+        val holding by rememberUpdatedState(held || album.isScrollInProgress)
+        val repeating by rememberUpdatedState(repeat)
+        val done by rememberUpdatedState(onPhotosDone)
+        LaunchedEffect(album.settledPage) { timer = PhotoTimer() }
+        LaunchedEffect(Unit) {
+            var last = SystemClock.uptimeMillis()
+            while (isActive) {
+                delay(PHOTO_TICK_MS)
+                val now = SystemClock.uptimeMillis()
+                val before = timer
+                timer = before.tick(now - last, holding)
+                last = now
+                if (before.done || !timer.done) continue
+                val at = album.settledPage
+                when (val next = afterPhoto(at, photos.size, repeating)) {
+                    is PhotoStep.Photo -> if (next.index == at) {
+                        timer = PhotoTimer()
+                    } else {
+                        scope.launch { if (still) album.scrollToPage(next.index) else album.animateScrollToPage(next.index) }
+                    }
+                    PhotoStep.NextPost -> done()
+                }
+            }
+        }
+    }
+
     Box(
         Modifier
             .fillMaxSize()
-            .clickable(
+            // Tap: brings the controls back, else pauses or plays. Hold: hides them, to see the post whole.
+            .combinedClickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClickLabel = when {
                     hidden -> "Show controls"
                     plays -> if (playback.paused) "Play" else "Pause"
+                    timed && onScreen -> if (photoPaused) "Play" else "Pause"
                     else -> null
                 },
-                onClick = onTap,
+                onLongClickLabel = if (hidden) null else "Hide controls",
+                onLongClick = { if (!hidden && !pip) onHide() },
+                onClick = { if ((!hidden || landscape) && timed && onScreen) timer = timer.toggled() else onTap() },
             ),
     ) {
         when {
-            plays -> MediaPage(post, server, onScreen, player, playback, pip)
-            post.kind == PostKind.PHOTO && photos.isNotEmpty() -> Album(photos, album, hidden || pip)
+            plays -> MediaPage(post, server, onScreen, player, playback, pip, fit, whole = landscape)
+            timed -> Album(photos, album, hidden || pip)
             else -> WordsCard(post, onRead)
+        }
+        if (timed && onScreen && photoPaused && !pip) PausedMark(Modifier.align(Alignment.Center))
+        // How far along it is: the video's own position, or the photo's time on screen.
+        val progress: (() -> Float)? = when {
+            !onScreen -> null
+            plays -> { { playback.fraction } }
+            timed -> { { timerState.value.fraction } }
+            else -> null
         }
         if (pip) {
             // The small window shows only the video.
         } else if (hidden) {
-            if (onScreen && plays) {
+            if (progress != null) {
                 ProgressLine(
-                    playback,
+                    progress,
                     Modifier
                         .align(Alignment.BottomStart)
                         .navigationBarsPadding(),
@@ -702,6 +949,7 @@ private fun PostPage(
                 onSave = if (canSave) onSave else null,
                 onShare = onShare,
                 onMore = onMore,
+                onOriginal = onOriginal,
                 onReact = onReact,
                 reacting = reacting,
                 modifier = Modifier
@@ -711,8 +959,9 @@ private fun PostPage(
             )
             BottomRow(
                 playback = if (onScreen && plays) playback else null,
+                photo = if (timed && onScreen) { { timerState.value.fraction } } else null,
                 // Live's line is yellow, as on the boards; New's is cream.
-                color = if (onReact != null) AdhxColors.Accent else AdhxColors.White,
+                color = if (live) AdhxColors.Accent else AdhxColors.White,
                 scrub = scrub,
                 onScrub = onScrub,
                 onSeek = onSeek,
@@ -743,12 +992,15 @@ private fun MediaPage(
     player: ExoPlayer?,
     playback: Playback,
     pip: Boolean,
+    fit: Boolean,
+    /** Sideways: everything shows whole, a sound's cover too. */
+    whole: Boolean = false,
 ) {
     val media = post.media.firstOrNull()
     val poster = media?.posterUrl?.let { AdhxApi.resolve(server, it)?.toString() }
-    // An upright video fills the screen, as on the boards (a little off the sides,
-    // never more than a phone's worth); a wide one fits, so nothing important is cut.
-    val fills = post.kind == PostKind.AUDIO || isUpright(media?.width, media?.height)
+    // Full bleed, as on the boards (the picture covers the screen), or the whole
+    // video at its own shape with Fit video on. A sound's cover always fills.
+    val fills = !whole && (post.kind == PostKind.AUDIO || !fit)
     // The page's own size, clipped: a sound's cover fills it (cropped) and never pushes past it.
     Box(Modifier.fillMaxSize().clipToBounds(), contentAlignment = Alignment.Center) {
         if (poster != null) {
@@ -791,28 +1043,66 @@ private fun MediaPage(
                         .padding(16.dp),
                 )
                 !playback.ready -> Spinner(size = 34.dp, stroke = 3.dp)
-                playback.paused -> Box(
-                    Modifier
-                        .size(76.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.55f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(44.dp))
-                }
+                playback.paused -> PausedMark()
             }
         }
     }
 }
 
+/** The play button in the middle of a paused video or photo. */
+@Composable
+private fun PausedMark(modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .size(76.dp)
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = 0.55f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(44.dp))
+    }
+}
+
+/** How long a photo stays on screen in the player before the next one. */
+internal const val PHOTO_MS = 10_000L
+
+/** How often a photo's timer moves on. */
+private const val PHOTO_TICK_MS = 50L
+
+/**
+ * A photo's time on screen: [elapsedMs] of [lengthMs], paused by a tap.
+ * It stands still while [tick] is told it's held (a sheet is open).
+ */
+internal data class PhotoTimer(val elapsedMs: Long = 0L, val paused: Boolean = false, val lengthMs: Long = PHOTO_MS) {
+    val done: Boolean get() = elapsedMs >= lengthMs
+    val fraction: Float get() = if (lengthMs > 0) (elapsedMs.toFloat() / lengthMs).coerceIn(0f, 1f) else 1f
+
+    /** [deltaMs] later, unless it's paused, held or already done. */
+    fun tick(deltaMs: Long, held: Boolean = false): PhotoTimer =
+        if (paused || held || done || deltaMs <= 0) this else copy(elapsedMs = (elapsedMs + deltaMs).coerceAtMost(lengthMs))
+
+    /** A tap: pause or carry on; once it's run out, start the photo over. */
+    fun toggled(): PhotoTimer = if (done) PhotoTimer(lengthMs = lengthMs) else copy(paused = !paused)
+}
+
+/** What comes after a photo's time is up. */
+internal sealed interface PhotoStep {
+    /** Another photo of the album (or the same one again, on Repeat). */
+    data class Photo(val index: Int) : PhotoStep
+
+    /** The next save. */
+    data object NextPost : PhotoStep
+}
+
+/** After photo [index] of [count]: the album's next photo, else the next save, or the album again on [repeat]. */
+internal fun afterPhoto(index: Int, count: Int, repeat: Boolean): PhotoStep = when {
+    index + 1 < count -> PhotoStep.Photo(index + 1)
+    repeat -> PhotoStep.Photo(0)
+    else -> PhotoStep.NextPost
+}
+
 /** How much room Live's React picker takes at the bottom, with a little air above it. */
 private val REACT_PICKER_HEIGHT = 156.dp
-
-/** Taller than wide by at least 4:3 (a phone video, a reel), when the size is known. */
-internal fun isUpright(width: Double?, height: Double?): Boolean {
-    if (width == null || height == null || width <= 0 || height <= 0) return false
-    return height / width >= 4.0 / 3.0
-}
 
 @Composable
 private fun Album(photos: List<String>, state: PagerState, hidden: Boolean) {
@@ -882,7 +1172,9 @@ private fun Dots(count: Int, current: Int) {
 private fun WordsCard(post: PhonePost, onRead: () -> Unit) {
     val article = post.article
     val title = article?.title?.takeIf { it.isNotBlank() }
-    val short = (title.orEmpty().length + post.text.length) < SHORT_WORDS
+    // A kept X article has its whole body: shown instead of the post's own words (usually just its link) and the summary.
+    val body = remember(article?.body) { ArticleBody.parse(article?.body) }
+    val short = body.isEmpty() && (title.orEmpty().length + post.text.length) < SHORT_WORDS
     val type = if (short) 38.sp else 28.sp
     val line = if (short) 44.sp else 34.sp
     val scroll = rememberScrollState()
@@ -923,17 +1215,21 @@ private fun WordsCard(post: PhonePost, onRead: () -> Unit) {
             article?.url?.takeIf { it.isNotBlank() }?.let {
                 Text(Links.display(it), fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            if (post.text.isNotBlank()) {
-                Text(
-                    post.text,
-                    fontFamily = SerifFamily,
-                    fontSize = if (title != null) 22.sp else type,
-                    lineHeight = if (title != null) 30.sp else line,
-                    color = if (title != null) AdhxColors.Cream else AdhxColors.White,
-                )
-            }
-            article?.description?.takeIf { it.isNotBlank() && it != post.text }?.let {
-                Text(it, fontSize = 16.sp, lineHeight = 24.sp, color = AdhxColors.Muted)
+            if (body.isNotEmpty()) {
+                ArticleBodyText(body, size = 20.sp, lineHeight = 29.sp)
+            } else {
+                if (post.text.isNotBlank()) {
+                    Text(
+                        rememberLinked(post.text),
+                        fontFamily = SerifFamily,
+                        fontSize = if (title != null) 22.sp else type,
+                        lineHeight = if (title != null) 30.sp else line,
+                        color = if (title != null) AdhxColors.Cream else AdhxColors.White,
+                    )
+                }
+                article?.description?.takeIf { it.isNotBlank() && it != post.text }?.let {
+                    Text(it, fontSize = 16.sp, lineHeight = 24.sp, color = AdhxColors.Muted)
+                }
             }
         }
         // Too long to show: the whole of it is a button away (taps on the words don't open it).
@@ -959,74 +1255,43 @@ private const val SHORT_WORDS = 140
 
 /**
  * Bottom left, over the post: who of your people saved it (faces and "Ana and
- * Ben saved this · 2h", a lock when it's just for you), where it's from
- * ("YouTube · Rick Astley") and the first lines of text (words posts show
- * them in the page).
+ * Ben saved this · 2h", a lock when it's just for you), or just the lock. Who
+ * posted it and their words are behind the network's button on the rail
+ * ([OriginalSheet]).
  */
 @Composable
 private fun CaptionText(post: PhonePost, server: String, onSaver: ((Saver) -> Unit)?, modifier: Modifier = Modifier) {
-    val words = post.kind == PostKind.TEXT || post.kind == PostKind.ARTICLE
-    val network = Networks.name(post.platform)
-    val by = post.author.name?.trim()?.takeIf { it.isNotEmpty() } ?: Copy.handle(post.author.handle)?.takeIf { network == null }
-    val source = listOfNotNull(network, by).joinToString(" · ").ifBlank { Copy.handle(post.author.handle) ?: "" }
     val justYou = Privacy.isPrivate(post)
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        val line = Copy.saversLine(post.savers)
-        if (line != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Faces(
-                    savers = post.savers,
-                    server = server,
-                    size = 30.dp,
-                    description = line,
-                    onTap = onSaver,
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    line,
-                    style = OverMedia,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AdhxColors.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Copy.shortAgoIso(post.savers.firstOrNull()?.savedAt)?.let {
-                    Text(" · $it", style = OverMedia, fontSize = 14.sp, color = AdhxColors.Muted, maxLines = 1, softWrap = false)
-                }
-                if (justYou) {
-                    Spacer(Modifier.width(8.dp))
-                    PrivateLock(size = 15.dp)
-                }
-            }
+    val line = Copy.saversLine(post.savers)
+    if (line == null) {
+        if (justYou) PrivateLock(size = 15.dp, modifier = modifier)
+        return
+    }
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Faces(
+            savers = post.savers,
+            server = server,
+            size = 30.dp,
+            description = line,
+            onTap = onSaver,
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            line,
+            style = OverMedia,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            color = AdhxColors.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        Copy.shortAgoIso(post.savers.firstOrNull()?.savedAt)?.let {
+            Text(" · $it", style = OverMedia, fontSize = 14.sp, color = AdhxColors.Muted, maxLines = 1, softWrap = false)
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (justYou && line == null) {
-                PrivateLock(size = 14.dp)
-                Spacer(Modifier.width(6.dp))
-            }
-            Text(
-                source,
-                style = OverMedia,
-                fontSize = 14.sp,
-                fontWeight = if (line != null) FontWeight.Normal else FontWeight.Bold,
-                color = if (line != null) AdhxColors.Muted else AdhxColors.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        if (!words && post.text.isNotBlank()) {
-            Text(
-                // One run of words: paragraph breaks would leave the second line empty.
-                Copy.oneLine(post.text),
-                style = OverMedia,
-                fontSize = 16.sp,
-                lineHeight = 22.sp,
-                color = AdhxColors.White,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+        if (justYou) {
+            Spacer(Modifier.width(8.dp))
+            PrivateLock(size = 15.dp)
         }
     }
 }
@@ -1099,13 +1364,14 @@ private fun ActionColumn(
     onSave: (() -> Unit)?,
     onShare: () -> Unit,
     onMore: () -> Unit,
+    onOriginal: () -> Unit,
     onReact: (() -> Unit)?,
     reacting: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier.width(52.dp),
-        // Live's extra React button tightens the column, as on the boards.
+        // Six buttons at most (React, Save, Share, Save to phone, the network, More): tight, as on Live's board.
         verticalArrangement = Arrangement.spacedBy(if (onReact != null) 8.dp else 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -1171,6 +1437,10 @@ private fun ActionColumn(
                 if (saving) Spinner(size = 20.dp, stroke = 2.dp) else ActionIcon(rememberVectorPainter(Glyphs.Download))
             }
         }
+        // The network's own mark: who posted it, all their words, and the way to the original.
+        ActionButton(description = "The original post on ${Networks.name(post.platform) ?: "the web"}", onClick = onOriginal) {
+            NetworkMark(post.platform, size = 22.dp, tint = AdhxColors.Cream)
+        }
         ActionButton(description = "More options", onClick = onMore) {
             ActionIcon(rememberVectorPainter(Glyphs.More))
         }
@@ -1218,22 +1488,39 @@ private fun ActionButton(
 
 /**
  * The playback line along the bottom, 16dp in from each side; you can drag
- * it to seek. Photos and words have none.
+ * it to seek. A photo's line shows its time on screen ([photo], 0–1) and
+ * can't be dragged. Words have none.
  */
 @Composable
 private fun BottomRow(
     playback: Playback?,
+    photo: (() -> Float)?,
     color: Color,
     scrub: Float?,
     onScrub: (Float?) -> Unit,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (playback == null) return
+    if (playback == null) {
+        if (photo != null) {
+            ScrubLine(
+                fraction = photo(),
+                color = color,
+                dragging = false,
+                enabled = false,
+                onDrag = {},
+                onRelease = {},
+                label = "Time on this photo",
+                modifier = modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+            )
+        }
+        return
+    }
     val duration = playback.durationMs
-    val fraction = if (duration > 0) (playback.positionMs.toFloat() / duration).coerceIn(0f, 1f) else 0f
     ScrubLine(
-        fraction = scrub ?: fraction,
+        fraction = scrub ?: playback.fraction,
         color = color,
         dragging = scrub != null,
         enabled = duration > 0,
@@ -1262,6 +1549,7 @@ private fun ScrubLine(
     onDrag: (Float) -> Unit,
     onRelease: (Float) -> Unit,
     modifier: Modifier = Modifier,
+    label: String = "Seek",
 ) {
     val drag by rememberUpdatedState(onDrag)
     val release by rememberUpdatedState(onRelease)
@@ -1269,7 +1557,7 @@ private fun ScrubLine(
     Canvas(
         modifier
             .height(32.dp)
-            .semantics { contentDescription = "Seek" }
+            .semantics { contentDescription = label }
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
                 detectTapGestures { at -> release((at.x / size.width).coerceIn(0f, 1f)) }
@@ -1345,11 +1633,9 @@ private fun ScrubTime(elapsedMs: Long, totalMs: Long, modifier: Modifier = Modif
     }
 }
 
-/** The thin line left at the bottom while the controls are hidden. */
+/** The thin line left at the bottom while the controls are hidden ([fraction] 0–1, read here so only the line redraws). */
 @Composable
-private fun ProgressLine(playback: Playback, modifier: Modifier = Modifier) {
-    val duration = playback.durationMs
-    val fraction = if (duration > 0) (playback.positionMs.toFloat() / duration).coerceIn(0f, 1f) else 0f
+private fun ProgressLine(fraction: () -> Float, modifier: Modifier = Modifier) {
     Box(
         modifier
             .fillMaxWidth()
@@ -1359,7 +1645,7 @@ private fun ProgressLine(playback: Playback, modifier: Modifier = Modifier) {
         Box(
             Modifier
                 .fillMaxHeight()
-                .fillMaxWidth(fraction)
+                .fillMaxWidth(fraction().coerceIn(0f, 1f))
                 .background(AdhxColors.Accent),
         )
     }
@@ -1393,3 +1679,10 @@ fun BarButton(painter: Painter, label: String, onClick: () -> Unit, background: 
 @Composable
 fun BarButton(icon: ImageVector, label: String, onClick: () -> Unit, background: Color = Color.Black.copy(alpha = 0.45f)) =
     BarButton(rememberVectorPainter(icon), label, onClick, background)
+
+/** The activity behind a [Context], unwrapping themes and the like. */
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}

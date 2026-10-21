@@ -1,7 +1,7 @@
 package com.adhx.share.main
 
+import androidx.compose.foundation.text.selection.SelectionContainer
 import android.content.Context
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -80,7 +80,6 @@ import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.SettingsCopy
 import com.adhx.share.ui.faceColor
-import com.adhx.share.ui.openInAdhx
 
 /** The red of Remove and Decline. */
 private val Danger = Color(0xFFFF8F7A)
@@ -101,9 +100,8 @@ class SettingsActions(
  * Invite, the feed filter, Just for me and Sound by default, what your ADHX
  * is doing, Shared lately, and this phone's connection.
  *
- * Changing your picture and inviting open Settings on your ADHX: the phone
- * routes for them (`/api/account/avatar`, `/api/invites`) take a signed-in
- * browser, not a phone key.
+ * Change picture ([PictureFlow]) and Invite someone ([InviteSheet]) happen
+ * here on the phone, through `/api/app/me/avatar` and `/api/app/invites`.
  */
 @Composable
 fun SettingsScreen(
@@ -134,10 +132,8 @@ fun SettingsScreen(
     val list = peopleUi.people
     val you = list?.you
     val username = you?.username ?: connection.username?.trim()?.trimStart('@')?.takeIf { it.isNotEmpty() }
-    val openWeb: (String, String) -> Unit = { anchor, note ->
-        Toast.makeText(context, note, Toast.LENGTH_SHORT).show()
-        openInAdhx(context, connection.server, "/settings#$anchor")
-    }
+    var pictureOpen by rememberSaveable { mutableStateOf(false) }
+    var inviteOpen by rememberSaveable { mutableStateOf(false) }
 
     Column(
         Modifier
@@ -173,7 +169,7 @@ fun SettingsScreen(
                         onClickLabel = SettingsCopy.CHANGE_PICTURE,
                         interactionSource = null,
                         indication = null,
-                    ) { openWeb("you", SettingsCopy.CHANGE_PICTURE_NOTE) },
+                    ) { pictureOpen = true },
                 ) {
                     Avatar(
                         username = username.orEmpty(),
@@ -182,6 +178,7 @@ fun SettingsScreen(
                         server = connection.server,
                         size = 64.dp,
                         ring = faceColor(username.orEmpty()),
+                        isYou = true,
                     )
                     Box(
                         Modifier
@@ -222,7 +219,7 @@ fun SettingsScreen(
                     SettingsCopy.CHANGE_PICTURE,
                     filled = false,
                     enabled = true,
-                    onClick = { openWeb("you", SettingsCopy.CHANGE_PICTURE_NOTE) },
+                    onClick = { pictureOpen = true },
                     height = 40,
                     fontSize = 14,
                 )
@@ -257,7 +254,7 @@ fun SettingsScreen(
             }
             if (list == null || list.canInvite) {
                 Divider()
-                NavRow(SettingsCopy.INVITE, onClick = { openWeb("invite", SettingsCopy.INVITE_NOTE) })
+                NavRow(SettingsCopy.INVITE, onClick = { inviteOpen = true })
             }
             Divider()
             NavRow(SettingsCopy.FEED, onClick = { filterOpen = true }) {
@@ -286,7 +283,7 @@ fun SettingsScreen(
         // This phone, then Shared lately (the spec's order; the boards end on This phone).
         Section {
             Row(
-                Modifier.padding(start = 16.dp, end = 6.dp, top = 12.dp, bottom = 12.dp),
+                Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
@@ -306,6 +303,7 @@ fun SettingsScreen(
                     Text(
                         SettingsCopy.connectedTo(list?.owner),
                         fontSize = 14.sp,
+                        lineHeight = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = AdhxColors.White,
                         maxLines = 1,
@@ -314,14 +312,13 @@ fun SettingsScreen(
                     Text(
                         Links.host(connection.server),
                         fontSize = 12.sp,
+                        lineHeight = 16.sp,
                         color = AdhxColors.Faint,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                TextButton(onClick = { confirmRemove = true }) {
-                    Text(SettingsCopy.REMOVE_PHONE, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Danger)
-                }
+                QuietButton(SettingsCopy.REMOVE_PHONE) { confirmRemove = true }
             }
         }
 
@@ -342,12 +339,25 @@ fun SettingsScreen(
             notice?.let { Text(it, fontSize = 13.sp, color = AdhxColors.Faint) }
         }
 
+        // Which release this phone runs, to match against the GitHub tags.
+        versionName(context)?.let {
+            SelectionContainer {
+                Text(
+                    "ADHX Share $it",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AdhxColors.Muted,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                )
+            }
+        }
         Text(
-            listOfNotNull(versionName(context)?.let { "ADHX Share $it" }, SettingsCopy.TAGLINE).joinToString(" · "),
+            SettingsCopy.TAGLINE,
             fontSize = 12.sp,
             color = AdhxColors.Faint,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 
@@ -360,6 +370,19 @@ fun SettingsScreen(
                 feed.applyFilter(types, mode)
             },
         )
+    }
+
+    if (pictureOpen) {
+        PictureFlow(
+            vm = vm,
+            connection = connection,
+            onChanged = { people.load() },
+            onClose = { pictureOpen = false },
+        )
+    }
+
+    if (inviteOpen) {
+        InviteSheet(connection = connection, onClose = { inviteOpen = false })
     }
 
     if (confirmRemove) {
@@ -410,7 +433,7 @@ private fun WaitingCard(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.semantics(mergeDescendants = true) { heading() },
         ) {
-            Text(SettingsCopy.WAITING_FOR_YOU, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.8.sp, color = AdhxColors.Accent)
+            Text(SettingsCopy.WAITING_FOR_YOU, fontSize = 13.sp, lineHeight = 17.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.8.sp, color = AdhxColors.Accent)
             Spacer(Modifier.width(8.dp))
             Box(
                 Modifier
@@ -430,16 +453,14 @@ private fun WaitingCard(
                 Avatar(request.username, request.label, null, server, 44.dp)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(SettingsCopy.wantsIn(request), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White)
-                    Text(SettingsCopy.requestLine(request), fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(SettingsCopy.wantsIn(request), fontSize = 15.sp, lineHeight = 19.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White)
+                    Text(SettingsCopy.requestLine(request), fontSize = 13.sp, lineHeight = 17.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 if (busy) {
                     CircularProgressIndicator(Modifier.size(20.dp), color = AdhxColors.Accent, strokeWidth = 2.dp)
                 } else {
                     // Decline sits quietly at the end of the row, so the two buttons stay as on the boards.
-                    TextButton(onClick = { onDecide(request, JoinDecision.DECLINE) }) {
-                        Text(SettingsCopy.DECLINE, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Danger)
-                    }
+                    QuietButton(SettingsCopy.DECLINE) { onDecide(request, JoinDecision.DECLINE) }
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -460,6 +481,21 @@ private fun WaitingCard(
             }
             errors[request.id]?.let { Text(it, fontSize = 13.sp, color = AdhxColors.Warn) }
         }
+    }
+}
+
+/** A quiet red text action at a row's end (Remove this phone, Decline): 36dp tall, as on the boards. */
+@Composable
+private fun QuietButton(text: String, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .height(36.dp)
+            .clip(RoundedCornerShape(50))
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Danger, maxLines = 1)
     }
 }
 

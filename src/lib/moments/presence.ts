@@ -1,10 +1,12 @@
 import { EventEmitter } from 'events'
 import type { ReactionEmoji } from './reactions'
+import { noteTuneIn } from '@/lib/admin/counts'
 
 /**
  * Who is tuned in to which moment, by account, and the reactions they send.
  * In-process on `globalThis` like the engine (a dev reload keeps it), never
- * stored. The engine still counts every viewer anonymously; this only knows
+ * stored (each reaction is kept on its post separately, in `post_reactions`,
+ * by `src/lib/moments/react.ts`). The engine still counts every viewer anonymously; this only knows
  * signed-in members, and `people.ts` turns it into names for other members.
  *
  * Account ids stay server-side: nothing here is sent to a client as is.
@@ -64,10 +66,12 @@ export function joinWatch(slug: string, userId: string): () => void {
   const s = state()
   const room = s.rooms.get(slug) ?? new Map<string, Entry>()
   s.rooms.set(slug, room)
+  const joined = !room.has(userId)
   const entry = room.get(userId) ?? { count: 0, since: Date.now(), phones: new Map() }
   entry.phones ??= new Map()
   entry.count++
   room.set(userId, entry)
+  if (joined) noteTuneIn(slug, userId, room.size)
   let left = false
   return () => {
     if (left) return
@@ -93,6 +97,7 @@ export function renewWatch(slug: string, userId: string, keyId: string, session:
   entry.phones ??= new Map()
   entry.phones.set(`${keyId}:${session}`, { keyId, expires: Date.now() + WATCH_LEASE_MS })
   room.set(userId, entry)
+  if (!before.has(userId)) noteTuneIn(slug, userId, room.size)
   return before.size !== room.size || [...room.keys()].some((id) => !before.has(id))
 }
 
@@ -144,12 +149,15 @@ export function isWatching(slug: string, userId: string): boolean {
 }
 
 /** Send a reaction to everyone listening for reactions (the moment's streams filter by slug). */
-export function sendReaction(signal: Omit<ReactionSignal, 'id' | 'at'>): ReactionSignal {
+export function sendReaction(
+  signal: Omit<ReactionSignal, 'id' | 'at'> & { id?: string; at?: string },
+): ReactionSignal {
   const s = state()
   const full: ReactionSignal = {
     ...signal,
-    id: `r${Date.now().toString(36)}${(s.nextId++).toString(36)}`,
-    at: new Date().toISOString(),
+    // The id the post keeps it under (`post_reactions`), when it was kept.
+    id: signal.id ?? `r${Date.now().toString(36)}${(s.nextId++).toString(36)}`,
+    at: signal.at ?? new Date().toISOString(),
   }
   const kept = freshReactions(s.recent.get(full.slug) ?? [])
   kept.push(full)
@@ -164,7 +172,8 @@ function freshReactions(list: ReactionSignal[], now = Date.now()): ReactionSigna
 
 /**
  * Reactions sent to `slug` in the last few seconds, oldest first. Phones that
- * poll instead of streaming show these; they're never stored anywhere else.
+ * poll instead of streaming show these. (The post keeps its own copy in
+ * `post_reactions`; see `src/lib/reactions/post-reactions.ts`.)
  */
 export function recentReactions(slug: string, now = Date.now()): ReactionSignal[] {
   const s = state()

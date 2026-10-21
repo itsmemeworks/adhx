@@ -81,8 +81,10 @@ struct ChannelsView: View {
     let server: URL
     /// Your people, everyone (Settings' list).
     @StateObject private var people = SettingsModel()
-    @Environment(\.openURL) private var openURL
+    @StateObject private var reacted = ReactedModel()
     @State private var playing: PlayQueue?
+    @State private var playingReacted: PlayerStart?
+    @State private var inviting = false
     @State private var problem: String?
     @State private var seeAll = false
 
@@ -101,7 +103,11 @@ struct ChannelsView: View {
             }
         }
         .scrollIndicators(.hidden)
-        .refreshable { await model.reload() }
+        .refreshable {
+            async let channels: Void = model.reload()
+            async let reactions: Void = reacted.reload()
+            _ = await (channels, reactions)
+        }
         // From the left edge: back to Channels.
         .simultaneousGesture(
             DragGesture(minimumDistance: 24)
@@ -115,10 +121,15 @@ struct ChannelsView: View {
             PlayerScreen(posts: queue.posts, server: server, start: queue.start ?? queue.posts.first?.key ?? "",
                          group: queue.group)
         }
+        .fullScreenCover(item: $playingReacted) { start in
+            ReactedPlayer(model: reacted, server: server, start: start.key)
+        }
         .navigationDestination(isPresented: $seeAll) {
-            PeopleListView(settings: people, server: server, invite: invite)
+            PeopleListView(settings: people, server: server)
                 .task { await people.load() }
         }
+        .inviteSheet(isPresented: $inviting, onBadKey: model.onBadKey)
+        .task { await reacted.reload() }
     }
 
     private var list: some View {
@@ -143,6 +154,11 @@ struct ChannelsView: View {
                             .foregroundStyle(Theme.warn)
                             .padding(.horizontal, 16)
                     }
+                    if !reacted.items.isEmpty {
+                        ReactionsRow(model: reacted, server: server) { post in
+                            playingReacted = PlayerStart(key: post?.key ?? reacted.items.first?.id ?? "")
+                        }
+                    }
                     if !model.index.group.isEmpty { fromEveryone }
                     if !model.index.friends.isEmpty { yourPeople }
                     if !model.index.mine.isEmpty { madeForYou }
@@ -152,10 +168,7 @@ struct ChannelsView: View {
             .padding(.bottom, 40)
     }
 
-    /// No phone route makes invites yet: Settings → Your people on the web does.
-    private func invite() {
-        if let url = ADHXClient.resolve("/settings#people", against: server) { openURL(url) }
-    }
+    private func invite() { inviting = true }
 
     // MARK: Rows
 
@@ -193,9 +206,17 @@ struct ChannelsView: View {
                     .padding(.trailing, 8)
                     .accessibilityHint("Everyone on your ADHX")
             }
-            // Spread across the row while they fit (the boards'), else a scroll.
+            // Five spread across the row (the boards'); fewer sit together from
+            // the left, so a lone face and Invite don't drift apart; more scroll.
             let count = model.index.friends.count + (model.canInvite ? 1 : 0)
-            if count <= 5 {
+            if count < 5 {
+                HStack(alignment: .top, spacing: 14) {
+                    ForEach(model.index.friends) { personButton($0) }
+                    if model.canInvite { InviteButton(action: invite) }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 16)
+            } else if count == 5 {
                 HStack(alignment: .top, spacing: 0) {
                     ForEach(Array(model.index.friends.enumerated()), id: \.element.id) { index, person in
                         if index > 0 { Spacer(minLength: 4) }
@@ -205,7 +226,6 @@ struct ChannelsView: View {
                         Spacer(minLength: 4)
                         InviteButton(action: invite)
                     }
-                    if count < 5 { Spacer(minLength: 0) }
                 }
                 .padding(.horizontal, 16)
             } else {
@@ -463,7 +483,7 @@ private struct PersonButton: View {
     }
 }
 
-/// "+ Invite" at the end of Your people (opens your ADHX in the browser).
+/// "+ Invite" at the end of Your people (makes a link to send).
 private struct InviteButton: View {
     let action: () -> Void
 
@@ -485,7 +505,7 @@ private struct InviteButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Invite someone")
-        .accessibilityHint("Makes a link on your ADHX, in the browser")
+        .accessibilityHint("Makes a link to send")
     }
 }
 

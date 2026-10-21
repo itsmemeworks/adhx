@@ -6,6 +6,227 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Android: change your picture, invites, email sign-in and the reactions feed, with nothing opening the web
+
+- Owner ask: the apps no longer lean on the web app. Coded against the shared decouple contract (server ↔ web ↔ iOS ↔ Android); the server routes were built in parallel.
+- Change picture (`main/PictureSheet.kt`, `Picture.kt`, `PictureImage.kt`): Choose a photo (Photo Picker), Take a selfie (TakePicture into the FileProvider's `camera/`, CAMERA asked first since the manifest declares it), then a square crop (drag, pinch 1–4×, round preview; `CropMath`), sent as a ≤1024px JPEG with x=0.5, y=0.5, zoom=1 to `POST /api/app/me/avatar`; plus a Gob face (four colours), my X photo (409 `no_x_picture` said plainly) and Remove (`DELETE`). The connection's picture is replaced and `/api/app/me` re-read.
+- Your face everywhere: `LocalMe` (`ui/Me.kt`) from the connection and `/api/app/me`'s `avatarSource`; `Avatar` draws your own picture whenever the face is you (`isYou` or your username), so Live reactions, savers, people and Settings all agree. A letter only when `avatarSource` is `generated`.
+- Invites (`main/InviteSheet.kt`): Settings → Invite someone and Channels → Invite open one sheet: make a link and share it with the system share sheet, list live links (for whom, or their code), Share again (`POST /api/app/invites/{id}/link`, a fresh link: the list never carries links), Revoke; no Make button without `canInvite`.
+- Connect: Sign in with email first (address + email → "Check your email for a 6-digit code" → code with the one-time-code autofill hint, auto-submits at six digits → `POST /api/app/signin/verify`, kept exactly like pairing via `connectWith`); bad_code / expired / busy / too_many / 404, and on sending no_email (a 503 read as an answer, not offline) / send_failed / too_soon (goes on to the code) in plain words (`EmailSignIn`). The pairing code is "the other way in".
+- Reactions row at the top of Channels (`feed/ReactionsRow.kt`, `FeedViewModel.loadReacted`, `Route.ReactedPlayer`): posters with the last reaction's face and emoji, "12 posts with reactions", Play all; the player replays reactions and React works as on any post.
+- Gone: every `openInAdhx` (Settings, the /settings#invite hop, More's "Open in my ADHX", "Open my ADHX" on My saves and Shared lately, Shared lately's fallback to the post's ADHX page, the share card's website fallback). Kept: Share an ADHX link, links inside posts, originals on their networks.
+- Tests: `WithoutWebModelsTest` (shapes, multipart, routes), `WithoutWebLogicTest` (crop math incl. agreement with the server's `cropRect`, sign-in words and resend wait, `Me` rules, invite lines, reactions copy). End to end on the emulator against the server branch (feat/apps-without-web): email sign-in as Ana (wrong code, then the logged code; the field clears and keeps the keyboard after a miss), a cropped photo upload showing at once, a coral Gob, X photo's 409, Remove back to the letter, invites (make + system share, Share again, Revoke), a reaction floating with her own picture and the Reactions row ("1 post with reactions"). Found server-side: reactions on link-network posts with `~` in the id (`soundcloud:forss~flickermood`) answer 400 `bad_post` (`POST_ID` in `src/lib/reactions/parse.ts`). `docs/specs/phone-app.md` still describes the web hop for Change picture (left to the server PR).
+
+## 2026-10-21 — Android: the network button opens the original post; toasts take the pill's place
+
+- The player overlay no longer shows the network/author line or the caption; it keeps the why chip, a friend's note and the savers line (or the lock). A rail button with the network's own mark (above More) opens `OriginalSheet`: the poster's picture (else the mark in a round tile), their name (else handle, else the network), "@handle · Posted 18 Oct 2026" with the small mark only when their picture leads, all their words (a kept article in full, selectable, links tappable) or "No words with this one, just the video.", then Open on {network} and Copy link. It keeps the phone upright and holds the photo timer.
+- On New and My saves the player's short messages show in place of the "N on their way" pill (`toastInTopBar`, `LocalPlayerToast`, `ToastPill`); everywhere else they stay where they were. Toasts last 3 s.
+- Tests in `OriginalSheetTest` (name/handle/line rules, the mark once, the posted day). Checked on the emulator against a parity server: the overlay, the rail button, the sheet for a SoundCloud post without a picture, and "Link copied" replacing the pill for 3 s. Not checked: a poster with a picture, an article in the sheet.
+
+## 2026-10-21 — Android: landscape for watching, full articles and aligned bylines
+
+- The app is portrait everywhere (`android:screenOrientation="portrait"`); `OrientationHost` (`ui/Orientation.kt`) is a stack like iOS's: a player on a video, sound or photo says `MayTurn(true)`, every sheet, the React picker and the reader say `KeepUpright()`, newest wins (`SCREEN_ORIENTATION_USER`: sideways, never upside down, keeps the phone's rotation lock). Words posts and the end page stay upright.
+- Sideways the player hides all chrome and the system bars (re-hidden when a closing sheet gives the focus back), shows the media whole whatever Fit video says, and taps only pause/play; swiping still moves between posts; turning back restores the chrome as it was.
+- Kept X articles: `PhoneArticle.body` (optional) is parsed by `ArticleBody` (headings, lists, quotes, rules, bold/italic, links; pictures left out) and replaces the description and the post's own text in the words card and the reader.
+- Byline: under the savers line the network mark is centred under the first face in a column as wide as the faces, so the poster's name starts where "You saved this" starts. HTML entities in post words and article titles are decoded on the phone (`Entities`) for servers before #588.
+- Tests in `LandscapeArticlesTest`. Checked on the emulator: rotation on a video (bars gone, letterboxed, tap pauses, back to portrait with chrome), Search stays upright, a More sheet holds portrait until closed, the aligned byline. Not checked: an article body on screen (the test server doesn't send one yet).
+
+## 2026-10-21 — Android: React on every post, replayed when you watch it
+
+- The player has its own React (smiley at the top of the rail) on every post outside Live, with Live's `ReactPicker` (prompt "Say something"). Yours floats at once with your picture (`Connection.avatarUrl`), posts to `POST /api/app/reactions`, and is taken back with "Couldn’t send that. Try again." in the picker on failure (`PostFloats`).
+- When a post settles, `GET /api/app/reactions` (once per post per run, `PostReactionsMemory`) and Live's floating faces replay the newest 12, oldest first, 350 ms apart from 600 ms after settling (`replayPlan`, `replayWait`); moving on cancels them. Live keeps its own room and doesn't replay. The photo timer waits while the picker is open.
+- The picker's footnote now says reactions are kept ("Kept on the post. Your people see it when they watch."), since the server stores Live's too.
+- Tests in `PostReactionsTest`. Checked on the emulator against a parity server with six seeded reactions: the replay, your 😂 stored with your face, the timer held under the picker, and the failure (server stopped) taking yours back with the message.
+
+## 2026-10-21 — iPhone without the web: your picture, invites, email sign-in, the reactions feed
+
+- Owner: "the app shouldnt have to rely on the web app any more". iOS side of the decouple contract (server routes built in parallel, coded against their shapes): `Shared/AccountAPI.swift` (avatar, invites, `/api/app/signin`, `/api/app/reacted`, multipart bodies via a new `send(…data:contentType:)`).
+- Change picture is native (`App/Settings/PictureSheet.swift`): Choose a photo (PhotosPicker), Take a selfie (front camera; camera copy now covers both), a square crop with pan/pinch and a round preview (`AvatarCrop.swift`, sent as a pre-cropped JPEG, x=y=0.5, zoom=1), four Gob faces, Use my X photo (409 explained), Remove picture.
+- Your face everywhere: `YourFace` (People.swift) holds `/api/app/me`'s avatarUrl/avatarSource, refreshed on activation and after a change; `Face` draws it for any saver that is you (isYou or your username), so Live's own reactions, savers, people and Settings all agree. Letter only when there's no picture (`generated`).
+- Invites: Settings, Your people and Channels' Invite open `InviteSheet` (make a link → system share sheet; your live links with Revoke). Connect gains Sign in with email (address → email → 6-digit code, `.oneTimeCode`; bad_code/expired/busy in plain words); pairing stays.
+- Reactions row at the top of Channels (`App/Feed/ReactedFeed.swift`); it plays the paged queue, replaying each post's reactions every time (`PlayerExtras.replayReactions`).
+- No web hops left: More's Open in my ADHX, Shared lately's and My saves' Open my ADHX, Shared lately rows (player only), the share extension's Open (`adhx://open` or the post). Share an ADHX link stays.
+- Checked: simulator build, `Tests/DecoupleTests.swift` (60 checks) and the existing suites. Not checked: against a live server (routes not on a branch yet) or on screen.
+
+## 2026-10-21 — The phone apps without the web: picture, invites, email code sign-in, a reactions feed
+
+- Owner: the apps shouldn't rely on the web any more. Server/web side of the shared contract (iOS/Android built in parallel): `POST|DELETE /api/app/me/avatar` (one handler with `/api/account/avatar`, `src/lib/avatar/handler.ts`), `GET /api/app/me` + `avatarSource`, `/api/app/invites` (+ `/{id}`, `/{id}/link`; own only; list `url` is null, links are shown once).
+- Sign in on the phone: `POST /api/app/signin` emails a 6-digit code (`login_tokens` intent `phone`, new `attempts` column via guarded ALTER, HMAC-stored, 15 min, 5 wrong tries burn it, a stand-in code for unknown/banned/waiting addresses so nothing enumerates); `/verify` returns `pair`'s `{ key, name, username }`. Servers that only hold links for an admin answer `503 no_email` (pairing code stays the way in).
+- Reactions feed: `reactedPosts()` (`src/lib/reactions/reacted.ts`) → `GET /api/app/reacted` and `GET /api/posts/reacted`; web plays it at `/play?reacted=1` from a new Reactions row on `/channels`.
+- Faces audit: every saver/reactor/watcher path already used `memberAvatar`; added a test covering Live reaction events, post reactions, savers, members and the feed. Uploaded/Gob pictures are members-only `/api/files/avatar/<hash>`: phones must send the key when loading them, or they fall back to the letter.
+- Docs: phone-app.md (API), PRIVACY.md + /privacy (code sign-in, the Reactions row), CLAUDE.md. Not pushed. Follow-ups: the apps' side (§6 of the contract); HEIC isn't decoded (phones send JPEG).
+
+## 2026-10-21 — Reactions kept on every post, and replayed
+
+- Owner ask: react on any post, not just Live, and see them again when you watch it. New `post_reactions` table (account-guarded, gone with Clear data / account delete) and `src/lib/reactions/` (parse shared with Live, one rate budget). Web `GET|POST /api/posts/reactions`, phone `/api/app/reactions`, `DELETE …/{id}` own only; shapes in `docs/specs/phone-app.md` → Reactions on any post.
+- Visibility follows the post (`seenBy`): a Just for me–only post keeps its reactions to its owner; banned reactors never shown; hidden posts return none; nothing signed out. Live reactions are now stored too, with the id the room saw.
+- Web: the React button is on every post in `TheaterV2` (signed out → `/start`); yours floats at once; `useReactionReplay` floats the newest 12 when a post settles (600 ms, 350 ms apart, once per post per page load). PRIVACY.md and /privacy updated.
+- Follow-ups: the iOS and Android players against the same contract (separate work).
+
+## 2026-10-21 — Android: fit and dock, logo bylines, tappable links, hold to hide, photo timer
+
+- Player (`PlayerScreen.kt`): Sound and Fit video are remembered in `SettingsPrefs` (`soundOn`, new `fitVideo`), as on iPhone. Videos now fill the screen by default (the old upright-fills/wide-fits rule is gone); Fit shows them whole. More's picture-in-picture row is now "Dock".
+- Byline: the network's mark before who posted it (`bylineName`: name, else the network's name, else the handle) instead of "YouTube · name".
+- Links in captions, the words card and the reader are shortened to site/path and open in the browser (`Links.spans`/`Links.short`, `ui/LinkedText.kt`).
+- Hold the stage to hide the chrome; a tap brings it back, the next tap pauses/plays. Photos show 10s each (`PhotoTimer`, `afterPhoto`): next album photo, then the next save; tap pauses; Repeat loops the post; held while a sheet/picker is open. Progress uses the video line.
+- Search words tiles: serif words on a surface card below the pills (no more clipped first line), author and savers at the bottom. Channels → Your people: fewer than five sit left with a 14dp gap. Send sheet: "Send via" with WhatsApp (falls back to the share sheet), Copy (the ADHX link) and More.
+- Unit tests in `PlayerPolishTest`. Checked on the emulator against a parity server: mark bylines, hold/tap/tap on a video and a photo, album advance and pause, Fit and Sound kept in prefs, Dock row, send sheet (Copy, WhatsApp falls back to the share sheet), search words tiles, five people spread. Not seen there: links in post words (no linked posts in the seed) and fewer than five people.
+
+## 2026-10-21 — iPhone: the network button opens the original post; toasts take the pill's place
+
+- Owner: "in most cases, the user doesn't care about the original post". The overlay now has only the why chip, a friend's note and who saved it; the network line and the caption are gone. A rail button with the network's mark (above More) opens `OriginalSheet`: who posted it (picture, name, handle), when, their words in full (a kept article whole, selectable, links tappable), Open on {network} and Copy link. Default rail spacing is 10 now there's one more button.
+- On New and My saves, a player message ("Words copied") takes the "on their way" pill's place for 3 s instead of stacking under it (`PlayerToastUp` preference; toasts last 3 s everywhere).
+
+## 2026-10-21 — Landscape for watching; full articles, words and tiles on phones
+
+- Landscape is only for watching (iOS `App/Orientation.swift`): the plist allows landscape, `AppDelegate` answers from `OrientationGate`, where each player says "may turn" while it's showing (`mayTurnToWatch()`) and anything over it says "upright" while it's up (`uprightWhile`: board sheets, More, the reader, the send sheet, a friend's channel). Newest wins; losing landscape turns the phone back. Turned sideways the player hides its chrome, fits the media whole and taps only pause; turning back restores the chrome. Debug: `-adhxTurn landscape -adhxTurnAfter 6`.
+- Phones get the whole kept X article as markdown (`article.body`, from `articleContent` via `articleBlocksToMarkdown`); iOS draws it (headings, paragraphs, lists, quotes, inline bold/italic/links, pictures left out) in place of the summary. The save result and Shared lately decode entities too; iOS also decodes them itself for older servers.
+- Search words tiles were drawn under the opaque surface colour (dark on dark): the cream is now the tile's base. The byline's network mark sits in a column as wide as the face above, so the poster's name lines up with "You saved this".
+
+## 2026-10-21 — Frosted sheets on iPhone; which build is installed, in Settings
+
+- Sheets over the player are frosted (`FrostedSheetBackground`: ultra-thin material under the surface colour at 72%), so the picture shows through softly: More and In your saves (system sheets, via `frostedSheet()`) and every board sheet. On iOS 26+ the system sheets no longer force a 28 pt radius, so their floating corners follow the screen's own curve. The two remaining non-continuous rounded rectangles are now continuous.
+- Settings on both apps shows which release the build is, on its own line: "ADHX Share 2.2.0" on a tag, else "2.2.0 +3 · abc1234" (commits after the tag), " · edited" with uncommitted changes, the commit alone without tags. iOS: the "Stamp version" build phase runs `apps/ios/Config/stamp-version.sh` (git describe → `build-info.txt` in the app's resources; user-script sandboxing is off for the app target so it can read git). Android: `gitBuildName()` in `app/build.gradle.kts` sets `versionName` unless `ADHX_VERSION_NAME` is given (the release APK workflow).
+
+## 2026-10-21 — iPhone: React on every post, replayed when you watch it
+
+- The player has its own React button (smiley at the top of the rail) on every post outside Live, with the same picker as Live (`ReactPicker`, moved with `FloatingReactions` into `App/Library/Reactions.swift`). Yours floats at once with your picture (`Store.avatarUrl`), posts to `POST /api/app/reactions`, and is taken back with "Couldn’t send that. Try again." on failure.
+- `PostReactionsModel` replays a post's stored reactions when it settles (`GET /api/app/reactions`): the newest 12, oldest first, 350 ms apart after 600 ms, once per post per run of the app. Live keeps its own room and doesn't replay (its reactions are stored by the server since #589).
+- Verified in the simulator against the parity server: the replay request, the picker, and your 😂 floating with your face.
+
+## 2026-10-21 — iPhone player polish from on-device testing
+
+- Hold the stage to hide everything but the media; a tap brings it back; a tap with the chrome showing pauses (`tapOrHold`: the hold never also counts as a tap). Photos move on by themselves after 10 s each (`PhotoTimer`: next photo in an album, then the next post; Repeat loops), with the bottom progress line, paused while a sheet or Live's picker is open or after a tap.
+- The byline is the network's mark then who posted it (just the mark when no one's named); Live's savers line no longer ends with the network's name. "Small window" is now "Dock".
+- Links in post words are tappable and shown short (`LinkedText`). `toPhonePost` now sends `postBody()` (t.co swapped for where it goes, entities decoded), which moved to the plain `src/lib/feed/post-body.ts` so server code can use it.
+- Search/channel tiles with no picture are the web's cream words card (chip and meter above the words, never on them).
+- Send via (was "Send with"): WhatsApp (its own `net.whatsapp.*` open-in route; an album or no WhatsApp falls back to the share sheet), Copy (the file itself on the clipboard), Files, Save to Photos, More. Messages/Mail composers removed.
+- Not checked on screen: search tiles (the parity server runs without the query process) and WhatsApp (not on the simulator).
+
+## 2026-10-21 — Phones: no why chip repeating the byline; your face on your reactions
+
+- iOS and Android hide the why chip when its only reason is `fresh`/`yours` ("Ana saved this · 1d") and the post has savers, since the byline under it already says that. This matches the web's rule in `TheaterV2`.
+- `GET /api/app/me` now returns `avatarUrl` (`memberAvatar`, so it's null for the generated icon). The apps store it (iOS `Store.avatarUrl`; Android `Connection.avatarUrl`, encrypted with the rest) and use it for your own reactions' faces in Tune in. Live's `watchers` leaves you out, so those faces had always fallen back to your initial. A server without this change still shows the initial.
+
+## 2026-10-20 — A signed Android APK on every release
+
+- `.github/workflows/android-release.yml` builds the release tag's app with `assembleRelease`, signs it with the owner's key from four repository secrets (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, optional `ANDROID_KEY_PASSWORD`), checks it with apksigner and attaches `adhx-<version>.apk` + `.sha256` to the GitHub release. Version code = major×10000 + minor×100 + patch.
+- Release Please calls it after creating a release (explicitly, like the image publisher, since `GITHUB_TOKEN` releases fire no events); it skips with a notice until the secrets exist. Manual: `gh workflow run android-release.yml -f version=2.2.0`. Friends install from the latest release page or Obtainium. Verified locally with a throwaway key: signed, versionCode 20200 / versionName 2.2.0.
+
+## 2026-10-20 — iPhone: sound and fit remembered, people row, 720p
+
+- Sound: the player's sound button now sets "Sound on by default" (`Playback.setSound`), so turning sound on keeps it on for every video, every feed and after a restart, until it's turned off. Open players follow the change (`Playback.choicesChanged`), and so does Settings' toggle.
+- Fit video: a new More toggle beside Sound. Off (the default) fills the screen like the boards; on shows each video whole at its own shape. Remembered in `Prefs.fitVideo`; the poster follows it too. Checked in the simulator: both choices carried to the next video and were saved.
+- Channels → Your people: fewer than five sit together from the left (a lone face and Invite drifted apart before); five spread across the row as on the board; more scroll.
+- The More sheet names video quality by the short side (720×1280 is 720p, not 1280p), as Android and the send sheet already do.
+
+## 2026-10-20 — Right now: the lead card keeps its size on a busy server
+
+- With many moments, every one stacked beside the lead, so the lead card stretched to their height and left a huge empty card (seen on real data: AI music beside six moments). Now two sit beside the lead, as on the board, and the rest wrap into a three-column row below (`SIDE_CARDS` in `RightNow.tsx`). Component test covers six moments.
+
+## 2026-10-20 — Moment titles checked with the boards' real names
+
+- The parity server names moments without the model ("Baby", "Dark"), so a proxy swapped in the boards' names ("Babies vs objects", "Sunday roast energy", "Kitchen synths") to check how they lay out on web, iPhone and Android. Every name fits on one line as on the boards.
+- Mobile web Tuned in now has the boards' "In {moment}" chip over the byline (TheaterV2), and "Jo just saved one" moves below the top chips when LIVE and the watchers wrap onto two rows, instead of covering them.
+- Live lead card, measured against j7-3 to within 0.5: iPhone's title uses `tightLines(32)` plus a small nudge. Android's uses `serifLineBox(32.sp, 30.4.sp)`, and a new `sansLineBox` trims Hanken Grotesk's taller Compose line on the meta line (22dp against CSS's 17.6). Both cards are padded 10, because the board's 2px ring sits outside its 8px padding while iOS `strokeBorder` and Compose `border` draw inside.
+- Parity server limit: the babies moment drops out about 25 minutes after seeding, so capture j7 screens from a freshly started server.
+
+## 2026-10-20 — Android Connected faces row includes you
+
+- The j5-6 board's faces row starts with your own face. Android's left it out and listed every name. It now shows you first, then everyone else, up to 5 faces. `Copy.youAnd` stops at four names and then says "and N other(s)". Both now match the iPhone ("You, Ana, Jo, Ben and 1 other").
+
+## 2026-10-20 — Connected screen has no header on Android either
+
+- Android's just-paired screen (`main/ConnectedScreen.kt`) dropped its Gob + "adhx" + Search/Settings row, as iPhone and the updated j5-6 board have it: the welcome is its own moment and Start watching is the way in. The unused header Gob vector and the `onSearch`/`onSettings` parameters are gone.
+
+## 2026-10-20 — Android: one-row header everywhere
+
+- Caught up, Channels, a friend's channel and Live used the old two-row header (Gob + "adhx", Search and Settings/sliders, then a tabs pill). They now share the player's one row, as on iPhone: Gob (Settings), New · Channels · Live with New's 99+ badge, Search. `HomeHeader(overMedia)` is the only header: see-through pill over the player, surface (#1a1814) pill and Search on solid pages. `PageHeader` is gone.
+- Tuned in shows only the LIVE row (LIVE, watching with you, Leave); New's row steps aside while the send sheet is up (`PlayerScreen(hideTopBarWhileSending)`). Content tops moved up to match (caught up, Channels, Live, a friend's channel).
+- Checked at 390dp on a :3620 parity server against the iPhone captures (j2-1, j2-4, j3-3, j4-4, j6-3, j7-3, j7-4).
+
+## 2026-10-20 — iPhone: swipe past a single photo
+
+- In New, swiping up on a one-photo post didn't move to the next save: the photo sat in a paging `TabView`, which swallowed the vertical swipe. A single photo is now drawn without the pager (albums keep it). Checked in the simulator: the same 500 pt swipe from the middle of the photo stays put on `main` and moves on with the fix.
+
+## 2026-10-20 — Phones keep sent posts past their own kind filter
+
+- Both apps re-filter New by kind on the phone (for servers that ignore `types`), which dropped a sent text post #576 lets through on the server. `PhonePost.sentToYou` (a `sent` reason) now passes that filter on iOS (`FeedModel.load`) and Android (`FeedViewModel`), found by the Android parity re-check on final main.
+
+## 2026-10-20 — Channel curation reconciled with current main
+
+- Integrated the latest privacy, admin and phone updates without replacing their schema or documentation. Both admin counters and image-curation tables install together; account-reference regression expectations include both sets of guards.
+- Image refinement now honours the admin processing pause; Clear data removes only that account’s private curation jobs. Regressions cover pause/resume without spending budget and scoped cache removal. Updated the new privacy page and policy for the separate image opt-in. No live service or private setting changed.
+
+## 2026-10-20 — Optional image-aware generated channel curation
+
+- In flight: `TYPESAFE_CHANNEL_IMAGES=on` plus a key enables background naming, conservative borderline checks, repeat spacing and channel cover-post selection for Made for you/From everyone. Default off; slugs, saves, files and manual/friend channels stay intact.
+- One durable scoped queue/cache: one task/minute, 48 attempts/UTC day, 256 entries/7 days, max8 existing stills, 15s requests, three tries. No page waits, remote thumbnail fetch, FFmpeg or local inference for this pass.
+- Upload only eligible public-source captions/posters/photos using opaque ids; private-only/quoted/hidden/banned/orphaned sources, saver details, notes, tags and extracted words stay out. Visibility/media/policy revisions and leases reject stale results; account deletion cascades private jobs.
+- Known-name choices, confidence gates, a four-member floor, transitive duplicate spacing/cover diversity and collision fallback keep changes conservative. Poster-only/video posts cannot be excluded based on one still. Covers select existing posts, not new video frames; repetition checks are sampled, not exhaustive.
+- Regression coverage includes opt-in, bounded transport, account/privacy races, original/path safety, budgets, restart/stale-claim recovery, uncertainty and no-loss playback ordering. A real synthetic-only eight-image request completed in ~0.5s; no real-library quality claim.
+- README, architecture, environment/Compose examples and `docs/channel-image-curation.md` explain the opt-in cloud boundary and evaluation steps. No live service, private configuration or network was changed.
+
+## 2026-10-20 — A sent post skips "What's in your feed"
+
+- New's kind filter (videos and photos by default) hid text posts and articles someone sent you, so "Pete sent you this" never arrived for most people. A post with an unseen send now passes the filter in every mode that shows sends (`inFeed` in `src/lib/feed/blend-db.ts`); it isn't counted as "waiting". Found by the Android parity pass (#574).
+
+## 2026-10-20 — Phone posters through kept files
+
+- `posterFor()` (`src/lib/app/phone-app.ts`, behind Shared lately's `posterUrl` and On their way's `thumbnail`) now always returns an `/api/files/…/poster` path for Instagram, TikTok and X posts with a picture or video, so a kept poster shows instead of a network thumbnail that may be unreachable (iOS j8-5 showed placeholders).
+
+## 2026-10-20 — iPhone: final design-parity pass
+
+- Compared every phone board (j1-2, j1-3, j2-1–j2-4, j2-7, j3-3, j4-3, j4-4, j5-6, j6-3, j7-3, j7-4, j8-4, j8-5, the note bubble) side by side with the app in the simulator against a fresh parity server.
+- Fixed: two-line serif headings now sit at the boards' 0.95 line height (caught up, Live, Connected, the share card via `tightLines`, iOS 26 only for wrapping text); the note bubble's tail is the board's 45° corner; "Saved together" in Why this one shows every saver's face; the tuned-in byline keeps the names whole and drops the network, then shortens the time; the send sheet's poster is upright 54×96 with the kind on a dark disc; the connected Gob's grin uses the board's own curves.
+- Unchanged on purpose: one-row header, data-only differences (moment names, counts, order), system sheets.
+
+## 2026-10-20 — Android: final phone-board parity pass
+
+- Side by side of every phone board (j1-2/3, j2-1/2/3/4/7, j3-3, j4-3/4, j5-6, j6-3, j7-3/4, j8-4/5, the note bubble) at 390dp against a :3613 parity server.
+- Fixed: words over the player and the search field fell back to Roboto (no `fontFamily`), now Hanken Grotesk; Instrument Serif headings set tighter than the font kept its full ascent/descent, so `serifLineBox` trims them to the CSS line box (share card title, caught-up title); the caught-up shadow is an ellipse, not a pill; Settings' Remove this phone / Decline are 36dp quiet buttons and the This phone card has the boards' padding and line heights; the share card's keep line and bar sit together at the poster's foot.
+- Left as is: the one-row player header, data-only differences (moment names, counts, order), system UI.
+
+## 2026-10-20 — Android: send text posts to your people
+
+- Share on a text post or article now opens the send sheet too ("Sending the words"): Chat, Mail and More send its words, and "Or straight to your people" sends the post, as for videos and photos. Before, words went straight to the system share sheet, so text posts couldn't be sent to a member from the phone (board j4-4 gap).
+
+## 2026-10-20 — Mac allocation tuning and isolated throughput experiments
+
+- In flight: opt-in `SEMANTIC_MEMORY_PROFILE=compact` disables ONNX CPU arenas/patterns without changing the pinned model, precision, inputs or index version; standard remains the application default.
+- Native M4 shared-host trials repeated a lower physical footprint (1.9–2.2 vs 2.6–2.8 GiB), with byte-identical CPU vectors; inference speed improvement did not repeat reliably.
+- CoreML compiled but rejected absent-modality tensors at inference. Dispose the accelerated session before one warm CPU fallback; CPU failures still propagate. A vision-only prototype hit the memory guard and was discarded.
+- Synthetic-only harnesses compare representative frames, batched FFmpeg extraction and one-batch-ahead preparation. These prototypes never enter production claims or change light/normal/deep sampling; quality/fairness/cleanup gates remain explicit.
+- Optional TypeSafe image smoke test sends generated colours only; experimental typed judgments are not search vectors. No private media uploaded.
+- Regression tests cover allocation options, runtime fallback, timestamp validation, representative coverage, exact batch/reference frames and abort/EOF cleanup. Setup/architecture docs link measured results and reproduction steps.
+- No installed worker, server, queue, model cache, private credential or network setting changed. Release-matched rollout and real-library retrieval evaluation remain separate follow-ups.
+
+## 2026-10-20 — Just for me privacy gaps closed
+
+- **Send sheet** `has` counts shared saves only (`holders()` in `src/lib/sends/sends.ts`), so a Just for me save is never revealed; that person can simply be sent the post.
+- **Just for me by default** now covers X sync (`saveBookmark(..., isPrivate)`, no pulse for private sync saves) and Keep this channel (`group-keep.ts`), like clones.
+- **Admin-only reads**: GET `/api/activity`, `/api/trending`, `/api/analytics` go through `adminOnlyResponse()` (`src/lib/admin/only.ts`); `public/llms.txt` rewritten for a private friends server.
+- **Kept files** (`src/lib/keep/file-access.ts`): a post whose only saves are Just for me is served only to an owner (session, phone key, or the post's HMAC `?k=` file token that `toPhonePost` and Shared lately add to the owner's own URLs, since AVPlayer/ExoPlayer send no headers), with `private, no-store`; anyone else gets the unsaved-post answer, and not-kept reasons are told to members only.
+- **Lifecycle**: clear data and account delete drop the account's "saved" pulses and `auto_channels` (now account-guarded, 56 triggers); removing one save drops its pulse; `AFTER DELETE ON bookmarks` triggers remove a post's vectors, queue and keyword rows with its last save.
+- PRIVACY.md, `/privacy`, ARCHITECTURE.md, CLAUDE.md and the NAS guide updated (on top of #567's rewrite, merged into this branch).
+
+## 2026-10-20 — Whole-system docs brought up to the friends feed
+
+- README: send to your people, notes, Show more / less, forming moments with "Tell me when it's live", Keep this channel, Getting it ready, `/doing`, invites with approval; phone app section matches the apps. Fixed stale setup lines (`ADMIN_USER_IDS` instead of `ADMIN_USERNAMES`, Android link default, PR wording, `INVITES` not passed by the Compose examples) and the garbled `KEEP_H264` comment in `.env.example`.
+- ARCHITECTURE.md rewritten around the current product: nine Mermaid diagrams (system context, save to watch, the New blend, live moments, who sees what, phone pairing and auth, plus the kept sign-in, understanding and search diagrams with quoted labels), every table by plane checked against `schema.ts`/`migrate.ts`, sections on New, sends, moments and bells, channels, invites and approval, the phone API. `TheaterShell`, Discover and the X-first flow removed or marked legacy.
+- PRIVACY.md and `/privacy` rewritten from the code: who sees what per data kind, notes, sends, viewing marks, weights, reactions, bells, invites, approvals, phone keys, avatars, kept files (unauthenticated, cached 7 days, existence visible), the Mac helper, Jev, analytics, admins, retention, clear vs delete.
+- CLAUDE.md top is now a ~25-line current overview with links; legacy sections are marked (history), the dead old-Header section is gone, test count is 3,558. AGENTS.md and `docs/remote-processing.md` overview lines corrected.
+- Privacy gaps found and documented, not fixed: the send sheet's `has` counts private saves; admin counts include private saves; kept files serve "Just for me" posts and reveal whether a post was saved; X sync and Keep this channel ignore Just for me by default; `GET /api/analytics` is public; Clear keeps `activity.user_id`; `auto_channels`, `post_embeddings` and `post_text_fts` outlive deletion.
+
+## 2026-10-20 — The admin area, to the "10 · Admin" boards
+
+- `/admin` is now nine sections plus a person page (`/admin/people/{username}`) in the new design (`components/next/admin/`, `AdminShell`: NxHeader + Admin chip, a section nav that's a chip row on phones). Server pages read `src/lib/admin/boards/*`; `GET /api/admin/boards/{board}` returns the same. The old Matter `AdminClient` is gone; every capability stayed (hide/show, ban/unban, clear notes, invites, sign-in links, playlist hide, the log). Spec: `docs/specs/admin.md`.
+- Privacy: Just for me saves are counts only (lists come from `postCards`/`sharedSavers`, shared saves only; the rest say "N Just for me"); never what anyone searched or watched; Made for you/private channels never in Top channels.
+- New data: `reaction_counts` (member/day/kind, never words/post/moment) from `react()`; `moment_log` (no user ids: formed, tune-ins once per member, peak, reactions, alerts sent/opened); `users.last_seen_at` (≤ 5 min, `/api/auth/me` + `phoneCaller`); `access_keys.platform`; events `app.open`, `search.found|none` (mode only), `post.finish`, `channel.play|keep`. `server_settings processing.paused` = Pause new work (keep worker, Mac helper claims, local understanding).
+- Actions: make/remove admin (audited; never the last admin), remove a phone, clear a member's notes, Retry failed / retry one / link only. Every `/api/admin/*` answer is `private, no-store` (`withAdmin`).
+- Parity: `seed-admin.ts` (Ana is an admin), captures `admin-1` … `admin-10`. Scores 1.5–5.3. Limits in `e2e/parity/README.md` (server name, filler save times and networks, sign-in links need `EMAIL_LINKS_TO_ADMIN`).
+- Follow-ups: PRIVACY.md got an admins-and-counts section on main's text; PR #567 rewrote PRIVACY.md, so merge by hand. The funnel's third row is reactions sent (reactions carry no post); phone saves aren't split iPhone/Android; no Mac helper Remove (its token is env).
+
 ## 2026-10-20 — Android: send to your people, forming alerts, like thumbnail, Keep this channel
 
 - Send sheet (j4-4): "Or straight to your people" from `GET /api/app/send`: 52dp faces, dimmed with "Jo already has it." when they have it, a tap posts `/api/app/send` and leaves a tick; a private save says "Just for you. Share it first to send it." The sheet expands once the row loads (M3 sheets don't grow on their own). New's `sent` reason is the why chip "Pete sent you this" with his face.

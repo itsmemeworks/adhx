@@ -49,6 +49,7 @@ import {
 import { nameMoment } from './naming'
 import { carryFormingSubscriptions, dropFormingSubscriptions, fireFormingAlerts } from './alerts'
 import { namedWatchAdjustment } from './presence'
+import { logMomentFormed } from '@/lib/admin/counts'
 
 /**
  * "Right now": what people are saving, grouped by meaning, live.
@@ -547,8 +548,10 @@ async function recompute(): Promise<void> {
       for (const m of d.members.values()) if (now - m.lastAt < 2 * 3_600_000) recent.push(m.lastAt)
       recent.sort((a, b) => a - b)
     }
+    const slug = prev?.slug ?? slugFor(title, d.centroid)
+    if (!prev) logMomentFormed(slug, title, now)
     moments.push({
-      slug: prev?.slug ?? slugFor(title, d.centroid),
+      slug,
       title,
       hue,
       centroid: d.centroid,
@@ -632,6 +635,7 @@ async function promote(f: Forming): Promise<Moment> {
     createdAt: now,
   }
   s.moments.push(moment)
+  logMomentFormed(moment.slug, moment.title, now)
   s.moments.sort((a, b) => rank(b.members, now) - rank(a.members, now))
   if (s.moments.length > MAX_MOMENTS + 3) s.moments.length = MAX_MOMENTS + 3
   s.forming = s.forming.filter((x) => x !== f)

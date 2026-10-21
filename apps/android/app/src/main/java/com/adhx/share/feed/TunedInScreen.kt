@@ -1,21 +1,16 @@
 package com.adhx.share.feed
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import coil3.compose.AsyncImage
-import com.adhx.share.R
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.ui.Avatar
 import com.adhx.share.ui.GobShape
 import com.adhx.share.ui.Glyphs
-import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.faceColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -81,7 +76,7 @@ import kotlinx.coroutines.delay
 
 /**
  * Tuned in to a moment: its posts in the player, LIVE and who's watching
- * with you at the top, and React in the button column (six emoji, or a few
+ * with you at the top (instead of home's row), and React in the button column (six emoji, or a few
  * words for everyone watching). Reactions float up the screen with the face
  * of who sent them. Asks `/api/app/live/{slug}` again every ~5 s while it's
  * on screen.
@@ -93,8 +88,6 @@ fun TunedInScreen(
     server: String,
     onBack: () -> Unit,
     onSaver: (Saver) -> Unit,
-    onSearch: (() -> Unit)? = null,
-    onSettings: (() -> Unit)? = null,
 ) {
     LaunchedEffect(slug) { feed.tuneIn(slug) }
     val ui by feed.tuned.collectAsStateWithLifecycle()
@@ -134,30 +127,7 @@ fun TunedInScreen(
                     .statusBarsPadding()
                     .padding(bottom = 20.dp),
             ) {
-                // Gob and "adhx" (back home), Search and Settings, as on the pages but over the post.
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                        .padding(start = 16.dp, end = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Row(
-                        Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable(onClickLabel = Copy.LEAVE_LIVE, onClick = onBack)
-                            .semantics(mergeDescendants = true) { contentDescription = "adhx home" },
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Image(painterResource(R.drawable.ic_gob), contentDescription = null, modifier = Modifier.size(GOB_MARK))
-                        Spacer(Modifier.width(9.dp))
-                        Text("adhx", fontFamily = SerifFamily, fontSize = 28.sp, lineHeight = 28.sp, color = Color.White)
-                    }
-                    Spacer(Modifier.weight(1f))
-                    onSearch?.let { BarButton(Glyphs.Search, Copy.SEARCH, it) }
-                    onSettings?.let { BarButton(Glyphs.Settings, Copy.OPEN_SETTINGS, it) }
-                }
+                // Only LIVE, who's watching and Leave: home's row steps aside while you're tuned in (as on iPhone).
                 Box(
                     Modifier
                         .fillMaxWidth()

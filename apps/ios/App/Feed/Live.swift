@@ -126,15 +126,21 @@ struct LiveView: View {
                     EmptyNote(title: "Nothing’s live right now",
                               message: "When a few of your lot save around the same thing, it shows up here.")
                 } else {
-                    Text("What your lot are into\ntonight")
-                        .font(Theme.serif(36))
-                        .lineSpacing(-3)
-                        .foregroundStyle(Theme.ink)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 10)
-                        .padding(.bottom, 4)
+                    // Two lines that nearly touch (the boards' line-height 0.95):
+                    // Text can't tighten its own leading before iOS 26.
+                    VStack(alignment: .leading, spacing: -12) {
+                        Text("What your lot are into")
+                        Text("tonight")
+                    }
+                    .font(Theme.serif(36))
+                    .foregroundStyle(Theme.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isHeader)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 5)
+                    // The last line's descent is room enough above the first card.
+                    .padding(.bottom, -3)
                     // The first one big; the quieter ones (and older servers'
                     // not-live ones) as rows, then what's still forming.
                     ForEach(Array(model.moments.enumerated()), id: \.element.id) { index, moment in
@@ -278,6 +284,10 @@ private struct LiveCard: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(moment.name)
                     .font(Theme.serif(32))
+                    .tightLines(32)
+                    // Where the board's letters sit: 12 below the strip, 8 above the meta line.
+                    .padding(.top, 3)
+                    .padding(.bottom, 1.5)
                     .foregroundStyle(Theme.ink)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
@@ -298,7 +308,8 @@ private struct LiveCard: View {
             .buttonStyle(PillButtonStyle(kind: .primary))
             .accessibilityLabel("Tune in to \(moment.name)")
         }
-        .padding(8)
+        // The board's 2 pt border sits outside its 8 of padding; strokeBorder draws inside this frame.
+        .padding(10)
         .background(RoundedRectangle(cornerRadius: 26, style: .continuous).fill(Theme.surface))
         .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous)
             .strokeBorder(Theme.hue(moment.hue) ?? Color(hex: 0xFF8FA3), lineWidth: 2))
@@ -640,7 +651,6 @@ struct TunedInScreen: View {
     @State private var sending = false
     @State private var retry: (say: LiveSay, post: PostRef)?
     @State private var reactionPost: PostRef?
-    @State private var pickerHeight: CGFloat = 126
     @FocusState private var typing: Bool
 
     init(moment: LiveMoment, server: URL) {
@@ -821,78 +831,16 @@ struct TunedInScreen: View {
 
     /// You, for your own reactions' faces.
     private var you: Saver {
-        model.watchers.first(where: \.isYou)
-            ?? Saver(username: Store.username ?? "you", name: nil, isYou: true)
+        // Always your current picture: the room's copy of you may not have it.
+        YourFace.shared.you(from: model.watchers.first(where: \.isYou))
     }
 
     /// Six quick emoji, and a few words to everyone watching.
     private var picker: some View {
-      ScrollView {
-        VStack(spacing: 10) {
-            ScrollView(.horizontal, showsIndicators: false) {
-              HStack(spacing: 0) {
-                ForEach(Array(LiveSay.quick.enumerated()), id: \.element.emoji) { index, quick in
-                    if index > 0 { Spacer(minLength: 8) }
-                    Button {
-                        send(.emoji(quick.emoji))
-                    } label: {
-                        Text(quick.emoji)
-                            .font(.system(size: 26))
-                            .frame(width: 48, height: 48)
-                            .background(Circle().fill(Theme.plate))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(quick.name)
-                }
-              }
-              .containerRelativeFrame(.horizontal)
-            }
-            .disabled(sending)
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel("Quick reactions")
-            HStack(spacing: 8) {
-                TextField("", text: $words,
-                          prompt: Text("Say something to everyone watching").foregroundColor(Theme.faint))
-                    .font(Theme.sans(15, .medium))
-                    .foregroundStyle(Theme.ink)
-                    .focused($typing)
-                    .submitLabel(.send)
-                    .onSubmit(sendWords)
-                    .onChange(of: words) { _, text in
-                        if text.unicodeScalars.count > LiveSay.maxText { words = LiveSay.clip(text) }
-                    }
-                    .padding(.horizontal, 16)
-                    .frame(height: 44)
-                    .background(Capsule().fill(Theme.app))
-                    .overlay(Capsule().strokeBorder(Color(hex: 0x4A453E), lineWidth: 1))
-                    .accessibilityLabel("Say something")
-                    .accessibilityHint("Up to \(LiveSay.maxText) characters, to everyone watching")
-                Button(sending ? "Sending…" : (retry != nil ? "Retry" : "Send"), action: sendWords)
-                    .buttonStyle(PillButtonStyle(kind: .primary, height: 44, fullWidth: false, fontSize: 15))
-                    .disabled(sending || words.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-            if let note {
-                Text(note)
-                    .font(Theme.sans(13, .bold))
-                    .foregroundStyle(Theme.warn)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityAddTraits(.updatesFrequently)
-            }
-        }
-        .padding(12)
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { pickerHeight = $0 }
-      }
-        // As tall as what's in it, scrolling only past 300 (very large text).
-        .frame(height: min(max(pickerHeight, 1), 300))
-        .scrollBounceBehavior(.basedOnSize)
-        .background {
-            let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
-            shape.fill(.ultraThinMaterial)
-                .overlay(shape.fill(Theme.surface.opacity(0.88)))
-                .overlay(shape.strokeBorder(.white.opacity(0.1), lineWidth: 1))
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("React")
+        ReactPicker(words: $words, typing: $typing, sending: sending, retrying: retry != nil, note: note,
+                    prompt: "Say something to everyone watching",
+                    hint: "Up to \(LiveSay.maxText) characters, to everyone watching",
+                    onEmoji: { send(.emoji($0)) }, onWords: sendWords)
     }
 
     private func sendWords() {
@@ -923,118 +871,4 @@ struct TunedInScreen: View {
         }
     }
 
-}
-
-// MARK: - Floating reactions
-
-/// One reaction on its way up the screen.
-struct FloatingReaction: Identifiable, Equatable {
-    let id = UUID()
-    let event: LiveReactionEvent
-    /// Where across the screen it rises, 0…1.
-    let lane: CGFloat
-    /// The face is the main thing: 44–56 pt.
-    var size: CGFloat = .random(in: 44...56)
-
-    static let lifeNanos: UInt64 = 3_600_000_000
-}
-
-/// Reactions rising and fading, each with the face of who sent it. Under
-/// Reduce Motion they stay put and just fade.
-private struct FloatingReactions: View {
-    let reactions: [FloatingReaction]
-    let server: URL
-    @State private var lastSpoken = Date.distantPast
-
-    var body: some View {
-        GeometryReader { box in
-            ZStack(alignment: .bottomLeading) {
-                ForEach(reactions) { reaction in
-                    Bubble(reaction: reaction, server: server, rise: box.size.height * 0.8)
-                        .offset(x: reaction.lane * max(box.size.width - 120, 0))
-                }
-            }
-            .frame(width: box.size.width, height: box.size.height, alignment: .bottomLeading)
-        }
-        .accessibilityHidden(true)
-        .onChange(of: reactions.last?.id) { _, _ in announce() }
-    }
-
-    /// VoiceOver hears them, but not a flood of them.
-    private func announce() {
-        guard UIAccessibility.isVoiceOverRunning, let last = reactions.last,
-              Date().timeIntervalSince(lastSpoken) > 3 else { return }
-        lastSpoken = Date()
-        let what = last.event.text ?? LiveSay.quick.first(where: { $0.emoji == last.event.emoji })?.name
-            ?? last.event.emoji ?? ""
-        UIAccessibility.post(notification: .announcement, argument: "\(last.event.saver.displayName): \(what)")
-    }
-
-    private struct Bubble: View {
-        let reaction: FloatingReaction
-        let server: URL
-        let rise: CGFloat
-        @Environment(\.accessibilityReduceMotion) private var reduceMotion
-        @State private var up = false
-        @State private var gone = false
-
-        var body: some View {
-            content
-                .offset(y: up && !reduceMotion ? -rise : 0)
-                .scaleEffect(up && !reduceMotion ? 1 : 0.85, anchor: .bottomLeading)
-                .opacity(gone ? 0 : 1)
-                .onAppear {
-                    let seconds = Double(FloatingReaction.lifeNanos) / 1_000_000_000 - 0.2
-                    if !reduceMotion {
-                        withAnimation(.easeOut(duration: seconds)) { up = true }
-                    }
-                    // Whole for most of the rise, then fading (the boards' faces are solid mid-way).
-                    withAnimation(.easeIn(duration: seconds * 0.4).delay(seconds * 0.6)) { gone = true }
-                }
-        }
-
-        /// Their face, ringed in their colour (a black gap, then the colour).
-        private func ringedFace(_ size: CGFloat) -> some View {
-            let saver = reaction.event.saver
-            return Face(saver: saver, server: server, size: size, ring: .clear)
-                .padding(3)
-                .background(GobShape().fill(.black))
-                .padding(2)
-                .background(GobShape().fill(Face.colour(for: saver.username)))
-        }
-
-        @ViewBuilder
-        private var content: some View {
-            let saver = reaction.event.saver
-            if let text = reaction.event.text {
-                // The face, and a speech bubble in their colour with its tail at the face.
-                HStack(alignment: .bottom, spacing: 6) {
-                    ringedFace(44)
-                    Text(text)
-                        .font(Theme.sans(14, .bold))
-                        .foregroundStyle(.black)
-                        .lineLimit(1)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(
-                            UnevenRoundedRectangle(topLeadingRadius: 16, bottomLeadingRadius: 4,
-                                                   bottomTrailingRadius: 16, topTrailingRadius: 16,
-                                                   style: .continuous)
-                                .fill(Face.colour(for: saver.username))
-                        )
-                        .padding(.bottom, 18)
-                }
-                .fixedSize()
-            } else if let emoji = reaction.event.emoji {
-                // The face first; the emoji is a sticker on its corner.
-                ringedFace(reaction.size)
-                    .overlay(alignment: .bottomTrailing) {
-                        Text(emoji)
-                            .font(.system(size: reaction.size * 0.6))
-                            .offset(x: reaction.size * 0.27, y: reaction.size * 0.22)
-                    }
-                    .fixedSize()
-            }
-        }
-    }
 }

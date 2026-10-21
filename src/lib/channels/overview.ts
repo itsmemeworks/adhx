@@ -83,7 +83,15 @@ export async function channelsOverview(
   const friends = friendChannels(viewerId, members)
   const [autoCovers, groupCovers, friendCovers] = await Promise.all([
     autoChannelCovers(viewerId, auto),
-    coversFor(viewerId, new Map(group.map((c) => [c.slug, c.keys.slice(0, COVER_POSTS)]))),
+    coversFor(
+      viewerId,
+      new Map(
+        group.map((c) => [
+          c.slug,
+          (c.coverKeys ?? c.keys).filter((key) => c.keys.includes(key)).slice(0, COVER_POSTS),
+        ]),
+      ),
+    ),
     coversFor(viewerId, new Map(friends.map((f) => [f.username, f.coverKeys]))),
   ])
   return {

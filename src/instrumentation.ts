@@ -57,6 +57,9 @@ export async function register(): Promise<void> {
   // Links shared from the phone app, read and saved in the background.
   const { startSaveQueue } = await import('@/lib/app/save-queue')
   startSaveQueue()
+  // Optional cloud image decisions: bounded background work, never page latency.
+  const { startVisualChannels } = await import('@/lib/channels/visual')
+  startVisualChannels()
 }
 
 export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {

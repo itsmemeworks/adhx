@@ -1,4 +1,6 @@
 import { and, count, desc, eq, sql } from 'drizzle-orm'
+import { articleBlocksToMarkdown, normalizeEntityMap } from '@/lib/utils/article-text'
+import { postBody } from '@/lib/feed/post-body'
 import { db } from '@/lib/db'
 import { archivedPosts, bookmarks, phoneSaveQueue } from '@/lib/db/schema'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
@@ -8,6 +10,7 @@ import type { FeedItemResponse } from '@/lib/feed/build-item'
 import type { Saver } from '@/lib/people/types'
 import type { WhyReason } from '@/lib/feed/blend'
 import { keepEnabled } from '@/lib/keep/config'
+import { withFileToken } from '@/lib/keep/file-access'
 import { keepCutoff } from '@/lib/keep/worker'
 
 /**
@@ -30,7 +33,8 @@ export interface PhonePost {
   /** The post on this ADHX (relative). */
   openPath: string
   media: PhoneMedia[]
-  article: { title: string | null; description: string | null; url: string } | null
+  /** `body`: the whole X article as markdown, when it was kept (else just the summary). */
+  article: { title: string | null; description: string | null; url: string; body?: string } | null
   /** Why a search found it. Only on search results. */
   match?: { strength: SearchItem['strength']; on: SearchItem['matched'] }
   /** Its picture or video isn't understood yet, so it matched on words. */
@@ -70,6 +74,10 @@ export function toPhonePost(
   { post, matched, strength, learning }: SearchItem,
   search: boolean,
 ): PhonePost {
+  // The viewer's own Just for me save: its files are theirs alone, and phone
+  // players can't send the key, so its URLs carry the post's file token.
+  const own = (url: string | null | undefined) =>
+    post.isPrivate ? withFileToken(url, post.platform, post.id) : (url ?? null)
   return {
     platform: post.platform,
     id: post.id,
@@ -79,7 +87,8 @@ export function toPhonePost(
       name: post.authorName,
       avatarUrl: post.authorProfileImageUrl,
     },
-    text: post.text ?? '',
+    // t.co links swapped for where they go, so the apps can make them tappable.
+    text: postBody(post),
     postedAt: post.createdAt,
     savedAt: post.processedAt || null,
     sourceUrl:
@@ -87,8 +96,8 @@ export function toPhonePost(
     openPath: previewPath(post.platform, post.author, post.id, post.category),
     media: (post.media ?? []).map((m) => ({
       kind: isVideo(m.mediaType) ? 'video' : 'photo',
-      url: m.url,
-      posterUrl: m.thumbnailUrl || null,
+      url: own(m.url) ?? m.url,
+      posterUrl: own(m.thumbnailUrl || null),
       width: m.width,
       height: m.height,
       durationMs: m.durationMs,
@@ -98,6 +107,7 @@ export function toPhonePost(
           title: post.articlePreview.title,
           description: post.articlePreview.description,
           url: post.articlePreview.url,
+          ...articleBody(post.articleContent),
         }
       : null,
     ...(search ? { match: { strength, on: matched } } : {}),
@@ -178,4 +188,22 @@ export async function savedPhonePost(
 ): Promise<PhonePost | null> {
   const [item] = await loadSearchItems(keysToHits([`${platform}:${id}`]), userId)
   return item?.saved ? toPhonePost(item, false) : null
+}
+
+/** The whole kept X article (FxTwitter's `{ blocks, entityMap }`) as markdown. */
+function articleBody(content: unknown): { body: string } | Record<string, never> {
+  const c = content as { blocks?: unknown; entityMap?: unknown } | null
+  if (!c || !Array.isArray(c.blocks) || c.blocks.length === 0) return {}
+  try {
+    const body = articleBlocksToMarkdown(
+      c.blocks as Parameters<typeof articleBlocksToMarkdown>[0],
+      normalizeEntityMap(c.entityMap as Parameters<typeof normalizeEntityMap>[0]) as Record<
+        string,
+        never
+      >,
+    ).trim()
+    return body ? { body } : {}
+  } catch {
+    return {}
+  }
 }

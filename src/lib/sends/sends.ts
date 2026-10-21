@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm'
+import { POST_ID_PATTERN } from '@/lib/platform/networks'
 import { db, runInTransaction } from '@/lib/db'
 import { readModeratedPostKeys } from '@/lib/admin/moderation'
 import { listMembers } from '@/lib/people/members'
@@ -22,14 +23,14 @@ export const MAX_SEND_TO = 20
 export const SEND_LIMIT = { windowMs: 60_000, max: 60 }
 
 const PLATFORM = /^[a-z]{1,16}$/
-const POST_ID = /^[A-Za-z0-9_-]{1,64}$/
+const POST_ID = POST_ID_PATTERN
 const USERNAME = /^[A-Za-z0-9_]{1,40}$/
 
 export interface SendPerson {
   username: string
   name: string | null
   avatarUrl: string | null
-  /** They already have a save of it they can see (their own save, any visibility). */
+  /** They already have a shared save of it (a Just for me save is never revealed). */
   has: boolean
   /** You've already sent it to them. */
   sent: boolean
@@ -83,11 +84,15 @@ export function postAccess(
   return 'none'
 }
 
-/** Members (not you) who already have their own save of the post. */
+/**
+ * Members who already have a shared save of the post. A Just for me save
+ * doesn't count: the sender must not learn about it, so that person is
+ * offered and can be sent the post like anyone else.
+ */
 function holders(platform: string, id: string): Set<string> {
   const rows = db.all<{ user_id: string }>(sql`
-    SELECT DISTINCT user_id FROM bookmarks
-    WHERE platform = ${platform} AND id = ${id} AND COALESCE(source, '') != 'quoted'
+    SELECT DISTINCT b.user_id FROM bookmarks b
+    WHERE b.platform = ${platform} AND b.id = ${id} AND ${visibleSave('b')}
   `)
   return new Set(rows.map((r) => r.user_id))
 }

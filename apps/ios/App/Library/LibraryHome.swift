@@ -27,7 +27,6 @@ struct LibraryHome: View {
     /// A tapped "… is live" notification.
     @ObservedObject private var alerts = AlertCenter.shared
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var tab: HomeTab = .new
     @State private var clean = false
@@ -54,6 +53,8 @@ struct LibraryHome: View {
 
     /// The player has its send sheet up.
     @State private var playerSheet = false
+    /// The player's showing a message ("Words copied"): it takes the pill's place.
+    @State private var playerToast = false
 
     /// The player's own buttons are hidden (Hide, or dragging through a video),
     /// or its sheet is over everything.
@@ -79,9 +80,10 @@ struct LibraryHome: View {
             }
             .transition(.opacity)
             .onPreferenceChange(PlayerSheetUp.self) { up in playerSheet = up }
+            .onPreferenceChange(PlayerToastUp.self) { up in playerToast = up }
             if !playerChromeHidden {
                 header
-                if tab == .new { newPills.padding(.top, headerHeight + 6) }
+                if tab == .new && !playerToast { newPills.padding(.top, headerHeight + 6) }
             }
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: library.preparing)
@@ -228,7 +230,7 @@ struct LibraryHome: View {
             } else {
                 PlayerView(posts: feed.items, server: server, clean: $clean, scrubbing: $scrubbing,
                            start: feed.currentKey,
-                           extras: PlayerExtras(onWhy: { why = $0 }, toastTop: headerHeight + 44,
+                           extras: PlayerExtras(onWhy: { why = $0 }, toastTop: headerHeight + 6,
                                                 endPage: feed.atEnd ? AnyView(caughtUp(server, topInset: endPageTop)) : nil)) { index in
                     feed.shown(index)
                 }
@@ -319,7 +321,7 @@ struct LibraryHome: View {
     private func savesPlayer(_ server: URL) -> some View {
         if !library.saves.isEmpty {
             PlayerView(posts: library.saves, server: server, clean: $clean, scrubbing: $scrubbing,
-                       jumpTo: $jumpTo, extras: PlayerExtras(toastTop: headerHeight + 44)) { index in
+                       jumpTo: $jumpTo, extras: PlayerExtras(toastTop: headerHeight + 6)) { index in
                 library.loadMoreIfNeeded(at: index)
                 onFirst = index == 0
                 if index < library.newAtTop { library.newAtTop = 0 }
@@ -426,10 +428,6 @@ struct LibraryHome: View {
                 EmptyShares()
             }
             Spacer(minLength: 0)
-            Button("Open my ADHX") {
-                if let server = model.server { openURL(server) }
-            }
-            .buttonStyle(PillButtonStyle(kind: .primary))
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 12)

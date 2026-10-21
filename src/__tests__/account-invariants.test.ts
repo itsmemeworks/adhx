@@ -9,6 +9,7 @@ import {
   LegacyAdminBootstrapError,
 } from '@/lib/db/account-invariants'
 import { FULL_SCHEMA_SQL } from './api/setup'
+import { UNDERSTANDING_DDL } from '@/lib/semantic/schema-sql'
 
 describe('account-reference write guards', () => {
   let sqlite: Database.Database
@@ -16,6 +17,7 @@ describe('account-reference write guards', () => {
   beforeEach(() => {
     sqlite = new Database(':memory:')
     sqlite.exec(FULL_SCHEMA_SQL)
+    sqlite.exec(UNDERSTANDING_DDL)
   })
 
   afterEach(() => sqlite.close())
@@ -91,7 +93,16 @@ describe('account-reference write guards', () => {
          WHERE type = 'trigger' AND name LIKE 'guard_%_account_%'`,
       )
       .get() as { count: number }
-    expect(row.count).toBe(54)
+    expect(row.count).toBe(62)
+  })
+
+  it('does not recreate private channel work for a deleted account and permits only the explicit shared scope', () => {
+    installAccountWriteGuards(sqlite)
+    const insert = sqlite.prepare(`INSERT INTO channel_visual_jobs
+      (scope, slug, user_id, revision, payload, available_at, updated_at) VALUES (?, 'cats', ?, 'r1', '{}', 0, 0)`)
+    expect(() => insert.run('user:deleted', 'deleted')).toThrow(/account reference does not exist/)
+    expect(() => insert.run('everyone', null)).not.toThrow()
+    expect(() => insert.run('user:deleted', null)).toThrow(/CHECK constraint failed/)
   })
 
   it('enforces the persisted trigger from a separate database connection', () => {
@@ -102,6 +113,7 @@ describe('account-reference write guards', () => {
 
     try {
       primary.exec(FULL_SCHEMA_SQL)
+      primary.exec(UNDERSTANDING_DDL)
       primary.prepare(`INSERT INTO users (id, username) VALUES ('account', 'account')`).run()
       installAccountWriteGuards(primary)
       primary.prepare(`DELETE FROM users WHERE id = 'account'`).run()

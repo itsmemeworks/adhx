@@ -124,9 +124,10 @@ ordinary private tailnet access with an existing proxy; Funnel is a separate
 public-publishing feature and is not part of these examples.
 
 **Media privacy:** account sign-in protects personal save lists and search.
-Kept files and shared post previews are available without sign-in to anyone
-who can reach the server. File paths include source post IDs and are not
-secret tokens. The email allowlist does not make playback private. Keep the
+Kept files of shared posts and shared post previews are available without
+sign-in to anyone who can reach the server. File paths include source post IDs
+and are not secret tokens. (A post only saved Just for me is served to its
+owner alone.) The email allowlist does not make playback private. Keep the
 network private if that is your intended boundary.
 
 ## Start and verify
@@ -161,11 +162,12 @@ running process; choose monitoring appropriate to your host.
 
 Start with the local features, then add the services you want:
 
-| Feature                                            | Additional credentials                           | Setup                                                                                                                                                          |
-| -------------------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Kept media and local text/picture/video search     | None beyond the instance's sign-in configuration | Keep `/data` persistent and permit the initial model download.                                                                                                 |
-| Jev refinement and automatic channel/moment naming | `TYPESAFE_API_KEY`                               | Use a dedicated key for this instance. See the [payload and fallback behavior](../../README.md#the-search-model).                                              |
-| X bookmark import                                  | `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET`     | Create an OAuth 2.0 confidential Web App, register the exact callback below, then connect the intended X account in ADHX Settings. X API credits are separate. |
+| Feature                                            | Additional credentials                           | Setup                                                                                                                                                                                 |
+| -------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kept media and local text/picture/video search     | None beyond the instance's sign-in configuration | Keep `/data` persistent and permit the initial model download.                                                                                                                        |
+| Jev refinement and automatic channel/moment naming | `TYPESAFE_API_KEY`                               | Use a dedicated key for this instance. See the [payload and fallback behavior](../../README.md#the-search-model).                                                                     |
+| Experimental image-aware generated channels        | `TYPESAFE_CHANNEL_IMAGES=on` plus the Jev key    | Separate opt-in uploads selected public-post thumbnails for naming, borderline membership, repeat spacing and covers. See [limits and privacy](../../docs/channel-image-curation.md). |
+| X bookmark import                                  | `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET`     | Create an OAuth 2.0 confidential Web App, register the exact callback below, then connect the intended X account in ADHX Settings. X API credits are separate.                        |
 
 For X, register `https://adhx.example.com/api/auth/twitter/callback`, replacing
 the origin with your final `NEXT_PUBLIC_APP_URL`. Use the OAuth 2.0 Client ID

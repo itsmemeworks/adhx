@@ -70,14 +70,18 @@ import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.Spinner
 
 /**
- * Channels: "From everyone" (channels made from the whole group's saves),
+ * Channels: Reactions (posts people reacted to, newest first), "From everyone" (channels made from the whole group's saves),
  * "Your people" (one round face per friend, with how many of theirs you
  * haven't seen), then "Made for you": My saves and your own channels.
  */
 @Composable
 fun ChannelsTab(feed: FeedViewModel, server: String, actions: HomeActions, header: @Composable () -> Unit) {
     val ui by feed.channels.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { feed.loadChannels(force = ui.loadedOnce) }
+    val reacted by feed.reacted.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) {
+        feed.loadChannels(force = ui.loadedOnce)
+        feed.loadReacted(force = true)
+    }
     val channels = ui.channels
 
     LazyColumn(
@@ -85,6 +89,12 @@ fun ChannelsTab(feed: FeedViewModel, server: String, actions: HomeActions, heade
         contentPadding = PaddingValues(bottom = 32.dp),
     ) {
         item(key = "header") { header() }
+        // Reactions first: what people said lately, ready to play.
+        if (reacted.items.isNotEmpty()) {
+            item(key = "reacted") {
+                ReactionsRow(reacted, server) { start -> actions.open(Route.ReactedPlayer(start)) }
+            }
+        }
         when {
             !ui.loadedOnce || (ui.loading && channels.group.isEmpty() && channels.friends.isEmpty()) -> item(key = "loading") {
                 Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
@@ -99,7 +109,7 @@ fun ChannelsTab(feed: FeedViewModel, server: String, actions: HomeActions, heade
             }
         }
         if (channels.group.isNotEmpty()) {
-            item(key = "group-h") { Heading(Copy.FROM_EVERYONE, Copy.FROM_EVERYONE_NOTE, size = 32, top = 20) }
+            item(key = "group-h") { Heading(Copy.FROM_EVERYONE, Copy.FROM_EVERYONE_NOTE, size = 32, top = 4) }
             item(key = "group") {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -129,12 +139,13 @@ fun ChannelsTab(feed: FeedViewModel, server: String, actions: HomeActions, heade
                 }
             }
             item(key = "people") {
-                // Spread across the width when they fit (four friends and Invite); scrolls past that.
+                // Fewer than five (faces and Invite) sit left with a 14dp gap; five spread across
+                // the width; past that it scrolls.
                 val invite = actions.onInvite
                 val count = channels.friends.size + if (invite != null) 1 else 0
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = if (count <= 5) Arrangement.SpaceBetween else Arrangement.spacedBy(14.dp),
+                    horizontalArrangement = if (peopleRowSpreads(count)) Arrangement.SpaceBetween else Arrangement.spacedBy(PEOPLE_GAP),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     items(channels.friends, key = { it.username }) { friend ->
@@ -325,6 +336,12 @@ private fun PersonBubble(friend: FriendChannel, server: String, onClick: () -> U
         Text(friend.label, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
+
+/** The gap between faces in Your people when they don't spread across the width. */
+private val PEOPLE_GAP = 14.dp
+
+/** Your people spread across the width only with exactly five (faces and Invite): fewer sit left, more scroll. */
+internal fun peopleRowSpreads(count: Int): Boolean = count == 5
 
 /** Invite: a dashed yellow circle with a plus. */
 @Composable

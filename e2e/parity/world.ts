@@ -84,7 +84,7 @@ export const PENDING = {
   displayName: 'Ben',
   invitedBy: 'jo' as PersonKey,
   minutesAgo: 10,
-  inviteId: 'inv_JOBNparityJoin',
+  inviteId: 'inv_M2XDparityJoin',
 }
 
 /** Settings → Your people → Pending invites (codes are the id's first four characters). */
@@ -972,3 +972,496 @@ export const FILLER_WORDS: Record<Topic, { subjects: string[]; twists: string[] 
     ],
   },
 }
+
+/**
+ * The admin boards ("10 · Admin"), on top of the friends-feed world. Figures
+ * are the boards' where the data allows (e2e/parity/seed-admin.ts). Dates are
+ * days before seeding; the boards were drawn on 20 October.
+ */
+export const ADMIN = {
+  people: {
+    pete: {
+      joinedDaysAgo: 69,
+      lastSeenMinutesAgo: null,
+      invitedBy: null,
+      admin: true,
+      notes: 4,
+      sends: 12,
+      reactions: 52,
+      favourite: 'laughing',
+      favouriteShare: 0.3,
+    },
+    ana: {
+      joinedDaysAgo: 67,
+      lastSeenMinutesAgo: 6,
+      invitedBy: 'pete',
+      admin: true,
+      notes: 6,
+      sends: 9,
+      reactions: 88,
+      favourite: 'crying',
+      favouriteShare: 0.45,
+    },
+    ben: {
+      joinedDaysAgo: 48,
+      lastSeenMinutesAgo: 60,
+      invitedBy: 'ana',
+      admin: false,
+      notes: 3,
+      sends: 18,
+      reactions: 104,
+      favourite: 'laughing',
+      favouriteShare: 0.3,
+    },
+    mum: {
+      joinedDaysAgo: 41,
+      lastSeenMinutesAgo: 26 * 60,
+      invitedBy: 'pete',
+      admin: false,
+      notes: 4,
+      sends: 2,
+      reactions: 41,
+      favourite: 'heart',
+      favouriteShare: 0.3,
+    },
+    jo: {
+      joinedDaysAgo: 20,
+      lastSeenMinutesAgo: 49 * 60,
+      invitedBy: 'ana',
+      admin: false,
+      notes: 1,
+      sends: 6,
+      reactions: 27,
+      favourite: 'fire',
+      favouriteShare: 0.3,
+    },
+  } satisfies Record<
+    PersonKey,
+    {
+      joinedDaysAgo: number
+      lastSeenMinutesAgo: number | null
+      invitedBy: PersonKey | null
+      admin: boolean
+      notes: number
+      sends: number
+      reactions: number
+      favourite: string
+      favouriteShare: number
+    }
+  >,
+  /** Pete's Just for me saves beyond the two hero posts (board: 14 Just for me). */
+  petePrivateFiller: 12,
+  noteWords: ['so good', 'watch to the end', 'this one', 'remember this?', 'for later', 'ha'],
+  /** Where older saves came from (bookmarks.source), weighted like board 10.6. */
+  sources: [
+    { source: 'phone_app', weight: 138 },
+    { source: 'manual', weight: 38 },
+    { source: 'sync', weight: 23 },
+    { source: 'channel_keep', weight: 15 },
+  ],
+  /** Members' channels: 23, six public (412 views, 9 keeps). Pete has none. */
+  channels: [
+    {
+      who: 'jo',
+      tag: 'kitchen-synths',
+      match: 'synth',
+      posts: 17,
+      public: true,
+      views: 160,
+      keeps: 4,
+      madeDaysAgo: 3,
+    },
+    {
+      who: 'jo',
+      tag: 'old-internet',
+      match: 'net',
+      posts: 8,
+      public: true,
+      views: 40,
+      keeps: 0,
+      madeDaysAgo: 12,
+    },
+    {
+      who: 'jo',
+      tag: 'rainy-day',
+      match: 'rain',
+      posts: 5,
+      public: false,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 15,
+    },
+    {
+      who: 'jo',
+      tag: 'weird-tunes',
+      match: 'tune',
+      posts: 4,
+      public: false,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 16,
+    },
+    {
+      who: 'jo',
+      tag: 'for-mum',
+      match: 'cook',
+      posts: 3,
+      public: false,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 17,
+    },
+    {
+      who: 'jo',
+      tag: 'later',
+      match: '',
+      posts: 6,
+      public: false,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 18,
+    },
+    {
+      who: 'jo',
+      tag: 'patches',
+      match: 'patch',
+      posts: 4,
+      public: false,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 19,
+    },
+    {
+      who: 'jo',
+      tag: 'loops',
+      match: 'loop',
+      posts: 3,
+      public: false,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 19,
+    },
+    {
+      who: 'ben',
+      tag: 'ben-swears-good',
+      match: 'good',
+      posts: 22,
+      public: true,
+      views: 120,
+      keeps: 0,
+      madeDaysAgo: 2,
+    },
+    {
+      who: 'ben',
+      tag: 'food-wins',
+      match: 'food',
+      posts: 9,
+      public: false,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 20,
+    },
+    {
+      who: 'ben',
+      tag: 'gym',
+      match: 'gym',
+      posts: 4,
+      public: false,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 30,
+    },
+    {
+      who: 'ben',
+      tag: 'cars',
+      match: 'car',
+      posts: 3,
+      public: false,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 33,
+    },
+    {
+      who: 'ben',
+      tag: 'memes',
+      match: 'joke',
+      posts: 7,
+      public: false,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 35,
+    },
+    {
+      who: 'ana',
+      tag: 'cats-opinions',
+      match: 'cat',
+      posts: 12,
+      public: true,
+      views: 52,
+      keeps: 2,
+      madeDaysAgo: 5,
+    },
+    {
+      who: 'ana',
+      tag: 'babies',
+      match: 'baby',
+      posts: 9,
+      public: true,
+      views: 40,
+      keeps: 3,
+      madeDaysAgo: 9,
+    },
+    {
+      who: 'ana',
+      tag: 'travel',
+      match: 'place',
+      posts: 5,
+      public: false,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 25,
+    },
+    {
+      who: 'ana',
+      tag: 'recipes',
+      match: 'food',
+      posts: 6,
+      public: false,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 26,
+    },
+    {
+      who: 'ana',
+      tag: 'outfits',
+      match: 'style',
+      posts: 4,
+      public: false,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 27,
+    },
+    {
+      who: 'ana',
+      tag: 'funny',
+      match: 'joke',
+      posts: 8,
+      public: false,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 28,
+    },
+    {
+      who: 'mum',
+      tag: 'sunday-roast',
+      match: 'sauce',
+      posts: 8,
+      public: true,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 6,
+    },
+    {
+      who: 'mum',
+      tag: 'garden',
+      match: 'garden',
+      posts: 4,
+      public: false,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 36,
+    },
+    {
+      who: 'mum',
+      tag: 'recipes',
+      match: 'food',
+      posts: 9,
+      public: false,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 37,
+    },
+    {
+      who: 'mum',
+      tag: 'grandkids',
+      match: 'baby',
+      posts: 5,
+      public: false,
+      views: 0,
+      keeps: 0,
+      madeDaysAgo: 38,
+    },
+  ] satisfies {
+    who: PersonKey
+    tag: string
+    match: string
+    posts: number
+    public: boolean
+    views: number
+    keeps: number
+    madeDaysAgo: number
+  }[],
+  /** Kinds a reaction is drawn from, about as often as board 10.4's bars. */
+  reactionMix: [
+    'laughing',
+    'laughing',
+    'laughing',
+    'laughing',
+    'laughing',
+    'laughing',
+    'fire',
+    'fire',
+    'fire',
+    'crying',
+    'crying',
+    'skull',
+    'skull',
+    'heart',
+    'eyes',
+    'text',
+    'text',
+  ],
+  /** This week's moments, most watched first (board 10.5), and their alerts. */
+  moments: [
+    {
+      slug: 'babies-vs-objects-m',
+      title: 'Babies vs objects',
+      daysAgo: 0,
+      tuneIns: 14,
+      peak: 4,
+      reactions: 64,
+      alerts: 5,
+      opened: 4,
+    },
+    {
+      slug: 'dark-chocolate-first-time',
+      title: 'Dark chocolate, first time',
+      daysAgo: 1,
+      tuneIns: 9,
+      peak: 3,
+      reactions: 52,
+      alerts: 4,
+      opened: 3,
+    },
+    {
+      slug: 'rickrolled-again',
+      title: 'Rickrolled again',
+      daysAgo: 2,
+      tuneIns: 7,
+      peak: 3,
+      reactions: 41,
+      alerts: 3,
+      opened: 3,
+    },
+    {
+      slug: 'cats-with-opinions-m',
+      title: 'Cats with opinions',
+      daysAgo: 3,
+      tuneIns: 6,
+      peak: 2,
+      reactions: 22,
+      alerts: 0,
+      opened: 0,
+    },
+    {
+      slug: 'kitchen-synths-m',
+      title: 'Kitchen synths',
+      daysAgo: 4,
+      tuneIns: 5,
+      peak: 2,
+      reactions: 18,
+      alerts: 0,
+      opened: 0,
+    },
+  ],
+  /** Tune-ins per day, last 14 days, oldest first (board 10.4). */
+  tuneInsByDay: [2, 0, 3, 5, 1, 4, 7, 3, 2, 6, 4, 9, 5, 8],
+  /** Moments 15–28 days ago, so the month holds 31. */
+  olderMoments: 18,
+  /** App opens per day, last 30 days, oldest first (board 10.6). */
+  opensByDay: [
+    31, 28, 40, 36, 30, 44, 52, 41, 38, 47, 43, 55, 39, 42, 58, 49, 45, 53, 47, 61, 66, 50, 57, 44,
+    52, 60, 68, 55, 49, 62,
+  ],
+  filesSent: 91,
+  /** Files sent through the share sheet (they also count as a share). */
+  filesShared: 31,
+  linksShared: 47,
+  /** Plays and keeps of shared channels this week (board 10.4). */
+  channelPlays: [
+    { surface: 'group', ref: 'food-youll-cook-one-day', plays: 186, keeps: 3 },
+    { surface: 'channel', ref: 'jo/kitchen-synths', plays: 142, keeps: 0 },
+    { surface: 'group', ref: 'babies-vs-objects', plays: 133, keeps: 2 },
+    { surface: 'group', ref: 'cats-with-opinions', plays: 97, keeps: 1 },
+    { surface: 'channel', ref: 'ben/ben-swears-good', plays: 88, keeps: 0 },
+    { surface: 'group', ref: 'kitchen-synths', plays: 40, keeps: 1 },
+  ],
+  /** Posts the plays land on. */
+  playedPosts: [
+    'zoo',
+    'charlie',
+    'rick',
+    'choc',
+    'hamster',
+    'steak',
+    'synth',
+    'bird',
+    'forss',
+    'bridge',
+  ],
+  anaWatched: 312,
+  /** Hidden by an admin: not any board's posts, pictured with a hero's still. */
+  hidden: [
+    {
+      id: '1999990000000000001',
+      author: 'chartguy',
+      title: 'Crypto chart screenshot',
+      still: 'chart',
+      reason: 'Spam',
+      by: 'pete',
+      daysAgo: 17,
+    },
+    {
+      id: '1999990000000000002',
+      author: 'someone',
+      title: 'A post with a stranger’s address',
+      still: 'reset',
+      reason: 'Personal info',
+      by: 'ana',
+      daysAgo: 22,
+    },
+  ] satisfies {
+    id: string
+    author: string
+    title: string
+    still: string
+    reason: string
+    by: PersonKey
+    daysAgo: number
+  }[],
+  /** The admin log, newest first (board 10.8). */
+  audit: [
+    {
+      by: 'pete',
+      action: 'hide_post',
+      target: { platform: 'twitter', bookmarkId: '1999990000000000001' },
+      daysAgo: 17,
+    },
+    { by: 'pete', action: 'approve_join', target: { username: 'jo' }, daysAgo: 20 },
+    {
+      by: 'ana',
+      action: 'hide_post',
+      target: { platform: 'twitter', bookmarkId: '1999990000000000002' },
+      daysAgo: 22,
+    },
+    {
+      by: 'ana',
+      action: 'clear_note',
+      target: { platform: 'youtube', bookmarkId: 'dQw4w9WgXcQ', notesCleared: 1 },
+      daysAgo: 29,
+    },
+    { by: 'pete', action: 'make_admin', target: { username: 'ana' }, daysAgo: 29.5 },
+  ] satisfies { by: PersonKey; action: string; target: Record<string, unknown>; daysAgo: number }[],
+  /** The Mac helper's name, from a conversion it finished. */
+  convertedBy: { post: 'zoo', worker: 'Petes MacBook Pro' },
+} as const

@@ -329,3 +329,64 @@ object WeightsSerializer : KSerializer<Map<String, Int>> {
         }.toMap()
     }
 }
+
+object LenientInvitesSerializer : LenientListSerializer<Invite>(Invite.serializer()) {
+    override fun keep(item: Invite): Boolean = item.id.isNotBlank()
+}
+
+/**
+ * A post's `reactions` summary (`{ count, last: { emoji, text, at, saver } }`),
+ * or null when it's missing or another shape. Never fails the post.
+ */
+object ReactionSummarySerializer : KSerializer<ReactionSummary?> {
+    override val descriptor: SerialDescriptor = ReactionSummary.serializer().nullable.descriptor
+
+    override fun serialize(encoder: Encoder, value: ReactionSummary?) {
+        if (value != null) ReactionSummary.serializer().serialize(encoder, value) else encoder.encodeNull()
+    }
+
+    override fun deserialize(decoder: Decoder): ReactionSummary? {
+        val json = decoder as? JsonDecoder ?: return null
+        val element = json.decodeJsonElement() as? JsonObject ?: return null
+        val count = (element["count"] as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull()?.toInt() ?: 0
+        val last = (element["last"] as? JsonObject)?.let { last ->
+            val person = listOf("saver", "who", "by").firstNotNullOfOrNull { last[it] as? JsonObject }
+            val saver = person?.let { p ->
+                p.firstText("username")?.let { username ->
+                    Saver(
+                        username = username,
+                        name = p.firstText("name"),
+                        avatarUrl = p.firstText("avatarUrl"),
+                        isYou = (p["isYou"] as? JsonPrimitive)?.contentOrNull == "true",
+                    )
+                }
+            }
+            LastReaction(
+                emoji = last.firstText("emoji"),
+                text = last.firstText("text")?.take(Reaction.MAX_TEXT),
+                at = last.firstText("at", "createdAt"),
+                saver = saver,
+            )
+        }
+        return ReactionSummary(count = count.coerceAtLeast(0), last = last)
+    }
+}
+
+/**
+ * A time as an ISO string: kept as sent when it's text, and turned into one
+ * when it's a number (milliseconds, or seconds when it's too small for them).
+ */
+object LooseTimeSerializer : KSerializer<String?> {
+    override val descriptor: SerialDescriptor = String.serializer().nullable.descriptor
+
+    override fun serialize(encoder: Encoder, value: String?) = encoder.encodeString(value ?: "")
+
+    override fun deserialize(decoder: Decoder): String? {
+        val element = (decoder as? JsonDecoder)?.decodeJsonElement() ?: return decoder.decodeString().trim().takeIf { it.isNotEmpty() }
+        val primitive = element as? JsonPrimitive ?: return null
+        if (primitive.isString) return primitive.text()
+        val number = primitive.contentOrNull?.toDoubleOrNull() ?: return null
+        val ms = if (number < 100_000_000_000.0) number * 1000 else number
+        return java.time.Instant.ofEpochMilli(ms.toLong()).toString()
+    }
+}

@@ -270,14 +270,24 @@ describe('API: /api/account', () => {
     await seedUserData(USER_B)
     await seedAccountData(USER_A, EMAIL_A)
     await seedAccountData(USER_B, EMAIL_B)
-    await testInstance.db.insert(schema.activity).values({
-      action: 'save',
-      bookmarkId: 't1',
-      author: 'testauthor',
-      url: '/testauthor/status/t1',
-      userId: USER_A,
-      createdAt: new Date().toISOString(),
-    })
+    await testInstance.db.insert(schema.activity).values([
+      {
+        action: 'save',
+        bookmarkId: 't1',
+        author: 'testauthor',
+        url: '/testauthor/status/t1',
+        userId: USER_A,
+        createdAt: new Date().toISOString(),
+      },
+      {
+        action: 'preview',
+        bookmarkId: 't1',
+        author: 'testauthor',
+        url: '/testauthor/status/t1',
+        userId: USER_A,
+        createdAt: new Date().toISOString(),
+      },
+    ])
     await testInstance.db.insert(schema.analyticsEvents).values({
       name: 'post.save',
       userId: USER_A,
@@ -396,13 +406,14 @@ describe('API: /api/account', () => {
     expect(tokensByEmail).toHaveLength(0)
 
     // Historical aggregates survive without retaining this account's private
-    // actor/viewer ID. Owner-keyed playlist events and a target ban are gone.
+    // actor/viewer ID; its public save pulses go with its saves. Owner-keyed
+    // playlist events and a target ban are gone.
     expect(
       await testInstance.db
         .select()
         .from(schema.activity)
         .where(eq(schema.activity.bookmarkId, 't1')),
-    ).toMatchObject([{ userId: null }])
+    ).toMatchObject([{ action: 'preview', userId: null }])
     expect(await testInstance.db.select().from(schema.analyticsEvents)).toMatchObject([
       { userId: null },
     ])

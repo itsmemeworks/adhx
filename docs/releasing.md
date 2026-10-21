@@ -6,13 +6,14 @@ changes. Ordinary main pushes do not publish images. Documentation-only commits
 do not initiate a release. Publishing an image does not update an installed
 service or publish the website.
 
-| Stage               | Work                                                                                                                                                                                                                                   |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Application PR      | Tests, lint/types/format, production audit, extension/site builds, browser tests and native AMD64/ARM64 runner-image smoke checks. The required `build` check depends on both native image builds; it does not compile the app again.  |
-| Ordinary main merge | Release Please updates its pending release PR when releasable changes exist. No container publication.                                                                                                                                 |
-| Release PR          | Validate bot identity, repository/branch and actual three-file diff. Only package version, matching root manifest version and changelog changes are allowed. No repeated full application CI suite.                                    |
-| Release PR merge    | Release Please creates the tag and GitHub release, then explicitly calls the publisher for that version. Build AMD64/ARM64 once, publish the immutable SHA and numbered tags, and update stable aliases for the latest stable release. |
-| Recovery            | Manually publish an existing release version. Reuse an existing SHA image when available.                                                                                                                                              |
+| Stage               | Work                                                                                                                                                                                                                                                                                                                   |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Application PR      | Tests, lint/types/format, production audit, extension/site builds, browser tests and native AMD64/ARM64 runner-image smoke checks. The required `build` check depends on both native image builds; it does not compile the app again.                                                                                  |
+| Ordinary main merge | Release Please updates its pending release PR when releasable changes exist. No container publication.                                                                                                                                                                                                                 |
+| Release PR          | Validate bot identity, repository/branch and actual three-file diff. Only package version, matching root manifest version and changelog changes are allowed. No repeated full application CI suite.                                                                                                                    |
+| Release PR merge    | Release Please creates the tag and GitHub release, then explicitly calls the publisher for that version. Build AMD64/ARM64 once, publish the immutable SHA and numbered tags, and update stable aliases for the latest stable release.                                                                                 |
+| Android APK         | The same release run calls `android-release.yml`, which signs `adhx-<version>.apk` with the repository's signing secrets and attaches it (and its SHA-256) to the release. It skips with a notice until the secrets exist; `gh workflow run android-release.yml -f version=X.Y.Z` attaches one to an existing release. |
+| Recovery            | Manually publish an existing release version. Reuse an existing SHA image when available.                                                                                                                                                                                                                              |
 
 PR runner images remain necessary to validate both supported architectures, but
 are not published to GHCR. Protected main requires build, format and test checks
@@ -27,7 +28,9 @@ release workflow calls the image workflow explicitly, only when
 `release_created` is true. The image workflow has no `push` or `release` event
 trigger, so publishing the GitHub release cannot start a second automatic build.
 Per-commit concurrency and the immutable SHA tag also prevent rebuilds during
-manual recovery. See [GitHub's event rules](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)
+manual recovery. The Android APK workflow is called the same way, alongside
+the image publisher, with only `contents: write` (to attach the
+APK); its secrets and setup are in [`apps/android/README.md`](../apps/android/README.md#release-apks). See [GitHub's event rules](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)
 and [Release Please's documentation](https://github.com/googleapis/release-please-action#other-actions-on-release-please-prs).
 
 The owner merges the Release Please PR. The configured `docs`, `style`, `chore`,

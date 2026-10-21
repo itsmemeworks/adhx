@@ -118,9 +118,25 @@ async function seedForming(): Promise<void> {
     await new Promise((r) => setTimeout(r, 2_000))
     const body = (await fetch(`${PARITY_ORIGIN}/api/moments`)
       .then((r) => r.json())
-      .catch(() => null)) as { forming?: { title: string }[] } | null
+      .catch(() => null)) as { forming?: { id: string; title: string }[] } | null
     if (body?.forming?.length) {
       console.log(`[parity] forming: ${body.forming.map((f) => f.title).join(', ')}`)
+      // Admin board 10.5: bells on it ("4 bells"). Not Pete's, so his Right
+      // now card still offers "Tell me when it's live" (j7-1).
+      const bells = new Database(PARITY_DB_PATH)
+      try {
+        for (const who of ['ana', 'ben', 'mum', 'jo']) {
+          const userId = PEOPLE.find((p) => p.key === who)?.id
+          if (!userId) continue
+          bells
+            .prepare(
+              'INSERT OR IGNORE INTO moment_alert_subs (user_id, forming_id, created_at) VALUES (?, ?, ?)',
+            )
+            .run(userId, body.forming[0].id, new Date().toISOString())
+        }
+      } finally {
+        bells.close()
+      }
       return
     }
   }

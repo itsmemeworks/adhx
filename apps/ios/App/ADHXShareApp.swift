@@ -3,6 +3,8 @@ import SwiftUI
 
 @main
 struct ADHXShareApp: App {
+    /// Says which way the phone may turn (OrientationGate).
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var model: AppModel
     @Environment(\.scenePhase) private var scenePhase
 
@@ -14,6 +16,7 @@ struct ADHXShareApp: App {
         AlertCenter.shared.install()
         #if DEBUG
         DebugLaunch.tuneInIfAsked()
+        DebugLaunch.turnIfAsked()
         #endif
     }
 
@@ -109,6 +112,20 @@ enum DebugLaunch {
     }
 
     /// `-adhxTuneIn <slug>`: what tapping a "… is live" notification does.
+    /// `-adhxTurn landscape` (or `portrait`), after `-adhxTurnAfter` seconds
+    /// (default 8): asks iOS to turn, as rotating the phone would. Only
+    /// happens where OrientationGate lets it.
+    @MainActor static func turnIfAsked() {
+        guard let way = UserDefaults.standard.string(forKey: "adhxTurn") else { return }
+        let after = max(UserDefaults.standard.double(forKey: "adhxTurnAfter"), 0) > 0
+            ? UserDefaults.standard.double(forKey: "adhxTurnAfter") : 8
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(after * 1_000_000_000))
+            guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else { return }
+            scene.requestGeometryUpdate(.iOS(interfaceOrientations: way == "portrait" ? .portrait : .landscapeRight))
+        }
+    }
+
     @MainActor static func tuneInIfAsked() {
         guard let slug = UserDefaults.standard.string(forKey: "adhxTuneIn"), !slug.isEmpty else { return }
         AlertCenter.shared.tuneIn = LiveMoment(slug: slug, name: slug)

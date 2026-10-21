@@ -13,6 +13,9 @@ import { applyAdminRoleBootstrap, installAccountWriteGuards } from './account-in
 import { runSqlMigrations, SqlMigrationError, type SqlMigration } from './sql-migrations'
 import { UNDERSTANDING_DDL } from '../semantic/schema-sql'
 import { BOARD_FEATURES_DDL } from '../sends/schema-sql'
+import { CHANNEL_VISUAL_DDL } from '../channels/visual-schema'
+import { ADMIN_COUNTS_DDL } from '../admin/schema-sql'
+import { POST_REACTIONS_DDL } from '../reactions/schema-sql'
 
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
 const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH || './drizzle'
@@ -374,6 +377,36 @@ try {
   process.exit(1)
 }
 
+// login_tokens.attempts: wrong codes tried against a phone sign-in code
+// (intent 'phone'); five burn it (src/lib/auth/phone-signin.ts).
+try {
+  const tokenColumns = db.prepare('PRAGMA table_info(login_tokens)').all() as Array<{
+    name: string
+  }>
+  if (!tokenColumns.some((column) => column.name === 'attempts')) {
+    db.exec('ALTER TABLE login_tokens ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0')
+    console.log('[migrate] Added login_tokens.attempts')
+  }
+} catch (error) {
+  console.log('[migrate] FAILED adding login_tokens.attempts', error)
+  db.close()
+  process.exit(1)
+}
+
+// access_keys.platform: 'ios' | 'android' for a phone key, when its requests
+// say which (src/lib/people/last-seen.ts). Admins see it on People.
+try {
+  const keyColumns = db.prepare('PRAGMA table_info(access_keys)').all() as Array<{ name: string }>
+  if (!keyColumns.some((column) => column.name === 'platform')) {
+    db.exec('ALTER TABLE access_keys ADD COLUMN platform TEXT')
+    console.log('[migrate] Added access_keys.platform')
+  }
+} catch (error) {
+  console.log('[migrate] FAILED adding access_keys.platform', error)
+  db.close()
+  process.exit(1)
+}
+
 // Long-running syncs renew this durable lease every 10 seconds. Add it
 // idempotently for legacy databases, then seed old rows from started_at so the
 // stale reaper can use one COALESCE expression across old and new data.
@@ -641,6 +674,14 @@ try {
 try {
   db.exec('ALTER TABLE users ADD COLUMN approval_snoozed_until integer')
   console.log('[migrate] Added users.approval_snoozed_until')
+} catch {
+  // Column already exists — nothing to do.
+}
+// users.last_seen_at: when the person last used ADHX (a session or phone-key
+// request), written at most once every 5 minutes. Admins see it on People.
+try {
+  db.exec('ALTER TABLE users ADD COLUMN last_seen_at text')
+  console.log('[migrate] Added users.last_seen_at')
 } catch {
   // Column already exists — nothing to do.
 }
@@ -1186,9 +1227,27 @@ try {
 // account guards below are installed.
 try {
   db.exec(BOARD_FEATURES_DDL)
+  db.exec(CHANNEL_VISUAL_DDL)
   console.log('[migrate] Ensured post_sends / moment_alert_subs / moment_alerts tables')
 } catch (error) {
   console.log('[migrate] FAILED creating post_sends / moment alert tables', error)
+  db.close()
+  process.exit(1)
+}
+
+// Admin counts: reactions per member per day (counts only) and the live
+// moment log (no user ids), and the reactions kept on posts. reaction_counts
+// and post_reactions are user-linked, so they exist before the account guards
+// below are installed.
+try {
+  db.exec(ADMIN_COUNTS_DDL)
+  db.exec(POST_REACTIONS_DDL)
+  console.log('[migrate] Ensured reaction_counts / moment_log / post_reactions tables')
+} catch (error) {
+  console.log(
+    '[migrate] FAILED creating reaction_counts / moment_log / post_reactions tables',
+    error,
+  )
   db.close()
   process.exit(1)
 }

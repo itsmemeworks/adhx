@@ -89,6 +89,42 @@ export ADHX_VERSION_NAME=1.0.1    # optional
 
 The signed APK is `app/build/outputs/apk/release/app-release.apk`.
 
+## Release APKs
+
+Every GitHub release gets a signed `adhx-<version>.apk` (and its `.sha256`)
+attached by `.github/workflows/android-release.yml`, which Release Please calls
+after it makes a release. The version name is the release (`2.2.0`) and the
+version code comes from it (`20200`), so each release installs over the last.
+
+It needs your key as four repository secrets (Settings → Secrets and variables
+→ Actions). Until they exist, the job skips with a notice and the release still
+ships.
+
+| Secret                      | Value                                                                    |
+| --------------------------- | ------------------------------------------------------------------------ |
+| `ANDROID_KEYSTORE_BASE64`   | The keystore, base64: `base64 -i adhx-release.keystore \| pbcopy`        |
+| `ANDROID_KEYSTORE_PASSWORD` | The keystore's password                                                  |
+| `ANDROID_KEY_ALIAS`         | The key's alias (`adhx` if you used the command above)                   |
+| `ANDROID_KEY_PASSWORD`      | The key's password; optional when it's the same as the keystore password |
+
+Make the keystore with the `keytool` command above, once. **Keep the keystore
+and its passwords somewhere safe and use the same key forever:** a phone only
+installs an update signed with the key it already has, so a new key means
+everyone uninstalls and starts again.
+
+To attach an APK to a release that already exists (for example the one before
+the secrets were added):
+
+```sh
+gh workflow run android-release.yml -f version=2.2.0
+```
+
+Friends install it from
+[the latest release](https://github.com/itsmemeworks/adhx/releases/latest) (tap
+the `.apk`, allow installs from the browser once), or add the repository's URL
+to Obtainium to get each new release as an update. Then they pair the app with
+the code from their invite's "You're in" page.
+
 ## Install it
 
 - **Straight from a file:** copy the APK to the phone and open it. Android asks
@@ -102,16 +138,32 @@ The signed APK is `app/build/outputs/apk/release/app-release.apk`.
 
 ## Connect the phone
 
+**Sign in with email** is the first way in and needs no website: type your
+ADHX's address and the email you sign in with, and the app asks
+`POST /api/app/signin { email, name }`. The server emails a 6-digit code (in
+development without `RESEND_API_KEY` it's logged like magic links). Type it,
+or let the keyboard fill it in from the email (the field is marked as a
+one-time code), and `POST /api/app/signin/verify { email, code, name }`
+answers exactly like pairing (`{ key, username, name }`). Wrong codes say so
+(`bad_code`), a spent or burned code says to send a new one (`expired`),
+too many tries say to wait (`busy`), and a full set of phones says so
+(`too_many`). A new code can be sent once a minute (`too_soon` goes straight
+to typing the one already sent). An ADHX that can't send email (503
+`no_email`) or doesn't have these routes (404) says to use the pairing code
+instead. In development the code is in the server log as `[sign-in-code] …`.
+
+The other way in is a pairing code:
+
 1. On your computer, open your ADHX and go to **Settings → Phone app**. It
    shows a QR code and an 8-character code (`ABCD-EFGH`) that works once, for
    10 minutes.
-2. In ADHX Share, tap **Scan the code** and point the camera at it. The QR
-   code holds `adhx://pair?server=…&code=…`, so the phone's own camera app
-   works too: it opens ADHX Share and connects straight away.
-3. Or tap **Type the address instead** and type your ADHX's address and the code.
+2. In ADHX Share, tap **Use a pairing code instead**, then point the camera
+   at it. The QR code holds `adhx://pair?server=…&code=…`, so the phone's own
+   camera app works too: it opens ADHX Share and connects straight away.
+3. Or tap **Type the code** and type your ADHX's address and the code.
 
-The app calls `POST /api/app/pair` with the code and the phone's model name,
-and gets back a **phone key**. The key and the address are kept in
+For a pairing code the app calls `POST /api/app/pair` with the code and the
+phone's model name. Either way it gets back a **phone key**. The key and the address are kept in
 an atomic AES-256-GCM encrypted file in the app’s private `noBackupFilesDir`;
 the non-exportable key lives in Android Keystore. Existing installations read
 the old EncryptedSharedPreferences once and remove it only after the new file
@@ -162,8 +214,8 @@ phones, or with blur switched off, it's dimmed instead.
 3. **Saved** shows the post and how keeping a copy is going
    (`GET /api/app/status` every 1.5 s). It closes by itself after 3 seconds
    unless you touch it. **Open in ADHX** opens the post in this app's player
-   through `adhx://post?platform=…&id=…` (the website only if there's no id
-   to go on). While its copy is still being kept, the player shows a
+   through `adhx://post?platform=…&id=…` (just the app if there's no id to
+   go on; never the website). While its copy is still being kept, the player shows a
    shimmering card with a progress ring and plays it once it's ready.
 4. **Already in your saves**, **That's not one post** and **Connect the app
    first** say what happened.
@@ -180,7 +232,10 @@ again without waiting.
 **Shared lately** (in Settings) lists the last 50
 completed shares, plus every unfinished delivery (kept on the phone only),
 and keeps unfinished copies up to date while
-it's open. Tap one to watch it in the player.
+it's open. Tap one to watch it in the player; one that isn't saved (or is
+gone from your saves) opens the link you shared, on its own network. Nothing
+in the app opens your ADHX's website: links inside posts open their own
+sites, and More's **Share an ADHX link** is for sending to other people.
 
 ## Home: New · Channels · Live
 
@@ -200,9 +255,16 @@ behaviour and the endpoints are in
   (`types=` on the feed, kept with `/api/app/feed/types` and on the phone). Posts count as seen after 2 s on
   stage or when you swipe past, sent in batches to `POST /api/app/seen`. It
   ends on "You're all caught up. Go touch grass."
+- **Reactions** tops Channels when there are any (`GET /api/app/reacted`,
+  paged): the newest posts your people reacted to, each its poster with the
+  last reaction's face and emoji (or words), "12 posts with reactions" (the
+  server's `total`) and
+  **Play all**. A tap plays them in the player, where their reactions float
+  again and React works.
 - **Channels** (`GET /api/app/channels`): From everyone, Your people (a face
   per friend, with how many of theirs you haven't seen) and Made for you
-  (My saves first), with See all (Your people) and Invite. A channel opens as a grid (`/api/app/channels/{kind}/{slug}`)
+  (My saves first), with See all (Your people) and Invite (the same sheet as
+  Settings → Invite someone). A channel opens as a grid (`/api/app/channels/{kind}/{slug}`)
   and plays from the one you tap. Posts you haven't saved or seen carry a yellow
   **New** (`isNew`), and **Play the 4 new** plays just those. A friend's channel
   shows their latest note as a paper tile ("Ana's note", in quotes, "on Charlie
@@ -242,9 +304,26 @@ Sound on by default, What your ADHX is doing (with its count), then
   counts and when they last saved; a row opens their saves.
 - **Waiting for you** (admins, from `requests` on the same answer): Let in,
   Not now, and Decline at the end of the request's row (`POST /api/app/people/requests/{id} { decision }`).
-- **Change picture** and **Invite someone** open Settings on your ADHX
-  (`/settings#you`, `/settings#invite`): their routes take a signed-in
-  browser, not a phone key.
+- **Change picture** opens a sheet: **Choose a photo** (the system Photo
+  Picker), **Take a selfie** (the camera app, front camera when it listens,
+  into a cached file shared through the FileProvider; asks for the camera the
+  first time), then a square crop (drag, pinch 1–4×, a round preview through a
+  dimmed frame, Use / Cancel). The phone sends the cropped square as a JPEG
+  (at most 1024 px) to `POST /api/app/me/avatar` (`file`, with `x=0.5, y=0.5,
+zoom=1`). **Use a Gob face** (blue, teal, coral, lime: `{ source: 'gob',
+colour }`), **Use my X photo** (`{ source: 'x' }`; 409 `no_x_picture` says
+  there isn't one) and **Remove picture** (`DELETE`) are there too. After any
+  change the connection's picture is replaced and `/api/app/me` asked again,
+  so every "you" face changes at once.
+- **Invite someone** opens a sheet: "Anyone with this link can ask to join.
+  Nobody gets in until you say yes." **Make a link and share it**
+  (`POST /api/app/invites`) hands the link to the system share sheet; your
+  links that still work (`GET /api/app/invites`) are listed by who they're
+  for or their code, with when they were made and run out. The server keeps
+  only a link's hash, so **Share again** makes a fresh link
+  (`POST /api/app/invites/{id}/link`; the one sent before stops working), and
+  **Revoke** is `DELETE /api/app/invites/{id}`. Without `canInvite` the sheet
+  says only the admin can make invites.
 - **Just for me by default** and **Sound on by default** are kept on the
   phone. Until the first is touched here, saves leave `private` out and the
   account's own default on the server applies. On sends `private: true`;
@@ -257,6 +336,12 @@ Sound on by default, What your ADHX is doing (with its count), then
   step and a thin bar (green once it plays); ones that need you show why and
   **Retry** (`POST /api/app/doing/retry`). **See everything your ADHX is
   doing** opens the full list (On their way · Needs you · Ready).
+
+**Your face, everywhere.** Anywhere the app draws you (your reactions in
+Live and on posts, savers, people, Settings), it uses your own picture from
+`/api/app/me` (`LocalMe`, refreshed on resume and after a change), matched by
+`isYou` or your username, whatever picture the row itself carries. A letter
+only shows when you really have no picture (`avatarSource: 'generated'`).
 
 Members' pictures (`/api/files/avatar/…`) are for members only, so Coil's
 OkHttp client adds the phone key to requests for the connected ADHX (same
@@ -287,8 +372,8 @@ rather than a link: a video, sound or photos open the send sheet, which fetches
 the file (`?download=1`, with how far along) and hands it to Chat, Mail, Files,
 Save to phone or the share sheet, or sends the post straight to one of your
 people (a face each, from `GET /api/app/send`; a tap is `POST /api/app/send`
-and leaves a tick; someone who has it is dimmed); a text post's words go straight to the share
-sheet. A post whose copy is still being kept says so instead. Share downloads use separate private
+and leaves a tick; someone who has it is dimmed); a text post or article gets the same sheet, sending
+its words through Chat, Mail or More, or the post straight to your people. A post whose copy is still being kept says so instead. Share downloads use separate private
 cache batches, so starting another share keeps earlier recipients' files usable.
 Failed batches are removed immediately; batches older than 24 hours are removed
 on later exports, excluding downloads still active in the app. Share downloads check

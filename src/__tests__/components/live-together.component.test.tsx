@@ -96,8 +96,12 @@ describe('the React picker', () => {
 
   it('says a few words, cleaned, and never sends nothing', async () => {
     const onText = vi.fn()
-    render(<ReactionPicker onEmoji={vi.fn()} onText={onText} onClose={vi.fn()} />)
+    const { rerender } = render(
+      <ReactionPicker onEmoji={vi.fn()} onText={onText} onClose={vi.fn()} />,
+    )
     const field = screen.getByRole('textbox', { name: 'Say something' })
+    expect(field).toHaveAttribute('placeholder', 'Say something')
+    rerender(<ReactionPicker live onEmoji={vi.fn()} onText={onText} onClose={vi.fn()} />)
     expect(field).toHaveAttribute('placeholder', 'Say something to everyone watching')
     expect(field).toHaveAttribute('maxLength', '80')
     const send = screen.getByRole('button', { name: 'Send' })
@@ -246,5 +250,13 @@ it('allows forty emoji code points and makes pending sends clear and non-interac
   rerender(<ReactionPicker onEmoji={vi.fn()} onText={vi.fn()} onClose={vi.fn()} disabled />)
   expect(screen.getByRole('button', { name: 'Sending…' })).toBeDisabled()
   expect(field).toBeDisabled()
-  expect(screen.getByText('Live reactions disappear after a few seconds.')).toBeInTheDocument()
+  expect(
+    screen.getByText('People who can see this post see it when they watch it.'),
+  ).toBeInTheDocument()
+  rerender(<ReactionPicker live onEmoji={vi.fn()} onText={vi.fn()} onClose={vi.fn()} />)
+  expect(
+    screen.getByText(
+      'Everyone watching sees it now. It stays on the post for people who can see it.',
+    ),
+  ).toBeInTheDocument()
 })

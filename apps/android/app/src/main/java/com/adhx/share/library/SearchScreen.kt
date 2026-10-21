@@ -15,6 +15,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import com.adhx.share.links.Networks
 import com.adhx.share.ui.Glyphs
+import com.adhx.share.ui.SansFamily
 import com.adhx.share.ui.SerifFamily
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -152,7 +153,7 @@ fun SearchScreen(vm: LibraryViewModel, server: String, onBack: () -> Unit, onOpe
                         value = ui.query,
                         onValueChange = vm::setQuery,
                         singleLine = true,
-                        textStyle = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White),
+                        textStyle = TextStyle(fontFamily = SansFamily, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White),
                         cursorBrush = SolidColor(AdhxColors.Accent),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
@@ -325,12 +326,18 @@ fun PosterCard(
     val image = (media?.posterUrl ?: media?.url?.takeIf { media.kind == "photo" })
         ?.let { AdhxApi.resolve(server, it)?.toString() }
     val title = (post.article?.title?.takeIf { it.isNotBlank() } ?: post.text).trim().lineSequence().firstOrNull()?.trim().orEmpty()
+    val others = if (owner != null) post.savers.filterNot { it.username == owner } else post.savers
+    val line = when {
+        others.isEmpty() -> null
+        owner != null -> if (others.size == 1 && others[0].isYou) Copy.YOU_SAVED_TOO else "${Copy.names(others)} too"
+        else -> listOfNotNull(Copy.names(others), Networks.name(post.platform)).joinToString(" · ")
+    }
     Box(
         Modifier
             .fillMaxWidth()
             .height(height)
             .clip(RoundedCornerShape(18.dp))
-            .background(AdhxColors.Placeholder)
+            .background(if (image != null) AdhxColors.Placeholder else AdhxColors.Surface)
             .clickable(onClickLabel = "Play", onClick = onClick),
     ) {
         if (image != null) {
@@ -340,41 +347,27 @@ fun PosterCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-        } else {
-            Text(
-                post.article?.title?.takeIf { it.isNotBlank() } ?: post.text,
-                fontSize = 14.sp,
-                lineHeight = 19.sp,
-                color = AdhxColors.Cream,
-                maxLines = 7,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 40.dp),
-            )
-        }
-        Column(
-            Modifier
-                .align(Alignment.BottomStart)
-                .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f))))
-                .padding(start = 10.dp, end = 10.dp, top = 36.dp, bottom = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            if (image != null && title.isNotBlank()) {
-                Text(title, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            }
-            val others = if (owner != null) post.savers.filterNot { it.username == owner } else post.savers
-            val line = when {
-                others.isEmpty() -> null
-                owner != null -> if (others.size == 1 && others[0].isYou) Copy.YOU_SAVED_TOO else "${Copy.names(others)} too"
-                else -> listOfNotNull(Copy.names(others), Networks.name(post.platform)).joinToString(" · ")
-            }
-            if (line != null) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Faces(others, server, size = 18.dp, description = line)
-                    Spacer(Modifier.width(6.dp))
-                    Text(line, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Column(
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f))))
+                    .padding(start = 10.dp, end = 10.dp, top = 36.dp, bottom = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                if (title.isNotBlank()) {
+                    Text(title, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+                if (line != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Faces(others, server, size = 18.dp, description = line)
+                        Spacer(Modifier.width(6.dp))
+                        Text(line, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
             }
+        } else {
+            WordsTile(post, server, others, line)
         }
         Row(
             Modifier.align(Alignment.TopStart).padding(8.dp),
@@ -425,6 +418,62 @@ fun PosterCard(
             )
         }
     }
+}
+
+/**
+ * A post with no picture, as the web's words tile: its words in the reading
+ * serif on the card (bigger when there are few), starting below the pills
+ * and the match meter so they never cover the first line, then who posted it
+ * and who saved it at the bottom.
+ */
+@Composable
+private fun WordsTile(post: PhonePost, server: String, others: List<com.adhx.share.net.Saver>, line: String?) {
+    val words = (post.article?.title?.takeIf { it.isNotBlank() } ?: Copy.oneLine(post.text)).trim()
+    val size = wordsTileSize(words.length)
+    val author = post.author.name?.trim()?.takeIf { it.isNotEmpty() } ?: Copy.handle(post.author.handle)
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(start = 12.dp, end = 12.dp, top = WORDS_TILE_TOP, bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            words.ifEmpty { Networks.name(post.platform) ?: "Post" },
+            fontFamily = SerifFamily,
+            fontSize = size.fontSize.sp,
+            lineHeight = size.lineHeight.sp,
+            color = AdhxColors.White,
+            maxLines = size.maxLines,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = true),
+        )
+        if (author != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                NetworkMark(post.platform, size = 12.dp, tint = AdhxColors.Muted)
+                Spacer(Modifier.width(6.dp))
+                Text(author, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        if (line != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Faces(others, server, size = 18.dp, description = line)
+                Spacer(Modifier.width(6.dp))
+                Text(line, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Cream, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+/** Below the tile's pills (8dp in, 22dp tall) with room to breathe: the words start here. */
+private val WORDS_TILE_TOP = 42.dp
+
+/** A words tile's type: short posts read as headlines, long ones smaller (the web's sizes, a step down for the phone's narrower tiles). */
+internal data class WordsSize(val fontSize: Int, val lineHeight: Int, val maxLines: Int)
+
+internal fun wordsTileSize(length: Int): WordsSize = when {
+    length < 60 -> WordsSize(22, 25, 5)
+    length < 140 -> WordsSize(18, 21, 6)
+    else -> WordsSize(15, 18, 8)
 }
 
 /** Where a search found a post, for its pill: on screen, said in it, or in the words. */

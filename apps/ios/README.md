@@ -117,12 +117,20 @@ Share Extension can’t see the connection.
 
 ## How connecting works
 
+**With your email:** on Connect, tap **Sign in with email**, type your ADHX’s
+address and the email you sign in with. Your ADHX emails a 6-digit code
+(`POST /api/app/signin`; existing accounts only); type it, or let iOS fill
+it in from Mail, and the app gets its phone key from
+`POST /api/app/signin/verify`, the same answer pairing gives.
+
+**With the pairing code** (the other way in):
+
 1. On your computer, open your ADHX → Settings → Phone app. It shows a QR code
    and an 8-character code (like `ABCD-EFGH`) that works once, for 10 minutes.
 2. The QR code holds `adhx://pair?server=<your ADHX address>&code=<code>`.
    Scan it with the app’s camera, or with the phone’s own Camera app (the
    `adhx://` link opens ADHX Share and connects straight away). Or tap “Type
-   the address instead” and type both.
+   the code instead” and type both.
 3. The app sends the code to `POST /api/app/pair` with the phone’s model
    name, and gets back a phone key. That key can save links, read their
    status, read and search saves (`/api/app/saves`, `/api/app/search`), and

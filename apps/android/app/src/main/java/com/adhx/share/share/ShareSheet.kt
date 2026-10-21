@@ -100,6 +100,7 @@ import com.adhx.share.ui.NetworkMark
 import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.PrimaryButton
 import com.adhx.share.ui.SerifFamily
+import com.adhx.share.ui.serifLineBox
 import com.adhx.share.ui.SkeletonBar
 import com.adhx.share.ui.Spinner
 import kotlinx.coroutines.delay
@@ -115,7 +116,7 @@ fun ShareSheetScreen(
     vm: ShareViewModel,
     frosted: Boolean,
     onFinish: () -> Unit,
-    /** Opens the post in this app's player (the website only as a fallback). */
+    /** Opens the post in this app's player (or just the app); never the website. */
     onOpenInAdhx: (server: String, post: SaveResponse?) -> Unit,
     onOpenApp: () -> Unit,
 ) {
@@ -361,9 +362,9 @@ private fun CardTop(ui: ShareUi, title: String, line: String?, done: Boolean = f
         Box(Modifier.width(16.dp))
         Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             AdhxBrand(markSize = 20.dp)
-            Text(title, fontFamily = SerifFamily, fontSize = 34.sp, lineHeight = 33.sp, color = AdhxColors.White)
+            Text(title, fontFamily = SerifFamily, fontSize = 34.sp, lineHeight = 33.sp, color = AdhxColors.White, modifier = Modifier.serifLineBox(34.sp, 33.sp))
             if (networkName.isNotBlank()) {
-                Text(networkName, fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(networkName, fontSize = 13.sp, lineHeight = 17.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             // Still saving: the post's words aren't in yet.
             if (post == null) {
@@ -371,8 +372,11 @@ private fun CardTop(ui: ShareUi, title: String, line: String?, done: Boolean = f
                 SkeletonBar(12.dp, Modifier.fillMaxWidth(0.55f))
             }
             Spacer(Modifier.weight(1f))
-            if (line != null) Text(line, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Muted, maxLines = 1)
-            if (bar) KeepBar(ui.keep)
+            // The line and its bar sit 6dp apart at the bottom, level with the poster's foot (the boards' margin-top: auto).
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (line != null) Text(line, fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Muted, maxLines = 1)
+                if (bar) KeepBar(ui.keep)
+            }
         }
     }
 }

@@ -156,10 +156,12 @@ final class FeedModel: ObservableObject {
             let types = types
             let page = try await client.feed(mode: mode, cursor: cursor, types: types)
             guard generation == self.generation else { return }
-            // A server that ignores `types` still gets filtered here.
-            let shown = page.items.filter { types.contains(FeedType(kind: $0.kind)) }
+            // A server that ignores `types` still gets filtered here. A post
+            // someone sent you shows whatever its kind, as the server's New does.
+            let inFeed = { (post: PhonePost) in types.contains(FeedType(kind: post.kind)) || post.sentToYou }
+            let shown = page.items.filter(inFeed)
             var hidden = replacing ? [:] : self.hidden
-            for post in page.items where !types.contains(FeedType(kind: post.kind)) {
+            for post in page.items where !inFeed(post) {
                 if hiddenKeys.insert(post.key).inserted { hidden[FeedType(kind: post.kind), default: 0] += 1 }
             }
             // The server's own count wins where it gives one.

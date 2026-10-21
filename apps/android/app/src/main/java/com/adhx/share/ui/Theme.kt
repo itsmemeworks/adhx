@@ -6,6 +6,10 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.TextUnit
+import kotlin.math.roundToInt
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
@@ -45,6 +49,37 @@ object AdhxColors {
  * the web (both bundled in res/font, with their licences in assets/licenses).
  */
 val SerifFamily: FontFamily = FontFamily(Font(R.font.instrument_serif, FontWeight.Normal))
+
+/**
+ * Serif headings set tighter than the font (34sp on 33sp lines) as CSS sets
+ * them: Compose keeps Instrument Serif's full ascent over the first line and
+ * descent under the last (1.3em in all), where a CSS line box splits the
+ * difference to line-height evenly. This trims that much off the top and/or
+ * bottom, so the words around a heading sit where the boards put them.
+ */
+fun Modifier.serifLineBox(fontSize: TextUnit, lineHeight: TextUnit, top: Boolean = true, bottom: Boolean = true): Modifier =
+    layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints)
+        val trim = ((1.3f * fontSize.toPx() - lineHeight.toPx()) / 2f).coerceAtLeast(0f).roundToInt()
+        val cut = (if (top) trim else 0) + (if (bottom) trim else 0)
+        layout(placeable.width, (placeable.height - cut).coerceAtLeast(0)) {
+            placeable.place(0, if (top) -trim else 0)
+        }
+    }
+
+/**
+ * Hanken Grotesk's full height in Compose is about 1.69em, where a CSS `normal`
+ * line is about 1.35em (13sp: 22dp against the boards' 17.6). This trims the
+ * difference evenly off the first line's top and the last line's bottom.
+ */
+fun Modifier.sansLineBox(fontSize: TextUnit): Modifier =
+    layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints)
+        val trim = (0.169f * fontSize.toPx()).roundToInt()
+        layout(placeable.width, (placeable.height - 2 * trim).coerceAtLeast(0)) {
+            placeable.place(0, -trim)
+        }
+    }
 
 /**
  * Hanken Grotesk is one variable font (the web's latin subset, weights

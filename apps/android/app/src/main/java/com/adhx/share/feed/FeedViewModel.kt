@@ -65,6 +65,24 @@ data class FeedUi(
         }.toMap()
 }
 
+/** Channels → Reactions: posts with reactions you can see, newest reaction first (`/api/app/reacted`). */
+data class ReactedUi(
+    val items: List<PhonePost> = emptyList(),
+    val nextOffset: Int? = 0,
+    val loading: Boolean = false,
+    val loadedOnce: Boolean = false,
+    /** This server has no reactions feed yet: the row stays away. */
+    val unavailable: Boolean = false,
+    /** How many posts have reactions in all, when the server says. */
+    val total: Int? = null,
+) {
+    /** "12 posts with reactions": the server's total, else what's loaded so far. */
+    val count: Int get() = total ?: items.size
+
+    /** Only a count of what's loaded so far, with more to come ("30+"). */
+    val more: Boolean get() = total == null && nextOffset != null
+}
+
 data class ChannelsUi(
     val channels: ChannelsResponse = ChannelsResponse(),
     val loading: Boolean = false,
@@ -158,6 +176,10 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
     private val _channels = MutableStateFlow(ChannelsUi())
     val channels: StateFlow<ChannelsUi> = _channels.asStateFlow()
 
+    private val _reacted = MutableStateFlow(ReactedUi())
+    val reacted: StateFlow<ReactedUi> = _reacted.asStateFlow()
+    private var reactedJob: Job? = null
+
     private val _channel = MutableStateFlow(ChannelUi())
     val channel: StateFlow<ChannelUi> = _channel.asStateFlow()
 
@@ -196,6 +218,8 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
                 if (server == null) prefs.clear()
                 _feed.value = FeedUi(types = prefs.types)
                 _channels.value = ChannelsUi()
+                reactedJob?.cancel()
+                _reacted.value = ReactedUi()
                 _channel.value = ChannelUi()
                 _live.value = LiveUi()
                 _tuned.value = TunedUi()
@@ -232,8 +256,9 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
                     val had = current.items.mapTo(HashSet()) { it.key }
                     val page = result.value
                     val fresh = page.items.filter { it.key !in had }
-                    // A server that ignores `types` still gets filtered here.
-                    val (shown, left) = fresh.partition { MediaType.of(it.kind) in types }
+                    // A server that ignores `types` still gets filtered here. A post
+                    // someone sent you shows whatever its kind, as the server's New does.
+                    val (shown, left) = fresh.partition { MediaType.of(it.kind) in types || it.sentToYou }
                     val hiddenHere = current.hiddenHere.toMutableMap()
                     left.forEach { val t = MediaType.of(it.kind); hiddenHere[t] = (hiddenHere[t] ?: 0) + 1 }
                     current.copy(
@@ -417,6 +442,55 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
                 ApiResult.Offline -> _channels.value.copy(loading = false, loadedOnce = true, error = OFFLINE)
             }
         }
+    }
+
+    /**
+     * The Reactions row: its first page again ([force]: on every visit to
+     * Channels, since reactions keep coming), else the next page.
+     */
+    fun loadReacted(force: Boolean = false) {
+        val now = _reacted.value
+        if (force) {
+            if (now.loading && reactedJob?.isActive == true) return
+        } else if (now.loading || now.nextOffset == null || now.unavailable) {
+            return
+        }
+        val connection = store.current() ?: return
+        val offset = if (force) 0 else now.nextOffset ?: return
+        _reacted.value = now.copy(loading = true)
+        reactedJob = viewModelScope.launch {
+            val result = AdhxApi(connection).reacted(offset, REACTED_PAGE)
+            val current = _reacted.value
+            _reacted.value = when (result) {
+                is ApiResult.Ok -> {
+                    val page = result.value.items.filter { it.platform.isNotBlank() && it.id.isNotBlank() }
+                    if (offset == 0) {
+                        ReactedUi(items = page.distinctBy { it.key }, nextOffset = result.value.nextOffset, loadedOnce = true, total = result.value.total)
+                    } else {
+                        val had = current.items.mapTo(HashSet()) { it.key }
+                        current.copy(
+                            items = current.items + page.filter { it.key !in had },
+                            nextOffset = result.value.nextOffset,
+                            loading = false,
+                            loadedOnce = true,
+                            total = result.value.total ?: current.total,
+                        )
+                    }
+                }
+                is ApiResult.Failed -> {
+                    signedOut(result, connection)
+                    current.copy(loading = false, loadedOnce = true, unavailable = result.status == 404 || current.unavailable,
+                        nextOffset = if (offset == 0) current.nextOffset else null)
+                }
+                ApiResult.Offline -> current.copy(loading = false, loadedOnce = true)
+            }
+        }
+    }
+
+    /** The Reactions player is at [page]: fetch more near the end. */
+    fun onReactedPage(page: Int) {
+        val now = _reacted.value
+        if (page >= now.items.size - 5) loadReacted()
     }
 
     /** Open a channel: [kind] is a [com.adhx.share.net.ChannelKind]. */
@@ -638,7 +712,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
         val slug = _tuned.value.slug.takeIf { it.isNotBlank() } ?: return false
         val words = text?.trim()?.let(com.adhx.share.net.Reaction::clip)?.takeIf { it.isNotEmpty() }
         if (emoji == null && words == null) return false
-        val me = Saver(username = connection.username ?: "you", name = Copy.YOU, isYou = true)
+        val me = Saver(username = connection.username ?: "you", name = Copy.YOU, avatarUrl = connection.avatarUrl, isYou = true)
         val sent = AdhxApi(connection).react(slug, post.platform, post.id, emoji = emoji, text = words) is ApiResult.Ok
         if (sent) float(emoji, words, me)
         return sent
@@ -690,6 +764,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
         /** Between reactions that arrived together (the poll is every 5 s). */
         private const val STAGGER_MS = 700L
         private const val OFFLINE = "Can’t reach your ADHX right now."
+        private const val REACTED_PAGE = 30
     }
 }
 

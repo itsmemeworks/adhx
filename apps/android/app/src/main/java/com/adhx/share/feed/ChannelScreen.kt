@@ -115,7 +115,8 @@ fun ChannelScreen(
         ) {
             item(span = StaggeredGridItemSpan.FullLine, key = "head") {
                 // The face's ring sits outside its 64dp on the boards; here it's part of the row, so the gaps are 5dp less.
-                Column(Modifier.padding(top = 13.dp, bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                // Under home's one-row header the face starts right below the row's own 10dp.
+                Column(Modifier.padding(top = if (header != null) 0.dp else 13.dp, bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val person = ui.person
                         if (route.kind == ChannelKind.FRIEND && person != null) {

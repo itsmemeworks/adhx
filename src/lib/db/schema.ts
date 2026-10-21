@@ -293,6 +293,63 @@ export const momentAlerts = sqliteTable(
   }),
 )
 
+// Admin counts (DDL in src/lib/admin/schema-sql.ts). Reactions are counted per
+// member, per UTC day, per kind (an emoji's id or 'text'); the words, the post
+// and the moment are never stored.
+export const reactionCounts = sqliteTable(
+  'reaction_counts',
+  {
+    day: text('day').notNull(),
+    userId: text('user_id').notNull(),
+    kind: text('kind').notNull(),
+    count: integer('count').notNull().default(0),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.day, table.userId, table.kind] }),
+    userIdx: index('reaction_counts_user_idx').on(table.userId, table.day),
+  }),
+)
+
+// Reactions kept on posts (`post_reactions`): an emoji or a few words a
+// member left on a post, shown (with names) only to members who can see the
+// post, and replayed when they watch it. Live reactions are kept here too,
+// with the id the room saw. User-linked; rows go with the account.
+// DDL: `src/lib/reactions/schema-sql.ts`.
+export const postReactions = sqliteTable(
+  'post_reactions',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    emoji: text('emoji'),
+    text: text('text'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    postIdx: index('post_reactions_post_idx').on(table.platform, table.postId, table.createdAt),
+    userIdx: index('post_reactions_user_idx').on(table.userId),
+  }),
+)
+
+// One row per live moment that formed. No user ids.
+export const momentLog = sqliteTable(
+  'moment_log',
+  {
+    slug: text('slug').primaryKey(),
+    title: text('title').notNull(),
+    formedAt: text('formed_at').notNull(),
+    tuneIns: integer('tune_ins').notNull().default(0),
+    peakWatching: integer('peak_watching').notNull().default(0),
+    reactions: integer('reactions').notNull().default(0),
+    alerts: integer('alerts').notNull().default(0),
+    alertsOpened: integer('alerts_opened').notNull().default(0),
+  },
+  (table) => ({
+    formedIdx: index('moment_log_formed_idx').on(table.formedAt),
+  }),
+)
+
 // Tag shares - track which tags are shared publicly
 export const tagShares = sqliteTable(
   'tag_shares',
@@ -459,6 +516,8 @@ export const accessKeys = sqliteTable(
     lastUsedAt: text('last_used_at'),
     /** `search` (the adhx skill: read-only search) or `phone` (the phone app: save + status). */
     scope: text('scope').notNull().default('search'),
+    /** A phone key's kind of phone, `ios` | `android`, once its requests say (null: not known). */
+    platform: text('platform'),
   },
   (table) => ({
     userIdIdx: index('access_keys_user_id_idx').on(table.userId),
@@ -860,6 +919,9 @@ export const users = sqliteTable('users', {
   approval: text('approval').notNull().default('approved'),
   // "Not now" on a waiting join: hidden from the admin's queue until then (epoch ms).
   approvalSnoozedUntil: integer('approval_snoozed_until'),
+  // When the person last used ADHX (a session or phone-key request), written
+  // at most once every 5 minutes (src/lib/people/last-seen.ts). Admins only.
+  lastSeenAt: text('last_seen_at'),
 })
 
 // Linked sign-in identities for a user — X OAuth and/or email magic link.
@@ -904,11 +966,12 @@ export const usernameAliases = sqliteTable('username_aliases', {
 export const loginTokens = sqliteTable('login_tokens', {
   tokenHash: text('token_hash').primaryKey(),
   email: text('email').notNull(), // lowercased
-  intent: text('intent').notNull(), // 'signin' | 'change'
-  userId: text('user_id'), // set for 'change' — the account confirming a new email
+  intent: text('intent').notNull(), // 'signin' | 'change' | 'phone' (an emailed 6-digit code)
+  userId: text('user_id'), // set for 'change' — the account confirming a new email; for 'phone', the account (null: no such account)
   returnTo: text('return_to'),
   expiresAt: integer('expires_at').notNull(), // epoch ms
   usedAt: text('used_at'),
+  attempts: integer('attempts').notNull().default(0), // wrong 'phone' codes tried
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 })
 

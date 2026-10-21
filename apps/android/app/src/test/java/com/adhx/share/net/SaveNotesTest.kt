@@ -90,5 +90,12 @@ class SaveNotesTest {
         assertEquals(Copy.WHY_CLOSE, whyChipLabel(close))
         assertEquals("Fresh", whyChipLabel(PhonePost(platform = "x", id = "2", why = listOf("Fresh"))))
         assertNull(whyChipLabel(PhonePost(platform = "x", id = "3")))
+        // "Ana saved this · 1d" alone is the byline already: no chip repeating it.
+        val fresh = PhonePost(
+            platform = "x", id = "4", why = listOf("Ana saved this · 1d"),
+            whyReasons = listOf(WhyReason("Ana saved this · 1d", kind = "fresh", username = "ana")),
+            savers = listOf(Saver(username = "ana")),
+        )
+        assertNull(whyChipLabel(fresh))
     }
 }

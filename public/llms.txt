@@ -1,54 +1,25 @@
 # ADHX
 
-> ADHX is a bookmark manager for X, Instagram, TikTok, and YouTube. Save a link, watch it in a full-screen theater, tag it into a public playlist. The community pulse at /trending and / is an anonymous, crawlable feed of what people are saving and sending. Structured data for saved posts is available as a read-only API.
+> ADHX is a self-hosted, private feed for one group of close friends and family. Members save posts from fourteen social networks (X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky); the server keeps a copy of each post's media and plays them in one feed. Almost everything on an ADHX server is for its members only. This file lists the few things anyone can read.
 
-## Public APIs
+## Public pages
 
-- [Tweet JSON](/api/share/tweet/{username}/{id}): Structured JSON for any X post — author, text, engagement metrics, media URLs, article content as markdown, quote tweets, external links. 5-min cache. No auth required. When citing a post, link to its ADHX preview URL (`/{username}/status/{id}`), not this raw JSON endpoint.
-- [Tag Playlist](/api/share/tag/by-name/{username}/{tag}): Posts in a user's public tag playlist (X / Instagram / TikTok / YouTube) with media metadata. No auth required.
-- [Trending JSON](/api/trending): Cross-network real-time trending JSON — the posts the community is saving and previewing right now across X, Instagram, TikTok, and YouTube, ranked by trend score (saves + previews + sends). Anonymous (no user identity). Optional `?platform=x|instagram|tiktok|youtube` filter. 60s cache. No auth required.
-- [Activity Pulse](/api/activity): Public anonymous feed of recent community actions (previews, saves, shares) across all platforms. No user identity, no auth required. 5s cache. Archive is private and is never written here.
-- [Analytics summary](/api/analytics): Aggregate growth counts (saves, views, shares, tags, …) by platform and content type, plus a top-posts list. Optional `?window=today|week|month|all`. No user identity. No auth required.
-- [Playlists Leaderboard JSON](/api/collections/trending): Public anonymous ranking of curators' shared tag playlists by views + clones. Optional `?window=today|week|month|all-time` (default `week`) and `?limit=` (1–50, default 24). No user identity — entries carry a curator username, never a userId. 60s cache. No auth required.
+- [Post previews](/{username}/status/{id}): an X post in the theater, with Schema.org JSON-LD (SocialMediaPosting), Open Graph tags and semantic HTML. Instagram is at /p/{id} and /reel/{id}, TikTok at /@{username}/video/{id}, and the other networks at /s/{network}/{id}.
+- [Public channels](/t/{username}/{tag}): a channel its owner made public, playable by anyone. The curator's profile is at /t/{username}.
+- [Right now](/now): the moments people on this server are saving, with counts only and never who saved what.
 
-## Your saves (access key)
+## Public JSON
 
-- [Search your saves](/api/agent/search): `GET /api/agent/search?q=&type=all|videos|photos|text|articles&limit=&offset=` with `Authorization: Bearer adhx_…` (a personal access key from Settings → Search from Claude). Finds the key owner's own saves by meaning, matching words, pictures and video frames. Read-only; never anyone else's saves. See the [adhx skill](https://github.com/itsmemeworks/adhx/blob/main/skills/adhx/SKILL.md).
+- [Post JSON](/api/share/tweet/{username}/{id}): an X post's author, text, engagement, media, article content as markdown, quotes and links. Not cached, so moderation is checked every time. When citing a post, link to its preview page, not this JSON.
+- [Channel JSON](/api/share/tag/by-name/{username}/{tag}): the posts in a public channel.
 
-## Public Pages
+## Your own saves (access key)
 
-- [Home theater](/): Live theater of the community pulse. Signed-out visitors watch; saving opens sign-in.
-- [Tweet Previews](/{username}/status/{id}): Theater + Schema.org JSON-LD (SocialMediaPosting), OG tags, and semantic HTML.
-- [Reel Previews](/reels/{id}): Instagram Reel theater.
-- [TikTok Previews](/@{username}/video/{id}): TikTok theater.
-- [Shorts Previews](/shorts/{id}): YouTube Shorts theater (official embed).
-- [Tag Playlists](/t/{username}/{tag}): Looping theater of one public tag. Curator profile at /t/{username}.
-- [Trending](/trending): The cross-network real-time trending source. Per-lens hubs at /trending/popular, /trending/videos, /trending/photos, /trending/text, /trending/articles. Backed by the [Trending JSON](/api/trending) API.
-- [Trending Archive](/trending/archive): Historical weekly archives of trending activity, one page per completed ISO week (e.g. /trending/archive/2026-w30).
-- [Author Hubs](/{username}): Per-author collection of an X handle's posts saved or previewed on ADHX.
-- [Playlists Leaderboard](/leaderboard): Ranked list of the most-viewed and most-cloned public tag playlists this week. Other windows at /leaderboard/today, /leaderboard/month, /leaderboard/all-time. Backed by the [Playlists Leaderboard JSON](/api/collections/trending) API.
-
-## Content Types
-
-- Tweet text with expanded URLs
-- Author profiles (name, username, avatar)
-- Engagement metrics (likes, retweets, replies, views)
-- Photos and video thumbnails with direct media URLs
-- X Articles converted to clean markdown
-- Quote tweet chains
-- External link previews
-- Instagram Reels, TikTok videos, and YouTube Shorts (preview pages + saved items)
+- [Search your saves](/api/agent/search): `GET /api/agent/search?q=&type=all|videos|photos|text|articles&limit=&offset=` with `Authorization: Bearer adhx_…` (a personal access key from Settings). Finds the key owner's own saves by meaning. Read-only; never anyone else's saves. See the [adhx skill](https://github.com/itsmemeworks/adhx/blob/main/skills/adhx/SKILL.md).
 
 ## Privacy
 
-- Public JSON never includes account ids. `activity.userId` and playlist `viewerId` are stored for moderation only and are omitted from every public select.
-- A user's collection and archive are private. Only an explicitly public playlist (`/t/{username}/{tag}`) is listed.
+- Public pages and JSON never name who saved a post. Members see each other's names; strangers never do.
+- A save marked "Just for me" never appears on a public page.
+- Activity, trending and analytics feeds are for the server's admins only.
 - Human-readable policy: [/privacy](/privacy) · [PRIVACY.md](https://github.com/itsmemeworks/adhx/blob/main/PRIVACY.md)
-
-## Usage Notes
-
-- All public APIs return JSON with Cache-Control headers
-- No API key or authentication required for public content
-- Media URLs served via platform proxies (no CORS issues). YouTube plays via the official iframe.
-- Tweet preview pages include `<link rel="alternate" type="application/json">` pointing to the JSON API
-- A playlist is one public tag. A user's saves are their collection. The grid over them is /library.

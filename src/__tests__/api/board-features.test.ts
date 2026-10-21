@@ -176,6 +176,17 @@ describe('send straight to your people', () => {
     expect(Object.keys(people[0]).sort()).toEqual(['avatarUrl', 'has', 'name', 'sent', 'username'])
   })
 
+  it('never reveals a Just for me save: a private holder is offered and can be sent it', async () => {
+    save(BEN, 'sauce', 1, { isPrivate: true })
+    viewer = PETE
+    const { body } = await targets('twitter', 'sauce')
+    expect(body.people.find((p: { username: string }) => p.username === 'ben')).toMatchObject({
+      has: false,
+    })
+    const sent = await send({ platform: 'twitter', id: 'sauce', to: ['ben'] })
+    expect(sent.body).toEqual({ sent: ['ben'], skipped: [] })
+  })
+
   it('sends, skips who has it, who already got it and who isn’t a member', async () => {
     viewer = PETE
     const first = await send({
@@ -275,6 +286,23 @@ describe('send straight to your people', () => {
     await POST(json('/api/views', 'POST', { posts: [{ platform: 'twitter', id: 'old' }] }))
     __resetBlendSnapshots()
     expect((await newFeed()).map((i) => i.id)).not.toContain('old')
+  })
+
+  it('shows a sent text post even to someone who only watches videos and photos', async () => {
+    save(BEN, 'words', 1)
+    save(JO, 'clip', 0.5, {
+      category: 'video',
+    })
+    viewer = PETE
+    await send({ platform: 'twitter', id: 'words', to: ['ana'] })
+
+    viewer = ANA
+    const { GET } = await import('@/app/api/feed/blend/route')
+    const res = await GET(
+      new NextRequest(`${BASE}/api/feed/blend?mode=new&limit=50&types=video,photo`),
+    )
+    const ids = ((await res.json()).items as Item[]).map((i) => i.id)
+    expect(ids[0]).toBe('words')
   })
 
   it('reaches the phone the same way', async () => {
@@ -610,6 +638,23 @@ describe('keep a From everyone channel', () => {
       params: Promise.resolve({ slug: 'food-x1' }),
     })
     expect((await other.json()).kept).toBeNull()
+  })
+
+  it("follows the keeper's Just for me by default for new copies", async () => {
+    testInstance.db
+      .insert(schema.userPreferences)
+      .values({ userId: PETE, key: 'save.privateDefault', value: 'true' })
+      .run()
+    viewer = PETE
+    const { POST } = await import('@/app/api/channels/group/[slug]/keep/route')
+    const res = await POST(json('/api/channels/group/food-x1/keep', 'POST'), {
+      params: Promise.resolve({ slug: 'food-x1' }),
+    })
+    expect(res.status).toBe(200)
+    const mine = testInstance.db.all<{ id: string; is_private: number }>(
+      sql`SELECT id, is_private FROM bookmarks WHERE user_id = ${PETE} AND source = 'channel_keep'`,
+    )
+    expect(mine).toEqual([{ id: 'steak', is_private: 1 }])
   })
 
   it('skips posts already at five tags, and 404s an unknown channel', async () => {

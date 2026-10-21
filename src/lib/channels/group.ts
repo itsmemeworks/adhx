@@ -1,4 +1,4 @@
-import { asc, eq, sql } from 'drizzle-orm'
+import { asc, sql } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
 import { groupChannels, type GroupChannel } from '@/lib/db/schema'
 import { readModeratedPostKeys } from '@/lib/admin/moderation'
@@ -10,6 +10,7 @@ import type { Member } from '@/lib/people/members'
 import type { Saver } from '@/lib/people/types'
 import { bestClusters, meanVectors, nameClusters, type AutoChannelDeps } from './auto'
 import { groupSaves, seedFrom } from './cluster'
+import { visualChannel, visualChannels } from './visual'
 
 /**
  * "From everyone" channels: the server's visible saves from every member
@@ -40,6 +41,7 @@ export interface GroupChannelView {
   size: number
   /** `platform:id`, most typical first (covers come from the front). */
   keys: string[]
+  coverKeys?: string[]
 }
 
 export interface GroupChannelSummary extends GroupChannelView {
@@ -167,7 +169,7 @@ export async function computeGroupChannels(
     })
   })
   state.lastEmpty = views.length === 0 ? now.getTime() : 0
-  return views
+  return visualChannels(views, null)
 }
 
 function toView(row: GroupChannel): GroupChannelView {
@@ -224,7 +226,7 @@ function startCompute(deps: AutoChannelDeps, fallback: GroupChannelView[]) {
 export async function getGroupChannels(deps: AutoChannelDeps = {}): Promise<GroupChannelView[]> {
   const now = (deps.now ?? (() => new Date()))().getTime()
   const rows = db.select().from(groupChannels).orderBy(asc(groupChannels.position)).all()
-  const views = rows.map(toView)
+  const views = visualChannels(rows.map(toView), null)
   // Nothing to group (or the last try failed) a moment ago: don't try on every request.
   if (now - state.lastEmpty < RETRY_EMPTY_MS) return views
   if (!isStale(rows, now)) return views
@@ -302,6 +304,7 @@ export async function groupChannelsFor(
     out.push({
       ...v,
       keys,
+      coverKeys: v.coverKeys?.filter((key) => keys.includes(key)),
       size: keys.length,
       members: [...counts.keys()].filter((id) => byId.has(id)).length,
       savers,
@@ -341,8 +344,11 @@ function newKeys(viewerId: string, keys: string[]): Set<string> {
 export async function groupChannelKeys(
   slug: string,
 ): Promise<{ name: string; keys: string[] } | null> {
-  const [row] = db.select().from(groupChannels).where(eq(groupChannels.slug, slug)).limit(1).all()
+  const rows = db.select().from(groupChannels).orderBy(asc(groupChannels.position)).all()
+  const row = rows.find((r) => r.slug === slug)
   if (!row) return null
   const keys = parseKeys(row)
-  return { name: row.name, keys: visibleKeys(keys, visibleSavesOf(keys), 'newest') }
+  const view = visualChannel(toView(row), null, visibleKeys(keys, visibleSavesOf(keys), 'newest'))
+  const named = visualChannels(rows.map(toView), null).find((c) => c.slug === slug)
+  return { name: named?.name ?? view.name, keys: view.keys }
 }
