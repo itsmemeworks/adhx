@@ -310,8 +310,8 @@ Sound on by default, What your ADHX is doing (with its count), then
   first time), then a square crop (drag, pinch 1–4×, a round preview through a
   dimmed frame, Use / Cancel). The phone sends the cropped square as a JPEG
   (at most 1024 px) to `POST /api/app/me/avatar` (`file`, with `x=0.5, y=0.5,
-  zoom=1`). **Use a Gob face** (blue, teal, coral, lime: `{ source: 'gob',
-  colour }`), **Use my X photo** (`{ source: 'x' }`; 409 `no_x_picture` says
+zoom=1`). **Use a Gob face** (blue, teal, coral, lime: `{ source: 'gob',
+colour }`), **Use my X photo** (`{ source: 'x' }`; 409 `no_x_picture` says
   there isn't one) and **Remove picture** (`DELETE`) are there too. After any
   change the connection's picture is replaced and `/api/app/me` asked again,
   so every "you" face changes at once.
