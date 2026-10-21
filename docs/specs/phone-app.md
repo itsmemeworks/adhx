@@ -111,6 +111,21 @@ The code is stored only as an HMAC (`login_tokens`, intent `phone`), works
   included).
 - `401 { code: 'bad_key' }` the key was removed (the app goes back to Connect)
 
+### `DELETE /api/app/me`
+
+Remove this phone, from the phone. Revokes the calling key and only that key
+(`deleteAccessKey(userId, keyId, 'phone')`, the same as Settings → Phone app →
+Remove on the web); the account's other phones keep working.
+
+- `200 { ok: true }` — revoked. Every later request with that key, this one
+  included, is `401 bad_key`.
+- `401 { code: 'bad_key' }` — already gone (removed on the web, or a repeat
+  after a lost answer). The apps treat it as removed.
+
+The apps forget the key whatever the answer. When the server can't be reached
+(offline, timeout, 5xx, or an older ADHX that answers 404/405), Connect says so
+plainly: the phone may still show in Settings → Phone app there.
+
 ### Your picture — `/api/app/me/avatar`
 
 The same handler as the web's `POST /api/account/avatar`
@@ -766,9 +781,11 @@ Gob opens Settings, in this order:
   default** (videos start with sound), **What your ADHX is doing** ("3 on
   their way · 1 needs you", opening the full list).
 - **This phone**: "Connected to Ana's ADHX" (the owner; "your ADHX" when it's
-  you), the address and **Remove this phone**, which forgets the key here.
-  No phone route removes its own key on the server yet, so the dialog says to
-  remove it from Settings → Phone app on the web as well.
+  you), the address and **Remove this phone**: `DELETE /api/app/me` revokes
+  the key on the server, then the phone forgets it, its list and waiting
+  links. If the server can't be reached it still forgets the key, and Connect
+  says it couldn't reach the server, so the phone may still show in
+  Settings → Phone app there.
 - **Shared lately**, then the version.
 
 Just for me by default is kept on the phone: the server keeps the same choice

@@ -1,5 +1,6 @@
 package com.adhx.share.ui
 
+import com.adhx.share.net.ApiResult
 import com.adhx.share.net.DoingItem
 import com.adhx.share.net.DoingStatus
 import com.adhx.share.net.DoingSummary
@@ -17,6 +18,23 @@ class SettingsCopyTest {
     private val mum = Saver(username = "mum", name = "Mum")
     private val jo = Saver(username = "jo", name = "Jo")
     private val you = Saver(username = "pete", isYou = true)
+
+    @Test
+    fun removeThisPhoneSaysSoOnlyWhenTheServerWasNotReached() {
+        // Removed on the server, or already removed there: nothing more to say.
+        assertNull(SettingsCopy.removedNote(ApiResult.Ok(Unit, 200), "adhx.example"))
+        assertNull(SettingsCopy.removedNote(ApiResult.Failed(401, "bad_key", null), "adhx.example"))
+        // Offline, or an older ADHX without the route: plainly, it may still be listed.
+        val offline = SettingsCopy.removedNote(ApiResult.Offline, "adhx.example")!!
+        assertEquals(
+            "This phone forgot its key, but it couldn’t reach adhx.example. " +
+                "It may still show in Settings → Phone app there; remove it there too.",
+            offline,
+        )
+        assertEquals(offline, SettingsCopy.removedNote(ApiResult.Failed(405, null, null), "adhx.example"))
+        assertEquals(true, SettingsCopy.removedNote(ApiResult.Offline, null)!!.contains("couldn’t reach your ADHX"))
+        assertEquals(false, SettingsCopy.REMOVE_BODY.contains("Settings → Phone app"))
+    }
 
     @Test
     fun linesUnderOnTheirWay() {

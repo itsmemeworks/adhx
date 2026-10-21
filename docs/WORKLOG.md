@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Remove this phone works without the web
+
+- Add `DELETE /api/app/me` (phone key): revokes only the calling key with the same `deleteAccessKey` as Settings → Phone app; afterwards that key is `401 bad_key`, other phones untouched.
+- iOS and Android Remove this phone call it, then forget the key whatever the answer; a 401 counts as already removed. If the server can't be reached (offline, timeout, older ADHX), Connect says plainly the phone may still show in Settings → Phone app there.
+- The "remove it on the web as well" dialog copy is gone. Spec and both app READMEs updated.
+- Validation: phone-app API tests (own key only, repeat answers 401, other phones and accounts unaffected), Android unit tests + debug APK, iOS simulator build. Not exercised on a device.
+
 ## 2026-10-21 — Review the complete dependency upgrade set
 
 - Review six dependency PRs together: Actions, the Gradle wrapper, the Node container, Node typings, lint-staged and Vitest with its coverage provider.
