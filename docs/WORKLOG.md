@@ -29,6 +29,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Player messages (`flash`) last 3 s, replace each other, and take the stage's top row: the pills there ("Shared with your people", "Kept on your ADHX", the via note, a moment's arrivals) step aside while one is up. Copy the text now also says "Words copied". `hasFullArticle` moved to `post.ts`.
 - Tests: `theater-original-sheet.component.test.tsx` (name/handle/day rules, mark once incl. a broken picture, article, focus trap), the overlay/rail/sheet path in `next-theater`, the toast/pill swap in `feed-theater`; e2e previews read the words from the sheet. Checked on a parity server at 1280×800 and 390×844. Not seen live: a poster with a picture (the parity world has none) and an article in the sheet; the browser pane blocks the clipboard, so "Link copied" was checked with a stubbed clipboard.
 
+## 2026-10-21 — No quote marks inside speech bubbles
+
+- Owner: a friend's note "shouldn't be in quotes — that's implied by the fact it's in a speech bubble". The player's note bubble on iOS (`NoteBubble`) and Android, and Android's Reactions-tile words chip, now show the words bare. The web bubble already did. Quote marks stay where words aren't in a bubble (a friend's note card in a channel, the why sheet's "Pete sent you this: …" line) and in Android's screen-reader description, where they say the words were said.
+
 ## 2026-10-21 — Run CI and local development on Node 26 like the image
 
 - The container moved to Node 26 while `.nvmrc` and every workflow `node-version` stayed on 24, so tests ran on a different major than what ships.
