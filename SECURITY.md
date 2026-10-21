@@ -1,97 +1,122 @@
-# Security Policy
+# Security policy
 
-## We Take Security Seriously
+ADHX holds the saves, notes, faces and viewing habits of people's closest
+friends and family. We treat a weakness in it as seriously as that sounds.
 
-Even if we don't take our bookmark reading habits seriously.
+## Reporting a vulnerability
 
-Your data matters to us. ADHX stores your Twitter/X bookmarks locally, and we want to keep them safe (so you can continue to ignore them in peace).
+**Please don't report security problems in public issues, discussions or pull
+requests.**
 
-## Supported Versions
+1. **Preferred:** open a
+   [private vulnerability report on GitHub](https://github.com/itsmemeworks/adhx/security/advisories/new).
+   Only the maintainers can see it.
+2. **Or email** [security@adhx.com](mailto:security@adhx.com).
 
-We provide security updates for the latest major version.
+Please include:
 
-| Version | Supported |
-| ------- | --------- |
-| 1.x.x   | ✅ Yes    |
-| < 1.0   | ❌ No     |
+- what the problem is and which part of ADHX it affects (web app, phone app,
+  Mac helper, extension, container image);
+- the version or commit you tested;
+- steps to reproduce it, or a proof of concept;
+- what an attacker could do with it;
+- a suggested fix, if you have one.
 
-## Reporting a Vulnerability
+Test only against a server you run yourself. Don't access, change or delete
+other people's data, and don't run tests that degrade someone else's
+instance.
 
-Found a security issue? First off, thank you! Second, please **don't** post it publicly.
+### What happens next
 
-### How to Report
+| When                 | What we do                                           |
+| -------------------- | ---------------------------------------------------- |
+| Within 2 days        | Confirm we received your report.                     |
+| Within 7 days        | Share our first assessment and severity.             |
+| Within 30 to 90 days | Release a fix, depending on severity and complexity. |
 
-**Do not open a public GitHub issue.**
+We'll keep you updated, agree a disclosure date with you, and credit you in
+the advisory and release notes unless you'd rather stay anonymous. We won't
+take legal action against good-faith research that follows this policy.
 
-1. **Preferred:** [GitHub private vulnerability report](https://github.com/itsmemeworks/adhx/security/advisories/new) — works even if you do not have our email.
-2. **Or email** [security@adhx.com](mailto:security@adhx.com)
-3. Include:
-   - Description of the vulnerability
-   - Steps to reproduce
-   - Potential impact
-   - Any suggested fixes (if you have them)
+## Supported versions
 
-### What to Expect
-
-- **24-48 hours**: We'll acknowledge receipt
-- **7 days**: We'll provide an initial assessment
-- **30-90 days**: We'll work on a fix (depending on severity)
-
-### What We Promise
-
-- We won't take legal action against good-faith security researchers
-- We'll credit you in the fix (unless you prefer to stay anonymous)
-- We'll keep you updated on our progress
-- We'll let you know when it's safe to disclose publicly
-
-## Security Best Practices
-
-When self-hosting ADHX:
-
-### Do
-
-- ✅ Use HTTPS in production
-- ✅ Set a strong `SESSION_SECRET` environment variable
-- ✅ Keep your dependencies updated
-- ✅ Back up your SQLite database regularly
-- ✅ Use a reverse proxy (nginx, Caddy) in production
-
-### Don't
-
-- ❌ Expose your database file publicly
-- ❌ Share your Twitter API credentials
-- ❌ Run as root in production
-- ❌ Ignore security updates (we know you're busy bookmarking things)
-
-## Known Security Measures
-
-ADHX includes:
-
-- **JWT-signed sessions** – Your session cookies are cryptographically signed
-- **PKCE OAuth flow** – Secure Twitter/X authentication
-- **SQL injection protection** – All queries use parameterized statements via Drizzle ORM
-- **Local-first storage** – Your bookmarks stay on the instance's SQLite volume
-- **Pulse anonymity** – `activity.userId` is stored for moderation and is never selected on a public surface (see [PRIVACY.md](PRIVACY.md))
+Security fixes go into the most recent release. Self-hosted servers should
+run the latest release image from `ghcr.io/itsmemeworks/adhx`; older releases
+don't receive backported fixes.
 
 ## Scope
 
-The following are **in scope** for security reports:
+In scope:
 
-- Authentication/authorization bypasses
-- Data exposure vulnerabilities
-- SQL injection
-- XSS (Cross-Site Scripting)
-- CSRF (Cross-Site Request Forgery)
-- Insecure dependencies with known CVEs
+- authentication or authorization bypass, including sessions, invite and
+  sign-in links, phone keys and the Mac helper's machine token;
+- one account reading or changing another account's data;
+- anything that reveals who saved a post to someone who isn't a member, or
+  reveals a Just for me save to anyone but its owner;
+- server-side request forgery through the media proxies, link previews or
+  downloads;
+- cross-site scripting, cross-site request forgery and injection (SQL, shell,
+  FFmpeg or yt-dlp arguments);
+- secrets or personal data written to logs, error reports or client bundles;
+- dependencies with known vulnerabilities that are reachable in ADHX.
 
-The following are **out of scope**:
+Out of scope:
 
-- Social engineering attacks
-- Physical attacks
-- Denial of service (we're a bookmark manager, not a bank)
-- Issues in dependencies we don't control
-- Self-inflicted issues from misconfiguration
+- social engineering and physical attacks;
+- denial of service by sheer volume;
+- problems that need an already-compromised server, device or admin account;
+- behaviour documented as intentional, such as kept files and preview pages
+  of shared posts being reachable by anyone who can reach the server (see
+  [`PRIVACY.md`](PRIVACY.md));
+- vulnerabilities in a network's own app or website.
 
----
+## Running ADHX safely
 
-_Thanks for helping keep ADHX secure. Your future self (and their 1,000 unread bookmarks) thanks you._ 🔒
+These apply to anyone hosting an instance.
+
+- **Use HTTPS** in front of ADHX, through a reverse proxy you control.
+- **Set a strong `SESSION_SECRET`** (`openssl rand -base64 32`) and keep it
+  private. It signs sessions and private file links.
+- **Choose your network boundary deliberately.** Preview pages and the kept
+  files of shared posts don't require sign-in, by design. If your server
+  shouldn't be reachable from the internet, keep it on a private network or
+  behind a VPN such as Tailscale.
+- **Treat `PROCESSING_WORKER_TOKEN` as a machine secret.** It grants
+  processing access to the whole instance. Put it only on a Mac you trust,
+  and never reuse an account or phone key for it.
+- **Set `TRUST_PROXY_IP_HEADERS=true` only** behind a proxy that overwrites
+  `X-Forwarded-For` and `X-Real-IP`. Otherwise anyone can fake their address
+  and dodge rate limits.
+- **Keep `ALLOWED_EMAILS` and invite settings tight** if you don't want
+  strangers making accounts.
+- **Remove phones you no longer use** in Settings → Phone app; a removed key
+  stops working at once.
+- **Back up** the data folder (SQLite file and media) regularly, and keep
+  the backups as private as the server.
+- **Update** to new releases promptly. The container runs as a non-root user;
+  keep it that way.
+- **Know what leaves your server.** With `TYPESAFE_API_KEY` set, search words
+  and public post text go to TypeSafe for reranking and naming. With
+  `TYPESAFE_CHANNEL_IMAGES=on`, selected public-post thumbnails go too.
+  Sentry, when configured, receives scrubbed and pseudonymized error reports.
+  [`PRIVACY.md`](PRIVACY.md) lists everything.
+
+## Security measures in ADHX
+
+- Signed, `httpOnly` session cookies; every request also checks that the
+  account exists, is approved and isn't banned.
+- Sign-in links, invite links, pairing codes and phone keys are stored only as
+  hashes, expire, and are spent by a single conditional write. Link previews
+  can't spend them.
+- X OAuth uses PKCE, state bound to the account that started it, and tokens
+  encrypted at rest with AES-256-GCM.
+- Every query over saves is scoped to its account; database triggers reject
+  writes for deleted accounts.
+- Outbound requests use exact host allowlists, revalidate every redirect, pin
+  DNS for link previews, and always time out.
+- A production Content Security Policy without `unsafe-eval`, and
+  clickjacking protection.
+- Moderation fails closed: if the server can't read moderation state, it
+  hides content rather than shows it.
+- Anonymous public surfaces never select who saved a post; error reports
+  remove secrets and pseudonymize identifiers.

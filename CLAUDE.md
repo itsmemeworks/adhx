@@ -1,1397 +1,528 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code and every other coding agent working in this
+repository. [`AGENTS.md`](AGENTS.md) is the short cross-tool entry point; this
+file is the reference it points to. Both are binding.
 
-## Local Configuration
+Read it top to bottom once. After that, use the headings: the rules come
+first, then a map of the code, then notes per subsystem. Deep detail lives in
+[`ARCHITECTURE.md`](ARCHITECTURE.md) and the specs under
+[`docs/specs/`](docs/specs/), so this file only says what you need to avoid
+breaking something.
 
-Create `./CLAUDE.local.md` for personal settings that won't be committed:
+## Local configuration
+
+Create a gitignored `./CLAUDE.local.md` for settings that are yours alone:
 
 ```markdown
-# Example CLAUDE.local.md
+# CLAUDE.local.md
 
 ## GitHub CLI
 
 Always use the `your-username` account for gh commands.
 
-## Sentry CLI
+## Personal notes
 
-Use org `your-org` and project `your-project`.
-
-## Personal Notes
-
-- My test user ID: user_abc123
-- Local dev URL: http://localhost:3000
+- Local dev URL: http://localhost:3001
 ```
 
-**Use cases for `CLAUDE.local.md`:**
-
-- CLI tool credentials (GitHub, Sentry, Fly.io accounts)
-- Personal test data and user IDs
-- Local environment URLs and ports
-- Workflow preferences specific to you
-- Notes that shouldn't affect other contributors
-
----
-
-## ADHX
-
-**Your friends have better taste than the algorithm.**
-
-A self-hosted, private, curated feed across fourteen social networks (X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur, Bluesky) for one group of close friends and family per server. UI copy follows the Voice section of `brand/BRAND.md` (punch up at ad tech, edgy not mean, clear first and funny second) and only describes what ships today.
-
-**The system in one breath.** One Next.js 16 container (React 19, route handlers as the backend) with one SQLite file (Drizzle over `better-sqlite3`) and a media folder (`MEDIA_DIR`). Every save's media is downloaded once (FxTwitter for X, yt-dlp for the rest) and served by `/api/files/…` (`keptSrc()`); search by meaning runs in forked model child processes, never in the web process; an optional native Mac helper (`PROCESSING_MODE=remote`) takes the heavy processing over HTTPS. Native iOS and Android apps (`apps/`) use `/api/app/*` with a phone key. `site/` is the separate adhx.com product site and builds on its own.
-
-**The rule: named to friends, never to strangers.** A member is a signed-in, approved, non-banned account; everyone on a server is one group. Saves are shared with members by default and named (face, name, note); **Just for me** (`bookmarks.is_private`) hides a save from everyone else. Signed-out surfaces (previews, signed-out Right now, public channels, public JSON, OG images, sitemap) only ever count savers. Every query over other people's saves uses `visibleSave` / `visibleSaveFilter` (`src/lib/people/savers.ts`); names come only from `saversFor(keys, viewerId)`. Kept files of shared posts are not behind sign-in; a Just for me-only post's files are owner-only (`src/lib/keep/file-access.ts`: session, phone key or the post's `?k=` file token on the owner's phone URLs).
-
-**Main surfaces** (nav in `src/components/next/PrimaryNav.tsx`; signed-in `/` → `/play?feed=new`):
-
-- **New** (`/play?feed=new`): the blended feed (`src/lib/feed/blend.ts`, `blend-db.ts`) of unseen posts your people saved, with why-reasons, Show more / less weights, sends first, then "caught up". Seen = `post_views`.
-- **Right now** (`/now`, `/moments/{slug}`, Tune in `/play?moment=`): live moments from the in-memory engine (`src/lib/moments/`), forming groups with "Tell me when it's live" bells (`moment_alert_subs` → `moment_alerts`), watchers and reactions (relayed live, and kept on the post in `post_reactions`, like reactions on any post; see "Reactions on every post" below).
-- **Channels** (`/channels`): From everyone (`group_channels`), Your people (one per friend), Made for you (`auto_channels`), your own tags; Keep this channel (`src/lib/channels/`).
-- **My saves** (`/play?recent=1`) and **Search** (`/search`, by words, pictures, frames, speech and on-screen text).
-- Also: notes on saves, sends (`src/lib/sends/`, `post_sends`), Getting it ready (`processing/keep-status.ts`), `/doing` (`processing/doing.ts`), invites with optional approval (`src/lib/auth/invites.ts`, `approval.ts`), phone pairing (`auth/phone-pairing.ts`), Settings (picture, people, approvals). Everything plays in `TheaterV2` (`src/components/next/theater/`).
-
-**Where to read next:**
-
-- [`ARCHITECTURE.md`](ARCHITECTURE.md): system diagrams, every table by plane, the save-to-watch flow, the blend, moments, privacy boundary, phone auth.
-- Specs: [`docs/specs/friends-feed.md`](docs/specs/friends-feed.md) (the contract for members, privacy, New, sends, channels, live, bells), [`docs/specs/phone-app.md`](docs/specs/phone-app.md) (`/api/app/*`), [`docs/remote-processing.md`](docs/remote-processing.md) (Mac helper and processing protocol), [`docs/specs/translation-safety.md`](docs/specs/translation-safety.md).
-- Setup: [`README.md`](README.md), [`deploy/nas/README.md`](deploy/nas/README.md), [`deploy/mac/README.md`](deploy/mac/README.md); release blockers in [`docs/rollout/self-hosted-release.md`](docs/rollout/self-hosted-release.md).
-- What users may know: [`PRIVACY.md`](PRIVACY.md) (keep `/privacy` in step).
-
-**History.** ADHX began as an X-first hosted bookmark app (library grid, `TheaterShell`, Discover at `/live`, `/trending`, `/leaderboard`). Those surfaces are removed and redirect (`next.config.js`). Sections below marked **(history)** describe them; keep them only for context on old data (`activity`, `collection_events`) and old URLs. `/shorts/{id}` still redirects home and stays a reserved route; YouTube posts live at `/s/youtube/{id}`.
-
-## Agent Context Protocol
-
-This repo carries its own cumulative context so any fresh session — new branch, no conversation history — can self-orient:
-
-1. **At session start**, read the most recent entries of **`docs/WORKLOG.md`** (append-only, newest first). It records what was done recently, why, what's in flight, and open follow-ups — context that postdates the docs.
-2. **After completing substantive work** (feature, fix with a lesson, architectural decision, reverted experiment), **append a dated entry** to `docs/WORKLOG.md`: what/why/current state/follow-ups, ≤10 lines, newest first. Never rewrite or delete old entries.
-3. If your change makes this file, `README.md`, or `ARCHITECTURE.md` inaccurate, update them in the same PR.
-4. **Always commit, push, and open/update a PR** after substantive work. Do not wait to be asked. Use the GitHub account named in gitignored `CLAUDE.local.md`. PR titles use Conventional Commit syntax with a lowercase subject and are verified via `gh pr view --json title` before handoff. Never merge — the user merges manually. This overrides any global “don't push unless asked” preference.
-
-`AGENTS.md` at the repo root is the cross-tool entry point (for agents that don't read CLAUDE.md) and points here.
-
-## Quick Start
-
-```bash
-pnpm install
-pnpm db:migrate  # creates ./data/adhdone.db (Docker does this on start; local does not)
-pnpm dev         # Start dev server at localhost:3001
-pnpm build       # Production build
-pnpm test        # Run the automated suite
-```
-
-## Tech Stack
-
-- **Framework**: Next.js 16 (App Router) + React 19
-- **Database**: SQLite via better-sqlite3 + Drizzle ORM 0.45
-- **Styling**: Tailwind CSS 3.4 + clsx + tailwind-merge
-- **Twitter API**: twitter-api-v2 with OAuth 2.0 PKCE
-- **Auth**: JWT-signed session cookies (jose)
-- **Monitoring**: Sentry (error tracking + metrics)
-- **Icons**: lucide-react
-- **Fonts**: Indie Flower (brand), IBM Plex Sans/Inter/Lexend/Atkinson Hyperlegible (body - user selectable)
-- **Testing**: Vitest
-- **Deployment**: portable Docker/Compose; legacy Fly workflows remain in the repository
-
-## Security
-
-### Session Management
-
-Sessions use JWT signing via `jose` library to prevent tampering:
-
-- Cookie name: `adhx_session`
-- Signed with `SESSION_SECRET` or `TWITTER_CLIENT_SECRET`
-- 30-day expiration
-- httpOnly, secure (in production), sameSite: lax
-
-### Accounts & Identities (magic link + optional X link)
-
-Accounts are first-class (`users` table). **There are two ways in: an invite link (the easy path) or an email magic link.** X OAuth is a Settings link on an existing account, used to sync X bookmarks — it never creates an account or a session.
-
-- **Tables**: `users` (id, unique username, immutable-ID-backed `role`, display/avatar/email, X-link revocation generation), `user_identities` (PK `(provider, provider_id)` plus one-X-identity-per-user partial uniqueness — provider `'x'` with the X user id, `'email'` with the lowercased address, or `'invite'` with the invite id an account joined with → `user_id`), `login_tokens` (sha256 token hash, intent `'signin'|'change'`, 15-min expiry, single-use), and `oauth_state` (PKCE verifier + initiating `user_id` + captured X-link generation, cascade-deleted). Magic links and OAuth states are consumed with one conditional write, so concurrent callbacks have exactly one winner. Email identity claims are transactional and uniqueness-race resolving. Created + backfilled idempotently in `migrate.ts` (existing users keep `userId == X id`; email-first users get `u_<hex>` ids; legacy unbound OAuth states are invalidated).
-- **Core lib**: `src/lib/auth/account.ts` (`getAccount`, `findOrCreateUserForX`, `findOrCreateUserForEmail`, `linkEmailToUser`, `unlinkX`, `createLoginToken`/`consumeLoginToken`). Email delivery: `src/lib/email/magic-link.ts` — Resend HTTP API when `RESEND_API_KEY` is set; **in dev without the key the link is logged to the server console** (`[magic-link] …`) so local testing needs no email round-trip. HTML is `src/emails/magic-link.tsx` (react-email, SignInModal-shaped). Preview with `pnpm email:dev` on :3003.
-- **Routes**: `GET /api/auth/me` (account view: `{ authenticated, user, identities: { x: { username, avatarUrl }, email }, xConnected, isAdmin }` — the client-side source of truth; Header/AuthedHome/preferences use it, NOT the twitter/status route. `identities.x.avatarUrl` is the X profile photo (from oauth tokens, falling back to `users.avatarUrl`). Account chrome honors `user_preferences.avatarSource` (`'x'` | `'generated'`). `isAdmin` comes from the persisted `users.role`, never the mutable username. Banned/deleted-account sessions return the signed-out shape.), `POST /api/auth/email/request` (rate-limited 60s/email, no user enumeration), `GET /api/auth/email/callback?token=` (script-free confirmation, no mutation), `POST /api/auth/email/callback` (same-origin URL-encoded form, at most 1 KiB, atomically consumes the token; signin sets session; change relinks email; 303 on success), `POST /api/auth/email/change` (authed), `POST /api/auth/twitter/disconnect` (409 when it's the last identity), `POST /api/auth/logout`.
-- **X start + callback**: `GET /api/auth/twitter` requires a session; unsigned visitors redirect `/?auth_error=x_link_only`. OAuth state is durably bound to that initiating ADHX user and its X-link generation; a callback under a different session is rejected without consuming the initiator's state, and disconnect increments the generation so an in-flight callback cannot silently reconnect. The callback calls `findOrCreateUserForX(x, existingSession.userId)`: signed-in users get X **linked** for bookmark sync; no session or `sign_in_required` → `/?auth_error=x_link_only` (no user created); an X identity already on another account redirects `/settings?auth_error=x_already_linked` without touching the session. Identity, generation, token, and X-derived profile writes finalize atomically. After a successful link, honor `adhx_return_url` if safe, else land on `/settings` (not `/?firstLogin=true` — signed-in `/` redirects to `/now` and drops the query).
-- **Status route semantics** (`/api/auth/twitter/status`): `authenticated` = valid session + users row (independent of X). A **fatal token-refresh error CAS-deletes only the rejected credential row and keeps the session** — a concurrent relink/rotation always wins; `xConnected`/`needsReconnect` describe the X state. X profile metadata updates use the same identity/generation/token guard. Sync for users without X tokens surfaces SSE `code: 'reauth'` with a Connect-with-X prompt (already-signed-in reconnect, not sign-in).
-- **Link lifetime**: 60 minutes for `admin` delivery, 15 minutes for email/development log. Resend cooldown remains 60 seconds and uses creation timestamps, including legacy UTC SQLite values. GET/HEAD previews cannot consume links. Unfinished accounts still go to `/welcome` on their next confirmed sign-in.
-- **Invites** (`src/lib/auth/invites.ts`, table `invites`): `POST /api/invites { nameHint? }` → `{ id, url, expiresAt }` (admins; any member when **Who can invite** isn't "Only me"; 30/hour per account and at most 20 waiting), `GET /api/invites` → `{ canInvite, invites }` (working ones only, never the link: everyone's for an admin, your own otherwise), `DELETE /api/invites/[id]` revokes (your own, or any for an admin). Only the token's SHA-256 is stored; 7-day expiry, single use. `GET /invite/<token>` (route handler, not a page) is a script-free confirmation ("Ana wants you in.") with a name field — previews and HEAD never consume it. Only a same-origin, ≤1 KiB URL-encoded `POST /invite/<token>` does: one conditional `UPDATE … WHERE unused AND unrevoked AND unexpired AND maker still exists, isn't banned and may invite` claims it, then (same transaction) creates a `users` row with **no email** (`usernameChosen = true`, name validated like `/welcome`) and a `user_identities` row `('invite', <invite id>)`. A bad or taken name rolls the claim back, leaving the invite unused. `ALLOWED_EMAILS` does not apply: the invite is the permission. Success sets the session cookie like the email callback and 303s to `/invite/done` ("You're in.", the phone pairing code/QR from the shared `components/next/settings/PairCode.tsx`, and "Skip, take me to the feed"). Invite accounts add an email later through the normal Settings email change. Their only sign-in is the 30-day session cookie until they do, so the done page and Settings nudge them. Cards: Settings → Your people (`PeopleCard`: rows show `inviteCode(id)`, the first 4 characters of the public id, never the token) and the admin area's Invites section (`/admin/invites`, `components/next/admin/InvitesView.tsx`, calling the same routes), both on `useInvites`. Links are only known when made, so **Copy link** on an older invite confirms, then `POST /api/invites/[id]/link` swaps in a fresh token (same id, code and expiry; the old link stops working). Tests: `src/__tests__/api/invites.test.ts`, `join-approvals.test.ts`.
-- **The phone apps without the web** (`docs/specs/phone-app.md`): every web-only hop has a phone route on the phone key, reusing the web's lib, never a fork. Picture: `POST|DELETE /api/app/me/avatar` share `src/lib/avatar/handler.ts` (`changeAvatar`/`resetAvatar`) with `/api/account/avatar` (same bodies, errors and the `avatar:<userId>` 30/hour budget; phones may send a file with no type, judged by its bytes); `GET /api/app/me` adds `avatarSource`. Invites: `GET|POST /api/app/invites`, `DELETE /api/app/invites/{id}`, `POST …/{id}/link` (your own only, admins too; `url` is null in the list because only the hash is kept; `inviteUrl()` in `invites.ts`). Sign in: `POST /api/app/signin { email }` emails a 6-digit code (`src/lib/auth/phone-signin.ts`, `login_tokens` intent `phone`, HMAC of address+code, `attempts` column, 15 min, five wrong tries burn it; template `src/emails/sign-in-code.tsx`, `sendSignInCodeEmail`), always `{ ok: true }` (unknown/banned/waiting addresses get a stand-in code nobody receives), `503 no_email` when the server only holds links for an admin; `POST /api/app/signin/verify { email, code, name? }` returns `pair`'s `{ key, name, username }`. Reactions feed: `src/lib/reactions/reacted.ts` (`reactedPosts`: `seenBy` posts with visible reactions, newest reaction first, banned reactors/hidden/gone out, moderation fail-closed) behind `GET /api/app/reacted` (PhonePost + `reactions: { count, last }`) and `GET /api/posts/reacted`, played at `/play?reacted=1` (`source.reacted`) from the Reactions row on `/channels` (`channels/ReactionsRow.tsx`). Every person object (savers, reactors, watchers, Live `reaction` events, people) carries `avatarUrl` from `memberAvatar`. Tests: `src/__tests__/api/phone-without-web.test.ts`.
-- **Who can invite and join approvals** (`inviteMode()` in `invites.ts`, `src/lib/auth/approval.ts`): `admin` (Only me) · `approve` (Anyone, I approve) · `anyone`, stored in `server_settings` key `invites.who` (`src/lib/settings/server.ts`); `INVITES=members` is only the first default (`anyone`). `PATCH /api/people { inviteMode }` (admins). With `approve`, someone a non-admin invited joins with `users.approval = 'pending'` and 303s to `/invite/waiting` ("Waiting for Ana to let you in", polls `GET /api/auth/approval` every 5 s). **`getCurrentUserId()` returns null for any account that isn't `approved`** (so every route, page and `withAuth` treats it as signed out); only the waiting page and `/api/auth/approval` use `getWaitingAccount()`. Phone keys (`phoneCaller`) and access keys (`accessKeyUser`) refuse them too; `listMembers`, `membersById` and invite makers (`makerCanInvite`) require `approved`. Admins answer under Settings → Your people → Waiting for you: `GET /api/people/requests`, `POST /api/people/requests/[id] { decision: approve | not_now | decline }` (id = the invite they joined with; `not_now` snoozes the card 3 days via `approval_snoozed_until`, `decline` sets `declined`, kept so the waiting page can say "Not this time."). Audited (`approve_join`/`decline_join`/`set_invite_mode`). Phone: `GET /api/app/people`, `POST /api/app/people/requests/[id]`. Non-allowlisted email sign-ins are still refused, not queued (that would mean emailing strangers' addresses).
-- **Sign-in UI**: `SignInModal` + `useAuthMe` in `src/components/auth/` — always-dark modal, **email magic link only** (no Continue with X). Opened at **save-intent** (theater Save buttons, collection Save CTA); viewing never requires an account. Link X later in Settings.
-
-### Authentication
-
-All data-modifying endpoints require authentication via `getCurrentUserId()`:
-
-```typescript
-import { getCurrentUserId } from '@/lib/auth/session'
-
-const userId = await getCurrentUserId()
-if (!userId) {
-  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-}
-```
-
-### Database
-
-- Uses Drizzle ORM query builder (never raw SQL with interpolation)
-- All queries filter by `userId` for multi-user data isolation
-- **Multi-user schema**: All user-owned tables use composite primary keys `(userId, id)` to allow multiple users to bookmark the same tweet independently
-- **Transactions**: Use `runInTransaction()` from `@/lib/db` for atomic multi-table operations. Inside transactions, use synchronous `.run()` instead of `await`:
-
-```typescript
-import { db, runInTransaction } from '@/lib/db'
-
-// Atomic multi-table operation
-runInTransaction(() => {
-  db.delete(bookmarkTags)
-    .where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.bookmarkId, id)))
-    .run()
-  db.delete(bookmarks)
-    .where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, id)))
-    .run()
-})
-```
-
-See `src/app/api/bookmarks/[id]/route.ts` and `src/app/api/account/clear/route.ts` for examples.
-
-### Token Encryption
-
-OAuth tokens are encrypted at rest using AES-256-GCM:
-
-- **Key file**: `src/lib/auth/token-encryption.ts`
-- Encryption key derived from `SESSION_SECRET` or `TWITTER_CLIENT_SECRET`
-- Each token gets a unique IV (initialization vector)
-- Stored format: `iv:authTag:ciphertext` (base64 encoded)
-
-```typescript
-import { encryptToken, decryptToken } from '@/lib/auth/token-encryption'
-
-const encrypted = encryptToken(accessToken) // Store this in DB
-const decrypted = decryptToken(encrypted) // Use this for API calls
-```
-
-### OAuth Token Refresh (race-safe)
-
-X OAuth 2.0 tokens: the **access token lasts ~2 hours**; the **refresh token is single-use and rotates** — every refresh issues a new access+refresh token and **invalidates the previous refresh token**. If two requests refresh concurrently they both spend the same refresh token; the loser is handed an invalidated one, which **breaks the rotation chain** and forces a full re-auth. This app calls auth on every page load (`/api/auth/twitter/status`) and during sync, so concurrent refreshes are common.
-
-**`getValidTokens(userId, { forceRefresh? })` (`src/lib/auth/oauth.ts`) is the single entry point** for obtaining a usable access token. It:
-
-- returns stored tokens unchanged when still valid (5-min expiry buffer),
-- refreshes when expired (or when `forceRefresh` is set),
-- **coalesces same-process refreshes** onto one promise and acquires a durable per-user SQLite refresh lease before calling X, so multiple workers cannot spend the same single-use token,
-- persists encrypted rotations, fatal invalidation, and transient lease release with lease-owned compare-and-swap writes; disconnect/relink/newer rotations always win.
-
-**Do NOT add new refresh call sites** that call `refreshAccessToken` + `saveTokens` directly — route everything through `getValidTokens`, or you reintroduce the rotation race. `getTwitterClient()` and `/api/auth/twitter/status` both use it.
-
-**`TokenRefreshError`** carries `status` + `fatal`:
-
-- `fatal` (HTTP 400/401) → the exact refresh-token row was rejected and CAS-deleted; only a fresh X link recovers it. The ADHX session remains valid.
-- non-fatal (network / 5xx / lost race) → **keep the stored tokens** and let a later request retry. Never tear down the session on a transient failure (that turns a blip into a forced re-auth).
-
-**Reactive 401/403 recovery**: `fetchBookmarks` (`src/lib/twitter/client.ts`) force-refreshes once and retries on 401 or 403. If the retry still fails, throw a `TwitterCallError` with `code: 'reauth'` and human copy. **Do not treat 402 as reauth** — X uses 402 for "developer account has no pay-per-use credits"; reconnecting the user loops. 402 is `code: 'unavailable'` ("Your login is fine — try again later") plus a Sentry warning. Classification lives in `src/lib/twitter/errors.ts` / `src/lib/sync/messages.ts`. The sync SSE sends `{ message, code }`; `SyncProgress` shows **Connect with X** only for `reauth`.
-
-Tests: `src/__tests__/token-refresh.test.ts` (coalescing, fatal/transient, rotation persistence) and the refresh cases in `src/__tests__/api/auth-status.test.ts`.
-
-### Sync concurrency
-
-`GET /api/sync` always scans every available X bookmark page (100 per request, until no next token), including empty/duplicate-only pages; legacy `all`/`maxPages` query parameters no longer truncate the scan. Repeated cursors fail visibly rather than loop. It atomically claims a `sync_logs.status = 'running'` row **before** opening SSE. A partial unique index permits only one running sync per user; a second EventSource observes the existing run's persisted counters and terminal result without starting X work or taking ownership. Settings' Sync X bookmarks (`useXSync`) attaches the same way when a sync is already running (another tab, `/start`), so it never starts a second one. The active stream persists counters and renews a durable heartbeat; stale claims are failed before replacement, and terminal writes require lease ownership so an old process cannot overwrite a reaped row. Startup repairs stale/duplicate legacy running rows before enforcing uniqueness. New-bookmark stats, activity pulses, and SSE processing events use the actual bookmark insert result—not a stale pre-sync snapshot. `bookmark_links` has a unique `(userId, platform, bookmarkId, expandedUrl)` boundary and field-wise merge upserts, so concurrent enrichment neither duplicates rows nor loses complementary metadata.
-
-### Content Security Policy (CSP)
-
-Security headers configured in `next.config.js`:
-
-- `script-src 'self' 'unsafe-inline'` — no `unsafe-eval` (only needed by React Refresh in dev, not production)
-- `style-src 'self' 'unsafe-inline'` — required for Tailwind CSS
-- Prevents clickjacking with `frame-ancestors 'none'`
-- Blocks mixed content
-- Configured for Twitter/X embed compatibility
-
-**Do NOT add `'unsafe-eval'`** — it enables `eval()` and is a major XSS escalation vector.
-
-### Browser translation is ENABLED — and constrains how we render text
-
-`<html>` deliberately carries no `translate="no"` and there is no `notranslate` meta: reading a Spanish tweet in English is a feature (owner decision). The cost is a hard rule — **never render a bare text child as the SIBLING of an element** (wrap each run in a `<span>`). A translator replaces text nodes with its own `<font>` wrappers, so React's next `removeChild`/`insertBefore` among those children throws `NotFoundError` and the page falls to the error boundary; in the theater that meant advancing to the next post crashed. Full rule, the grey area, and the console audit that finds new offenders: **`docs/specs/translation-safety.md`**.
-
-### SSRF Protection
-
-All media proxy endpoints validate URLs against a strict domain allowlist before fetching. **Never use `.includes()` for domain validation** — it allows bypass via `domain.evil.com`.
-
-```typescript
-// ❌ WRONG: allows twimg.com.evil.com
-if (hostname.includes('twimg.com')) { ... }
-
-// ✅ CORRECT: exact match + endsWith with dot prefix
-const isAllowed = hostname === 'video.twimg.com'
-  || hostname.endsWith('.twimg.com')
-  || hostname === 'twitter.com'
-  || hostname.endsWith('.twitter.com')
-```
-
-This pattern is used in:
-
-- `src/app/api/media/video/route.ts` — video proxy (allowlist array)
-- `src/app/api/media/video/hls/route.ts` — HLS playlist proxy
-- `src/app/api/media/video/hls/segment/route.ts` — HLS segment proxy
-
-### Named to friends, never to strangers (`src/lib/people/`)
-
-The friends-feed contract is `docs/specs/friends-feed.md`. Saves are shared with the server's **members** (signed-in, non-banned accounts) by default; strangers (signed out, public pages) never see names.
-
-- **Private saves**: `bookmarks.is_private` ("Just for me"; also `phone_save_queue.is_private`). The owner still searches and plays it; nobody else sees, counts or is told about it. A private save writes **no** activity pulse (`recordActivity` is skipped), and making a save private deletes the owner's earlier `save` pulse rows for it (`setSavePrivate` in `src/lib/bookmarks/privacy.ts`). Every save path takes `private?: boolean` (`addBookmark`/`addTweet` options, `/api/bookmarks/add`, `/api/tweets/add`, `/api/app/save` and its queue); a repeat save that passes it updates the flag. Switch with `PATCH /api/bookmarks/[id]/private { platform, private }` or the phone's `POST /api/app/private { platform, id, private }`.
-- **Notes on saves**: `bookmarks.note` (nullable; also `phone_save_queue.note`, where `''` means "clear" and null "not given"), cleaned by `cleanNote` (`src/lib/people/note-text.ts`, no imports so the client counter agrees: whitespace collapsed, control/bidi characters dropped, trimmed, ≤140 grapheme clusters, empty → null). Every save path takes `note?: string` (`SaveOptions.note`; `newSaveNote` on insert, `applyRepeatSave` = `applyRepeatPrivacy` + `applyRepeatNote` on a repeat save; omitted leaves it). Edit with `PATCH /api/bookmarks/[id]/note { platform, note }` or the phone's `POST /api/app/note { platform, id, note }` (`setSaveNote`, own row only). `saversFor` puts `note` on each `Saver`, so it reaches members only and a private save's note reaches its owner only; `momentSavers` (moment card faces) strips it, group channel faces and watchers never have it. Never copy a note to another account (`cloneTagToUser` sets `note: null`). Admins clear notes with `POST /api/admin/posts { platform, id, clearNotes: true | username }` (audited as `clear_note`). Web UI: `SaverNote` (bubble on the theater byline via `SaversButton`, quote in Who saved it) and `NoteField` (Save sheet) in `components/next/`.
-- **One condition for other people's saves**: `visibleSave(alias?)` / `visibleSaveFilter` (`savers.ts`) = not private, not quoted, saver not banned. Any query that counts, groups or surfaces other people's saves must use it (moments, trending `saveCount`, Everyone `publishable`, `loadSearchItems`' copy pick, `similarPosts`' source check, sitemap, author hubs, public tweet JSON `savedByCount`, the share/preview pulse fallback). `seenBy(viewerId)` adds the viewer's own saves.
-- **Names**: `saversFor(keys, viewerId)` → `Map<'platform:id', Saver[]>` newest first, the viewer's own save included even when private, empty when `viewerId === ''`. `loadSearchItems` attaches `post.savers` and `post.isPrivate` only for a signed-in viewer, so `/api/feed` (`withSavers`), `/api/search`, `/api/search/similar` (signed in), channel queues and `PhonePost` carry them. Never put them on a public output (public tweet JSON, OG images, signed-out moments, previews, trending). `listMembers(viewerId)` (`members.ts`) lists members with the saves the viewer can see.
-- **Just for me by default**: `user_preferences` `save.privateDefault = 'true'` (Settings → You). `withPrivateDefault(userId, options)` (`bookmarks/privacy.ts`) fills `defaultPrivate` at the top of `addBookmark`/`addTweet`; inserts and the new-save pulse use `newSavePrivate(options)`; a repeat save still changes only on an explicit `private`. The phone queue settles it when queued (`phone_save_queue.default_private`).
-- **Pictures** (`src/lib/avatar/`): `POST /api/account/avatar` (multipart `file` ≤5 MB, JPEG/PNG/WebP/GIF/AVIF sniffed by bytes, plus crop `x`,`y` 0–1 and `zoom` 1–4, clamped server-side by `clampCrop`/`cropRect`; or JSON `{ source: 'gob', colour }` / `{ source: 'x' }`), `DELETE` (no picture). `sharp` decodes upright, crops, re-encodes a 512px JPEG without metadata into `MEDIA_DIR/avatars/<userId>-<hash>.jpg`; `users.avatar_url = /api/files/avatar/<hash>` (no account id in the address) and `avatarSource` = `upload` | `gob` | `x` | `generated`. The previous file is deleted on replace, and all of an account's on delete. `/api/files/avatar/<hash>` serves only someone's current picture, to members (session or phone key), `immutable`. An X relink never overwrites a picture stored here (`isOwnPicture`). `/api/auth/me` `user.avatarUrl` is the picture to show (`memberAvatar`), plus `avatarSource` and `privateDefault`. Display name: `PATCH /api/account/profile { displayName }` (cleaned, ≤40).
-- **Web UI**: `SaverFaces` / `PrivateLock` (`components/next/SaverFaces.tsx`, words from `savers.ts` `saversLine`) on the theater byline (media) or by the top chips (text and article stages) and on search tiles (`SaversMark`: faces replace the Everyone badge). "Just for me" is a row in the theater's More menu and a switch in `SaveSheet`. `/now` shows a one-time `SharedSavesNotice` (localStorage, try/catch). **Private wins on public channels**: `/t/{user}/{tag}` and everything built on it never list a post its owner saved privately, even when tagged — `getPublicTagCollection` (page, JSON-LD, OG mosaic, non-owner `channelQueue`), `cloneTagToUser`/`listTaggedBookmarks`, the public theater backfill, curator profiles, leaderboard tiles, the public tweet JSON's `publicTags`, and the sitemap (a public tag holding only private saves is left out). The owner still sees them through `channelQueue`'s owner path.
-- **Seen**: one seen list, `post_views`, in `src/lib/feed/views.ts`: `markSeen` (written by `POST /api/views` / `POST /api/app/seen` — 2s on stage or skipped), `seenKeys(viewer, keys)` (the blend), and the SQL `notSeenBy(viewer, alias)` / `newTo(viewer, alias)` (not saved and not seen) that friend and group channels use for "N new".
-
-### Privacy changes during cached reads and queued saves
-
-- `bookmarks/visibility-sql.ts` (also in `FULL_SCHEMA_SQL`) installs idempotent SQLite triggers that bump `server_settings['saves.visibility']`. Public caches check `savePrivacyFingerprint()` on every read, including warm hits and other web processes. Do not replace this with TTL-only or process-local invalidation.
-- Blend snapshots cache ordering/seen state, but every page rechecks moderation, gone posts, current savers, reasons and counts. Cursor offsets refer to the original ordered slots, so removing an invisible post cannot skip or repeat surviving posts. Channel clones read the recipient's `privateByDefault`, preserving existing copies.
-- Named SSE streams recheck their account's approval/ban and the exact phone key before each event/reaction and every heartbeat (20 s). Rejection closes the stream and removes its watcher/reaction subscriptions.
-- `POST /api/app/save` can take `deferPublish: true`; both native apps use it. New queue saves are staged privately until `PATCH /api/app/save { id, private?, intentVersion? }` confirms intent. Versioned native acknowledgements only accept a newer persisted version; equal/stale retries are no-ops, including after a manual web privacy change. `private_choice` keeps explicit false distinct from omission; `publish_pending` survives restarts. Completion and intent updates read/write the latest queue row transactionally. Omission preserves repeat-save privacy and acknowledgement retries cannot undo a later web toggle. Interrupted iPhone acknowledgements remain in Shared lately for retry; Android uses WorkManager-backed receipt/intent delivery; no automatic timeout publishes them.
-- Pending approvals select their public handle from `user_identities.provider_id`, with a left join to the invite. An inviter's deletion must not strand joined accounts after its invite records are removed.
-
-### Multi-User Query Safety
-
-When querying tables with `userId`, never include `isNull(userId)` fallbacks for "legacy" data. This leaks data across users:
-
-```typescript
-// ❌ WRONG: includes other users' NULL-userId rows
-.where(or(eq(table.userId, userId), isNull(table.userId)))
-
-// ✅ CORRECT: strict user isolation
-.where(eq(table.userId, userId))
-```
-
-### Health Check Endpoint
-
-`/api/health` provides monitoring for Fly.io and external health checks:
-
-```json
-{
-  "status": "healthy",
-  "timestamp": "2026-02-04T17:34:51.608Z",
-  "version": "1.18.0",
-  "checks": {
-    "database": { "status": "healthy", "responseTime": "0ms" }
-  }
-}
-```
-
-Returns 503 if database is unreachable.
-
-### Error Tracking & Metrics (Sentry)
-
-Error tracking and user behavior metrics via Sentry SDK 10.x (server-side only, `@sentry/node`).
-
-**Key file**: `src/lib/sentry.ts`
-
-**Configuration**:
-
-- `tracesSampleRate: 0.2` — 20% sampling to avoid quota issues at scale
-- `enabled` only in production (`NODE_ENV === 'production'`)
-- **PII protection**: User IDs are hashed before sending as metric attributes (never send raw `userId` to third parties)
-
-```typescript
-import { captureException, metrics } from '@/lib/sentry'
-
-// Capture errors with context
-captureException(error, { userId, endpoint: '/api/sync' })
-
-// Track user behavior
-metrics.authCompleted(isNewUser)
-metrics.syncCompleted(bookmarksCount, pagesCount, durationMs)
-metrics.bookmarkReadToggled(true)
-metrics.feedSearched(hasResults, resultCount)
-metrics.trackUser(userId) // Hashes userId internally
-```
-
-**Available metrics**:
-
-- `auth.*` - OAuth flow tracking (started, completed, failed)
-- `sync.*` - Sync operations (started, completed, failed, duration)
-- `bookmark.*` - User interactions (read_toggled, tagged, added, deleted)
-- `feed.*` - Feed usage (loaded, searched, filtered)
-- `users.daily_active` - DAU tracking (uses `user_hash`, not raw ID)
-
-**Error Boundaries**:
-
-- `src/app/error.tsx` — catches page-level React errors (client component). Server-side errors are captured by Sentry Node SDK before reaching this boundary. Client-only React errors log to console but aren't sent to Sentry (no `@sentry/browser` installed).
-- `src/app/global-error.tsx` — catches root layout crashes. Must provide its own `<html>` and `<body>` tags since the layout itself may have failed. Uses inline styles (no Tailwind available).
-
-## Resilience Patterns
-
-### External Fetch Timeouts
-
-All server-side `fetch()` calls to external services **must** include `signal: AbortSignal.timeout()`. Without timeouts, a hanging CDN connection exhausts Fly.io's connection pool.
-
-```typescript
-// API calls: 10 second timeout
-await fetch(url, { signal: AbortSignal.timeout(10_000) })
-
-// Large file downloads: 30 second timeout
-await fetch(videoUrl, { signal: AbortSignal.timeout(30_000) })
-```
-
-Applied in all media proxy routes:
-
-- `src/app/api/media/video/download/route.ts` — 10s for API, 30s for video
-- `src/app/api/media/video/hls/route.ts` — 10s for playlist
-- `src/app/api/media/video/hls/segment/route.ts` — 10s for segment
-
-### Migration Safety
-
-Database migrations (`src/lib/db/migrate.ts`) run at container startup. Each migration statement is wrapped in try/catch — on failure, the migration tag and error are logged, then `process.exit(1)` stops the container with a clear message rather than an opaque crash.
-
-Account deletion is enforced below the request layer by idempotent SQLite triggers installed from `src/lib/db/account-invariants.ts`. Every future insert (and account-ID-changing update) into a user-linked table must reference a live `users` row; nullable activity/analytics/viewer IDs still allow legitimate anonymous events. This closes the cross-process race where a handler authenticated before `DELETE /api/account` could otherwise write after deletion committed. Existing historical rows are not retroactively validated or rewritten by migration.
-
-## Architecture
-
-### URL Prefix Feature
-
-Users can preview tweets, Instagram posts/Reels, and TikToks by replacing the host in any link with `adhx.com`:
-
-| Source URL                      | Becomes                       | Route                                     |
-| ------------------------------- | ----------------------------- | ----------------------------------------- |
-| `x.com/{user}/status/{id}`      | `adhx.com/{user}/status/{id}` | `src/app/[username]/status/[id]/page.tsx` |
-| `instagram.com/p/{id}`          | `adhx.com/p/{id}`             | `src/app/p/[id]/page.tsx`                 |
-| `instagram.com/reels/{id}`      | `adhx.com/reels/{id}`         | `src/app/reels/[id]/page.tsx`             |
-| `instagram.com/reel/{id}`       | `adhx.com/reel/{id}`          | `src/app/reel/[id]/page.tsx`              |
-| `tiktok.com/@{user}/video/{id}` | `adhx.com/@{user}/video/{id}` | `src/app/[username]/video/[id]/page.tsx`  |
-
-Users can also paste the **full** source URL after `adhx.com/` — `src/proxy.ts` (Next.js middleware) rewrites these via 307 redirect:
-
-- `adhx.com/https://x.com/{user}/status/{id}` → `/{user}/status/{id}`
-- `adhx.com/https://www.instagram.com/p/{id}` → `/p/{id}`
-- `adhx.com/https://www.instagram.com/reels/{id}` → `/reels/{id}`
-- `adhx.com/https://www.tiktok.com/@{user}/video/{id}` → `/@{user}/video/{id}`
-
-All work with or without protocol, browser path normalization (`//` → `/`), trailing path segments, and platform-specific subdomains (e.g. `vm.tiktok.com`, `m.tiktok.com`).
-
-All preview routes render `SharedPreviewPage`: crawler output (`generateMetadata`, JSON-LD, `SharedPostStatic`) plus `PreviewTheater` → `TheaterV2` (see "Preview pages now play in the new theater" below; the `TheaterShell` notes there are history). The per-platform media-resolution notes below still apply.
-
-**Tweet preview**:
-
-- Authenticated: landing on a preview via a **new open** (URL prefix, paste, `/share`) auto-saves the shared lead (`POST /api/bookmarks/add`, `source: 'url_prefix'`). Refresh of a theater-rewritten address bar, back/forward, and in-app hops (`/trending` → preview) do **not**. `?save=1` after sign-in still completes an explicit save even on reload. Watching in Live (`useTheaterDwell`) only pulses `/api/activity/preview` — it never saves. The Save pill pops **Saved** then morphs to **Tag** (same `TagQuickPicker` as Live).
-- Unauthenticated: rich preview; saving opens `SignInModal` at save-intent. A later in-modal sign-in does not auto-save unless the URL already had `?save=1`.
-
-**Instagram preview** (media resolution):
-
-- Metadata comes from Instagram's crawler Relay payload (`src/lib/media/instafix.ts`), with OG tags as a reduced fallback. Relay distinguishes images from Reels and preserves every ordered carousel child, dimensions, and accessibility text. OG is explicitly incomplete: a duplicate save may repair an empty media set from it, but must never replace a richer saved carousel. Mixed-carousel video children are persisted as poster-only photo slides until indexed child-video playback exists.
-- `/p/{id}` image posts use `/api/media/instagram/thumbnail?id=&index=` to re-resolve expiring signed CDN URLs. Single images and ordered carousels render through the same theater photo-album controls as X; Send/download uses the attachment form of that proxy.
-- `/reel/{id}` and `/reels/{id}` preserve the existing Reel path. There is no `og:video`.
-- MP4 comes directly from allowlisted Relay `video_versions` CDN URLs (`src/lib/media/instagram-video.ts`), with vxinstagram as a fallback. Expired CDN signatures refresh once; resolution is bounded to 30s including mirror retries. Both streaming and download use this resolver; **do not attach `<video src>` until a Range probe 200/206s** (`probeInstagramVideo` in `src/lib/media/instagram-playback.ts`). The preview page also warms the cache (Range 0-1, fire-and-forget) so the probe is usually already hot.
-- Legacy saves mislabeled as Reels receive a 409 photo result from the probe and render the existing photo-album stage without video retries. This repairs playback presentation, not stored bookmark metadata.
-- If no video source resolves: official Instagram iframe (`/reel/{id}/embed/`). Needs `https://www.instagram.com` in CSP `frame-src`.
-
-**TikTok preview** (media resolution):
-
-- Resolves metadata via `tnktok.com` (fxTikTok). The mirror's `/generate/video/{id}.mp4` endpoint 302-redirects to the real TikTok CDN (`tiktokcdn-us.com` / `tiktokcdn-eu.com`) with proper signing — we stream straight through (`src/lib/media/tnktok.ts`).
-- Custom inline SVG glyph for the TikTok logo (lucide doesn't ship one).
-- Note: Next.js URL-encodes `@` in dynamic params, so `params.username` arrives as `%40user`. Decode before validation.
-
-**CSP**: the Instagram Reel fallback embed needs `frame-src https://www.instagram.com`. `img-src` allows `https:` so off-site OG/link-preview images (Substack, Medium, …) can render on stage and in the library. Both in `next.config.js`.
-
-**Send** is the file (video or photo); **Share link** is the preview URL. Touch **Send** prefetches the MP4 and shares `files` + `text: "via <canonical url>"` — never `url` alongside `files` (WhatsApp concatenates them into `via URL URL`). iOS needs the file ready before the tap so `navigator.share` stays a user gesture (implemented by `useSendFile` in the theater).
-
-**Save-to-collection**: a signed-in new-open of a preview autosaves the lead (see Tweet preview above). The chrome Save button still POSTs `/api/bookmarks/add` and flips to Saved. Saved Instagram images/carousels, Reels, and TikToks land in the same feed as tweets, distinguished by the platform badge on the FeedCard.
-
-AppShell (`src/components/AppShell.tsx`) draws no header; preview pages render their own chrome. Private pages that should send signed-out visitors to `/start` are listed there.
-
-**OG Image Selection** (`getOgImage()` in `src/lib/utils/og-image.ts`):
-When generating Open Graph metadata for social unfurling, images are selected in priority order:
-
-1. Direct media (tweet's own photos/video thumbnails)
-2. Article cover image (X Articles `tweet.article.cover_media.media_info.original_img_url`)
-3. Quote tweet media (when parent has no media, use quoted tweet's photos/videos)
-4. External link thumbnail (`tweet.external.thumbnail_url`)
-5. Author avatar (`tweet.author.avatar_url`) for text-only tweets
-6. Fallback to `/og-logo.png` for tweets without avatar
-
-**Twitter Card Type** (`src/app/[username]/status/[id]/page.tsx`):
-
-- `summary_large_image` — tweets with rich media (photos, videos, article covers, external thumbnails)
-- `summary` — text-only tweets where OG image is the author's avatar (small square card fits avatars better than a stretched banner)
-
-### Trending & Activity Pulse (history)
-
-> **History.** This describes the retired X-first / `TheaterShell` product. Kept for context on old URLs and data; see the overview at the top and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the current system.
-
-`/trending` (`src/app/trending/page.tsx`) and the per-lens hubs `/trending/[filter]` (`popular` / `videos` / `photos` / `text` / `articles` — see `FILTER_SLUGS` in `src/lib/trending/filter.ts`) are public, **anonymous**, crawlable feeds of what the community is watching and sending right now — the SEO growth loop that turns user activity into indexable content. **`/discover` 308-redirects to `/trending`** (the old `/discover` page and the `LivePulse` marquee are gone). Each hub server-renders a real, crawlable `sr-only` item list (`src/components/trending/TrendingStaticList.tsx`) + `CollectionPage`/`ItemList` JSON-LD, then mounts the dark ranked list (`TrendingRankedList` — see the Theater section) seeded with the same items so there's no skeleton flash. The selected filter pill is reflected in the URL (tidy path, via `history.replaceState`) so a filtered view is shareable; loading `/trending/<filter>` seeds that filter server-side.
-
-**Runtime-render gotcha — do NOT make these static.** `/trending`, `/trending/[filter]`, the `/sitemap.xml` route, and the preview pages are `export const dynamic = 'force-dynamic'` (and the trending hubs deliberately have **no** `generateStaticParams`). They read the SQLite DB, which is **only migrated at container startup** — pre-rendering them at build queries a table-less DB (`no such table: activity`) and bakes empty HTML. Keep them dynamic. (The trending DB query is a cheap local read, so per-request rendering is fine.)
-
-**Shared trending query — the single anonymity-safe choke point.** `getTrendingItems()` (`src/lib/trending/query.ts`) reads recent `activity`, dedupes to **one row per post** (`platform:bookmarkId`, newest event wins — a post can be both previewed and saved), and enriches it. It **never selects `activity.userId`**; every read path (`/api/activity`, the public `/api/trending` JSON endpoint, and the hubs) goes through it. Filtering/typing lives in `src/lib/trending/filter.ts` (`FilterId`, `FILTERS`, `inferType`, `applyFilter`, `slugToFilter`/`filterToPath`) — shared by the server hubs and the client grid so the crawlable HTML matches the hydrated grid. The sharded sitemap was reverted to a single dynamic `/sitemap.xml` (sharding served only `/sitemap/<id>.xml` with no index, 404ing the robots-declared URL).
-
-**Recorded events** (`recordActivity()` in `src/lib/activity/record.ts`):
-
-| Action    | Hooked into                                                                                                                                                                                                                                                                      | Notes                                                                                                        |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `preview` | the 4 preview page server components                                                                                                                                                                                                                                             | Skipped for bots/OG-unfurl crawlers via `isLikelyBot()` (`src/lib/activity/bot.ts`) so the pulse stays human |
-| `save`    | `/api/tweets/add` (twitter, covers the `/api/bookmarks/add` delegation) + the IG/TikTok branches of `/api/bookmarks/add`, **and `/api/sync`** (each newly-synced bookmark — capped per sync via `SYNC_PULSE_CAP`, freshest first, so a big backfill can't flood the shared feed) |                                                                                                              |
-| `share`   | `POST /api/activity/share` `{ platform, id }` only — native send/download on preview pages pings this. Display fields are copied from an existing pulse/bookmark row; unknown posts are a no-op. Client-supplied captions/thumbs are ignored.                                    |                                                                                                              |
-
-Archive (`POST /api/bookmarks/[id]/read`) is private — it does **not** write a public `read` pulse. It **does** write `post.archive` to the private growth log.
-
-**Growth analytics** (`src/lib/analytics/record.ts` — `recordAnalytic` / `recordPostAnalytic`): a separate append-only `analytics_events` table for everything the pulse is not allowed to show (tag, archive, copy, open, send-vs-download, auth, shortcut install, theater open, playlist publish). Pulse actions dual-write here (`preview` → `post.view`, `save` → `post.save`, `share` → `post.share`) with platform + content type + source. `userId` is stored and **never** selected by `GET /api/analytics`. Client POSTs are an allowlist (`post.send` / `post.copy` / `post.open` / `shortcut.install`) and identifiers only — type is resolved server-side. Rollups live in `src/lib/analytics/query.ts` (`getAnalyticsSummary`) so future leaderboards do not query the table ad hoc. Rows older than 90 days are pruned at migrate. Do **not** dump these events into `activity` — that would flood `/trending`. The **admin area** (`/admin/*`, linked from Settings for persisted admin-role accounts) counts these events without ever showing who; its own counts-only events are `app.open`, `search.found`/`search.none` (mode, never the words), `post.finish` and `channel.play`/`channel.keep`.
-
-**Admin area** (`/admin/*`, `src/lib/admin/`, spec `docs/specs/admin.md`): the "10 · Admin" boards — Overview, People (+ `/admin/people/{username}`), Posts, Channels, Live, Analytics, Processing, Moderation, Invites — in `components/next/admin/` under `AdminShell` (`NxHeader` + Admin chip, a section nav that is a chip row on phones). Server pages read `src/lib/admin/boards/*` directly; `GET /api/admin/boards/{board}?range=` returns the same. **Privacy**: Just for me saves are counted, never listed (lists come only from `postCards`/`sharedSavers` in `src/lib/admin/shared.ts`, on `visibleSave`; left-out posts are counted as "N Just for me"); never what anyone searched or watched (counts only); notes only on shared saves; Made for you and private channels never appear in Top channels. New data: `reaction_counts` (day, user, kind — never the words, post or moment; counted in `react()` and `addPostReaction()`), `moment_log` (no user ids; formed/tune-ins/peak/reactions/alerts), `users.last_seen_at` (≤ every 5 min from `/api/auth/me` and `phoneCaller`), `access_keys.platform`, `server_settings` `processing.paused` (Pause new work). Make/remove admin (`POST /api/admin/people/{username} { role }`, audited, never the last admin), remove a phone, clear a member's notes, Retry failed (`POST /api/admin/processing`). Gated by `users.role = 'admin'`, attached to the immutable account ID. `ADMIN_USERNAMES` is only a one-time migration bootstrap for existing deployments; runtime authorization never resolves usernames, so deletion/reclamation cannot transfer privilege. The legacy bootstrap is all-or-nothing: every configured username must already resolve or startup fails with no promotions, and that rejected list is durably blocked from later promoting a new claimant. Remove/fix it and use `ADMIN_USER_IDS` to recover. Fresh installs and deliberate future grants use `ADMIN_USER_IDS` (comma-separated immutable account IDs): set it after the account exists and restart once to persist the role. Removing an ID does not auto-demote it. Hide a post writes `moderated_posts` + `activity.hidden` (preview pages tombstone + noindex; sitemap and pulse skip it; user bookmarks stay). Ban writes `user_bans` (`getCurrentUserId` returns null; sign-in callbacks bounce; public `/t/{user}` 404s). Playlist hide still uses `collection_events.hidden`. Every action is appended to `admin_audit`. Helpers: `withAdmin`, `hidePost`, `setUserBanned`.
-
-**Moderation fails closed.** Read helpers return a typed success/unavailable result; callers must never translate an unavailable moderation store into “visible” or “not banned.” Auth denies, previews tombstone/noindex before upstream resolution, pulse writes skip, sitemap entries are omitted, and public profile/playlist/tweet/leaderboard surfaces withhold content when moderation state cannot be read. `hidePost` updates `moderated_posts`, `activity.hidden`, and audit atomically. Startup verifies the moderation tables and terminates if their required columns are unreadable.
-
-**Two invariants enforced in `recordActivity()` — do not break these:**
-
-1. **Content is always resolved server-side** by the caller (tweet/reel/tiktok metadata already fetched in the route/page). We **never** accept display text/thumbnails/avatars from the client — a public "anyone can POST what shows on the front page" endpoint would be a stored-XSS / spam-injection hole. `POST /api/activity/share` is the only write endpoint and it takes identifiers only, then copies server-stored fields via `recordSharePulse()`.
-2. **`userId` is stored but never exposed.** It exists only for future moderation/rate-limiting. `GET /api/activity` selects an explicit public column list that omits it — the pulse is anonymous by construction. Don't `select()` the whole row there.
-
-**`GET /api/activity` enriches each item server-side** — the recorded `activity` row is intentionally sparse, so the API joins the saved bookmark to fill in display data (this is why Discover cards look right even though the raw row doesn't carry the media):
-
-- `contentType` (video/photo/text/article) — from the saved bookmark's media kinds + `category`; TikTok is always video, while Instagram distinguishes `/p/` photos/carousels from Reels. For **preview-only** posts (no saved bookmark) it falls back to the **server-resolved `activity.content_type`** recorded at preview time, so an article still renders as an article (cover + headline) instead of a bare "Saved post" — only if that's also absent does the client guess from platform/thumbnail. `content_type` was added via guarded `ALTER TABLE` in `migrate.ts` (like `author_avatar_url`); new `activity` columns must also be added to the in-memory test DDL.
-- `thumbnailUrl` — **Instagram** images/posters are derived as `/api/media/instagram/thumbnail?id=`, and **TikTok** posters as `/api/media/tiktok/thumbnail?username=&id=`. Both are stable same-origin URLs that re-resolve expiring/signed CDN media and work even when an activity row has no thumbnail; **article** covers come from `bookmark_links.preview_image_url`; everything else keeps the recorded thumbnail. Mirrors how `/api/feed` builds thumbnails for the collection.
-- article `text` is overridden with `bookmark_links.preview_title` (the recorded text is usually just the wrapper tweet's `t.co` link) so the card shows the real headline.
-- `authorAvatarUrl` — the post author's avatar for tweet-style text/quote cards: the saved bookmark's `author_profile_image_url`, else the recorded `activity.author_avatar_url` (populated for preview-only items, server-resolved like `thumbnailUrl`).
-- `saveCount` — distinct savers with a visible save (anonymous count; private and quoted saves never count).
-- `trendCount` — savers + preview events + send events → powers Trending + the flame badge.
-
-Other details:
-
-- Recording is fire-and-forget and synchronous (better-sqlite3); it swallows all errors so a pulse-write failure can never break a save/preview/read.
-- De-duped on write (same `action+platform+bookmarkId` within 60s) and again on read (same `action+platform+url`), so refreshes/prefetches/double-fires don't flood it.
-- Text/author are whitespace-collapsed and capped; thumbnails/avatars must be `http(s)` or an `/api/` proxy path (`safeThumb()`).
-- Pulse consumers (the theater's live tab; formerly `DiscoverFeed`, deleted 2026-08-21) poll `/api/activity` (5s SWR cache on the API), de-dupe by `platform:bookmarkId`, and link each card to the **on-ADHX** preview path (`previewPath()`) to keep clicks on-site.
-- Schema: standalone `activity` table. Append-only, no composite key — it's an event log, not user-owned content, so it's exempt from the `(userId, platform, id)` convention. The `author_avatar_url` column was added after the initial schema via a **guarded `ALTER TABLE` in `migrate.ts`** (SQLite has no `ADD COLUMN IF NOT EXISTS`, so it's wrapped in try/catch — not a Drizzle table-recreate). The in-memory test DB DDL (`src/__tests__/api/setup.ts`) must include new activity columns too.
-
-**`DiscoverCard`** (`src/components/discover/DiscoverCard.tsx`) renders per content type, mirroring the in-app `FeedCard`, with a **bottom-pinned footer on an equal-height grid** (media flex-fills so footers align across the row):
-
-- **media** (video/photo): poster fills the card + up to a 2-line caption overlay (white text on a `transparent → rgba(11,11,17,.84)` scrim + `text-shadow`).
-- **article (with cover)**: cover image + serif title overlaid on a dark scrim.
-- **article (no cover)**: accent-tinted gradient + `ARTICLE` chip + serif title + a faint oversized `FileText` watermark.
-- **text / quote**: tweet-style — author avatar + name + `@handle` + `PlatformChip`, then the body.
-- Anonymous footer: incognito avatar + time + platform glyph + Save/Preview button.
-- The flame/trend badge is pinned top-right for **every** card type (rendered once at the card-link level, not per-branch). Time-derived text (the "N saving now" counter + each card's relative time) carries `suppressHydrationWarning` — it legitimately differs between the server-rendered HTML and the client (`Date.now()`), and without it React regenerates the tree (which also re-runs the layout's anti-FOUC `<script>` → a spurious "script tag while rendering" warning).
-
-### Branding Assets
-
-- `public/logo-dark.png` — transparent GOB + ADHX lockup for `#08070a` / `#322b23`
-- `public/logo-paper.png` — outlined transparent lockup for `#e4dac8`
-- `public/og-logo.png` — 1200×630 site-wide branded fallback
-- `public/icon-192.png` / `public/icon-512.png` — full-bleed PWA icons
-- `public/favicon-16.png` / `public/favicon-32.png` — browser favicons
-- `public/gob-loader.svg` / `public/gob-loader-paper.svg` — animated post loader; the SVG's
-  internal CSS must remain intact so `<img>` playback works
-
-`MatterLogo` selects the dark or paper lockup; fixed theater surfaces must pass
-`surface="dark"`. Header lockups are at least 32px tall. The brand tagline is
-**Your friends have better taste than the algorithm.** `public/og-logo.png` is a picture and
-may still carry the old line until it is redrawn.
-
-**OG Image Routes:**
-
-- `src/app/opengraph-image.tsx` - Serves `og-logo.png` for homepage OG
-- `src/app/twitter-image.tsx` - Serves `og-logo.png` for Twitter cards
-- `src/app/api/og/playlist/[username]/[tag]/route.tsx` — dynamic 1200×630 playlist card:
-  adaptive one-to-five-image mosaic, text-tile fallback, generic empty/error card, and a
-  fully anonymous private/missing card. It preloads only allowlisted image hosts with bounded
-  reads and fetches Indie Flower TTF for `ImageResponse`.
-
-### LLM-Friendly Previews & Structured Data
-
-- Public tweet JSON API (`/api/share/tweet/[username]/[id]`) — clean JSON with author, engagement stats, media, and article content as markdown. Public responses are `no-store` so every request rechecks moderation. `<link rel="alternate" type="application/json">` on preview pages points to this endpoint.
-- JSON-LD structured data (`SocialMediaPosting` schema) on preview pages — author, interaction stats, images, video objects
-- Enhanced OG tags: 280-char descriptions with engagement suffixes ("1.4K likes, 84 reposts"), `article:author`, `article:published_time`, `twitter:creator`
-- Article tweets use the article title as OG title (instead of `@username: "title" - Save to ADHX`)
-- Semantic HTML: tweet card in `<article data-content="tweet">` with `<header>`/`<footer>`, CTA section `role="complementary"`
-
-**Article Text Utility** (`src/lib/utils/article-text.ts`):
-
-- `articleBlocksToMarkdown()` converts X Article content blocks to clean markdown
-- Handles headings, paragraphs, images, tweets, and dividers
-
-**Tweet API Enrichment (`adhxContext`)**:
-The public tweet JSON API enriches responses with ADHX curation context when the tweet exists in the local database:
-
-- `savedByCount` — number of distinct ADHX users who bookmarked this tweet (no user IDs exposed)
-- `publicTags` — list of public playlists (shared tags) containing this tweet (tag name, curator username, URL)
-- `previewUrl` — canonical ADHX preview URL for the tweet
-- Only appears when `savedByCount > 0`; private tags are never included
-
-Key files:
-
-- `src/app/api/share/tweet/[username]/[id]/route.ts` — Public tweet JSON API + `adhxContext` enrichment
-- `src/lib/utils/article-text.ts` — Article content block → markdown conversion
-
-### LLM Discovery (`llms.txt`)
-
-`public/llms.txt` follows the [llmstxt.org](https://llmstxt.org/) standard. Declares ADHX's public APIs, content types, and usage patterns for AI agents. Served as a static file at `/llms.txt`.
-
-### Dynamic Sitemap
-
-`src/app/sitemap.ts` generates a dynamic sitemap including:
-
-- Homepage (priority 1)
-- All public playlist pages at `/t/{username}/{tag}` (priority 0.7, daily)
-- All tweet preview URLs from public tags at `/{author}/status/{id}` (priority 0.5, weekly)
-- Tweet URLs are deduplicated across multiple tags
-- Private tags and their tweets are never included
-- Falls back to homepage-only if database queries fail (e.g., during static build)
-
-`public/robots.txt` includes `Allow: /t/`, `Allow: /api/share/`, `Allow: /api/og/`
-(dynamic social cards), and `Allow: /api/media/` (VideoObject thumbnails + MP4 streams —
-without this GSC reports "Thumbnail blocked by robots.txt") while keeping `/api/` disallowed
-for authenticated endpoints. Longer Allow prefixes beat `Disallow: /api/` under Google's
-longest-match rule.
-
-### adhx.com is the product site, not an ADHX (2026-10-18)
-
-`site/` is a separate static Next.js app (webpack, `output: 'export'`) published to GitHub Pages by `.github/workflows/site.yml` (`pnpm site:dev` / `pnpm site:build`). It reuses the repo's installed packages but imports nothing from `src/`: Gob, the network marks and the network list are copies in `site/components/`. The app never serves it. "adhx.com" in older notes below means "your ADHX's address".
-
-### Kept media and link networks (self-hosted, 2026-10-18)
-
-ADHX is self-hosted: every saved post's files are downloaded once (yt-dlp, fxtwitter for X) into `MEDIA_DIR` and served by `/api/files/{platform}/{id}/{slot}`. Build every client media URL with `keptSrc()` (`src/lib/keep/src.ts`). Never hand-write an `/api/media/*` URL; those proxies are now only the fallback until a file is kept. Fourteen networks: X, Instagram and TikTok plus the link networks in `src/lib/platform/networks.ts` (previews at `/s/{network}/{id}`). Locally, run with `KEEP_BACKFILL=off` unless you want the whole library downloaded. Details: ARCHITECTURE.md → Kept media. The backfill-off boundary is persisted in `keep_settings` and reset only when backfill starts enabled. `recordKept` reconciles each saver's playback media/category with the actual files in the same transaction, without touching private save state. Link-network saves can reuse an existing retained post's public metadata instead of requiring its original to remain online. Docker/NAS examples are vendor-neutral: root Compose uses a loopback port, `deploy/nas/` uses an existing proxy network; neither requires a tunnel. See the deployment guide for persistence and resource hooks.
-
-### Save Methods (Platform-Aware)
-
-The app offers multiple ways to save tweets, shown contextually based on the user's platform:
-
-| Platform | Primary Method                                                          | Fallback                                 |
-| -------- | ----------------------------------------------------------------------- | ---------------------------------------- |
-| iOS      | One-tap iCloud shortcut — adds ADHX to the share menu (X / IG / TikTok) | URL prefix + paste                       |
-| Desktop  | Extension (`extension/` — toolbar / right-click / ⌘⇧A → `/share?url=`)  | Bookmarklet + URL prefix + theater paste |
-| Android  | Add to Home Screen, then Share → ADHX (PWA Share Target)                | Paste link + URL prefix                  |
-
-**Mobile paste-first save (Tier 1)**: "Copy Link" in any share sheet → open ADHX → tap **Paste link**. `PasteLinkButton` (`src/components/PasteLinkButton.tsx`) reads the clipboard via a user-gesture-gated `navigator.clipboard.readText()` (must fire directly inside the click handler, never on mount) and navigates through the shared `navigateToPastedLink` helper (`src/lib/utils/parse-share-url.ts`) — the same CodeQL-hardened navigation shape (TikTok short links → hard nav to `/api/tiktok/resolve?url=…&go=1` built from a constant prefix + `encodeURIComponent`; everything else → `router.push` guarded by `isSafeInternalPath`) shared with `LandingPage`'s hero input. States: idle / resolving / a brief self-clearing "not a supported link" error; when the Clipboard API is unavailable, denied, or the clipboard is empty, it expands an inline URL input instead of dead-ending. Mounted mobile-only (`sm:hidden`) above the Collection feed (`src/app/AuthedHome.tsx`) and in the empty-state onboarding (`EmptyAccountOnboarding.tsx`), and icon-only (`iconOnly`) in the theater's mobile top bar (`TheaterMobileChrome.tsx`) — the touch equivalent of desktop's ⌘V paste-to-preview, which has no paste gesture on mobile Safari.
-
-**Platform detection** (`src/lib/platform.ts`):
-
-- `isIOSDevice()`, `isAndroidDevice()`, `getPlatformType()` → `'ios' | 'android' | 'desktop'`
-- SSR-safe (returns `'desktop'` when `window` is undefined)
-- Components use `useState` + `useEffect` to detect platform client-side
-
-**iOS Shortcut:**
-
-- Published iCloud shortcut ID: `0d187480099b4d34a745ec8750a4587b` — opens `/share?url=` for **X, Instagram, and TikTok** (the published shortcut may still list YouTube; `/share` now reports those links as unsupported). Not in this repo. One tap adds ADHX to the iOS share menu; from those apps, Share → ADHX. Surfaces: iOS banner (`PWAInstallPrompt` — tap away or X dismisses it), landing hero + promo, **Settings** (`IosShortcutSettingsCard`, always on iOS so the link is never lost), preview CTA nudge (`IosShortcutNudge`). Dismiss key `adhx-shortcut-dismissed`.
-- URL-prefix (`x.com` → `adhx.com`) still works as a fallback. A DIY Share Sheet recipe that opens `https://adhx.com/share?url=` lives in `src/components/IosShareRecipe.tsx` if the iCloud link is ever lost. Settings and landing show a 3-step icon strip (`IosHow`). `/share` maps X / IG / TikTok (and TikTok short links).
-
-**Android install** (`src/components/AndroidInstall.tsx`):
-
-- Settings (`AndroidSettingsCard`) is its own redesign-look card with the same copy and install hook as the nudge's `AndroidInstallBanner` — always on Android so the path is never lost. Standalone: “Installed. Share → ADHX.” `beforeinstallprompt`: one-tap Add. Else: a 3-step icon strip (Add to Home / Open the app / Share → ADHX). Anchor `#android-install`. No dismiss (it is not a nudge).
-- Banner (`PWAInstallPrompt`) shows on Android even **without** `beforeinstallprompt` (Samsung/Firefox often never fire it). Same `AndroidInstallBanner`; not mounted on `/settings` (AppShell hides the banner there) so the card is not doubled. Tap away or X dismisses it. On theater paths it hangs under the logo at `z-[70]` so it does not cover the peek bar. Hidden in standalone. Dismiss key `adhx-a2hs-dismissed`.
-- Landing `ShortcutPromo` is Android-first (install + share), not bookmarklet-first.
-
-**Bookmarklet** (desktop):
-
-```
-javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tiktok)\.com/,'adhx.com'))
-```
-
-- One-click URL rewrite from x.com/twitter.com to adhx.com
-- Shown with copy-to-clipboard button and drag-to-toolbar instructions
-- No auth needed — redirects to preview page which handles auth/unauth
-
-**PWA Share Target** (Android only — Web Share Target is unsupported on iOS Safari; requires the PWA installed):
-
-- `public/manifest.json` includes `share_target` config: `action: "/share"`, `method: "GET"`, `params: { url, text, title }`. **All three params are captured** because apps disagree on which field carries the link — a clean share sets `url`, but TikTok (and others) drop it into `text` alongside a caption.
-- `src/app/share/page.tsx` — client component that extracts the link from the shared payload and redirects to the matching preview path
-- `extractSharedUrl(...candidates)` (`src/lib/utils/parse-share-url.ts`) returns the first http(s) URL across `url`/`text`/`title`, pulling a URL embedded in caption text when the whole field isn't one.
-- `parseShareUrl()` maps **all three platforms** to their preview path and returns `{ path }`: X → `/{user}/status/{id}`, Instagram `/p/` → `/p/{id}`, Instagram Reel → `/reels/{id}`, TikTok → `/@{user}/video/{id}`. **TikTok short links** (`vm.`/`vt.tiktok.com/{code}`, `tiktok.com/t/{code}` — the native share format) can't be resolved client-side, so it returns the `/api/tiktok/resolve?url=…&go=1` resolver path instead, which 307s to the preview. The share page does a full `window.location.replace` for `/api/` paths (the client router can't follow a cross-route redirect) and `router.replace` for app routes.
-- Shows a "Not a supported link" error for unrecognised URLs with a link back to homepage
-
-**Add to Home Screen (PWA install)**:
-
-- `src/components/PWAInstallPrompt.tsx` — mobile-only bottom banner, mounted app-wide in `AppShell` (preview pages too). Hidden on desktop.
-  - **Android**: show even without `beforeinstallprompt`. Add when the event fires; otherwise How. Hidden in standalone. Dismiss key `adhx-a2hs-dismissed`. Settings has its own always-available card.
-  - **iOS/Safari**: Share Sheet shortcut install (iCloud link), not Add to Home Screen. Still shown in standalone. Dismiss key `adhx-shortcut-dismissed`.
-- `public/sw.js` — a deliberately **cache-free** service worker (no-op `fetch` handler, no `respondWith`). It exists only to satisfy Chrome's installability criteria so `beforeinstallprompt` fires; it never serves stale content. Registered from `PWAInstallPrompt` on mount.
-
-**Implementation files:**
-
-- `src/lib/platform.ts` — Platform detection utilities
-- `src/components/LandingPage.tsx` — `ShortcutPromo` component (platform-aware)
-- `src/components/AndroidInstall.tsx` — Android Settings card + how-to
-- `src/components/next/settings/SettingsScreen.tsx` — mounts the iOS + Android install cards
-- `src/app/share/page.tsx` — PWA Share Target landing page
-- `src/lib/utils/parse-share-url.ts` — Tweet URL parsing for share target
-- `extension/` — desktop Save to ADHX (Extension.js). Toolbar / context menu / ⌘⇧A → `/share?url=`. Unpacked only until a store listing. **Local:** `pnpm --dir extension install`, set `EXTENSION_PUBLIC_APP_ORIGIN=http://localhost:3001` in `extension/.env` (gitignored; copy `.env.example`), `pnpm --dir extension build`, Chrome → Load unpacked → `extension/dist/chromium`. Rebuild + Reload after env/source changes. Root `tsconfig` **excludes** `extension` so CI `tsc` / `next build` do not need `@types/chrome`. Walkthrough: `extension/README.md`.
-
-### Typography & Reading Preferences
-
-ADHD-friendly font system with user selection:
-
-- **Brand font**: Indie Flower (playful handwritten)
-- **Body fonts** (user selectable in Settings):
-  - IBM Plex Sans - Clean, professional
-  - Inter - Neutral, familiar
-  - Lexend - Designed for ADHD/reading difficulties
-  - Atkinson Hyperlegible - Maximum letter differentiation
-
-Files:
-
-- `src/lib/preferences-context.tsx` - Font preference state & FONT_OPTIONS
-- `src/components/FontProvider.tsx` - Applies selected font to document
-- `src/app/globals.css` - Font CSS rules
-
-Additional reading aids:
-
-- **Bionic Reading** - Bolds first part of each word to guide eyes. Honored on the Library feed cards and, in the theater, on article bodies and Read-mode typeset text (not the two-line media caption overlay).
-
-### Matter Design System
-
-The UI is the **"Matter"** warm editorial direction (light + dark). Shared primitives live in `src/components/matter/index.tsx`:
-
-- `TypeBadge` (dark chip + type-color dot + uppercase label), `PlatformGlyph` / `PlatformChip` (dark circle), `TYPE_META`, `ContentType` / `PlatformId` types, `MatterLogo`, `LiveDot`, `ConnectWithX` (renders "Connect with" + the X glyph).
-- Tailwind tokens (`tailwind.config.ts`): `clay`/`clay-grad` (accent), `done` (green), `flame`, `ink`/`ink-2`/`ink-3`, `surface`/`paper`/`inset`, `hairline`, `font-serif`. All resolve to CSS vars that flip with the `light`/`dark` class on `<html>`.
-- Content cards render **per content type** in both surfaces: the in-app `FeedCard` (`src/components/feed/FeedCard.tsx`) and `DiscoverCard` share the same shapes — article-with-cover (cover + overlaid serif title), article-no-cover (accent gradient + `FileText` watermark), text/quote (tweet-style: avatar + name + `@handle`, no type chip), video/photo (media + up to 2-line caption overlay).
-- **Caption/title clamp gotcha**: put the big padding on a wrapper and the `line-clamp-N` on a _child_ with no vertical padding. `-webkit-line-clamp` constrains box height but still paints overflow lines, so bottom padding on the clamped element lets a clipped extra line peek through.
-- **Theater media captions**: two clamped lines (`TheaterCaption`). Overflow (or a quote) uses **Read** by tapping the caption; there is no separate Read button. Never more than two lines on the overlay. **Watch** remains visible in Read mode (TV icon, not Film — Film is Download) and returns to full-bleed; the parent video stays the same playing element in a top band so you can read while it continues. Action pills use `StageGlass` — the same flat frost as the mobile paste button (`border-white/25 bg-white/10 backdrop-blur-md`). The Tag button shows a count of tags on the post (max 5); there are no name chips in the action row.
-
-### The design (`src/components/next/`)
-
-The find-by-meaning redesign (phases 0–7) is the only UI for signed-in people: search, the theater, channels and onboarding. The previous look (library grid, Saved theater, Tags page, playlist theater, the `next_ui` flag and its `NEXT_UI_FORCE` kill switch) was **removed**; old URLs redirect (`/saved`, `/collection` → `/play?recent=1`, `/library?search=` → `/search?q=`, `/tags` → `/channels`, via `src/lib/next-ui/routes.ts`). Every page is now in the new design. **Retired 2026-10-17** (owner decision): `/live`, `/trending` (+ `/trending/*`, archive, `/trending/play`), `/leaderboard` (+ windows), `/discover`, `/collections` — `next.config.js` `redirects()` sends them to `/now` (pulse pages) or `/channels` (leaderboard/collections), permanently. With them went the old theater (`TheaterShell` and its chrome, `AuthedTheater`), the old site `Header`, `PWAInstallPrompt`, and the trending/leaderboard lists; the new theater still borrows the old media `Stage` and a few helpers in `components/theater/`. AppShell no longer draws any header or install banner: every page renders its own `NxHeader` (admin included). Profiles (`/{handle}` author pages, `/t/{username}` curators), `/privacy` (keep in step with `PRIVACY.md`), `/share`'s error, `error.tsx` and the 404 use `components/next/profile/ProfileParts.tsx` / `NxHeader` / `NxLogo`. `channelTitle` lives in `channels/title.ts` (plain module) so server pages can call it. A failed paste-to-save offers "Watch it anyway". Sections below that describe `/live`, `/trending`, `/leaderboard` or `TheaterShell` are history.
-
-**Navigation** (`src/components/next/PrimaryNav.tsx`): five places, the same everywhere — **New** (`/play?feed=new`, the signed-in home), **Right now** (`/now`, live dot), **Channels** (`/channels`), **My saves** (`/play?recent=1`), **Search** (`/search`). Desktop: `PrimaryNav` tabs in `NxHeader` (Search left out there; the header has its own field), in the search header (no logo below `xl`) and in the theater header (a fixed 72px bar outside the stage on `md+`, the stage starting under it at `md:top-[72px]`; logo, tabs, search and avatar only, lit from the queue: feed → New, moment → Right now, channel/auto → Channels, recent → My saves, else Search). Phones get a one-row header over the stage instead: Gob · New / Channels / Live (`PhoneTabs`, New's unseen count on its corner) · one tool (the feed's filter sheet, else search). The theater's frame follows the design boards (`theater/TheaterLayout.tsx`, `useWide` = `lg`): New gets a left column (title, count, `FeedSwitch`, Up next with why lines) and a "Next, in N seconds" card under the stage; My saves and search put Up next on the right; channels and moments play in a dimmed room with a side panel (Keep this channel for Made for you, Share channel; Live · pace, Say something quick words, Stay close / Wander). The stage is a rounded frame shaped to the media (`mediaAspect`, else the video's own size, 9:16–16:9) with the byline (Gob faces + "You, Ana and 2 others saved this · 3h", the network line linking the original, two-line caption) and transport on its scrim; the rail (Save, Share, Download, ⋯) sits beside it. Only leaf placement depends on `useWide`: the Stage keeps one tree position at every width. Below `lg` it stays the full-bleed reel with a thin seek line (tap to pause, swipe to move) led by a small play/pause glyph. **Every control the boards hide keeps a button**: Previous/Next show as the channel room's stack at `xl` and as small glyphs after play/pause in a moment's room (`transportSkips`); elsewhere they sit on the transport as `sr-only` buttons revealed on keyboard focus (never two visible pairs: e2e clicks `Next` by exact name). Repeat is a ⋯ row read as "Repeat: This post". Paste is ⌘V on wide screens, with the pill kept as a focus-revealed button (`PasteButton keyboardOnlyFrom`), and Paste a link in ⋯ below `lg`. Phones: `BottomNav`, a fixed bar with all five, the theater included (its root stops 64px above the bottom on phones). The page stays clear of it via `body:has([data-nx-bottom-nav])` padding in globals.css; never put a spacer in the header. Signed-in `/` → `/play?feed=new` (New; a just-added post `?added=&id=` still opens the theater on it); leaving My saves in the theater goes to `/now`. A new full-screen route must also be added to AppShell's hide-the-old-Header lists. **Signed out**: AppShell's client redirect sends `/search`, `/play`, `/channels`, `/settings` to `/start?returnTo=<path+query>` (older private pages still go to `/`); `/play?moment=` and `/play?channel=` are public and render (read from `window.location` in an effect: the root layout can't `useSearchParams`). `AccountMenu` shows **Sign in** (with returnTo) when signed out; `PasteButton` and `SaveTools` render nothing; theater Save sends you to sign in. `SaveTools` (onboarding) = learning pill + Paste for any `NxHeader`, portalling its toast/sheet to `body` (a blurred header traps fixed children). `/welcome` is one new-look step (pick your name → `returnTo`); the starter-playlists step is gone (an empty My saves was a dead end). `/start` and the 404 (`not-found.tsx`, full-screen) are new-look too. Theater empty/error screens use `NxHeader` and say why (`emptyState`: moment passed → Right now, channel missing/private → Channels, empty My saves → Bring in X bookmarks). **Channel visibility**: owners get a Public/Private switch on `/t/{user}/{tag}` (`PATCH /api/tags`); a private channel hides its link; count/visibility come from `/api/channels/by`. Made for you **Keep** is private by default. `invalidateTagCollectionCache` clears every module copy's cache (registered on `globalThis`): route handlers and pages are separate copies in Next. **Search is instant** (`QuickSearch.tsx`): headers use `HeaderSearch`, a real field on desktop (Enter → `/search?q=`; `/` in the theater focuses it) and a button on phones. That button and the tab bar's Search call `openQuickSearch()`, which focuses inside the tap (the only way iOS raises the keyboard): the Search page's own `#nx-search` if present, else the `QuickSearch` sheet, whose field is always mounted (transparent, `pointer-events-none` while closed) by `BottomNav`.
-
-- **Routes helpers** (`src/lib/next-ui/routes.ts`): `savedToPlay`, `libraryToSearch`, `TAGS_TO_CHANNELS`, `startHref` (sign-in that returns to the exact address).
-- **Tokens** live _alongside_ Matter: `--nx-*` RGB vars in `globals.css`, Tailwind `nx-ink` (#0f0e0c warm black), `nx-stage` (#000), `nx-cream`, `nx-accent` (#ffd23f), `nx-muted`, `nx-hairline`, …; fonts `font-nx-serif` (Instrument Serif) and `font-nx-sans` (Hanken Grotesk), loaded in `layout.tsx` with `preload: false`.
-- **Legibility rule**: text over media sits on `.nx-scrim` (transparent → black .9) **and** `.nx-text-shadow`; chips/controls over media use `.nx-plate` (black .38 + shadow + blur). Motion is `animate-nx-*` and is disabled under `prefers-reduced-motion`.
-- **Primitives** (`src/components/next/`): tiles `VideoTile` / `PhotoTile` / `PostTile` / `ArticleTile` / `GifTile` (+ `NextTile` dispatcher; row height via `--nx-tile-h`, default 340px), stages `TallVideoStage` / `WideMediaStage` / `PostStage` / `ArticleStage`, loader `AdhxFace` / `AdhxLoader` / `Shimmer` / `StageSkeleton` / `PasteToast`. All take `FeedItem`; view helpers are in `post.ts`.
-- **Preview**: `/dev/next-ui` (dev only) renders every primitive with the signed-in user's saves (sample posts when signed out).
-- UI copy never names models or techniques — say "learning", "channels", "words only".
-- **Search screen (phase 3)**: `/search` (`src/app/search/page.tsx`) renders `SearchScreen` (`src/components/next/search/`) (signed out → `/start`). AppShell treats `/search` as full-width and account-owned. State lives in the URL (`?q=&scope=&type=&words=1&view=bento|groups|queue`), synced with `history.replaceState` — NOT `router.replace`, which re-renders the server page per keystroke and dropped the flag. `useSearch` fires an instant request (~120ms debounce) and a `refine=1` request after a pause, aborting stale ones; answers apply only to the input they were asked for. Bento = best match (muted autoplay preview via `previewVideoSrc`, own proxies only) + CSS-columns masonry; Groups = by strongest match signal; Queue = ranked list with "Why this one". Taps open your saves at `/saved?open=` and others' posts on their public page; theater v2 will take the whole list as its queue. Recent searches are per-browser localStorage.
-- **Theater v2 (phase 4)**: `/play?q=&scope=&type=&words=1&group=<signal>&start=<platform:id>` (`src/app/play/page.tsx`, flag off → `/saved`) renders `TheaterV2` (`src/components/next/theater/`). The queue is the search's results fetched with `refine=1` (same order the search showed), optionally one Groups signal; every search tap / Play all / Play this group links here via `playHref`. Media playback is the CURRENT theater's `Stage` (persistent `<video>`, Instagram probe, YouTube iframe) — never fork it; v2 drives it only through the window events in `usePlayerState.ts` (`theater-pause|resume|set-muted|set-volume|seek`, PiP toggle; listens to `theater-playing-state|muted-state|video-progress`). `theater-set-volume` was added to `StageVideo` for the slider. Posts/articles render phase 0 `PostStage`/`ArticleStage` over a covered Stage; non-video posts advance on `useDwell` (`dwellSeconds`); articles wait for Skip. An X article (`hasFullArticle`) shows `ArticleReader` (`components/next/stages/ArticleReader.tsx`) inline as the stage (arrow up/down scroll it instead of skipping): the whole body from `fetchArticleMarkdown` (the public tweet JSON), parsed by `parseArticleMarkdown`, in the reading font with Bionic Reading when on; it falls back to the summary plus a link to the original. Rail (the phones' order): React, Save (`/api/bookmarks/add`), Share (always the post's page: opens `ShareSheet` with the link in a field, Copy link, and the device's share sheet where there is one; a blocked copy selects the link and says so; a playing video pauses while it's open and resumes on close), Download (`useSendFile` for pictures/videos, pausing a playing video around the phone save sheet; for posts and articles it's "Copy the text"/"Copy the article", whose icon turns into a tick for 2s on success and says "Words copied"), the network's own mark (`OriginalSheet`: the poster's picture else the mark in a round tile, their name else handle else the network, "@handle · Posted 18 Oct 2026" with the small mark only when their picture leads, all their words or a kept X article in full, Open on {network}, Copy link; frosted, focus-trapped, Esc closes), ⋯ (Why this one, add to a channel, Just for me, copy link, More like this (`GET /api/search/similar`, inserted after the current post), open original, repeat, Videos only, Stick to this vibe, picture in picture, archive; below `lg` also Up next and Paste a link). Wide screens open ⋯ and Share beside the rail. "Stick to this vibe" (default on) appends similar posts when the queue runs out — similar ignores the search's type filter unless Videos only is on. Posts added by More like this / Stick to this vibe carry `via` (`addedVia` in `queue.ts`): the counter counts only the source's own posts (`queuePosition`), added ones show a "More like @x’s video" note that says why (`viaReason`: "Your search finished, so similar posts play next" or "You asked for more like this") · n of m, Up next gets a heading per run, and the switch is announced in a toast. A video the stage finds gone (410) fires `theater-media-gone` and is dropped from the queue. Async queue changes go through `itemsRef`/`replaceItems` (a state-updater flag read back synchronously is always stale).
-- **New and the blended feed** (`/play?feed=new|everyone|friends|mine`, `source.feed` in `queue.ts`; contract in `docs/specs/friends-feed.md`): the queue pages through `GET /api/feed/blend` (`feedUrl`, 20 a page, the next page fetched four posts from the end; an opaque cursor reads a per-user snapshot kept ~5 min by seed in `src/lib/feed/blend-db.ts`, so pages never reshuffle). Scoring is pure in `src/lib/feed/blend.ts` (`blend`, `scoreCandidate`, `applyVariety`, `BLEND_WEIGHTS`): fresh (e^(-h/24)), saved together, close to you (share of a friend's visible saves you've seen or saved, from `post_views` + co-saves), like what you keep (cosine to the mean of your last 50 saves' `post_embeddings`, ranked within the pool), seen (out of New, ×0.35 elsewhere), your own (×0.3, one in four, none in New/Friends only), "Show more / less from …" (`user_preferences` `feed.weights`, `GET|PUT /api/feed/weights`, phone `/api/app/feed/weights`), then no friend or topic more than 2 in a row. Candidates are `seenBy` saves of the last 14 days (Everyone/Friends reach further back on a quiet server), minus moderated and gone posts. Each item carries `why` + `whyReasons`: the stage's top-left `WhyChip` ("Saved together", or the why line; left out when it would only repeat the faces line), a why line per Up next tile, and **Why this one** in ⋯ (`WhySheet`: every reason plus Show more / Show less per friend). Everyone · Friends only · Mine (`FeedSwitch`) and **What's in your feed** (`FeedTypesControl`: Videos / Photos / Text posts / Articles chips, at least one on) sit in New's column on wide screens; below `lg` both are in `FeedFilterSheet`, opened from the header's filter button. Kinds (`src/lib/feed/kinds.ts` `postKinds`, the same reading as `toPhonePost` / search's type filter; sound counts as video) filter the blend: `types=` on the request, else `user_preferences` `feed.types` (`GET|PUT /api/feed/types`, phone `/api/app/feed/types`), else video + photo; `caughtUp` and `why` apply within it and New's `waiting` counts what it holds back ("4 text posts waiting · Show them" on the caught-up card → `/play?feed=new&types=text`, this visit only; `source.feedTypes`). Seen (`useSeenPosts`): 2s on stage, or moving on before that, batched to `POST /api/views` (≤50, keepalive, flushed on hide); members only. When New runs out (or opens with nothing unseen) `CaughtUpStage` replaces the stage: "You’re all caught up. / Go touch grass.", Browse channels, See what’s live, Watch it all again (→ `feed=everyone`). New with `nothingYet` (nobody else saved anything lately) says "Nothing new yet. Save something for your people to find." with Paste. Phones: `GET /api/app/feed` (PhonePost + `why`) and `POST /api/app/seen` on the phone key.
-- **Channels (phase 5)**: a channel IS a tag — no second system. Public link = `/t/{username}/{tag}` (`tag_shares.is_public`), "Save channel" = the existing clone route, Top channels = `/api/collections/trending` (Discovery leaderboard). Under `next_ui`, `/t/…` renders `ChannelPage` AFTER the existing view recording (owners also see their private channel); `/channels` shows **From everyone**, **Your people**, Made for you, Your channels, Top channels (one `GET /api/channels` = `channelsOverview()` in `src/lib/channels/overview.ts`, shared with the phone's `GET /api/app/channels`). Theater Save opens "Saved · add to a channel" (`SaveSheet`): ticks = `POST|DELETE /api/bookmarks/[id]/tags`, new channels are tagged then made public via `PATCH /api/tags` (logic in `src/lib/tags/visibility.ts`, shared with keep). Play: `/play?channel=user/tag` (anyone, via public `GET /api/channels/by/{user}/{tag}`, anonymised like Everyone search), `/play?auto=slug`, `/play?group=slug` (a `group` value that names a search signal — words/picture/video/keywords — is still a search group; group slugs never take those names) and `/play?friend=username[&new=1]`. **From everyone** (`src/lib/channels/group.ts`, table `group_channels`, server-wide, no `user_id`, members only): the newest 2000 posts with a visible save (`visibleSave`; hidden-by-admin posts out, fail closed) → the same `meanVectors` + `groupSaves` + `bestClusters` + `nameClusters` as Made for you (seed `adhx:everyone`). Stored with `savers` (user id → posts, compute-time) and `saves_at_compute`. Recomputed when missing, model changed, >12h, ≥10 visible saves gained/lost, or a counted saver has left/been banned; one compute at a time, in the background when rows exist. Every read re-checks each post's visible savers (`groupChannelsFor`: size, `members`, up to 3 `savers` faces, `newCount`; `groupChannelKeys`: newest save first), so private/ban/delete take effect at once. **Your people** (`src/lib/channels/friends.ts`): one channel per other member with visible saves (`listMembers`), `newCount` = their visible saves you haven't saved or seen (`newTo`), queue = their visible saves newest first (200). `GET /api/channels/group/{slug}` and `GET /api/channels/friend/{username}[?new=1]` (adds `friend` and `note`, the friend's latest visible note; your own name 404s) return the auto queue's shape, each item with `isNew` (`newKeysFor`: not saved or seen; phone `/api/app/channels/{group|friend}/*` too). The friend page draws "New" from it and the note as `FriendNoteTile` (second tile). `/channels/friend/{username}` (`FriendChannelPage`, members only, yourself → My saves) has Play all, Play the N new ones and "Only people on this server can see this page." Rows live in `channels/PeopleRows.tsx`; the invite link (`/settings#people`, Settings → Your people) shows when `canInvite`. Saver faces are links (`SaverFaces linked`: role=link spans that stop a tile's click; search/channel tiles and group cards) and the theater's faces are `SaversButton`, a "Who saved it" popover portalled to `body` (each saver, when, See Ana’s saves / See your saves). **Made for you** (`src/lib/channels/auto.ts`, table `auto_channels`, private): per-save vector = mean of its understood kinds → spherical k-means (`cluster.ts`, seeded per user, groups >36 split again) → ranked by cohesion×√size, top 8 → each named from `CHANNEL_NAMES` (closest 6 by meaning via `embedQueries`, Jev `choice` over sample post words, else the closest). Recomputed when missing, model changed, >7 days, or >12h with ≥5 save changes; one compute per user at a time. `POST /api/channels/auto/{slug}/keep` tags its posts (skipping posts at `MAX_TAGS_PER_POST`) and makes it public. Display names via `channelTitle()` ("dev-tools" → "Dev tools"). Jev calls go through `src/lib/semantic/jev.ts` (strings made well-formed BEFORE `JSON.stringify` — it escapes lone surrogates rather than dropping them).
-- **Settings** (`/settings` → `SettingsClient` → `SettingsScreen` in `src/components/next/settings/`): full-width with `NxHeader` + `LearningPill` (AppShell: no old Header, no install banner). Desktop (`lg`) has a sticky section nav (You, Your people with the waiting count, Phone app, Watching and reading, Your X bookmarks, Danger zone); **You** (`AccountCard`, `#you`: picture + `AvatarDialog`, display name, username, email, Just for me by default) and **Your people** (`PeopleCard`, `#people`: Waiting for you queue for admins, members with save counts, role chip and an admin ⋯ ban/unban via `/api/admin/users`, pending invites, Who can invite) sit side by side on `xl`. Then Phone app, keys, Admin, install cards, Watching and reading, then **Your X bookmarks** (`SyncCard`, `#sync`): Connect X (`/api/auth/twitter?returnUrl=/settings?sync=1`) or Sync with live progress via `useXSync` (same bars as `/start`), the once-an-hour wait from `/api/sync/cooldown`, counts from `/api/sync/history`; `?sync=1` scrolls there and starts a sync when allowed, then `router.replace('/settings')`. Then Past syncs, Account (picture / email / username via `UsernameChooser` `theme="next"`, Sign out), Admin (admins), phone install cards, Watching and reading (sound, Bionic Reading, reading font), Danger zone (typed CLEAR / DELETE in a `Sheet`). Theater v2 honors them too: sound via `useTheaterSoundPreference` (shared with `TheaterShell`), Bionic Reading on post / quote / article-summary text in `next/stages`, and the reading font on reading-sized text only (posts over `READING_LENGTH` 200 chars, quotes, the summary). Short posts keep the poster serif unless Bionic Reading is on, because Instrument Serif has no bold weight.
-- **Onboarding (phase 6)**: `/start` (`?returnTo=` safe path, `?sync=1` auto-imports) = `StartScreen`: email → `POST /api/auth/email/request {email, returnTo}` → "Check your inbox" (60s resend; polls `/api/auth/me` every 3s so opening the link in another tab signs THIS tab in) → "Bring your X bookmarks": Connect = `/api/auth/twitter?returnUrl=/start?sync=1` (scopes are read-only), import = `useXSync` over the existing `/api/sync` SSE (`page`/`processing`/`progress`/`complete`/`error`, errors via `parseSyncErrorEvent`; `reauth` → Reconnect), second bar = understood words from the status API; done shows Made for you rings. New email accounts still pass through `/welcome` (name pick) via the callback. Signed-out `/search`, `/channels`, `/play` (non-channel) → `/start?returnTo=…` with the full address kept (`startHref` in `next-ui/routes.ts`). **Paste** (`usePasteToSave`): document `paste` outside text fields, or the Paste pill (`navigator.clipboard.readText`, falling back to a paste box) → `POST /api/bookmarks/add` → phase 0 `PasteToast`; outside the theater "Play" → `/play?recent=1&start=key` (queue = `/api/feed` newest 100, start post fetched and prepended if older); inside the theater the post is inserted next and plays, toast offers Add to channel. **Learning** (`learning.tsx`): `LearningPill` (conic ring; hidden when done — failures are never shown, the worker already retries them) + `LearningSheet` (rows, what's happening now, no failure row) on search, theater and channels. `AccountMenu` (avatar in the search, channels, settings and theater headers): Sync X bookmarks / Connect X (`/settings?sync=1`), Settings, Sign out. Copy must stay true: frames every 2s, what's said is transcribed and text on screen read, all "understood on your own server, and none of that leaves it" — Jev does receive query + the post's own text, so never claim nothing at all leaves. Search items carry `learning: true` (from `stillLearning()` in `semantic/status.ts`) → "Words only" badge.
-
-### Theme System (dark only)
-
-- Dark is the single product theme. `layout.tsx` server-renders `<html class="dark">` and a fixed `#08070a` browser theme color, so there is no preference lookup, system-theme branch, or FOUC script.
-- Legacy `localStorage.theme` values are never read, so old `light` / `system` preferences cannot affect rendering.
-- There are no theme controls in public navigation, account dropdowns, theater menus, or Settings. The former theme context, resolver, `ThemeToggle` component, and Matter-light token set were removed.
-
-### UI Patterns
-
-**Mobile Input Zoom Prevention:**
-iOS Safari auto-zooms when focusing inputs with `font-size < 16px`. Use responsive classes to maintain 16px on mobile while allowing smaller fonts on desktop:
-
-```tsx
-// ❌ Causes zoom on iOS
-className = 'text-xs ...'
-
-// ✅ 16px on mobile, 12px on sm+
-className = 'text-base sm:text-xs ...'
-```
-
-**Theater keyboard (desktop power users):**
-The library grid and Settings bind **no** keys. The theater keymap lives in `src/components/theater/theater-shortcuts.ts` (`resolveTheaterShortcut`, `THEATER_SHORTCUT_KEYS`) and `useTheaterKeyboard`:
-
-- Navigate: `→` `J` next, `←` `K` previous, `↓` `↑` scroll text/articles (they do not change posts)
-- Theater: `1` Saved, `2` Discover (signed-in personal theater and signed-in shared previews; no-op signed-out / playlists). `Q` toggles Queue (the full playlist: desktop panel / mobile up-next sheet); on desktop, `Shift+Q` toggles the type-filter flow and focuses its current choice. While Queue is open, `↓`/`↑` move through the list (they do not scroll the stage), Enter plays the focused row, Esc or a click outside closes. In the desktop filter flow, arrows move, Space selects in place, Enter selects and closes, and Escape closes. Live and Saved queue types (Videos / Photos / Text, with articles included in Text) are single-choice filters in Queue / the up-next sheet, persisted independently per destination. Playlists omit the pills. Queues start newest-first, then rotate around Now playing so it is always the first row and the post just left moves to the tail. The desktop filmstrip, desktop Queue, and mobile sheet defensively normalize this current-first order; Saved transport consumes that same rendered traversal after deep links, queue picks, and Seen-row selections. Repeat off completes one pass (`N in queue`); Hide watched independently excludes history. Repeat all is the playlist size (`N on repeat`). Repeat this post is `1 on repeat`; deliberate Next exits it into Repeat all. A new post plays immediately if caught up; otherwise it becomes Next without stealing the stage, including cross-tab and poll arrivals. Previous always works when another row exists; wrapping from the head promotes the session to Repeat all. Repeat-off Queue has Now playing, Next (what's left to play), and Seen. Repeat is Now playing and Next only. An active filter keeps the toggle labelled Queue and adds a clay ListFilter cue (the closed button labels the selected type; hover title names watch filtering too)
-- Playback: `Space` play/pause (`theater-toggle-play` — video stages and the 10s timed dwell on photo/text/article), `M` mute, `E` expand (hide/show chrome), `R` cycle repeat
-- Actions: `S` Save, `T` Tag (picker autofocuses the new-tag field; arrows move the list, Space/Enter toggle a row; Enter in the field creates, assigns, and closes), `L` copy link, `C` copy text, `D` download/send, `O` open original, `F` Read / Watch, `A` Archive (collection), `U` undo Archive
-- Also: `.` menu (arrows / J K move, Enter opens the focused item), `W` Watch again (caught-up: includes watched posts without clearing history, then starts the newest matching post), `P` Keep playing (Saved end-of-queue stage), `?` (Shift+/) help overlay (`TheaterShortcutsHelp`), `Esc` close help / Queue / collection
-- Paste a link is the OS shortcut (`⌘V` / `Ctrl+V`) — the chrome listens for the `paste` event, not a keydown
-
-Action keys dispatch `theater-*` window events; each chrome clicks the matching `[data-theater-action]` control and no-ops when that surface is CSS-hidden (`lg` split). Overlays (sign-in, tag picker, avatar menu, Queue, help) stop `THEATER_SHORTCUT_KEYS` so they don't drive the stage.
-
-**Cross-Component Keyboard Feedback:**
-When keyboard shortcuts need to trigger UI in child components, use custom events:
-
-```tsx
-window.dispatchEvent(new CustomEvent('theater-toggle-play'))
-
-useEffect(() => {
-  const handler = () => triggerAnimation()
-  window.addEventListener('theater-toggle-play', handler)
-  return () => window.removeEventListener('theater-toggle-play', handler)
-}, [])
-```
-
-This avoids prop drilling and keeps keyboard logic centralized while allowing distributed UI responses.
-
-### Home routing & the old Theater (history)
-
-> **History.** This describes the retired X-first / `TheaterShell` product. Kept for context on old URLs and data; see the overview at the top and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the current system.
-
-**Terminology (owner decision):** a **playlist** is a single shared tag — the thing at `/t/{username}/{tag}`, the thing `/leaderboard` ranks, the thing you clone with **Save playlist**. A user's own pile of saved posts is **Saved** (the theater tab at `/saved`; `/collection` 308s there). The grid that browses it is the **Library**. Keep those three words straight in UI copy: playlist = one shared tag, Saved = your saves, library = the grid over them. APIs, DB columns (`collection_events`, `tag_shares`) and the `/api/collections/*` endpoints still say "collection" — they're indexed, in sitemaps, and public contracts.
-
-**Which timestamp a surface shows.** Three different questions, three different answers — do not unify them:
-
-| Surface                     | Time shown                                      | Source                                                                                    |
-| --------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Live / trending (community) | when the post first entered ADHX, by anyone     | `getTrendingItems`' `addedAt` = MIN(earliest saver's `processedAt`, first activity event) |
-| Saved, `/library`           | when **this** user saved it                     | their own `bookmarks.processed_at`                                                        |
-| A playlist (`/t/{u}/{tag}`) | when the curator added the post **to that tag** | `bookmark_tags.created_at`                                                                |
-
-Owner rule: on a user-owned surface the user's own timestamp always wins, even when the post entered ADHX earlier via somebody else — "users get control over when they are creating things that are related to them". `bookmark_tags.created_at` exists precisely because "saved it" and "curated it into this playlist" are different events, often months apart; it's nullable (added to an existing table) and `migrate.ts` backfills old rows from the bookmark's save time, which is what readers also fall back to. Never the source platform's publish date, anywhere.
-
-**Routes:**
-
-| Route         | What renders                                                                                                |
-| ------------- | ----------------------------------------------------------------------------------------------------------- |
-| `/`           | signed-out: public live theater + crawlable static list. Signed-in: **redirects to `/play?feed=new`** (New) |
-| `/live`       | signed-in Discover tab (community pulse) — unseen newest-first. Signed-out: redirects to `/`                |
-| `/saved`      | redirects to `/play?recent=1` (`?open=` → `&start=`)                                                        |
-| `/collection` | 308 → `/play?recent=1` (legacy URL)                                                                         |
-| `/library`    | redirects to `/search` (`?search=` → `?q=`)                                                                 |
-
-The Live ⇄ Saved switch is a pair of ROUTES (`/live` ⇄ `/saved`), not local state, so each side is linkable and survives a reload — `TheaterShell`'s `onPersonalTabChange` flips the tab locally (instant) then the page navigates. A Live caught-up stay (`waiting`) survives that flip so coming back does not keep playing the Saved clip on the shared `<video>`. `theater-resume` still fires for Saved, but StageVideo no-ops while `covered` (Live waiting / Saved All Clear / a non-video stage). Live auto-advance (`onEnded` / `theater-advance`) marks the leaving post seen — clips shorter than the 2s dwell used to stay unseen. Saved All Clear is a z-10 overlay; `<Stage/>` stays mounted (`covered`) so the iOS unmute grant survives. A Saved add after All Clear jumps to index 0; while a post is playing, an add is inserted immediately after its cursor so Queue and transport agree on Next. Live Save prepends with `idPlatform`, same as paste. Read (`articleMode`) resets on the staged identity, not `personalIndex`. Live poll runs as soon as `live` becomes true. Repeat/queue-type prefs, membership lookup, and transport live in dedicated hooks. Live and Saved begin newest-first, then preserve a current-first circular session order: arrivals are Next unless already caught up, advancing rotates the departed row to the tail, and Previous wraps by promoting to Repeat all when needed. Queue headings are Now playing / Next, plus Seen when Repeat is off. Live `replaceState`s the address bar onto the staged post (same as signed-out `/`); Saved stays on `/saved`, and flipping back writes `/saved` even if Live left a preview path in the bar. `TheaterShell` snapshots `personalItems` at mount, so `/saved` fetches the queue BEFORE mounting the shell; `/live` never waits on it. Saved opens newest-first (`?open=` still wins via `preserveSavedStart`). Signed-in `/` opens Saved at `/saved`; community Discover at `/live` is secondary.
-
-**Launch UX (2026-09-13):** Visible destinations are **Saved** (`/saved`, signed-in default) and **Discover** (`/live`, community feed). Internal `collection` / `live` identifiers remain compatible. Saved loads all non-archived saves via paginated `/api/feed`; incomplete loads show Retry. New Discover visitors get Videos + Hide watched; Saved gets All posts + Hide watched off. `useTheaterQueueTypes` and `filter-preferences.ts` remember each destination independently under `adhx-theater-filters-{discover,saved}-v1`, including explicit All (`types: []`). Legacy type choices migrate; shared links use separate ephemeral type choices, and playlists remain unfiltered. The labelled filter beside Queue groups single-choice Post type controls and one Hide watched switch. No second navigation row. Watch history remains browser-local with the existing 500-mark bound. Repeat does not override Hide watched. Discover's **Watch again** includes watched posts and restarts without erasing history. A pass-local departure set lets All + Repeat off finish once. Paste link has a dark fill and orange edge in theater chrome; mobile media actions stay 44px and icon-only, desktop actions have labels. The first-visit hint and empty-account copy teach paste → watch → send. Downloads verify media bytes before emitting `post.send`; native cancellation emits no success. `post.play` comes only from confirmed media playing events; `post.view` is still preview/dwell. See `docs/specs/launch-ux.md`.
-
-`src/app/page.tsx` is a **server component** (`force-dynamic` — reads cookies + SQLite). The theater spec is `docs/specs/theater-first.md`. The theater is a full-bleed near-black stage (`#08070a`, both themes) + viewport-responsive chrome, built from `src/components/theater/`:
-
-- `TheaterShell` (`fixed inset-0 z-[60]` — deliberately overlays the global Header since AppShell can't see auth; revisit in Phase 3) owns current-item state, keyboard (`useTheaterKeyboard` + Shift+? `TheaterShortcutsHelp` — see "Theater keyboard" above), the 2s-dwell seen-marking + `POST /api/activity/preview` pulse, and prefetch-next. Desktop (`lg+`) mounts `DesktopStageChrome` (overlays: top bar with brand + LIVE/tabs + a paste button that expands into the preview field, ⌘V still works globally — on signed-in Live / Saved paste **adds in place** and stays on `/live` or `/saved`, if saving fails, it opens the canonical preview and keeps the previous stage covered until navigation completes (metadata failure must not bounce playback back) — same-tab paste plays the new post immediately and the interrupted clip is Next; if the Queue type filter would hide the new post it resets to All (same reset on a second window's `tweet-added`); a second-window add is Next while you stay on Live — flipping to Saved starts newest-first; changing Videos while a text post is on stage snaps to a matching post or caught-up, never a blank stage; Saved Queue marks Watched only for posts actually left this session (a second-window prepend and rows skipped by Videos are not Watched); playlist mode has no paste; avatar stays top-right; flame chip left of paste on every post type (never next to the author); caption overlay; bottom actions — Open is the source-platform glyph, no "Open" label) + `DesktopDock` (bottom filmstrip: 3-col transport — prev / play-pause / next over expand / repeat / mute — plus horizontal queue cards auto-scrolled to keep current visible, compact playlist/count and filter controls matching mobile, and a "Queue" panel reusing `UpNextList` with Live / Saved type pills: All / Videos / Photos / Text, where Text includes articles; playlists omit the pills). The de-clutter restore (Minimize2) floats bottom-left, never top-right. Mobile (<lg) mounts `TheaterMobileChrome` (top/bottom scrims, a joined right-side swipe capsule, a frosted post-action rail, and a bottom bar with Queue/filter plus transport/audio/repeat/focus; the same queue pills sit above the up-next list). The platform+added-to-ADHX chip is gone from stage chrome (nobody cared about when it landed here); filmstrip / Up-next still show `addedAt`. Shared wiring lives in `SavePostButton`, `TheaterCollectionActions`, `TheaterMetaChips`, `TheaterTagCount`, `useTheaterCopy`, `useTheaterStageEvents` — do not copy those back into either chrome.
-- `TheaterAvatarMenu` (mounted in the top bar/scrim by both chromes) is authed-only by default — signed in: the account dropdown (**Theater** with the Radio icon + same 13px row as Library; **Live** / **Saved** indented under it with their own icons; then Library / Tags / Leaderboard / Settings / sign out). Desktop also keeps the top-bar Live ⇄ Saved pill; both chromes pass `theaterTabs` so `.` + arrows can pick those tabs. Callers that pass `allowSignedOut` get a burger-menu fallback (Menu icon, same slot/geometry) for signed-out visitors instead of nothing: **Theater** (closes the menu if already on `/`, else links home) / **Leaderboard** (`/leaderboard`) / **Sign in** (fires `onRequestSignIn`, wired to the shell's existing `openSignIn`/save-post sign-in-modal flow). Only the home/shared-mode mounts pass `allowSignedOut` — the collection theater is always reached authed, and collection mode's own "Make your own" CTA is its signed-out conversion path, so neither does.
-- Feed = `getTheaterFeed()` (`src/lib/theater/feed.ts`): `getTrendingItems()` + public-tag backfill when < 12 items. **Seed limit must match `/api/activity`'s LIMIT (30)** or the first poll surfaces old items as "fresh". Crawlable SEO content is server-rendered by `TheaterStaticList` (sr-only list + CollectionPage/ItemList JSON-LD + hero copy).
-- Seen model: `adhx-seen-v1` remains the readable 500-key localStorage projection, while immutable V2 per-key/batch operations are the cross-tab authority (newest 500 marks + 500 tombstones). Bulk unmarking is one atomic batch; Watch again no longer unmarks history; storage events coalesce and recompute current authority, so tabs never write stale snapshots. Existing V1 arrays migrate once; a tab still running pre-V2 code must reload before later seen changes can propagate. `adhx-last-visit` is still written on pagehide/hide only → "N new since your last visit" divider in `UpNextList`. Zero per-user server cost.
-- Playback: `usePlaybackSource` → `reelVideoSrc` (video-src SSOT). Twitter/TikTok play via the intentionally persistent `StageVideo`; every async `play()` result and native media event is source-generation/lifecycle guarded, so a superseded clip cannot mute, replay, error, or advance its replacement. **Never key/remount this video element** — iOS grants unmuted playback to the element. **Instagram** uses `StageInstagram` (Range-probe the media proxy before attaching `<video src>` — cold cache; IG-embed fallback); **YouTube** uses `StageYouTube` (nocookie iframe, concrete-height box); **X Articles** use `StageArticle` (splash is tweet-style author row — avatar + name + `@handle`, tappable to the author's profile — plus the headline; no ARTICLE chip. Body = `article.content` from `/api/share/tweet/{author}/{id}`, rendered by the dependency-free parser in `src/lib/theater/article-markdown.ts`). **Off-site link tweets** (Substack/Medium/…) stay on `StageText` with a `StageLinkCard` — do not send them to `StageArticle` (there is no X Article body; the OG thumbnail is not a tweet photo). Text/quote stages use the same tappable `StageAuthorRow` and a full-height reader: parent text + parent photos/video + the **full** quoted tweet (text and photos/video — never a 4-line clamp). A short tweet floats in the middle of the stage; a long one starts below the chrome (`STAGE_TEXT_TOP_PAD`) and scrolls. Photo+quote and video+quote default to full-bleed parent media with a 2-line caption; multi-photo and multi-video tweets snap sideways (a frost pill overlaid on the painted bottom of the clip — object-contain, so letterboxed Watch on a phone still sits on the picture, not the peek bar — tap it for the next clip; tap the right/left third also works), not first-item-only. Twitter albums use `/api/media/video?index=` (1-based, same as photos). The last clip’s `ended` advances the queue; earlier clips advance the album. **Read** (also for any overflowing caption) opens the stacked article — photo albums seed every still from `photoCount` (Saved / shared preview) so the essay shows the full set immediately; a playing video album keeps its snap chrome in the top band with the same on-picture pill. A playing parent video stays mounted in a top band so it continues while you read (never fade/blur the clip — `StageArticleVideoFade` is a stage-black gradient in the strip _below_ it so the essay can tuck under; isolate the stage so the band's `z-20` stays under chrome `z-10`); **Watch** (`TvMinimalPlay`, not Film) goes back to full-bleed. The Tag button carries a count of tags on the post (max 5); assigned tags sort to the top of `TagQuickPicker`. Playback defaults muted unless the account's **Sound on by default** preference is enabled. That account preference is the fallback; the latest audio-button choice is stored browser-wide and synchronized across tabs. Mobile may reject a gesture-less audible autoplay or cross-tab unmute, so playback safely falls back to muted and the next stage tap retries the saved choice inside the user gesture. Sound uses the dock/peek-bar audio button (always present, disabled on non-video; pulsing while muted on video) — tap no longer unmutes. A tap on the video or photo hides chrome and starts playback; tapping again restores overlays without pausing (pause is the peek-bar / dock button or Space). Playback state driven by media events (`onPlaying`/`onCanPlay`), never by racing `play()` promises against `autoPlay`.
-- Mobile (<lg) is the reel: full-viewport stage, top/bottom scrims, and a bounded right-side thumb zone (`useMobileSwipeNavigation`) where swipe up/down moves next/previous. The up/previous and down/next tap fallbacks are two halves of one frosted capsule; a swipe may start anywhere inside it. Bounding the gesture surface preserves article scrolling, album swipes, links, and embedded-player controls across the rest of the stage. Save/Tag/Archive, Share, and Open form a vertical frosted rail immediately above the capsule; it disappears while Queue is expanded and returns only after the sheet finishes closing. Share opens a keyboard-isolated, type-aware menu: Copy text/article only when text exists; Download + native file Share only for sendable media; Share link always. The rail Share glyph flashes a green tick only after the selected action succeeds, then resets automatically and on post changes. Explicit downloads use attachment endpoints, while native file sharing keeps the prefetched-blob path. Repeat-off keeps session back-history so up can rewatch the post just left, and every resolvable direct shared-post landing visibly starts as Repeat one. Tapping Repeat or deliberately moving to another post promotes the queue to Repeat all. The bottom bar makes playback the stable hierarchy: the playlist button shows how many posts will play plus a separate unseen badge; Filter opens a compact counted type picker without expanding the playlist; focus, prominent play/pause, repeat, and mute/unmute stay grouped right in that order. Repeat-one text/photo posts retain the playback button in its disabled state instead of shifting the group. Tapping a stopped video starts it and enters focus; tapping a playing video never pauses it. Focus/de-clutter hides the post-action rail, capsule, and scrims while the bottom transport remains visible as the exit path; invisible swipe navigation still works, and a tap in the zone also restores the chrome. Pressing Focus while Up next is open closes the sheet and enters de-clutter in one action. When Up next expands, post actions disappear instead of moving onto its edge. The 70%-of-theater sheet is overflow-clipped and does not focus a queue row on open (that panned iOS and hid the Live type pills). The bottom scrim is `pointer-events-none` except the caption (media) and action rail, so article/tweet body still scrolls in the empty caption zone. Text/article/quote scrollers use `STAGE_TEXT_SCROLL_PAD` so the last lines can sit above the action rail + peek bar. `/trending/play` 307s into the theater.
-- Send-the-file: `useSendFile` (2s-delayed MP4 blob prefetch so `navigator.share` opens in-tap on iOS; `files` + `text: "via <url>"`, never a `url` key with `files`; desktop falls back to download). **It's mounted on both desktop dock and mobile chrome** — the module-level in-flight dedupe in `useSendFile.ts` is what stops every MP4 downloading twice; keep it.
-- **Preview pages now play in the new theater** (2026-10-17): `SharedPreviewPage` keeps the server side below (generateMetadata, the not-awaited `sharedResolve`, the Suspense JSON-LD + `SharedPostStatic` sibling, pulse recording in the resolver) but renders `PreviewTheater` (`components/next/theater/`) instead of `TheaterShell`: Suspense fallback = TheaterV2's loading screen; resolved → `TheaterV2` with `source.shared` and `lead` (`theaterItemToFeedItem(item)` for the word stages, `stage: item` so media plays from the exact `TheaterItem`). The lead loops (repeat one) until you move on; then Stick to this vibe adds everyone's similar posts (`/api/search/similar` now serves `scope=everyone` signed out, anonymised, IP rate-limited; `mine` stays 401). Auto-save keeps the `autosave-shared.ts` rules (fresh signed-in open → `url_prefix` save; `?save=1` after sign-in → save, then the param is stripped) and announces `NX_POST_SAVED`. Signed-out Save anywhere in the theater → `/start?returnTo=<that post's preview>?save=1`. Unresolvable → "This post isn't available"; moderated → "This post was removed". Signed-out `/` renders `PublicHome` (hero + Right now) with the sr-only `TheaterStaticList` kept for crawlers. The old notes below describe the previous TheaterShell preview and still apply to `/live` and `/trending`.
-- **(Previous) Preview pages ARE the theater** (Phase 3): the preview routes keep crawler SEO in `generateMetadata` (that path still awaits the upstream). The **page RSC does not wait** on FxTwitter / a scrape / oEmbed — it paints a URL stub + TheaterShell immediately and passes a `sharedResolve` Promise (`src/lib/theater/resolve-shared-preview.ts`). JSON-LD + `SharedPostStatic` stream in a Suspense sibling; TheaterShell `replaceItem`s the stub in place. Tweets show `StageResolving` until the kind is known; Instagram `/p/` stubs are photo stages, while Reels / TikTok / Shorts are already video. Instagram posts/Reels, TikTok, and Shorts share `SharedPreviewPage` + `getSavedPreviewDisplay` + `recordHumanPreview`. `buildSharedSeed()` (`src/lib/theater/shared-seed.ts`) pins the shared post as the lead item and copies pulse-only `addedAt` / `saveCount` / `trendCount` onto it so the flame chip shows on first paint. Shared-mode Queue uses the same Now playing / Next LIFO list; every resolvable opened post starts in **Repeat one**, signed in or out. Tapping Repeat promotes the full current queue to **Repeat all**. Deliberately moving to another post releases the landing exemption and promotes the remaining queue to Repeat all; the opened lead cannot replay through Prev once released. "More being sent right now" header, authed Save POSTs `/api/bookmarks/add` with a `sourceUrl()`-reconstructed canonical URL (NOT `item.url`, which for pulse items is the on-ADHX preview path). Shared chrome uses the shell's live auth state after an in-place sign-in, and cross-tab add/delete events update Save/Tag membership without stale ownership lookups; archive removes queue position but preserves membership. A signed-in new-open still autosaves the lead. Signed-in previews keep shared Save/Tag + paste chrome, and also get the Live ⇄ Saved cluster (neither destination is current on a shared preview; Saved → `/saved`; Discover → `/live`; Close → `/library` on desktop). Mobile omits Close — the avatar menu already sits top-right and has Library. Do **not** pass `personalChrome` here, or the shared Save pill becomes the live-tab pair. The `*PreviewLanding` components were unmounted then deleted (dead-code cleanup, 2026-08-21).
-- **Unresolvable shared source (TASK 3)**: when FxTwitter returns null (401/404 — deleted, private, or suspended) the page has already painted the theater on a URL stub. The resolve Promise settles `{ ok: false }`; TheaterShell then treats the lead as `sharedUnavailable` and swaps in `StageUnavailable` (`StageFrame` + platform glyph + `@author` + a platform-named "no longer available on {X/YouTube/…}" line — no retry/save/X-connect CTA). The shared-post-repeat pin drops so the stub's `'timed'` progress kind auto-advances into the live pulse. `generateMetadata` still returns a minimal `robots: { index: false }` tombstone with no fabricated OG image/video. Reels/TikTok/Shorts pages never had this bug — they always render the theater regardless of resolution success, degrading display fields to null rather than branching to a landing page. **Admin hide** (`moderated_posts`) uses the same stage with `sharedUnavailableReason="hidden"`: "This post was removed from ADHX" + a one-line "no longer on preview pages or the live feed" — never "unavailable on X", because the source (a Short, a Reel) is often still up. Admin hide is known before any proxy, so that path still passes `sharedUnavailable` on the first paint.
-- **/trending is the dark ranked list** (`src/components/trending/TrendingRankedList.tsx`): rank by `trendCount` desc, recency tiebreak — deliberately different from the theater dock's recency order. Hubs keep their sr-only list + JSON-LD untouched; `DiscoverFeed` was unmounted from the hubs then deleted (dead-code cleanup, 2026-08-21) — its `ActivityItem` type now lives in `src/components/discover/types.ts`. Never import from `TrendingStaticList.tsx` into a client component — it transitively pulls better-sqlite3 into the client bundle. `/trending/archive` and `/trending/archive/[week]` use the same dark chrome + numbered rows (`TrendingListHeader` / `TrendingRankedRow`); a week page is a frozen snapshot (no live poll, no filter pills).
-- Every theater and non-theater route uses the same dark Matter palette; legacy stored theme choices are ignored.
-
-### Library grid (removed)
-
-The library grid (`AuthedHome`, `FeedGrid`, `FilterBar`, `FeedCard`) was removed with the previous look; finding saves is `/search`.
-
-- **No gamification.** The streak card, its API route and the flame badges were REMOVED (owner: "we don't want to gamify things — we've added that with the leaderboard"). Don't reintroduce a streak.
-
-### Quote Tweet Handling (partly history)
-
-> **History.** This describes the retired X-first / `TheaterShell` product. Kept for context on old URLs and data; see the overview at the top and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the current system.
-
-Quote tweets display embedded content showing the quoted tweet. Two data sources:
-
-- `quotedTweet`: Full `FeedItem` when the quoted tweet exists in user's collection
-- `quoteContext`: Fallback JSON blob with basic info (author, text, thumbnail) when not in collection
-
-**Rendering:** quotes use `StageText` (via the shared `Stage`) on every theater surface including Saved. Gallery cards render quote context inline. Historical note: an older `Lightbox.tsx` with `Q`/`P` quoted/parent keyboard navigation and `R`/`U` read keys no longer exists — the focus surface went `TriageMode` → `CollectionTheater` → `TheaterShell mode="personal"`; none ever carried those bindings, so don't "restore" them from stale docs.
-
-Files:
-
-- `src/components/theater/StageText.tsx` - quote + parent text on the theater stage
-- `src/components/feed/types.ts` - FeedItem.quotedTweet, FeedItem.quoteContext types
-
-### Playlists (shared tags) with Friendly URLs
-
-A playlist is one tag, shared publicly at a human-readable URL:
-
-- **URL format**: `/t/{username}/{tag}` (e.g., `/t/you/claude-code`)
-- **Route**: `src/app/t/[username]/[tag]/page.tsx`
-- **API**: `src/app/api/share/tag/by-name/[username]/[tag]/route.ts`
-
-**Sharing flow ("Share as theater"):**
-
-1. (Previous look, removed: the library's Tags dropdown and Share as theater. Channels are made from the theater's Save sheet now — see "Channels (phase 5)".)
-2. Share as theater PATCHes `/api/tags` (make public), copies the friendly URL, shows a "… copied" chip
-3. `/t/{username}/{tag}` renders the **playlist theater**: `TheaterShell mode="playlist"` seeded with the tag's posts — the queue **loops** (wrap on next/prev and video-ended; dashed "LOOPS" divider + ghosted first card in the desktop dock; no StageWaiting, no paste-to-preview, no /api/activity polling, no address-bar rewriting). SEO is preserved: generateMetadata + CollectionPage JSON-LD + sr-only item list; private/unknown tags 404/noindex exactly as before.
-4. **Save playlist · N** is the conversion CTA (`SavePlaylistButton`): authed → POSTs the clone endpoint; signed-out → opens `SignInModal` (returnTo `/t/{user}/{tag}?save=1`, which auto-clones once after sign-in and strips the param)
-5. Seed conversion lives in `src/lib/theater/tag-seed.ts`; loop math (`computeLoopedNext/Prev`) is exported from TheaterShell and unit-tested
-
-**Clone endpoint**: `/api/share/tag/by-name/[username]/[tag]/clone`
-
-- Copies all bookmarks, media, and links to the cloning user's account
-- Adds the tag to all cloned bookmarks
-- Skips bookmarks the user already has
-
-### Tag Sanitization
-
-Tags are sanitized before storage to ensure URL-safe, consistent naming:
-
-- **Utility**: `src/lib/utils/tag.ts`
-- Lowercase conversion
-- Invalid characters replaced with hyphens
-- Multiple hyphens collapsed
-- Leading/trailing hyphens removed
-- Maximum 15 characters (truncated, not rejected)
-- Maximum 5 tags per post (`MAX_TAGS_PER_POST` — theater Tag button shows this count; POST `/api/bookmarks/[id]/tags` returns 400 past the cap)
-
-```typescript
-import { sanitizeTag } from '@/lib/utils/tag'
-
-sanitizeTag('Test Tag!') // → 'test-tag'
-sanitizeTag('Claude Code') // → 'claude-code'
-sanitizeTag('AI/ML') // → 'ai-ml'
-```
-
-**UI Preview**: The `TagInput` component shows a real-time preview of the sanitized tag as users type (e.g., "Test Tag!" → "→ test-tag").
-
-### Landing Page Optimization (history)
-
-> **History.** This describes the retired X-first / `TheaterShell` product. Kept for context on old URLs and data; see the overview at the top and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the current system.
-
-Signed-out `/` now renders the theater (see "Home routing & the Theater" above); Unauthenticated visitors still trigger no authenticated API calls:
-
-- `page.tsx` branches on `getCurrentUserId()` server-side, so the feed fetch never runs signed-out
-- `Header.tsx` only fetches stats/cooldown after auth is confirmed
-- `preferences-context.tsx` checks auth status before fetching preferences
-
-This prevents 401 errors in server logs when visitors view the public homepage.
-
-### Shared Types (`src/components/feed/types.ts`)
-
-Centralized type definitions including:
-
-- `FeedItem` - Full bookmark data for display
-- `StreamedBookmark` - Lighter type for sync SSE events
-- `streamedBookmarkToFeedItem()` - Conversion helper
-
-### Feed API Performance
-
-The feed API (`/api/feed/route.ts`) uses optimized SQL queries to avoid N+1 problems:
-
-- Single query fetches bookmarks with tags via SQL subquery
-- Media and links fetched in bulk with `IN` clause
-- Read status joined efficiently
-
-```typescript
-// Tags fetched via subquery (avoids N+1)
-const tagsSubquery = db
-  .select({
-    bookmarkId: bookmarkTags.bookmarkId,
-    tags: sql<string>`GROUP_CONCAT(${bookmarkTags.tag})`.as('tags'),
-  })
-  .from(bookmarkTags)
-  .where(eq(bookmarkTags.userId, userId))
-  .groupBy(bookmarkTags.bookmarkId)
-  .as('tags_agg')
-```
-
-### Understanding pipeline (`src/lib/semantic/`)
-
-Search by meaning is backed by server-side EmbeddingGemma 2 vectors (see ARCHITECTURE.md → Understanding pipeline).
-
-- **Tables**: `post_embeddings` `(platform, post_id, kind)` and `understanding_queue` `(platform, post_id, kind)` — both keyed by POST, not saver, with no `user_id`. DDL lives in `src/lib/semantic/schema-sql.ts` and is shared by `migrate.ts` and the test DB. Never put tags or anything user-private into a document (`documents.ts`).
-- **Kinds**: `text` (post words, article body, link previews, quote, alt text, plus "Said in the video:" / "Text on screen:" words from `post_extracted_text`), `image` (first photo, video poster or article cover), `video` (the local fallback uses ffmpeg one frame every 2 s over the first 32 s, max 16 frames, 448px wide, 70 vision tokens per frame, from the same-origin video proxy; `VIDEO_SAMPLING` is folded into the video content hash so changing it re-queues only videos). `status` is `ok`, `none` (nothing of that kind, including a "video" that is really a photo and media deleted upstream — `MediaGoneError` on 404/410, kept with its `error`; `gone.ts` `withoutGone`/`goneKeys` keep those posts out of search, similar, channels and `/api/feed`) or `failed`. X articles whose content never loaded (sync gave up on FxTwitter) are re-fetched by `repairUnloadedArticles()` (`src/lib/sync/repair-articles.ts`) when the worker starts, then re-understood. `SEMANTIC_MODEL_VERSION` is stored on every row; bump it to re-understand everything.
-- **Speech and text on screen** (`speech`, `screen` queue kinds; `extract-*.ts`, `extracted.ts`): words, not vectors, in `post_extracted_text` `(platform, post_id, kind)` (keyed by post, `model` = `SPEECH_VERSION`/`SCREEN_VERSION`, deleted with the last save by trigger). Whisper base (`onnx-community/whisper-base@1846881b…`, fp32 encoder + q8 decoder; language read from the first decoder step per 30 s window, because transformers.js otherwise assumes English; windows with p(no speech) > 0.6 or RMS < 0.002 skipped) over the first 10 min; Florence-2 base `<OCR_WITH_REGION>` (`onnx-community/Florence-2-base-ft@e88a44ea…`, all q8) over ≤4 photos (else the poster/cover) + 4 frames from the first minute. `extract-clean.ts` drops junk (music tags, "Thanks for watching", loops, slivers, "0"); the server re-applies it to remote results (`acceptExtracted`). Changed words → `indexPostText` + re-queue only `text` at the job's priority (the text hash includes them; posts without extracted words keep their hash). The models run only in `extract-child.ts`, forked by `ExtractorProcess` (`extractor.ts`) from the jobs child or the Mac runner: one model per process (switching kind replaces it), exits after 60 s idle so its memory is returned; ffmpeg prep runs async in the caller. `labelExtractedMatches` (search.ts) adds `speech`/`screen` signals when query words are in those words (leading when the post's own words don't have them, or it has none); `find.ts` treats them like visual matches (Jev never receives extracted words). Never import `extract-model.ts` outside `extract-child.ts`. `SEMANTIC_SPEECH=off` / `SEMANTIC_SCREEN_TEXT=off` stop new work (queued jobs complete as skipped; stored words stay). `scripts/smoke-extract.ts` runs the real models on files.
-- **Enqueue** with `noteSaved(keys, priority)` from `@/lib/semantic` — fire-and-forget, never throws. Already wired into `/api/tweets/add`, `/api/bookmarks/add` (IG/TikTok), `/api/sync` (sync priority) and playlist clone.
-- **Processes**: the model NEVER runs in the web server (inference blocks the event loop — one video froze all requests for ~15s). `src/instrumentation.ts` calls `startSemanticProcesses()` (`supervisor.ts`), which forks `child.ts` via `node --import tsx` twice: `jobs` (the worker, full model, nice 10) and `query` (words-only model for `embedQuery`, ~60ms). Web code talks to them only through `supervisor.ts` (`wakeJobs`, `jobActivity`, `embedQuery`); never import `model.ts` or `worker.ts` from a route. The Docker image ships `tsconfig.json` so tsx resolves `@/`. One job at a time with pond-style rests. Disabled when `SEMANTIC_SEARCH=off` and always under Vitest. E2E sets it off.
-- **Env**: `SEMANTIC_CACHE_DIR` (model weights, including speech/on-screen text; `/data/models` on Fly), `SEMANTIC_THREADS` (ONNX intra-op threads, extract process too; 1 on Fly), `SEMANTIC_SPEECH` / `SEMANTIC_SCREEN_TEXT` (`off` stops that work), `SEMANTIC_INTERNAL_ORIGIN` (loopback origin for media proxies; defaults to `http://127.0.0.1:$PORT`), `FFMPEG_PATH` (absolute system FFmpeg executable; otherwise resolve it from PATH).
-- **Routes**: `GET /api/understanding/status`, `POST /api/understanding/retry`, `POST /api/understanding/prioritize { posts: [{ platform, id }] }` (max 20, only the caller's own saves).
-- **Remote mode**: `PROCESSING_MODE=remote` suppresses the jobs child and keeps the query child. `PROCESSING_PROTOCOL` is 2 (server accepts 1 and 2): v2 claims carry `kinds`, `speech`/`screen` jobs lease media by `slot` (`files[]` for screen) and finish with `extracted { text, language }`; v1 workers are never handed those kinds (`claimableKinds`). Dedicated `PROCESSING_WORKER_TOKEN` authenticates leased `/api/processing/jobs` work and `/api/processing/media`; no account token or SQLite mount. `SEMANTIC_SEARCH=off` pauses remote inference too, while conversion can continue; `KEEP_MEDIA=off` pauses new conversion claims. `INDEXING_LEVEL=light|normal|deep` selects full-duration sections (120/60/30s, target frame spacing 12/4/2s, max16frames/section,512sections,24h). Each section checkpoints atomically to `video_segments`/`video_index_state`, releases its lease and returns to backfill priority. Search uses the best segment per post; the final aggregate still supports channels. Last-saver deletion removes segment state and leases. See `src/lib/processing/` and `deploy/mac/README.md`; original retention stays on the server; remote H.264 conversion uses leased `media_conversions` jobs and streamed `PUT /api/processing/result`. The server probes a restricted MP4 input and checks full resolution/duration/H.264/yuv420p/AAC before an atomic per-slot swap, preserving originals until commit. Uploads cap at4GiB with8GiB total private scratch, free-disk reservations and deadlines; cleanup never removes referenced files.
-- **Mac scratch lifecycle**: native worker polls via HTTPS with a private machine token, samples temporary448pxJPEGs and isolates inference in a child so heartbeats keep running. Delete frames after each section including failure; delete downloaded original only after final NAS acknowledgement (or invalidated conversion capability). Temporary full-resolution conversion outputs always clean up after attempts; VideoToolbox hardware encoding falls back to bounded software encoding. One worker processes one inference section or conversion at a time. Default4GiB/file and8GiBtotal managed scratch, one-hour partial/frame expiry and24-hour original expiry, earlier eviction under budget pressure. Sweep on startup/periodically while running; reusable weights are separate and never swept. CoreML/VideoToolbox availability is not proof of operator coverage or performance; verify on the actual Mac before claiming acceleration.
-- **Memory/time** (measured on real saves): words ~0.1s, pictures 3–7s, videos 11–15s. Speech/on-screen text (Apple M4, 2 threads, synthetic clips): ~3.4 s per minute of speech (178 s → 10.2 s), ~1.6 s per picture or frame, first load 1–4.5 s; the extract process peaks ~1.5 GB (speech) / ~1.8 GB (text on screen) RSS and exits when idle. The process sits at ~0.7GB after words, ~1.1GB after a picture and plateaus near 2GB after videos (onnxruntime keeps its buffers), which is why both Fly apps run 4GB VMs. 32 frames × 140 tokens (pond's GPU settings) took ~42s and ~3GB per video on CPU.
-
-Sheets (`TheaterSheets` `Sheet`) move focus in once on open: callers pass a new `onClose` every render (the theater re-renders several times a second while video plays), and re-focusing per render stole focus from the channel search field.
-
-### What your ADHX is doing (`/doing`, `src/lib/processing/doing.ts`)
-
-`GET /api/activity/processing?scope=all|mine|needs[&summary=1]` (signed in) and `GET /api/app/doing` (phone): every post with a keep job in progress or stuck (gave up in the last 7 days and not "link only"), a conversion, an understanding-queue row, a failed understanding result (24 h), or a save in the last 30 minutes, **only when the viewer may see one of its saves** (`seenBy`; never another member's private save, not even counted). Each item: thumbnail (`appPost` poster), network, `savers` (`saversFor`), step 1–7 (`DOING_STEPS`: Got the link · Keeping a copy · Making it play everywhere · Listening to what's said · Reading text on screen · Learning what it's about · Ready), percent (yt-dlp progress or video sections), `status` `working | waiting | needs_you | ready`, plain `reason` (`keepReason`), `retryInfo`, and `retry`/`keepLinkOnly` (the viewer saved it). `summary`: counts, `freeBytes` (`freeDiskBytes`, the keep worker's statfs) and `remoteConnected` (`processing/presence.ts`: the last authorised `/api/processing/jobs` request within 2 min, or a live lease). Actions (savers only): `POST /api/activity/processing/retry {platform,id}` (`retryPost`: keep job → pending, failed conversion → pending, backoff → now, failed results re-queued) and `/link-only` (`keep_jobs.accepted_at`). Phone retry: `POST /api/app/doing/retry`. UI: `DoingScreen` polls every 3 s while visible; `OnTheirWayPill` in `NxHeader` ("3 on their way", members only, hidden at 0, polls `summary=1` every 20 s). Tests: `src/__tests__/processing/doing.test.ts`. A running download's percent is the live one (`keep/progress.ts`), else `keep_jobs.progress` (the worker writes it in steps of 5; cleared on claim). **Getting it ready** (theater, board j1-4): `GET /api/activity/processing/posts?posts=platform:id,…` (`processing/keep-status.ts`, ≤20, `seenBy` only) → `{ posts: [{ state: waiting|keeping|converting|kept|none, step, percent, keptAt }], people }`; `useKeepStatus` asks when a post comes on stage and every 1.5 s while it's on its way, `GettingReadyStage` covers the Stage (blurred poster, ring with the percent, the first three `DOING_STEPS`), `SharedWithChip` / `KeptChip` sit top-left, and `POST_KEPT` (`lib/theater/client-events.ts`) reloads a StageVideo whose load failed while it waited.
-
-### Post words in the new design (`components/next/rich-text.tsx`)
-
-`postBody()` keeps paragraphs (blank lines) and swaps t.co links for their expanded URLs (`item.links`); `RichText` renders paragraphs with clickable URLs (shown as site/path), @mentions and #hashtags (X only), with Bionic Reading; links stop propagation so stage taps don't pause or skip. `useLinkCard` + `LinkCard`: the card for a linked page from the stored preview, else from `/api/share/tweet/{author}/{id}` `externalLink` (the preview pages' source); the URL is dropped from the text when the card shows it. `isRealArticle` (post.ts): saves filed as "article" only get the article stage with a body, an X article link or a real preview — a post linking to a blog stays a post with its card (build-item invents "Article by @…" otherwise). Over a video or photo the overlay keeps only the why chip, a friend's note and who saved it ("You and Mum saved this · 1h"): no author/network line, no caption; the words are in the rail's original-post sheet. Short player messages (`flash`, 3 s) take the place of the top pills ("Shared with your people", "Kept on your ADHX", a moment's new saves) instead of stacking. The transport is one bar in one place for every kind (same scrim, padding and buttons). Articles and long posts (taller than the stage, reported by `PostStage onLong`) are read, not timed: no dwell timer, no inner scrollbar, and the bottom bar shows and moves the reading position ("40% read"; `onScrollProgress`/`seekRef`).
-
-### Right now: live moments (`src/lib/moments/`)
-
-What people are saving, grouped by meaning, as it happens. Shown on `/now` (`NowScreen` → `RightNow`, the signed-in home, open to everyone), each moment at `/moments/{slug}` (`MomentScreen`), and Tune in at `/play?moment=slug` (theater). The engine is anonymous: savers are only counted inside it (ids never leave it), posts are `loadSearchItems(…, '')` anonymised copies, only posts allowed in Everyone search (`publishable`, `withoutGone`), and only visible saves count (`visibleSave('b')`): private saves, saves with `source = 'quoted'` (the quoted post stored with a save) and banned savers never count.
-
-- **Engine** (`engine.ts`, web process, globalThis state, runs only while someone is listening — idle after 10 min): every 5 min `recompute()` regroups recent saves from scratch; every 3 s `processNewSaves()` reads new `bookmarks` rows since a watermark, waits (≤3 min) for the post's first vector, then joins it to the closest moment (`bestMoment`) or a forming group (`addToForming`, looser `FORM_SIMILARITY` since a new group's centre is one post; groups whose centres come close are merged), which becomes a moment when ready (`formingProgress`; `MOMENT_MIN_SAVERS` distinct people, default 3 — set 1 locally where there's one saver). Events on an in-process EventEmitter: `save`, `formed`, `snapshot`, `stats`, `watching`. First start sets the watermark to the newest save and fills the strip from the latest saves without events.
-- **Grouping** (`group.ts`, pure): post vector = `postVector()` (words/picture/video averaged, 256 dims, from the vector index), **centred** (window mean subtracted — raw cosines between any two posts sit ~0.72; centred, unrelated ~0, one topic 0.5–0.8 to its centre). k-means (`clusterCount` ≈ n/10), each cluster cut to members ≥ `KEEP_SIMILARITY` of its centre and re-centred until stable, kept if cohesion ≥ `MIN_COHESION`, ≥ `MIN_POSTS` and enough people. Windows 24 h → 72 h → 7 d, widening only when a wider window finds more (label "Right now" / "Last few days" / "This week"). `matchPrevious` keeps slug, name and colour across regroups. Thresholds in `config.ts` were tuned on real saves (0.42 leaked "everything else" into small groups).
-- **Naming** (`naming.ts`): closest `MOMENT_TOPICS` (embedded once with the query model, compared in raw space) + the posts' most shared word (≥40%), Jev `choice` with sample posts; falls back to the shared word or the closest topic; forming groups are named without Jev.
-- **API** (public, rate-limited, `no-store`): `GET /api/moments` (snapshot), `GET /api/moments/{slug}` (items newest first + 30 per-minute bars), `GET /api/moments/{slug}/near` (Wander), `GET /api/moments/stream?watch=slug` (SSE via `stream.ts` `momentStreamResponse`; `watch` counts the viewer as watching).
-- **How busy lately** (members only): `withMomentPeople` adds `recentSaves` + `windowMinutes` (`recentOf`: visible saves of the last hour over the smallest of 5/10/15/30/60 min holding them) → the lead card's "LIVE · 3 saves in 10 min" (`recentLine`); phone `PhoneMoment` too.
-- **Live with names** (`people.ts`, `presence.ts`, `react.ts`; members only): names are added **per request** on top of the engine's output, only when `getCurrentUserId()` (or a phone key) gives a member; signed out, every helper returns its input untouched, so public responses keep their exact old shape (no `savers`/`watchers` keys). `withSnapshotPeople`/`withDetailPeople`/`eventForViewer` add `MomentView.savers` (≤5, newest first, from `momentPostKeys(slug)` post keys + `saversFor`, saves inside the window only), `MomentView.watchers`, item `savers` and detail `watchers`; `save` events get `saver` (who just saved it). Moments name **visible saves only**: the viewer's own private saves are dropped too (`privateKeysFor`). Watchers: `presence.ts` (globalThis, like the engine) counts each signed-in stream by account (`joinWatch` before `subscribe`, leave before unsubscribe so counts and names agree); `watchersFor` names them without the receiver and without banned accounts (`membersById`, `people/by-id.ts`); strangers' `watching` events stay count-only. Reactions: `POST /api/moments/{slug}/react { emoji | text, platform, id }` (signed in; exactly one of `emoji` from `REACTION_EMOJI` 😂 🔥 😭 👀 💀 ❤️ or `text` cleaned by `cleanReactionText` — whitespace collapsed, control and bidi characters dropped, trimmed, ≤40 code points; 20/min per user, words 6/min on top, one budget with post reactions; also kept on the post in `post_reactions` under the same id) → `{ id, at }`, broadcast on the presence bus as `reaction { slug, id, at, saver, emoji | text, post }` to signed-in streams watching that moment (the sender gets it back with `isYou`); strangers never get one. Phone: `GET /api/app/live` (snapshot, covers as image paths, `PhonePost` strip), `GET /api/app/live/{slug}` → `{ moment, items: PhonePost[], watchers }`, `POST /api/app/live/{slug}/react`, `GET /api/app/live/{slug}/stream` (SSE, that moment's events only, `save.item.post` is a `PhonePost`); shapes in `src/lib/app/live.ts`.
-- **Reactions on every post** (`src/lib/reactions/`: `parse.ts` shared with Live, `post-reactions.ts`, `handlers.ts`; table `post_reactions`, DDL `reactions/schema-sql.ts`, account-guarded, deleted by Clear data and account delete): `GET /api/posts/reactions?platform=&id=` (web, session) and `GET /api/app/reactions` (phone) → `{ reactions: [{ id, emoji|null, text|null, at, saver: { username, name, avatarUrl, isYou } }] }`, oldest first, newest 100, `no-store`, 404 `not_found` unless the viewer can see a save (`seenBy`); banned reactors never shown; a hidden post returns `[]` (moderation read fail-closed). `POST` `{ platform, id, emoji | text }` → `{ id, at }` (same limits as Live, 429 `busy` + `Retry-After`; counted in `reaction_counts`). `DELETE …/reactions/{id}` own only → `{ ok: true }`. Spec: `docs/specs/phone-app.md` → Reactions on any post. Never on a public surface, no counts signed out. Web: `TheaterV2` shows the React button on every post (signed out → `/start?returnTo=<post page>`); non-Live reactions float yours at once (dropped with a "Couldn’t send that. Try again." toast on failure); `useReactionReplay` floats the newest 12 stored ones (oldest first, 350 ms apart, from 600 ms after the post settles), once per post per page load, skipping ids already floated (Live arrivals, yours). UI copy says React / Say something, never "comments".
-- **Client** (`components/next/moments/live.ts`): `useMoments` / `useMoment` / `useMomentStream` (EventSource, reconnects); `applyEvent` is pure (keeps a card's `savers`/`watchers` when an event's moment carries none). Members see faces: `RightNow` cards ("Ana, Ben and Jo are saving these", green-ringed "Ana and Ben are watching", "Tune in with Ana"), `MomentScreen` (same lines, faces on tiles); words in `moments/people.ts`, pieces in `moments/LiveTogether.tsx` (`Faces`, `WatchersBar`, `ReactButton`, `ReactionPicker`, `ReactionFloats`, `ArrivalToast`). Cards flash in their colour when a save lands (`animate-nx-*` classes in `globals.css`, off under reduced motion); a formed moment goes right after the lead.
-- **Tell me when it's live**: members see who's saving a forming group (`FormingView.people`) and a bell (`alert`). Bells live in `moment_alert_subs`, keyed by forming id (`f<boot>-<n>`, new per process); after every structural change the engine calls `reconcileForming` (`group.ts`) to carry them to the group holding most of their posts, alert subscribers when it went live (`moment_alerts`, 24 h, `GET /api/moments/alerts` / `/api/app/alerts`), or drop them. `MomentAlerts` (AppShell) polls once a minute on every signed-in page. Send straight to your people (`post_sends`, `src/lib/sends/`) and Keep this channel on group channels (`src/lib/channels/group-keep.ts`) are in `docs/specs/friends-feed.md`.
-- **Tune in** (`TheaterV2`, `source.moment`): queue = the moment's posts newest first (`savedAt` → "Just saved · 4 min ago"); new saves in the moment are inserted next with an "N new saves just landed" toast; at the end it waits ("You're all caught up") and plays the next save as it lands; Stay close / Wander (`/near`, items flagged `wander`); LIVE · N watching. Anyone can tune in (like public channels). Members also get the watchers bar ("Ana and Ben are watching with you"), the arriving-save toast named ("Jo just saved one · playing next", or "playing now" when caught up), a **React** button (smiley, top of the rail; on every post now, see below) opening `ReactionPicker` (six emoji — a tap sends and closes — and a "Say something to everyone watching" field, `live`), and reactions rising up the stage for ~4 s (`ReactionFloats`: the sender's face leads, ringed in `personColour`; an emoji is a sticker on its corner, words a bubble in their colour; text is rendered as text only; reduced motion fades in place via `nx-react-fade`); item `savers` are copied onto `post.savers` so the byline names them.
-
-### Search by meaning (`GET /api/search`)
-
-- **Params**: `q` (≤200 chars; no trailing space = last word is also a prefix), `scope=mine|everyone`, `type=all|videos|photos|text|articles` (feed vocabulary), `wordsOnly=1`, `limit` (≤60), `offset`, `refine=1` (Jev pass, first page only). Signed-in only, per-user rate limits (240/min search, 30/min refine), `no-store`.
-- **Signals** (`search.ts`): query vector (from the `query` child) vs each post's `text`, `image` and `video` vectors through `vector-index.ts` (in-memory, first 256 Matryoshka dims, re-scored with full 768-dim vectors, refreshed from `post_embeddings` by `(created_at, rowid)` keyset every ~2s), plus FTS5 keywords (`keywords.ts`, `post_text_fts`, written independently on save and caught up at web startup even with semantic search off; every user token is quoted so input can never use FTS syntax).
-- **Fusion**: each vector list is standardised against that query's similarity to every candidate of the kind (z-score), because raw cosines sit in a narrow 0.6–0.8 band whose level varies by query and modality. Plain RRF was tried and was far worse (hit@5 0.35 vs 0.84): every query gets a picture list, so weak picture matches earned rank points. Results under `TUNING.minScore` are dropped. Re-tune with `scripts/eval-search.ts` after large changes.
-- **Everyone scope** ("Everyone's saves", the default on the search screen): post keys only, filtered to posts with ≥1 visible save (`visibleSave`: not private, not quoted, saver not banned) or the viewer's own, and not in `moderated_posts` (fails closed if moderation can't be read). `items.ts` builds another saver's copy from a visible save only (never a private one) with no tags, archive state, summary or save time (`processedAt` = post time), and link rows get `userId: ''`, `id: 0`. Never add saver-derived fields to `anonymize()` output: names are attached afterwards, as `savers`, and only for a signed-in viewer (see "Named to friends, never to strangers").
-- **Rerank** (`rerank.ts`): top 20 sent to Jev as one graded `score` question each (query + public post words only, `toWellFormed()` — a half emoji makes Jev return 400). Blended with fused rank; visual matches keep more fused weight because Jev reads words only. Any failure returns the fused order (`refined: false`).
-- **Image-aware generated channels**: separate `TYPESAFE_CHANNEL_IMAGES=on` opt-in plus key; the text-only search client remains unchanged. `channels/visual.ts` and `visual-policy.ts` apply asynchronous, versioned decisions to Made for you/From everyone only; no saved/tagged channel, slug, original or library save is modified. Durable `channel_visual_jobs` (account FK cascade; explicit everyone scope), one task/minute, 48 attempts/day, 256 entries/7 days, max8 images, 3 attempts/15s requests. Upload only existing public-source photos/posters with eligible visible savers, never private-only/hidden/banned posts, tags, notes, identities or extracted words. Recheck before upload and commit; lease/revision guards reject superseded answers. No thumbnail fetch or FFmpeg/model on the NAS. Confidence floors .8 naming, .95 membership/repeats, .35 cover scores≥2.5; bounded sampling and synthetic smoke do not establish real-video quality. `docs/channel-image-curation.md` is the full contract.
-- **Match strength**: every hit carries `strength: strong|good|related` from its fused score (`strengthOf`: ≥`TUNING.strongScore` 3.5 strong, ≥`goodScore` 2.6 good; keyword-only searches with no vector use `keywordStrongScore`). After rerank, matches made on words alone take Jev's 0–4 grade instead (`jevStrength`: ≥3 strong, ≥2 good) but may drop at most one level below their fused strength (short captions like "#nibs #squirrel" read as weak to Jev), and words-only items Jev scores under 0.5 are removed (never the lead). Visual matches keep their fused strength because Jev can't see. Words-led hits need `TUNING.minWordsScore` (1.9), above `minScore`. The UI (`model.ts` `orderByStrength`/`splitByStrength`, `StrengthMeter` in `ResultTile.tsx`) shows a three-bar meter on every tile, sorts strong → related, and puts related ones under "Related to “q”" with a plain explanation; with nothing close the headline says "Nearest N" and "Nothing close to that". Channel pages hide the meter.
-- **Posts without words of their own** (empty, bare link, emoji only — `PostDocument.hasWords`) get no `text` vector (`status: 'none'`), so they can't rank on noise; `clearWordlessText()` fixes rows understood before this, at worker start. Keywords still index them.
-
-### Media Handling
-
-FxTwitter (`api.fxtwitter.com`) provides reliable media URLs (Twitter has CORS issues).
-
-- **Videos**: `/api/media/video?author=xxx&tweetId=xxx&quality=preview|hd|full`
-- **Photos**: `https://d.fixupx.com/{author}/status/{tweetId}/photo/{index}` — theater stage loads these via `/api/media/image` (pbs.twimg.com hotlinks 403 off twitter.com)
-
-**Video Quality Levels:**
-
-| Quality   | Resolution | Bitrate  | Use Case                             |
-| --------- | ---------- | -------- | ------------------------------------ |
-| `preview` | 360p       | ~832kbps | Gallery hover preview                |
-| `hd`      | 720p       | ~2Mbps   | Focus mode playback, mobile download |
-| `full`    | 1080p      | ~10Mbps  | Desktop download only                |
-
-**Video Playback UX Patterns:**
-
-| Context       | Attributes                           | Behavior                 | Why                             |
-| ------------- | ------------------------------------ | ------------------------ | ------------------------------- |
-| Gallery hover | `muted autoPlay loop playsInline`    | Silent auto-preview      | Quick browse without disruption |
-| Focus mode    | `controls playsInline` (no autoPlay) | Click to play with sound | Full viewing experience         |
-
-**Browser Autoplay Policy**: Modern browsers block autoplaying videos with sound. Gallery works because it's `muted`. Focus mode removes `autoPlay` so users click play and get sound immediately - this is intentional UX, not a workaround.
-
-**HLS Streaming for Long Videos:**
-Videos >5 minutes use HLS (HTTP Live Streaming) to avoid Fly.io's 60-second proxy timeout:
-
-- `src/app/api/media/video/info/route.ts` - Determines playback strategy (MP4 vs HLS)
-- `src/app/api/media/video/hls/route.ts` - Proxies m3u8 playlists, rewrites URLs
-- `src/app/api/media/video/hls/segment/route.ts` - Proxies video/audio segments
-- Theater playback is `StageVideo` (MP4 proxy). The HLS routes stay for long videos; `StageVideo` does not mount HLS.js.
-
-**Why HLS proxy?** Twitter's video CDN (`video.twimg.com`) returns 403 for direct browser requests. Our server proxies with proper `User-Agent` and `Referer` headers.
-
-**Browser HLS Detection Gotcha:**
-
-```typescript
-// ❌ Wrong: Chrome on Mac returns truthy but can't play HLS natively
-const canPlay = video.canPlayType('application/vnd.apple.mpegurl')
-
-// ✅ Correct: Explicit Safari detection
-const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
-const canPlayHlsNatively = isSafari && video.canPlayType('application/vnd.apple.mpegurl')
-```
-
-**Video Downloads:**
-
-- Desktop: `/api/media/video/download` endpoint with `Content-Disposition: attachment` for instant browser download with progress bar
-- Mobile: Limited to 50MB (HD quality check). Shows friendly "too thicc for your phone" message via `VideoDownloadBlocked` component when exceeded
-- Size estimation: `duration × bitrate / 8` (returned by `/api/media/video/info`)
-
-Key files:
-
-- `src/lib/media/fxembed.ts` - FxTwitter API types and URL builders
-- `src/app/api/media/video/route.ts` - Video proxy with quality selection
-- `src/app/api/media/video/download/route.ts` - Streaming download endpoint
-- `src/components/theater/StageVideo.tsx` - Theater MP4 playback
-- `src/components/feed/utils.tsx` - `VideoDownloadBlocked` shared component, `handleShareMedia`
-- `src/components/feed/FeedCard.tsx` - Gallery video preview (muted autoplay)
-
-### Database (SQLite + Drizzle)
-
-Every current table, grouped by plane (people, feed, sends, moments, phone, keep, understanding, channels, …), is in [`ARCHITECTURE.md` → Persistence planes](ARCHITECTURE.md#persistence-planes). The table below covers the core account and save tables.
-
-Database location: `./data/adhdone.db` locally (`DATABASE_PATH`, `/data/adhx.db` in Docker)
-
-**Multi-user schema with composite primary keys:**
-
-| Table                   | Primary Key                           | Description                                                                                                                                                                                                                   |
-| ----------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bookmarks`             | `(userId, platform, id)`              | Main bookmark data — same source id can exist for multiple users AND across platforms (tweet 123 ≠ tiktok 123)                                                                                                                |
-| `bookmark_tags`         | `(userId, platform, bookmarkId, tag)` | Tags are per-user, per-platform                                                                                                                                                                                               |
-| `bookmark_media`        | `(userId, platform, id)`              | Media attachments                                                                                                                                                                                                             |
-| `bookmark_links`        | `id` (auto) + `userId` + `platform`   | URLs with enrichment data                                                                                                                                                                                                     |
-| `archived_posts`        | `(userId, platform, bookmarkId)`      | Archive (was `read_status`)                                                                                                                                                                                                   |
-| `user_preferences`      | `(userId, key)`                       | User settings (theme, font, etc.)                                                                                                                                                                                             |
-| `users`                 | `id`                                  | First-class accounts (unique `username`, display name, avatar, email, `approval`: approved/pending/declined). X-first users keep `id == X user id`; email-first users get `u_<hex>`                                           |
-| `user_identities`       | `(provider, providerId)`              | Linked sign-in methods per user — `'x'` (X user id) and `'email'` (lowercased address) → `userId`                                                                                                                             |
-| `login_tokens`          | `tokenHash`                           | Magic-link tokens (sha256 hash only, 15-min expiry, single-use, intent `signin`/`change`)                                                                                                                                     |
-| `invites`               | `id`                                  | Invite links (sha256 token hash only, 7-day expiry, single-use, revocable; `created_by`/`used_by` are account-guarded)                                                                                                        |
-| `server_settings`       | `key`                                 | Runtime server settings an admin changes (`invites.who`). Env vars only give the first default                                                                                                                                |
-| `oauth_tokens`          | `userId`                              | Twitter OAuth credentials                                                                                                                                                                                                     |
-| `sync_logs`             | `id` + `userId`                       | Sync history per user                                                                                                                                                                                                         |
-| `tag_shares`            | `(userId, tag)`                       | Public tag sharing settings                                                                                                                                                                                                   |
-| `activity`              | `id` (auto)                           | Append-only public activity pulse — anonymous event log (`userId` stored but never exposed; `author_avatar_url` added via guarded ALTER in `migrate.ts`). Not user-owned content, so exempt from the composite-key convention |
-| `analytics_events`      | `id` (auto)                           | Private growth log (saves/views/shares/tags/archive/auth/…). `userId` stored, never selected by `/api/analytics`. Exempt from composite-key convention. 90-day prune in `migrate.ts`                                          |
-| `moderated_posts`       | `(platform, bookmarkId)`              | Admin hide: tombstones preview pages + blocks new pulse writes. Retains a nullable content-type route hint for unknown `/p/` posts. Does not delete bookmarks.                                                                |
-| `user_bans`             | `userId`                              | Banned accounts: session treated as signed-out; public profile/playlists 404; leaderboard skips them. Data kept for unban.                                                                                                    |
-| `admin_audit`           | `id` (auto)                           | Who hid/banned what. Never on a public surface.                                                                                                                                                                               |
-| `collection_events`     | `id` (auto)                           | Retained 90-day collection view/clone detail behind finite-window leaderboards (`viewer_id` stored but never exposed; read only via `src/lib/discovery/rank.ts`).                                                             |
-| `collection_aggregates` | `(ownerUserId, tag)`                  | Durable viewer-free all-time playlist counts. Updated atomically with accepted events; account guards and deletion treat the owner ID as account-linked.                                                                      |
-
-**Why composite keys with `platform`**: Allows User A and User B to both bookmark tweet X independently (multi-user), AND lets the same numeric id exist across platforms without collision (a TikTok video id and a tweet id can both be 19 digits). `platform` is one of `twitter` | `instagram` | `tiktok`, default `twitter`. Every query that filters by `bookmarkId` must also filter by `platform`.
-
-Schema modifications: Edit `src/lib/db/schema.ts`, then run `pnpm drizzle-kit push:sqlite`
-
-## API Patterns
-
-### Authenticated route
-
-```typescript
-import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserId } from '@/lib/auth/session'
-
-export async function GET(request: NextRequest) {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  // ... query with userId filter
-  return NextResponse.json({ data })
-}
-```
-
-### SSE streaming
-
-```typescript
-export async function GET() {
-  const encoder = new TextEncoder()
-  const stream = new ReadableStream({
-    async start(controller) {
-      const send = (event: string, data: object) => {
-        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
-      }
-      send('start', { message: 'Starting...' })
-      send('complete', { stats })
-      controller.close()
-    },
-  })
-  return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } })
-}
-```
-
-## Key API Routes
-
-The friends-feed routes (`/api/feed/blend`, `/api/views`, `/api/posts/send`, `/api/moments/*`, `/api/channels/*`, `/api/invites`, `/api/people`, `/api/activity/processing*`) are listed in [`docs/specs/friends-feed.md`](docs/specs/friends-feed.md); the phone's `/api/app/*` in [`docs/specs/phone-app.md`](docs/specs/phone-app.md). The table below is the older core.
-
-| Route                                           | Method      | Auth  | Description                                                                                                                                                                                                                                                            |
-| ----------------------------------------------- | ----------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/api/health`                                   | GET         | No    | Health check for monitoring                                                                                                                                                                                                                                            |
-| `/api/activity`                                 | GET         | Admin | Public anonymous activity pulse (recent previews/saves/reads/shares, no userId, `no-store`; in-process burst cache is moderation-gated)                                                                                                                                |
-| `/api/analytics`                                | GET         | Admin | Aggregate growth rollups (`?window=today\|week\|month\|all`) — totals, by platform, by type, top posts. Never includes userId                                                                                                                                          |
-| `/api/analytics`                                | POST        | No    | Client UI events (copy / open / send / shortcut). Identifiers + allowlisted dimensions only. Same-origin + rate-limited                                                                                                                                                |
-| `/api/activity/share`                           | POST        | No    | Record a send/download. Body `{ platform, id }` only — display fields copied server-side. 204.                                                                                                                                                                         |
-| `/api/trending`                                 | GET         | Admin | Public anonymous trending JSON (wraps `getTrendingItems`, optional `?platform=`, no userId, `no-store`) — for GEO/AI search                                                                                                                                            |
-| `/api/feed`                                     | GET         | Yes   | Main feed with filtering (`?id=` returns one bookmark regardless of read state — used to open a saved tweet in the collection theater). Default hides archived; `hideArchived=false` includes them; `archivedOnly=true` is archived posts only (library Show archived) |
-| `/api/feed/blend`                               | GET         | Yes   | The blended feed: `?mode=new\|everyone\|friends\|mine&types=&limit=&cursor=` → `{ items, nextCursor, caughtUp, nothingYet, total, types, waiting }`; items carry `savers`, `why`, `whyReasons` (see "New and the blended feed")                                        |
-| `/api/feed/types`                               | GET/PUT     | Yes   | "What's in your feed": `{ types }` (`video`, `photo`, `text`, `article`; default video + photo); PUT `{ types }` with at least one                                                                                                                                     |
-| `/api/feed/weights`                             | GET/PUT     | Yes   | "Show more / less from …": `{ weights: { username: -1\|1 } }`; PUT `{ username, weight: -1\|0\|1 }` (other members only)                                                                                                                                               |
-| `/api/views`                                    | POST        | Yes   | Mark posts seen `{ posts: [{ platform, id }] }` (≤50) → 204; idempotent (`post_views`, first `seen_at` kept, pruned after 180 days at migrate)                                                                                                                         |
-| `/api/bookmarks/[id]/read`                      | POST/DELETE | Yes   | Toggle read status                                                                                                                                                                                                                                                     |
-| `/api/bookmarks/[id]/tags`                      | POST/DELETE | Yes   | Add/remove tags                                                                                                                                                                                                                                                        |
-| `/api/bookmarks/[id]/private`                   | PATCH       | Yes   | "Just for me": `{ platform, private }` → `{ private }` (private saves are hidden from other members and the pulse)                                                                                                                                                     |
-| `/api/bookmarks/[id]/note`                      | PATCH       | Yes   | Note on your save: `{ platform, note }` → `{ note }` (≤140 characters, empty or null clears; shown to members only)                                                                                                                                                    |
-| `/api/sync`                                     | GET         | Yes   | SSE sync stream                                                                                                                                                                                                                                                        |
-| `/api/tweets/add`                               | POST        | Yes   | Add single tweet (Twitter-only, delegates from `/api/bookmarks/add`)                                                                                                                                                                                                   |
-| `/api/bookmarks/add`                            | POST        | Yes   | Platform-agnostic add — accepts X / Instagram / TikTok URLs, dispatches to the right resolver                                                                                                                                                                          |
-| `/api/tags`                                     | GET         | Yes   | List user's tags with counts and share URLs                                                                                                                                                                                                                            |
-| `/api/tags`                                     | PATCH       | Yes   | Toggle tag public sharing (returns `shareUrl`)                                                                                                                                                                                                                         |
-| `/api/tags`                                     | DELETE      | Yes   | Delete tag from all bookmarks                                                                                                                                                                                                                                          |
-| `/api/share/tag/by-name/[username]/[tag]`       | GET         | No    | View a shared playlist (friendly URL)                                                                                                                                                                                                                                  |
-| `/api/share/tag/by-name/[username]/[tag]/clone` | POST        | Yes   | Clone shared tag to user's account                                                                                                                                                                                                                                     |
-| `/api/share/tag/[code]`                         | GET         | No    | View shared tag (legacy random code)                                                                                                                                                                                                                                   |
-| `/api/share/tweet/[username]/[id]`              | GET         | No    | Public tweet JSON API (LLM-friendly, `no-store` so moderation runs per request)                                                                                                                                                                                        |
-| `/api/og/playlist/[username]/[tag]`             | GET         | No    | Dynamic 1200×630 playlist social card; public playlists get adaptive mosaics/text tiles, private/missing playlists get a generic non-identifying card                                                                                                                  |
-| `/api/auth/twitter`                             | GET         | Yes   | Start X OAuth to _link_ bookmark sync (session required; unsigned → `/?auth_error=x_link_only`)                                                                                                                                                                        |
-| `/api/auth/twitter/callback`                    | GET         | Yes   | X OAuth callback (browser bounce; session required to link)                                                                                                                                                                                                            |
-| `/api/auth/twitter/status`                      | GET         | No    | Check auth status and refresh tokens                                                                                                                                                                                                                                   |
-| `/api/media/instagram/video`                    | GET         | No    | Stream Instagram Reel MP4 inline (Range supported)                                                                                                                                                                                                                     |
-| `/api/media/instagram/video/download`           | GET         | No    | Stream Reel MP4 with `Content-Disposition: attachment`                                                                                                                                                                                                                 |
-| `/api/media/tiktok/video`                       | GET         | No    | Stream TikTok MP4 inline (Range supported)                                                                                                                                                                                                                             |
-| `/api/media/tiktok/video/download`              | GET         | No    | Stream TikTok MP4 with `Content-Disposition: attachment`                                                                                                                                                                                                               |
-| `/api/media/tiktok/thumbnail`                   | GET         | No    | Resolve + proxy a TikTok poster JPEG from `username`+`id` (via tiktxk → CDN); used by feed + Discover                                                                                                                                                                  |
-| `/api/media/instagram/thumbnail`                | GET         | No    | Resolve + proxy an Instagram image/poster from `id`; `index=1..20` selects an ordered carousel slide and `download=1` serves an attachment                                                                                                                             |
-| `/api/collections/trending`                     | GET         | No    | Public anonymous collection leaderboard JSON (`?window=today\|week\|month\|all-time`, wraps `getCollectionLeaderboard`, `no-store`)                                                                                                                                    |
-| `/api/invites`                                  | GET/POST    | Yes   | List working invites (no links) / make one (admin, or members with `INVITES=members`)                                                                                                                                                                                  |
-| `/api/invites/[id]`                             | DELETE      | Yes   | Revoke an unused invite                                                                                                                                                                                                                                                |
-| `/invite/[token]`                               | GET/POST    | No    | Script-free invite page; same-origin form POST spends it, makes an email-less account, signs in → `/invite/done`                                                                                                                                                       |
-| `/api/admin/overview`                           | GET         | Yes   | Admin Overview board (`?range=` or `?window=`). Every `/api/admin/*` answer is `private, no-store`                                                                                                                                                                     |
-| `/api/admin/boards/[board]`                     | GET         | Yes   | Admin: one section's numbers (`overview`, `people`, `posts`, `channels`, `live`, `analytics`, `processing`, `moderation`, `invites`; `?range=`)                                                                                                                        |
-| `/api/admin/people/[username]`                  | GET/POST    | Yes   | Admin: one person's board / `{ role: 'admin' \| 'user' }` (audited; 409 for the last admin). `DELETE …/phones/[id]` removes a phone                                                                                                                                    |
-| `/api/admin/processing`                         | POST        | Yes   | Admin: `pause` / `resume` new work, `retry_failed`, or `retry` / `link_only` one post (audited)                                                                                                                                                                        |
-| `/api/admin/posts`                              | GET/POST    | Yes   | Admin: inspect a post (`?url=` or `platform`+`id`) / hide or restore it (writes `moderated_posts` + `activity.hidden`); `clearNotes` (true, or a username) clears notes                                                                                                |
-| `/api/admin/users`                              | GET/POST    | Yes   | Admin: inspect a username (counts only, no email/userId) / ban or unban / `clearNotes: true` clears every note they left                                                                                                                                               |
-| `/api/admin/activity/hide`                      | POST        | Yes   | Admin: hide/unhide a post from the pulse (same as POST `/api/admin/posts`)                                                                                                                                                                                             |
-| `/api/admin/collections/hide`                   | POST        | Yes   | Admin: hide/unhide a playlist from leaderboards (`{ username, tag, hidden? }`)                                                                                                                                                                                         |
-
-### Discovery leaderboards (history: `/leaderboard` now redirects to `/channels`)
-
-> **History.** This describes the retired X-first / `TheaterShell` product. Kept for context on old URLs and data; see the overview at the top and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the current system.
-
-Public playlists (shared tags) are ranked on `/leaderboard` (+ `/leaderboard/{today|month|all-time}`;
-week is the default at the bare path) — the "podium" leaderboard per
-`docs/specs/discovery-leaderboards.md`. (This page lived at `/collections` until it was renamed
-— that path collided with a now-deleted custom-collections CRUD API. The old
-`/collections`(`/[window]`) URLs still work via thin `permanentRedirect` stubs — they're on
-staging and already shipped in sitemaps. `/api/collections/trending`, the machine JSON endpoint,
-was NOT renamed; the unused custom-collections CRUD is gone.) Data model: `collection_events`
-keeps 90 days of timestamped detail (`view` from the `/t/{username}/{tag}` page — bot-filtered,
-self-views excluded, public tags only; `clone` ×5 from the clone endpoint), while
-viewer-free `collection_aggregates` preserves true all-time counts without scanning an unbounded
-event log. Both are read exclusively through `src/lib/discovery/rank.ts` (the anonymity choke
-point — `viewerId` is never selected; the 60s in-process cache revalidates bans, post moderation,
-and hidden-playlist state on every hit; `RankMode` plumbing is reserved for
-hot/rising/new). Recording writes detail + aggregate atomically via
-`recordCollectionEvent()` in `src/lib/discovery/record.ts` (fire-and-forget, deduped
-30min/signed-in + 60s/anon), then independently prunes detail older than 90 days through an
-hourly process-local throttle; prune failure cannot roll back the accepted pair, and aggregates
-are never pruned. Curator surfaces: `/api/tags` GET includes per-tag
-`viewCount/cloneCount/rank` + totals; `/tags` shows a This-week summary + leaderboard promo
-band; the public profile `/t/{username}` shows a stat strip + per-card stats (public-tag
-aggregates only — a since-privated tag's history never leaks). The leaderboard pages are
-`force-dynamic` like `/trending` — do not make them static. Signed-in visitors get the global
-app Header as their chrome instead of `CollectionsBoard`'s own internal dark header (which
-signed-out visitors still see, minus the "Trending posts →" link, removed in both states) —
-the page checks `getCurrentUserId()` server-side and passes `authed` down.
-
-## Environment Variables
-
-```env
-# Required
-TWITTER_CLIENT_ID=
-TWITTER_CLIENT_SECRET=
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-# Optional
-SESSION_SECRET=           # For JWT signing (falls back to TWITTER_CLIENT_SECRET)
-RESEND_API_KEY=           # Magic-link sign-in emails; unset in dev = links logged to server console
-EMAIL_FROM=               # From address for magic-link emails (default 'ADHX <login@adhx.com>'; must be a verified Resend domain)
-SENTRY_DSN=               # Sentry error tracking DSN
-SENTRY_RELEASE=           # Set automatically in Docker builds
-SENTRY_ENVIRONMENT=       # 'staging' or 'production' (set in fly.toml/fly.production.toml)
-ADMIN_USER_IDS=           # Immutable account IDs to persist as admins on startup
-ADMIN_USERNAMES=          # Strict all-match legacy bootstrap; rejected lists fail startup
-INVITES=                  # 'members' lets every member make invite links (default: admins only)
-TWITTER_OAUTH_REDIRECT_URI= # Overrides the OAuth callback URL (see "OAuth callback host" below). Prod only.
-TRUST_PROXY_IP_HEADERS=   # Set true only behind a proxy that overwrites X-Forwarded-For/X-Real-IP; Fly uses Fly-Client-IP.
-```
-
-### OAuth callback host (the `adhx.com` → `adhtwitter.com` bug)
-
-X has a confirmed platform bug: during the **logged-out** login flow it runs a regex that rewrites every `x.com`→`twitter.com` across the authorize URL — and it greedily catches the host inside our `redirect_uri`. Production runs on `adhx.com`, which _ends in_ `x.com`, so the callback gets mangled to the dead `adhtwitter.com` (NXDOMAIN) and login fails for anyone **not already signed into X** (incognito, fresh device, most Android-web users). Logged-in users skip that redirect, so it works for them. Percent-encoding the dots does **not** help — X decodes them back before rewriting. ([devcommunity report](https://devcommunity.x.com/t/oauth2-bug-twitter-replaces-x-com-string-in-the-oauth-redirect-with-twitter-com/232600))
-
-**Fix:** the OAuth `redirect_uri` must use a host with no `x.com` substring. `getOAuthRedirectUri()` (`src/lib/auth/oauth.ts`) returns `TWITTER_OAUTH_REDIRECT_URI` when set, else the `NEXT_PUBLIC_APP_URL` callback.
-
-- **Production** sets `TWITTER_OAUTH_REDIRECT_URI=https://adhx-prod.fly.dev/api/auth/twitter/callback` (in `fly.production.toml`). The Fly host has no `x.com`, so X leaves it intact. X lands the browser on `adhx-prod.fly.dev`; the callback route detects it's on the redirect_uri host (not the canonical origin) and **307-bounces to `https://adhx.com/api/auth/twitter/callback`** (carrying `code`+`state`, before consuming anything) so the session cookie is set on `adhx.com`. The token exchange uses the same `redirect_uri` X bound the code to.
-- **Staging** (`adhx.fly.dev`) and **local** have no `x.com`, so the override is unset and the bounce is a no-op.
-- **The exact `TWITTER_OAUTH_REDIRECT_URI` value must be registered as a callback URL in the X Developer Portal**, alongside the existing `adhx.com` / `adhx.fly.dev` callbacks.
-
-## CI/CD & Deployment
-
-### Development Workflow (IMPORTANT)
-
-**ALWAYS test locally before deploying:**
-
-1. Make changes locally
-2. Run `pnpm dev` and test the feature manually in the browser
-3. Verify the feature works as expected with real user interaction
-4. Run `pnpm test` and `pnpm typecheck` to ensure no regressions
-5. Only after local verification, create a PR
-
-**NEVER auto-deploy to production:**
-
-- Production deploys should be explicit, intentional actions
-- Always verify on staging first (adhx.fly.dev)
-- Production: `gh workflow run deploy.yml -f environment=production` (uses `FLY_API_TOKEN_PROD`) or Fly CLI
-
-**When debugging browser features:**
-
-- Use browser DevTools to inspect network requests and console logs
-- Add temporary `console.log` statements to trace execution flow
-- Test with real data, not just API responses
-- Remember that React state updates are batched - effects may not run immediately
-
-### Deployment Environments
-
-| Environment | App         | URL          | Config File           | Volume           |
-| ----------- | ----------- | ------------ | --------------------- | ---------------- |
-| Staging     | `adhx`      | adhx.fly.dev | `fly.toml`            | `adhx_data`      |
-| Production  | `adhx-prod` | adhx.com     | `fly.production.toml` | `adhx_prod_data` |
-
-**Current release flow:**
-
-1. Code merged to main → Release-please creates version bump PR
-2. Owner merges version PR → Release Please creates a tagged GitHub release and calls the container publisher once.
-3. An operator selects and installs the verified release image separately. Fly and Pages are explicit manual operations.
-
-The single root package uses empty `component` **and** `package-name` release
-overrides so the grouped PR can be parsed into an unprefixed version tag.
-An empty component alone falls back to the Node package name in Release Please
-17.6.0 and rejects the merged grouped branch. The action and isolated offline
-round-trip tests are pinned together; see [`docs/releasing.md`](docs/releasing.md).
-
-**Legacy Fly commands (only when explicitly requested):**
-
-```bash
-# Deploy to staging (manual)
-gh workflow run deploy.yml
-
-# Deploy to production (uses FLY_API_TOKEN_PROD — staging token cannot deploy adhx-prod)
-gh workflow run deploy.yml -f environment=production
-# or locally:
-fly deploy --config fly.production.toml --app adhx-prod
-
-# Check deployed versions
-curl -s https://adhx.fly.dev/api/health | jq .version  # staging
-curl -s https://adhx.com/api/health | jq .version      # production
-```
-
-### GitHub Actions Workflows
-
-- **CI** (`.github/workflows/ci.yml`) - Runs on PRs: lint, typecheck, test, build
-- **Deploy** (`.github/workflows/deploy.yml`) - Deploys to Fly.io with environment selection (staging/production)
-- **Container image** (`.github/workflows/image-publish.yml`) - Publishes public AMD64/ARM64 release images to `ghcr.io/itsmemeworks/adhx`
-- **Release Please** (`.github/workflows/release-please.yml`) - Pinned semantic-version automation; calls container publication only after creating a release. No implicit Fly or website deployment.
-
-**Important**: GitHub doesn't fire `release: published` events when releases are created with `GITHUB_TOKEN` (security measure). The release workflow explicitly calls the reusable publisher. GHCR creates the organization package as private on its first publication and has no visibility API; an owner must set it to **Public** once in package settings. The publish workflow verifies anonymous pulls and fails with the exact settings URL until that is done.
-
-### Sentry Release Tracking
-
-Deployments automatically create Sentry releases for error tracking:
-
-- Version from `package.json` is passed as `SENTRY_RELEASE` build arg
-- Commits are associated with releases for "Suspect Commits" feature
-- Deploy notifications sent to Sentry after successful deployment
-- **Environment separation**: `SENTRY_ENVIRONMENT` env var tags errors as `staging` or `production`
-- Same Sentry project, filter by environment in Sentry UI
-
-### Fly.io Secrets
-
-Required secrets on **both** Fly.io apps (set via `fly secrets set --app <app-name>`):
-
-- `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET` - Twitter OAuth
-- `NEXT_PUBLIC_APP_URL` - `https://adhx.fly.dev` (staging) or `https://adhx.com` (production)
-- `SENTRY_DSN` - Error tracking (same DSN for both, separated by `SENTRY_ENVIRONMENT`)
-- `SESSION_SECRET` - JWT signing (generate unique per environment)
-
-GitHub Actions deploy tokens (app-scoped; staging cannot deploy prod):
-
-- `FLY_API_TOKEN` — `fly tokens create deploy -a adhx`
-- `FLY_API_TOKEN_PROD` — `fly tokens create deploy -a adhx-prod`
-
-**Twitter OAuth**: Both callback URLs must be registered in Twitter Developer Portal:
-
-- `https://adhx.fly.dev/api/auth/twitter/callback`
-- `https://adhx.com/api/auth/twitter/callback`
-
-### Fresh Database Deployment (Major Schema Changes)
-
-For breaking schema changes (like switching to composite primary keys), deploy a fresh database:
-
-```bash
-# STAGING
-fly machines list --app adhx
-fly machines stop <machine-id> --app adhx
-fly machines destroy <machine-id> --app adhx --force
-fly volumes delete <volume-id> --app adhx --yes
-fly volumes create adhx_data --region lhr --size 1 --app adhx
-gh workflow run deploy.yml
-
-# PRODUCTION
-fly machines list --app adhx-prod
-fly machines stop <machine-id> --app adhx-prod
-fly machines destroy <machine-id> --app adhx-prod --force
-fly volumes delete <volume-id> --app adhx-prod --yes
-fly volumes create adhx_prod_data --region lhr --size 1 --app adhx-prod
-gh workflow run deploy.yml -f environment=production
-```
-
-The app will initialize a fresh SQLite database with the new schema. Users will need to re-authenticate and sync their bookmarks.
+Put these there, never in committed files: GitHub, Sentry and hosting account
+names, personal test data and user IDs, local URLs and ports, and workflow
+preferences that shouldn't affect other contributors.
+
+## What ADHX is
+
+**Your friends have better taste than the algorithm.** ADHX is a self-hosted,
+private feed of the best posts from fourteen networks (X, Instagram, TikTok,
+YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch,
+Threads, Imgur, Bluesky), picked by one group of close friends and family per
+server.
+
+The system in one breath: one Next.js 16 container (React 19, route handlers as
+the backend), one SQLite file (Drizzle over `better-sqlite3`) and one media
+folder (`MEDIA_DIR`). Every save's media is downloaded once and served by
+ADHX itself. Search by meaning runs in forked model processes, never in the web
+process. An optional native Mac helper takes the heavy processing over HTTPS.
+Native iOS and Android apps (`apps/`) talk to `/api/app/*` with a phone key.
+`site/` is the separate static adhx.com product site.
+
+The privacy rule is **named to friends, never to strangers.** A **member** is
+a signed-in, approved, non-banned account. Members see who saved what. Signed-out
+visitors only ever see counts. A **Just for me** save is never shown, counted
+or named to anyone but its owner.
+
+## Session protocol
+
+1. **Start** by reading the newest entries of [`docs/WORKLOG.md`](docs/WORKLOG.md)
+   (append-only, newest first). It holds context that postdates the docs.
+2. **After substantive work** (a feature, a fix with a lesson, a decision, a
+   reverted experiment), add a dated entry at the top of the worklog: what,
+   why, current state, follow-ups, 10 lines at most. Never rewrite or delete
+   old entries, and never name operator GitHub logins or personal handles in
+   them.
+3. **Keep docs true.** If your change makes this file, `AGENTS.md`,
+   `README.md`, `ARCHITECTURE.md` or a spec inaccurate, fix it in the same PR.
+4. **Commit, push and open or update a PR** after substantive work, without
+   waiting to be asked. Use the GitHub account named in `CLAUDE.local.md`. PR
+   titles are Conventional Commits with a lowercase subject; check yours with
+   `gh pr view --json title` before handing off. Don't merge on your own
+   initiative: the owner merges, or asks you to arm auto-merge. Never merge the
+   Release Please PR. This overrides any global "don't push unless asked"
+   preference.
+
+## Commands
+
+| Command                                       | What it does                                                        |
+| --------------------------------------------- | ------------------------------------------------------------------- |
+| `pnpm install`                                | Install dependencies (pinned pnpm via Corepack).                    |
+| `pnpm db:migrate`                             | Create or migrate `./data/adhdone.db`. Docker does this on start.   |
+| `pnpm dev`                                    | Dev server on http://localhost:3001.                                |
+| `pnpm test`                                   | The Vitest suite (needs FFmpeg on `PATH` or `FFMPEG_PATH`).         |
+| `pnpm typecheck`                              | `tsc --noEmit`.                                                     |
+| `pnpm lint` / `pnpm format:check`             | ESLint over `src/`, Prettier over the repo.                         |
+| `pnpm test:e2e`                               | Playwright against an isolated server on :3002 and `data/e2e.db`.   |
+| `pnpm test:e2e:install`                       | Download Chromium and WebKit once.                                  |
+| `pnpm parity:serve` / `parity:capture`        | Design parity harness on :3600 (see `e2e/parity/README.md`).        |
+| `pnpm email:dev`                              | Preview sign-in emails on :3003.                                    |
+| `pnpm extension:build`                        | Build the desktop extension (after `pnpm --dir extension install`). |
+| `pnpm site:dev` / `site:build`                | The adhx.com product site on :3040.                                 |
+| `pnpm check:dependencies`                     | Audit all three JavaScript lockfiles.                               |
+| `./gradlew assembleDebug` (in `apps/android`) | Android debug APK. iOS builds from `apps/ios/ADHXShare.xcodeproj`.  |
+
+Locally, run with `KEEP_BACKFILL=off` unless you want your whole library
+downloaded, and `SEMANTIC_SEARCH=off` if you don't need search models (they
+download about 400 MB on first start). Vitest always runs with the model
+processes off.
+
+## The rules
+
+These are the things that have bitten someone before. Each one has a reason;
+the reason is usually a production incident or a privacy leak.
+
+**This is Next.js 16.** APIs and conventions differ from older versions you
+may know. Read the relevant guide in `node_modules/next/dist/docs/` before
+writing framework code (the managed block at the end of `AGENTS.md` says the
+same).
+
+### Privacy
+
+- **One condition for other people's saves.** Any query that counts, groups
+  or shows someone else's saves uses `visibleSave(alias)` /
+  `visibleSaveFilter` from `src/lib/people/savers.ts` (not private, not a
+  quoted copy, saver not banned). `seenBy(viewerId)` adds the viewer's own.
+- **Names only through `saversFor(keys, viewerId)`**, and only for a
+  signed-in member. Never put savers, notes or watchers on a public output:
+  previews, signed-out moments, public JSON, OG images, the sitemap.
+- **Never add saver-derived fields to `anonymize()`** in
+  `src/lib/semantic/items.ts`. Names are attached afterwards, for members.
+- **A private save writes no activity pulse**, and making a save private
+  deletes its earlier `save` pulse rows (`setSavePrivate`). Private wins on
+  public channels too: `/t/{user}/{tag}` never lists a post its owner saved
+  privately.
+- **Never copy a note to another account** (clones set `note: null`).
+- **Kept files of Just for me-only posts are owner-only**
+  (`src/lib/keep/file-access.ts`). Everything else under `/api/files/` is
+  reachable by anyone who can reach the server, by design.
+- **Public caches check `savePrivacyFingerprint()` on every read**, including
+  warm hits. Don't replace it with TTL-only or process-local invalidation.
+- **`activity.userId` and `analytics_events.userId` are stored, never
+  selected** on any public or aggregate read. Select explicit column lists.
+- **Never accept display data from the client** (captions, thumbnails,
+  avatars, types). Clients send identifiers; the server resolves the rest. A
+  public "post what shows on the front page" endpoint is a stored-XSS hole.
+- **Sentry gets hashed IDs only** (`src/lib/sentry.ts`). Never send a raw
+  `userId`, email or token to a third party.
+
+### Accounts and access
+
+- **`getCurrentUserId()`** (`src/lib/auth/session.ts`) returns null unless the
+  session's account exists, is `approved` and isn't banned. Every
+  data-changing route checks it, usually through `withAuth`
+  (`src/lib/api/with-auth.ts`). Phone routes use `withPhoneKey` /
+  `withPhoneKeyOrSession` (`src/lib/api/phone-auth.ts`); admin routes use
+  `withAdmin` (`src/lib/admin/guard.ts`).
+- **Admin is `users.role = 'admin'` on the immutable account ID**, never a
+  runtime username check. `ADMIN_USER_IDS` grants it at startup;
+  `ADMIN_USERNAMES` is a strict one-time bootstrap for old deployments.
+- **Links are spent by POST, never GET.** Magic links and invite links show a
+  script-free confirmation on GET or HEAD (link previews must not spend them);
+  a same-origin form POST consumes them with one conditional write.
+- **X never creates an account or a session.** It is a link on an existing
+  account for bookmark sync.
+
+### X tokens
+
+- **`getValidTokens(userId, { forceRefresh? })`** in `src/lib/auth/oauth.ts`
+  is the only way to get a usable X access token. X refresh tokens are
+  single-use and rotate; two concurrent refreshes break the chain and force
+  a re-link. It coalesces in-process, takes a durable SQLite lease, and
+  writes with compare-and-swap. Never call `refreshAccessToken` +
+  `saveTokens` yourself.
+- **`TokenRefreshError.fatal`** (400/401) deletes only the rejected
+  credential row and keeps the ADHX session. Non-fatal errors keep the stored
+  tokens for a later retry.
+- **402 is not reauth.** X uses 402 for "the developer account has no
+  credits". It's `code: 'unavailable'`; only 401/403 after one forced refresh
+  become `code: 'reauth'` (`src/lib/twitter/errors.ts`).
+- **The OAuth `redirect_uri` host must not contain `x.com`.** During
+  logged-out login, X rewrites every `x.com` in the authorize URL to
+  `twitter.com`, so `adhx.com` became `adhtwitter.com`. Set
+  `TWITTER_OAUTH_REDIRECT_URI` to a host without that substring; the callback
+  307-bounces back to the canonical origin before consuming anything.
+
+### Security
+
+- **SSRF: exact host or dot-prefixed suffix, never `.includes()`.**
+
+  ```typescript
+  // Wrong: allows twimg.com.evil.com
+  if (hostname.includes('twimg.com')) { ... }
+
+  // Right
+  const ok = hostname === 'video.twimg.com' || hostname.endsWith('.twimg.com')
+  ```
+
+  Redirects are followed manually and every hop is revalidated. Arbitrary
+  link previews use public-IP validation with DNS pinning.
+
+- **Every server-side `fetch()` to the outside world has
+  `signal: AbortSignal.timeout(…)`** (10 s for APIs, 30 s for large files).
+  A hung CDN connection otherwise ties up the single process.
+- **CSP lives in `next.config.js`.** Production never gets `'unsafe-eval'`
+  (only `pnpm dev` adds it, for React Refresh). The Instagram fallback embed
+  needs `frame-src https://www.instagram.com`.
+- **Moderation fails closed.** Moderation reads return success or
+  "unavailable"; never translate unavailable into visible or not banned.
+  Startup stops if the moderation tables can't be read.
+- **Drizzle's query builder or `sql` template tags only**, never string
+  interpolation into SQL. FTS input is quoted token by token.
+
+### Data
+
+- **Every user-data query filters by `userId`; every lookup by `bookmarkId`
+  also filters by `platform`.** Keys are composite, `(userId, platform, id)`,
+  so two people can save the same post and a TikTok ID can't collide with a
+  tweet ID. Never add `isNull(userId)` "legacy" fallbacks; they leak rows
+  across accounts.
+- **Transactions** use `runInTransaction()` from `@/lib/db`, with synchronous
+  `.run()` inside (better-sqlite3 is synchronous). Examples:
+  `src/app/api/bookmarks/[id]/route.ts`, `src/app/api/account/clear/route.ts`.
+- **Migrations run at container start** (`src/lib/db/migrate.ts`), each step
+  guarded; a failure exits with the step's name. SQLite has no
+  `ADD COLUMN IF NOT EXISTS`, so new columns are guarded `ALTER TABLE`s. Add
+  new columns to the in-memory test DDL in `src/__tests__/api/setup.ts` too.
+- **Account triggers** (`src/lib/db/account-invariants.ts`) reject writes
+  that reference a deleted `users.id`. A new user-linked table needs one.
+- **DB-reading pages are `force-dynamic`** and never use
+  `generateStaticParams`. The database doesn't exist at build time, so a
+  prerender bakes empty HTML or fails the build.
+- **One app instance, one SQLite volume.** Rate limits, caches, presence and
+  the moments engine are process-local by design.
+- **Never import a server-only module into a client component.** Anything
+  that reaches `@/lib/db` drags `better-sqlite3` into the browser bundle.
+
+### Models and processing
+
+- **Models never run in the web process.** Inference blocks the event loop
+  (one video once froze every request for about 15 seconds). The web server
+  talks to the forked `jobs` and `query` children only through
+  `src/lib/semantic/supervisor.ts`. Never import `model.ts`, `worker.ts` or
+  `extract-model.ts` from a route or page.
+- **Documents hold public post content only** (`src/lib/semantic/documents.ts`):
+  never tags, notes or anything private.
+- **Strings sent to Jev are made well-formed before `JSON.stringify`**
+  (`src/lib/semantic/jev.ts`). A half emoji gets a 400.
+- **Enqueue understanding with `noteSaved(keys, priority)`** from
+  `@/lib/semantic`. It's fire-and-forget and never throws.
+
+### Rendering and the theater
+
+- **Browser translation is on, so never render a bare text node as a sibling
+  of an element.** Wrap each run in a `<span>`. A translator swaps text nodes
+  for its own wrappers and React's next DOM update throws. Full rule:
+  [`docs/specs/translation-safety.md`](docs/specs/translation-safety.md).
+- **Never key or remount `StageVideo`.** iOS grants audible playback to the
+  element the person touched; a new element loses it. `TheaterV2` drives the
+  shared `Stage` (`src/components/theater/`) only through window events in
+  `usePlayerState.ts` (`theater-pause`, `theater-resume`, `theater-set-muted`,
+  `theater-set-volume`, `theater-seek`, …). Don't fork the Stage.
+- **Build every media URL with `keptSrc()`** (`src/lib/keep/src.ts`). Never
+  hand-write `/api/media/*`; those proxies are only the fallback until a file
+  is kept.
+- **Instagram video: don't attach `<video src>` until a Range probe answers
+  200 or 206** (`probeInstagramVideo`).
+- **Sending a file shares `files` plus `text: "via <url>"`, never `url`
+  with `files`** (WhatsApp prints the link twice). `useSendFile` prefetches so
+  `navigator.share` stays inside the tap on iOS, and its module-level
+  in-flight dedupe stops double downloads. Keep both.
+- **Gestures that iOS guards happen inside the tap**: clipboard reads,
+  `navigator.share`, and focusing the quick-search field (`openQuickSearch()`).
+- **Inputs are 16px on phones** (`text-base sm:text-xs`), or iOS Safari zooms.
+- **Search state syncs with `history.replaceState`**, not `router.replace`,
+  which re-renders the server page on every keystroke.
+- **Sheets move focus in once on open.** The theater re-renders several times
+  a second while video plays, so focusing on every render steals focus.
+- **Text over media** sits on `.nx-scrim` and `.nx-text-shadow`; controls over
+  media use `.nx-plate`. Motion is `animate-nx-*` and stops under
+  `prefers-reduced-motion`.
+- **Line clamps:** put padding on a wrapper and `line-clamp-N` on a child with
+  no vertical padding, or a clipped line peeks through.
+- **Dark is the only theme.** There is no theme toggle.
+
+### Words in the product
+
+- UI copy follows the Voice section of [`brand/BRAND.md`](brand/BRAND.md):
+  clear first, funny second, punch up at ad tech, never at people. Describe
+  only what ships today.
+- Never name models or techniques in the UI. Say "learning", "channels",
+  "words only".
+- Keep privacy copy true: pictures, frames, speech and on-screen text are
+  understood on your own server, but Jev does receive the search words and a
+  post's own text when it's configured, so never claim nothing at all leaves.
+- Reactions are "React" and "Say something", never "comments".
+- **No gamification.** Streaks were removed on purpose. Don't bring them back.
+
+## Where things live
+
+| Area                   | Code                                                                                                                         | Read more                                                                 |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Pages and routes       | `src/app/` (App Router; route handlers under `src/app/api/`)                                                                 | [`ARCHITECTURE.md`](ARCHITECTURE.md#product-surfaces)                     |
+| Middleware             | `src/proxy.ts` (full source URL after the host → clean preview route)                                                        |                                                                           |
+| Database               | `src/lib/db/` (`schema.ts`, `migrate.ts`, `account-invariants.ts`)                                                           | [Persistence planes](ARCHITECTURE.md#persistence-planes)                  |
+| Accounts and sign-in   | `src/lib/auth/` (`account.ts`, `session.ts`, `invites.ts`, `approval.ts`, `phone-pairing.ts`, `phone-signin.ts`, `oauth.ts`) | [Accounts](ARCHITECTURE.md#accounts-and-authentication)                   |
+| Email                  | `src/lib/email/magic-link.ts`, templates in `src/emails/`                                                                    |                                                                           |
+| People and privacy     | `src/lib/people/` (`savers.ts`, `members.ts`), `src/lib/bookmarks/privacy.ts`, `visibility-sql.ts`                           | [`docs/specs/friends-feed.md`](docs/specs/friends-feed.md)                |
+| Saving                 | `src/app/api/bookmarks/add`, `src/app/api/tweets/add`, `src/app/api/app/save`, `src/lib/platform/networks.ts`                | [Save to watch](ARCHITECTURE.md#save-to-watch)                            |
+| Kept media             | `src/lib/keep/` (worker, `file-access.ts`, `src.ts`), served by `src/app/api/files/`                                         | [Kept media](ARCHITECTURE.md#kept-media)                                  |
+| Understanding, search  | `src/lib/semantic/` (`supervisor.ts`, `search.ts`, `vector-index.ts`, `rerank.ts`)                                           | [Understanding](ARCHITECTURE.md#understanding-pipeline-search-by-meaning) |
+| Mac helper protocol    | `src/lib/processing/`, `deploy/mac/`                                                                                         | [`docs/remote-processing.md`](docs/remote-processing.md)                  |
+| New (the blended feed) | `src/lib/feed/` (`blend.ts` pure, `blend-db.ts`, `views.ts`, `kinds.ts`)                                                     | [New](ARCHITECTURE.md#new-the-blended-feed)                               |
+| Sends                  | `src/lib/sends/`                                                                                                             | [Sends](ARCHITECTURE.md#sends)                                            |
+| Right now (moments)    | `src/lib/moments/` (`engine.ts`, `group.ts`, `people.ts`, `presence.ts`)                                                     | [Right now](ARCHITECTURE.md#right-now-live-moments)                       |
+| Reactions              | `src/lib/reactions/`                                                                                                         | [`docs/specs/phone-app.md`](docs/specs/phone-app.md)                      |
+| Channels               | `src/lib/channels/` (`overview.ts`, `group.ts`, `friends.ts`, `auto.ts`), `src/lib/tags/`                                    | [Channels](ARCHITECTURE.md#channels)                                      |
+| Admin and moderation   | `src/lib/admin/`, `src/components/next/admin/`                                                                               | [`docs/specs/admin.md`](docs/specs/admin.md)                              |
+| X sync                 | `src/app/api/sync`, `src/lib/sync/`, `src/lib/twitter/`                                                                      | [X bookmark sync](ARCHITECTURE.md#x-bookmark-sync)                        |
+| Phone API              | `src/app/api/app/`, `src/lib/app/`, `src/lib/api/phone-auth.ts`                                                              | [`docs/specs/phone-app.md`](docs/specs/phone-app.md)                      |
+| The UI                 | `src/components/next/` (theater, search, channels, moments, settings, admin)                                                 |                                                                           |
+| The media Stage        | `src/components/theater/` (`StageVideo.tsx`, `useSendFile.ts`, shared by `TheaterV2`)                                        |                                                                           |
+| Phone apps             | `apps/ios/` (Swift), `apps/android/` (Kotlin, Compose)                                                                       | [iOS](apps/ios/README.md), [Android](apps/android/README.md)              |
+| Desktop extension      | `extension/`                                                                                                                 | [`extension/README.md`](extension/README.md)                              |
+| Deployment examples    | `docker-compose.yml`, `deploy/nas/`, `deploy/mac/`, `Dockerfile`                                                             | [`deploy/nas/README.md`](deploy/nas/README.md)                            |
+| Product site           | `site/` (imports nothing from `src/`; editing it doesn't publish it)                                                         |                                                                           |
+| Tests                  | `src/__tests__/` (Vitest), `e2e/` (Playwright), `e2e/parity/`                                                                | [Testing](#testing)                                                       |
+
+## Subsystem notes
+
+Short notes on what is easy to get wrong. Each links to the full description.
+
+### Accounts, invites and sign-in
+
+- Two ways in: an **invite link** (`/invite/{token}`, 7 days, single use, only
+  the token's SHA-256 stored; it makes an account with no email) or an
+  **email magic link** (15 minutes; 60 when links are held for an admin with
+  `EMAIL_LINKS_TO_ADMIN`). `ALLOWED_EMAILS` limits who may create an account
+  by email; existing accounts can always sign in. In development without
+  `RESEND_API_KEY` or `SMTP_URL`, links are printed to the server console.
+- **Who can invite** (`admin | approve | anyone`) lives in `server_settings`
+  (`invites.who`); `INVITES=members` only sets the first default. Under
+  `approve`, people a non-admin invited join as `pending` and wait at
+  `/invite/waiting` until an admin answers in Settings → Your people.
+- `GET /api/auth/me` is the client's source of truth for the account,
+  identities, X connection and admin role.
+- Sessions are an HS256 JWT in the `adhx_session` cookie: 30 days, `httpOnly`,
+  `sameSite=lax`, `secure` in production, signed with `SESSION_SECRET`.
+- OAuth tokens are AES-256-GCM encrypted at rest
+  (`src/lib/auth/token-encryption.ts`).
+
+### Phones
+
+- **Pairing:** Settings (or `/invite/done`) shows an 8-character code that
+  works once for 10 minutes; the app spends it at `POST /api/app/pair` and
+  gets a phone key (`access_keys`, scope `phone`, stored as a hash).
+- **Sign in on the phone:** `POST /api/app/signin { email }` emails a 6-digit
+  code (15 minutes, five wrong tries burn it, always answers `{ ok: true }`);
+  `POST /api/app/signin/verify` returns a phone key.
+- **Every phone route reuses the web's library code**, never a fork.
+  `DELETE /api/app/me` lets a phone revoke its own key.
+- Share sheets post to `/api/app/save` with `deferPublish: true`: the save is
+  staged privately until `PATCH /api/app/save` confirms the Just for me choice
+  with a monotonic `intentVersion`. Without that confirmation, a new save
+  stays private.
+
+### Saves, notes and privacy
+
+- Every save path takes `private?` and `note?` and honours the saver's "Just
+  for me by default" (`withPrivateDefault`). A repeat save changes privacy
+  only when `private` is passed explicitly.
+- Notes are cleaned by `cleanNote` (`src/lib/people/note-text.ts`): 140
+  characters at most, control and bidi characters dropped.
+- Tags are cleaned by `sanitizeTag` (`src/lib/utils/tag.ts`): lowercase,
+  hyphens, 15 characters. At most 5 tags a post (`MAX_TAGS_PER_POST`).
+- Seen marks live in `post_views` (`src/lib/feed/views.ts`): 2 seconds on
+  stage or a skip, batched through an account-scoped outbox to
+  `POST /api/views` (phones: `/api/app/seen`).
+
+### Kept media
+
+- `keep_jobs` has one row per post, not per saver. X downloads through
+  FxTwitter; everything else through yt-dlp. Non-H.264 video is re-encoded
+  unless `KEEP_H264=off` (on the Mac in remote mode).
+- `/api/files/{platform}/{id}/{slot}` serves kept files with Range support.
+  Until a file is kept, X, Instagram and TikTok fall back to the old proxies
+  under `/api/media/`.
+- FFmpeg comes from the system (`FFMPEG_PATH` or `PATH`); `ffmpegPath()`
+  returns an absolute path because yt-dlp doesn't search `PATH`.
+
+### Understanding and search
+
+- Vectors: EmbeddingGemma 2 for words, pictures and sampled video frames.
+  Words: Whisper base for speech, Florence-2 base for text on screen, both in
+  a short-lived `extract-child.ts`. Everything is keyed by post, with no
+  `user_id`.
+- `GET /api/search` fuses z-scored vector lists with FTS5 keywords, then an
+  optional Jev rerank (`refine=1`) of the top 20. Plain rank fusion was tried
+  and was far worse; re-tune with `scripts/eval-search.ts` after big changes.
+- Bump `SEMANTIC_MODEL_VERSION` to re-understand everything.
+- `PROCESSING_MODE=remote` stops the local jobs child and hands work to the
+  Mac helper over leased `/api/processing/*` calls authenticated by
+  `PROCESSING_WORKER_TOKEN` (never an account or phone key).
+
+### New, moments, reactions and channels
+
+- **New** (`/play?feed=new`) is scored in pure functions in
+  `src/lib/feed/blend.ts`; snapshots cache only ordering, and every page
+  rechecks moderation, savers and gone posts.
+- **Right now** is an in-memory engine in the web process
+  (`src/lib/moments/engine.ts`). It is anonymous; names are added per request
+  for members only (`people.ts`), and signed-out responses keep their old
+  shape.
+- **Reactions** (`post_reactions`) show only to members who can see the post,
+  never from banned members, never on hidden posts.
+- **A channel is a tag or a derived group**, never a second system: From
+  everyone (`group_channels`), Your people (one per friend), Made for you
+  (`auto_channels`, private), and your own tags (public via
+  `tag_shares.is_public` at `/t/{user}/{tag}`).
+
+### The theater
+
+- `TheaterV2` (`src/components/next/theater/`) plays every queue at `/play`;
+  the query picks the source (`feed=`, `recent=1`, `q=`, `channel=`, `auto=`,
+  `group=`, `friend=`, `moment=`, `reacted=1`).
+- Preview pages (`/{user}/status/{id}`, `/p/{id}`, `/reel(s)/{id}`,
+  `/@{user}/video/{id}`, `/s/{network}/{id}`) render `PreviewTheater`: the
+  page paints at once and passes a not-awaited promise for the upstream post,
+  while `generateMetadata` awaits it for crawlers. A signed-in fresh open
+  saves the post (`autosave-shared.ts`).
+- Keyboard (handled in `TheaterV2.tsx`): `→`, `↓` or `J` next; `←` or `↑`
+  previous (on an article the up and down arrows scroll instead); `Space` or
+  `K` play and pause; `M` mute; `F` full screen; `Q` the queue; `/` search;
+  `⌘V` pastes a link.
+- Every control the design hides keeps a focus-revealed button. Never show two
+  visible Previous/Next pairs: e2e clicks `Next` by exact name.
+
+### Admin and moderation
+
+- `/admin/*` boards read `src/lib/admin/boards/*`. They count Just for me
+  saves but build every list from shared saves only, and never show what
+  anyone searched or watched.
+- Hiding a post writes `moderated_posts`, `activity.hidden` and `admin_audit`
+  in one transaction. Banning writes `user_bans`; the account's sessions,
+  phone keys and invites stop working.
+
+## Environment variables
+
+[`.env.example`](.env.example) lists every variable with a comment; copy it to
+`.env.local`. The ones you'll meet first:
+
+| Variable                                                     | Purpose                                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `SESSION_SECRET`                                             | Signs sessions and file tokens. Generate with `openssl rand -base64 32`. |
+| `NEXT_PUBLIC_APP_URL`                                        | The address people use (http://localhost:3001 locally).                  |
+| `DATABASE_PATH`, `MEDIA_DIR`                                 | SQLite file and kept-media folder.                                       |
+| `RESEND_API_KEY`, `SMTP_URL`, `EMAIL_LINKS_TO_ADMIN`         | How sign-in links are delivered.                                         |
+| `ALLOWED_EMAILS`, `INVITES`, `ADMIN_USER_IDS`                | Who may join, who may invite, who is admin.                              |
+| `KEEP_MEDIA`, `KEEP_BACKFILL`, `KEEP_H264`                   | Kept-media switches (`off` to disable).                                  |
+| `SEMANTIC_SEARCH`, `SEMANTIC_SPEECH`, `SEMANTIC_SCREEN_TEXT` | Model switches (`off` to disable).                                       |
+| `PROCESSING_MODE`, `PROCESSING_WORKER_TOKEN`                 | Local processing or the Mac helper.                                      |
+| `TYPESAFE_API_KEY`                                           | Optional Jev rerank and naming. Never commit or log it.                  |
+| `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET`                 | Optional X bookmark sync.                                                |
+| `TRUST_PROXY_IP_HEADERS`                                     | `true` only behind a proxy that overwrites `X-Forwarded-For`.            |
 
 ## Testing
 
-```bash
-pnpm test         # Run all 3,558 tests
-pnpm test:watch   # Watch mode
-pnpm test:e2e     # Playwright against an isolated Next on :3002 (not `pnpm dev`)
-pnpm test:e2e:install  # download Chromium and WebKit once
-```
+- **Unit and route tests** are Vitest files in `src/__tests__/`. Route tests
+  use an in-memory SQLite database from `createTestDb()` in
+  `src/__tests__/api/setup.ts` and check that one account's actions never
+  touch another's.
+- **Mock every `@/lib/db` export a route uses.** A missing export (say,
+  `runInTransaction`) shows up as a silent 500 in the test:
 
-Browser tests live in `e2e/*.spec.ts` and are **not** part of `pnpm test`. `e2e/serve.ts` migrates + seeds `data/e2e.db` (or `data/adhdone.db` on GitHub Actions) **before** spawning Next on :3002, then mints a session JWT against that file. Do not point them at the owner's `:3001` / `adhdone.db`.
+  ```typescript
+  vi.mock('@/lib/db', () => ({
+    get db() {
+      return testInstance.db
+    },
+    runInTransaction<R>(fn: () => R): R {
+      return testInstance.sqlite.transaction(fn)()
+    },
+  }))
+  ```
 
-Test files in `src/__tests__/`:
+- **Browser tests** live in `e2e/*.spec.ts` and are not part of `pnpm test`.
+  `e2e/serve.ts` migrates and seeds `data/e2e.db`, starts Next on :3002 and
+  mints a session. Never point them at your own `:3001` or `adhdone.db`.
+- **Design parity** (`e2e/parity/`) screenshots the app beside the design
+  boards; its README explains the world it builds.
+- **Native apps** build and test in the Native apps workflow; locally see the
+  [iOS](apps/ios/README.md) and [Android](apps/android/README.md) READMEs.
+- Before you call something done: `pnpm typecheck && pnpm test`, then
+  `pnpm lint && pnpm format:check`. For UI changes, also look at it in a
+  browser at desktop and phone widths. A passing test is not a screenshot.
 
-- `session.test.ts` - JWT session handling
-- `oauth.test.ts` - OAuth PKCE flow, state management, token exchange
-- `types.test.ts` - Shared type conversions
-- `feed-helpers.test.ts` - Feed utilities
-- `format.test.ts` - Number formatting, relative time, text truncation
-- `url-expander.test.ts` - URL expansion
-- `fxembed.test.ts` - FxTwitter integration
-- `twitter-client.test.ts` - Twitter API client, token refresh, bookmarks fetching
-- `og-image-selection.test.ts` - OG image priority selection for social unfurling
-- `og-metadata-fixtures.test.ts` - OG metadata generation with real tweet fixtures
-- `article-text.test.ts` - Article block to markdown conversion
-- `feed-utils.test.ts` - Feed utility functions
-- `proxy.test.ts` - Media proxy URL validation
-- `url-prefix-route.test.ts` - URL prefix route parameter validation
-- `platform.test.ts` - Platform detection (iOS/Android/desktop, SSR safety)
-- `share-page.test.ts` - PWA Share Target URL parsing and redirect logic
-- `sitemap.test.ts` - Dynamic sitemap generation with public tags and deduplication
-- `utils.test.ts` - General utilities
+## CI, releases and deployment
 
-API route tests in `src/__tests__/api/`:
+| Workflow              | When                          | What                                                                                     |
+| --------------------- | ----------------------------- | ---------------------------------------------------------------------------------------- |
+| `ci.yml`              | Pull requests                 | Format, lint, typecheck, tests, e2e, build, extension, container smoke, site, audit.     |
+| `native.yml`          | Pull requests                 | Android and iOS builds and tests.                                                        |
+| `pr-title.yml`        | Pull requests                 | Conventional Commit PR title.                                                            |
+| `codeql.yml`          | Pull requests, weekly         | Code scanning.                                                                           |
+| `release-please.yml`  | Push to `main`                | Opens the release PR; on release, publishes the image, Android APK and TestFlight build. |
+| `image-publish.yml`   | Called by release, or by hand | AMD64 and ARM64 images to `ghcr.io/itsmemeworks/adhx`.                                   |
+| `android-release.yml` | Called by release, or by hand | Signed APK attached to the GitHub release (skips without signing secrets).               |
+| `ios-testflight.yml`  | Called by release, or by hand | Signed upload to TestFlight (skips without App Store secrets).                           |
+| `site.yml`            | By hand                       | Publishes `site/` to GitHub Pages.                                                       |
+| `deploy.yml`          | By hand                       | Legacy hosted Fly apps. Never run it unless the owner asks.                              |
 
-- `setup.ts` - In-memory SQLite test database factory
-- `bookmarks-*.test.ts` - Bookmark CRUD operations
-- `tags.test.ts` - Tag management
-- `preferences.test.ts` - User preferences
-- `feed.test.ts` - Feed filtering, pagination, tag queries
-- `auth-callback.test.ts` - OAuth callback handling
-- `auth-status.test.ts` - Auth status and token refresh
-- `sync-cooldown.test.ts` - 1-hour sync rate limiting
-- `tweets-add.test.ts` - Manual tweet adding, URL parsing, categorization
-- `media-video.test.ts` - Video proxy, quality selection, range requests
-- `media-video-download.test.ts` - Video download endpoint, range requests, mobile limits
-- `media-video-info.test.ts` - Video info endpoint, HLS detection
-- `account.test.ts` - Account management (clear data, delete)
-- `share-tag-clone.test.ts` - Tag sharing and cloning functionality
-- `share-tweet.test.ts` - Public tweet JSON API and adhxContext enrichment
-- `stats.test.ts` - User stats endpoint
+Merging to `main` never deploys anything. The owner merges the Release Please
+PR; installing a release on a server is a separate step. Release mechanics,
+secrets and the Release Please quirks are in
+[`docs/releasing.md`](docs/releasing.md). Commit messages and PR titles are
+checked by commitlint (`commitlint.config.cjs`): a type from the allowed list,
+a lowercase subject, no trailing full stop, 100 characters at most.
 
-All API tests verify multi-user isolation (User A's actions don't affect User B).
+## History
 
-**Test mock pattern for `@/lib/db`**: When a route imports new exports from `@/lib/db` (like `runInTransaction`), the test mock must be updated to include them. Tests use `createTestDb()` from `setup.ts` which exposes `{ db, sqlite, close }`:
+ADHX began as an X-first hosted bookmark app with a library grid, an older
+theater (`TheaterShell`), Discover at `/live`, `/trending` and a playlist
+leaderboard. All of that is gone, and `next.config.js` redirects the old URLs
+to `/now` or `/channels`. If an old doc or comment tells you to edit
+`TheaterShell`, `FeedCard` or the library grid, it's a ghost: don't feed it.
 
-```typescript
-vi.mock('@/lib/db', () => ({
-  get db() {
-    return testInstance.db
-  },
-  runInTransaction<R>(fn: () => R): R {
-    return testInstance.sqlite.transaction(fn)()
-  },
-}))
-```
+What survives from that era, and why:
 
-Forgetting to add new exports to mocks causes silent 500 errors in tests.
+- **Tables with old data:** `activity` (the anonymous post pulse, 30 days),
+  `analytics_events` (private product log, 90 days), `collection_events` and
+  `collection_aggregates` (channel views and clones). Their privacy rules
+  above still apply.
+- **Words in public contracts:** APIs and columns still say "collection" and
+  "playlist" (`/api/collections/trending`, `tag_shares`). Don't rename them;
+  they're indexed and linked.
+- **The media proxies** under `/api/media/` (FxTwitter, Instagram, TikTok,
+  HLS for long X videos) remain as the fallback before a file is kept.
+- **The legacy Fly configs** (`fly.toml`, `fly.production.toml`) and the
+  manual Deploy workflow. The current product is self-hosted with Docker.
 
-## Common Tasks
-
-### Add UI component
-
-1. Create in `src/components/`
-2. Use `cn()` from `@/lib/utils` for class merging
-3. Use lucide-react for icons
-4. Export from barrel file if in a subdirectory
-
-### Database queries (Drizzle)
-
-```typescript
-import { db } from '@/lib/db'
-import { bookmarks } from '@/lib/db/schema'
-import { eq, and, desc } from 'drizzle-orm'
-
-const results = await db
-  .select()
-  .from(bookmarks)
-  .where(and(eq(bookmarks.userId, userId), eq(bookmarks.category, 'github')))
-  .orderBy(desc(bookmarks.processedAt))
-  .limit(20)
-```
-
-### Dependency and release verification
-
-- Audit all three JavaScript lockfiles with `pnpm check:dependencies`; only the documented unpatched build-only braces advisory has a time-limited exception, never in production.
-- Android exports resolved Maven runtime versions for OSV checks. Both native image architectures and actual release digests are scanned before tag promotion.
-- FFmpeg comes from the maintained OS/package-manager installation, never an old npm-downloaded binary. `media/ffmpeg.ts` returns an existing absolute executable because yt-dlp's location option does not search PATH.
-- Run the synthetic released-database upgrade/restore and load/recovery rehearsals before distribution. Physical phone acceptance remains separate; see `docs/rollout/dependency-maintenance.md` and linked checklists.
-
-### Friends-feed reliability verification
-
-- Doing totals use `processing/doing-state.ts` aggregate SQL over the full visible backlog; filter/order before limiting details to 60. `summary=1` avoids post/media/saver hydration. Keep aggregate predicates aligned with detailed step/status logic and preserve private/owner isolation.
-- `components/next/doing/doing-poller.ts` shares one foreground poll per account/scope, cancels pending fetches and timers after the final subscriber, and retains explicit stale/error feedback. Never restart polling from an obsolete response.
-- Web viewing marks stay in an account-scoped bounded outbox until an HTTP success; network and HTTP failures retry, including after reconnect/reload. Account changes must never submit old marks under the new cookie.
-- Native live polling POSTs bounded known keys plus a screen UUID, refreshes existing metadata and consumes `removedKeys`. Do not drop a cached item merely because it fell outside newest60. Foreground presence leases expire after15s and count one account across tabs/phones; names remain per authorized viewer.
-- OCR skips specifically unreadable pictures, but model/inference failures or no successfully processed inputs must fail/retry, not record `none`. Cache pruning pins every input of an active job. Retained-generation keys share originals across learning kinds; server release/reconciliation plus bounded expiry removes unused copies.
-- Processing scheduling alternates conversion/understanding durably and ages waiting work. See `processing/scheduling.ts`, `docs/remote-processing.md`, and `docs/rollout/friends-feed-verification.md` for the verification matrix and native CI.
+The long-form history, with the reasoning behind each removal, is in
+[`docs/WORKLOG.md`](docs/WORKLOG.md) and in this file's git history.

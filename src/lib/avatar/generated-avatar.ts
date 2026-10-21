@@ -10,8 +10,8 @@
  * identity always renders the same icon. That project targets p5.js canvas
  * rendering in a standalone HTML page (large runtime, DOM/canvas APIs, PNG
  * export) — not usable here under this app's no-new-runtime-dependency /
- * strict-CSP / inline-SVG constraints (see CLAUDE.md "Content Security
- * Policy"), and it isn't published as an npm package. So the algorithm is
+ * strict-CSP / inline-SVG constraints (see the CSP rule under "Security" in
+ * CLAUDE.md), and it isn't published as an npm package. So the algorithm is
  * reimplemented from scratch below: a small non-crypto string hash (FNV-1a)
  * seeds a tiny PRNG (mulberry32) that picks a curated color palette and
  * places a few overlapping circles — no p5.js, no canvas, no dependency.

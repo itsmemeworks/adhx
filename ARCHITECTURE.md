@@ -1,10 +1,11 @@
 # Architecture
 
-This is the human-facing technical tour of ADHX: the shape of the system, the
-important state transitions, and the boundaries that keep it safe. It is
-linked from the README. For route-by-route operational notes, security
-recipes and gotchas, use [`CLAUDE.md`](CLAUDE.md). The per-feature contracts
-live in the specs:
+This is the technical tour of ADHX: the shape of the system, how a link
+becomes a post you can watch, and the boundaries that keep it private. It's
+written for contributors, self-hosters who like to know what's running in
+their cupboard, and coding agents. For the rules and gotchas to follow while
+changing code, use [`CLAUDE.md`](CLAUDE.md). The per-feature contracts live
+in the specs:
 
 - [`docs/specs/friends-feed.md`](docs/specs/friends-feed.md): members, Just for
   me, notes, New, sends, channels, live names, forming bells, Getting it ready.
@@ -24,6 +25,25 @@ child processes on the same machine for search-by-meaning inference, because
 inference blocks its thread. With `PROCESSING_MODE=remote`, only the
 lightweight query child stays there and an optional native Mac helper claims
 the heavy work over authenticated HTTPS.
+
+Every diagram below has a short summary under it, so nothing here depends on
+seeing the picture.
+
+## Words used here
+
+| Term              | Meaning                                                                                                                       |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Member**        | A signed-in account that is approved and not banned. Everyone on one server is one group.                                     |
+| **Save**          | One person's copy of a post: a `bookmarks` row. Two people saving the same post make two saves.                               |
+| **Post key**      | `platform:id`, the post itself, whoever saved it. Downloads and understanding are keyed by post.                              |
+| **Just for me**   | A private save (`bookmarks.is_private`). Only its owner sees it.                                                              |
+| **Kept**          | A post whose media has been downloaded to the server's `MEDIA_DIR` and is served from there.                                  |
+| **Understanding** | Turning a post's words, pictures, video frames, speech and on-screen text into vectors and searchable words.                  |
+| **Moment**        | A live group of recent saves about the same thing, shown on Right now.                                                        |
+| **Channel**       | A tag, or a group of posts derived from saves (From everyone, Your people, Made for you).                                     |
+| **Phone key**     | A secret a paired phone app sends as `Authorization: Bearer`. Stored on the server only as a hash.                            |
+| **Worker token**  | `PROCESSING_WORKER_TOKEN`, the machine secret the optional Mac helper uses. Never an account credential.                      |
+| **Jev**           | TypeSafe's hosted decision model, used only when `TYPESAFE_API_KEY` is set: it reranks search and names channels and moments. |
 
 ## What ADHX is now
 
@@ -84,6 +104,14 @@ flowchart LR
   Web -->|"optional errors"| Sentry["Sentry"]
   Jobs -->|"model weights, once"| HF["Hugging Face"]
 ```
+
+In words: browsers and phone apps reach one Next.js server through your
+reverse proxy, with a session cookie or a phone key. The server keeps one
+SQLite file and a media folder, and forks model processes for search and for
+reading speech and on-screen text. An optional Mac helper connects in the same
+way with its own machine token. Outbound, the server fetches posts from the
+networks, and only if configured talks to the X API, an email service, Jev,
+Sentry, and Hugging Face for model weights.
 
 - **Browser.** Sessions are a signed `adhx_session` cookie. The installed PWA
   registers `/share` as an Android share target; iPhones use the native app or
@@ -165,6 +193,13 @@ flowchart TD
   E --> Out
 ```
 
+In words: every way of saving ends in a `bookmarks` row. That row starts two
+background jobs keyed by the post: keep (download once, convert to H.264 if
+needed, record the files) and understand (vectors and searchable words). While
+a post is still being kept, the player shows "Getting it ready" with real
+progress, then plays the kept file. New, Right now, Channels and Search read
+the saves and the understanding results.
+
 `POST /api/bookmarks/add` is the platform-neutral save boundary for the web;
 `POST /api/app/save` is the phone's, with a durable queue (`phone_save_queue`)
 so a share sheet can acknowledge quickly. X delegates over loopback to
@@ -234,6 +269,12 @@ flowchart LR
   Seen -.->|"left out next time"| C
 ```
 
+In words: New starts from what other members saved in the last 14 days plus
+anything sent to you, removes what you can't see or don't want, scores each
+post on four readable signals, applies your Show more and Show less choices,
+spreads friends and topics out, puts unseen sends first, and returns a page
+where every post says why it's there. Posts you've seen drop out next time.
+
 `src/lib/feed/blend.ts` is pure (signals, `BLEND_WEIGHTS`, variety, why words,
 cursor); `blend-db.ts` loads candidates and context. Routes:
 `GET /api/feed/blend?mode=new|everyone|friends|mine&types=…` and the phone's
@@ -296,6 +337,12 @@ flowchart TD
   A -->|"poll every 60 s"| Toast["Web toast and browser notification"]
   A -->|"poll /api/app/alerts, background refresh"| Notif["Phone notification"]
 ```
+
+In words: an engine inside the web process watches new visible saves, joins
+each one to a live moment or a forming group, and regroups everything every
+five minutes. Browsers follow it over a server-sent event stream and phones
+poll. When a forming group that someone rang the bell on goes live, the
+server writes an alert that the web and the phones pick up as a notification.
 
 - **Engine** (`engine.ts`, global state in the web process, running only
   while someone listens and idling after 10 minutes): new saves past a
@@ -381,6 +428,13 @@ flowchart LR
   Files["Kept files at /api/files"] --> Anyone["Anyone who can reach the server, moderated posts excepted"]
   Admin["Admins"] --> Counts["Counts, invites, join requests, held sign-in links, audit"]
 ```
+
+In words: a shared save shows members the post, who saved it, their face,
+note and time; signed-out visitors see the post and a count only. A Just for
+me save is for its owner alone. Sends are between sender and recipient.
+Views, weights, bells and archive belong to one account. Kept files of
+shared posts are reachable by anyone who can reach the server. Admins see
+counts, never lists of private saves.
 
 The rule is **named to friends, never to strangers**
 ([`docs/specs/friends-feed.md`](docs/specs/friends-feed.md),
@@ -473,6 +527,12 @@ sequenceDiagram
   A->>D: atomically link identity and encrypted tokens if generation still matches
 ```
 
+In words: the browser asks for a sign-in link, and the server stores only a
+hash of it. Opening the link shows a confirmation page that spends nothing;
+pressing the button posts the token, which the server claims once and answers
+with a signed 30-day session. Linking X later runs OAuth with PKCE, bound to
+the signed-in account, and only links if nothing changed in between.
+
 Magic-link tokens are single-use and store a hash. Emailed links expire after
 15 minutes; admin-held links expire after 60 minutes. Admin delivery separately
 retains the raw link until use/expiry so it can be handed over. Requests have a
@@ -562,20 +622,38 @@ admin page for an admin to pass on.
 
 ## Phone app API and auth
 
+A phone gets its key one of two ways: by pairing with a signed-in browser, or
+by signing in with an emailed code, with no browser involved.
+
 ```mermaid
 sequenceDiagram
   participant W as Web Settings or invite done page
   participant S as ADHX server
+  participant M as Email
   participant P as Phone app
-  W->>S: POST /api/app/pairing with the session cookie
-  S-->>W: 8-character code for 10 minutes, only its hash stored
-  W-->>P: QR code adhx://pair, or the address and code typed in
-  P->>S: POST /api/app/pair with the code
+  alt Pair with a signed-in browser
+    W->>S: POST /api/app/pairing with the session cookie
+    S-->>W: 8-character code for 10 minutes, only its hash stored
+    W-->>P: QR code adhx://pair, or the address and code typed in
+    P->>S: POST /api/app/pair with the code
+  else Sign in on the phone
+    P->>S: POST /api/app/signin with an email address
+    S->>M: 6-digit code, 15 minutes, five wrong tries burn it
+    S-->>P: always ok, so addresses can't be probed
+    P->>S: POST /api/app/signin/verify with the address and code
+  end
   S-->>P: phone key, shown once, stored as a hash with scope phone
   P->>S: /api/app/... with Authorization Bearer key
   S->>S: check key, ban and approval on every request
-  Note over W,S: Settings, Phone app, Remove deletes the key at once
+  Note over P,S: Remove this phone (DELETE /api/app/me) or Settings revokes the key at once
 ```
+
+In words: to pair, the browser asks the server for a short one-time code and
+shows it as a QR code; the phone sends the code back and receives its key.
+To sign in on the phone instead, the phone asks for an emailed six-digit code
+and sends it back with the address. Either way the server stores only a hash
+of the key, checks it with the account's ban and approval state on every
+request, and forgets it the moment the phone or Settings removes it.
 
 - **Pairing.** `POST /api/app/pairing` (session) makes a one-time code in
   `app_pair_codes`; a new code cancels the old one. `POST /api/app/pair`
@@ -717,7 +795,7 @@ Every saved post's media is downloaded once and served by ADHX itself (`src/lib/
 - **Download.** X uses fxtwitter's original files (photos `name=orig`, the best MP4 variant, up to 4K). Instagram uses yt-dlp, then instafix images and the public mirror. Everything else uses yt-dlp (`-S res,fps,vcodec:h264`), with the page's `og:image` for picture posts. Special cases: Vimeo goes through `player.vimeo.com`; Reddit finds its v.redd.it playlist through vxreddit; Threads only uses link-preview tags.
 - **Re-encoding.** Non-H.264 video is re-encoded to H.264 at the same size (CRF 20) unless `KEEP_H264=off`.
 - **Recording.** Files land in a scratch folder, are probed with ffmpeg, then moved into `MEDIA_DIR/{platform}/{id}-{hash}/` as slots `video-N`, `photo-N`, `audio-N` and `poster`. `kept_files` records each one. In the same transaction, `reconcileKeptMedia` updates each saver's public category/media descriptors to the actual file kinds and counts, preserving private tags, archive state and summaries. Article categories stay articles.
-- **Serving.** `/api/files/{platform}/{id}/{slot}` serves the kept file with Range support. `poster` falls back to `photo-1`, and `video-1` to `audio-1`. Until a file is kept, X, Instagram and TikTok hand off (307, relative) to the old proxies; other networks wait up to 25 s for a running download. Every client media URL is built by `keptSrc()` (`src/lib/keep/src.ts`). The route checks moderation but not sign-in: anyone who can reach the server and knows a post's platform and source ID can fetch its kept files, including a post saved only Just for me.
+- **Serving.** `/api/files/{platform}/{id}/{slot}` serves the kept file with Range support. `poster` falls back to `photo-1`, and `video-1` to `audio-1`. Until a file is kept, X, Instagram and TikTok hand off (307, relative) to the old proxies; other networks wait up to 25 s for a running download. Every client media URL is built by `keptSrc()` (`src/lib/keep/src.ts`). The route checks moderation, and asks `src/lib/keep/file-access.ts` who may fetch: anyone who can reach the server and knows a post's platform and source ID can fetch the kept files of a shared post, while a post whose only saves are Just for me is served only to an owner (see [Who sees what](#who-sees-what)).
 - **Progress.** `keep_jobs.progress` holds the last download percent (in steps of 5) so Getting it ready and `/doing` survive restarts; in remote mode a post stays `converting` until every `media_conversions` slot is done.
 - **Clean-up.** An hourly pass deletes files for posts nobody has saved any more.
 - **Understanding.** The understanding worker reads kept files straight from disk. Its content hash gains `:kept` once a file is kept, so posts are learned again from the original.
@@ -756,6 +834,12 @@ flowchart LR
   I --> E
   V --> E
 ```
+
+In words: saves and a startup backfill fill a durable queue. One background
+process works through it a job at a time, making a vector each for a post's
+words, its picture and sampled video frames. A separate short-lived process
+turns speech and on-screen text into words, which join the post's words and
+the keyword index.
 
 - **Keyed by post, not saver.** Only public post content is read (never tags
   or who saved it), so one row serves everyone who saved the post. Per-user
@@ -874,6 +958,13 @@ flowchart LR
   P --> I["Feed-shaped posts with savers for members"]
   I -->|"refine=1"| J["Jev graded rerank of the top 20"]
 ```
+
+In words: the query is turned into a vector by the small query process and
+compared with every post's word, picture and video vectors, while the keyword
+index matches the words themselves (including speech and on-screen text). The
+lists are standardised and fused, filtered by scope, visibility and
+moderation, and returned as posts. An optional second request asks Jev to
+rerank the top 20.
 
 - **Hybrid signals.** One query vector is compared with every post's words,
   picture and video; keywords come from FTS5 over the same post text. Each
@@ -999,8 +1090,8 @@ deadlines; retrying resolvers share an overall budget; redirects and parsed
 bodies have hard limits; and chunked responses are counted as they stream.
 Pass-through MP4 responses preserve Range semantics instead of buffering the
 file in memory. Inline previews, attachment downloads, public reads, and
-analytics writes use separate rate budgets. Exact limits are documented in
-[`CLAUDE.md`](CLAUDE.md).
+analytics writes use separate rate budgets. Exact limits live next to each
+route, using `src/lib/rate-limit.ts`.
 
 ## Bounded in-process state and scaling envelope
 
@@ -1013,7 +1104,9 @@ capacity is full. Hot-query, media, and negative-result caches are TTL/LRU
 bounded rather than raw maps. Positive public cache hits still recheck
 moderation before serving.
 
-Scaling to multiple application machines would require, at minimum, a shared
+In short: SQLite is the database, the job queue and the lock service, and it's
+very good at all three as long as there's exactly one of you. Scaling to
+multiple application machines would require, at minimum, a shared
 rate-limit store and an explicit database/volume strategy. The OAuth refresh
 lease and sync claim already use durable SQLite rows and remain cross-process
 safe, but process-local caches and browser-facing freshness are optimizations,
@@ -1087,14 +1180,20 @@ CI checks source quality, unit and browser behavior, the production build, both
 extension targets, and the runnable container (including migrations and the
 health endpoint).
 
-Release Please creates a tagged release and calls the container publisher,
-which builds AMD64 and ARM64 images for `ghcr.io/itsmemeworks/adhx`. Installing
-a release on a server is a separate, explicit step; see
-[`docs/releasing.md`](docs/releasing.md). The legacy hosted Fly apps remain in
-the repository and deploy only when run by hand.
+The Native apps workflow builds and tests the iOS and Android apps on every
+pull request, and CodeQL scans the code.
 
-For exact environment variables, migration recovery, deploy commands, and
-incident procedures, see [`CLAUDE.md`](CLAUDE.md).
+Release Please creates a tagged release and then calls three publishers: the
+container publisher (AMD64 and ARM64 images for `ghcr.io/itsmemeworks/adhx`),
+the Android workflow (a signed APK attached to the release) and the iOS
+workflow (a signed upload to TestFlight). The two phone jobs skip with a
+notice until their signing secrets exist. Installing a release on a server is
+a separate, explicit step; see [`docs/releasing.md`](docs/releasing.md). The
+product site and the legacy hosted Fly apps deploy only when run by hand.
+
+Every environment variable is described in [`.env.example`](.env.example);
+installation, upgrades and backups are in the
+[NAS guide](deploy/nas/README.md).
 
 ### Portable Docker hosting
 
