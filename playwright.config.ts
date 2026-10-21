@@ -40,6 +40,7 @@ export default defineConfig({
         '**/mobile-webkit.spec.ts',
         '**/email-sign-in.spec.ts',
         '**/friends-reliability.spec.ts',
+        '**/review-reliability.spec.ts',
       ],
       use: { ...devices['iPhone 13'], browserName: 'webkit' },
     },

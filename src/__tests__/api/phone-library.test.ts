@@ -112,6 +112,17 @@ beforeEach(async () => {
 afterEach(() => testInstance.close())
 
 describe('GET /api/app/saves', () => {
+  it('serves the whole feed when one caption has out-of-range numeric entities', async () => {
+    saveFor('user-1', 'bad', '2026-10-21T10:00:00Z', { text: 'hello &#1114112; &#x110000;' })
+    saveFor('user-1', 'good', '2026-10-21T09:00:00Z', { text: 'still here' })
+    const result = await saves('', await phoneKey('user-1'))
+    expect(result.status).toBe(200)
+    expect(result.body.items).toHaveLength(2)
+    expect(result.body.items.map((p: { text: string }) => p.text)).toEqual([
+      'hello \uFFFD \uFFFD',
+      'still here',
+    ])
+  })
   it('includes server-queued shares in preparing, scoped to the phone account', async () => {
     testInstance.db
       .insert(schema.phoneSaveQueue)

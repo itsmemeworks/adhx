@@ -154,6 +154,26 @@ describe('theater queue', () => {
     })
   })
 
+  it.each([
+    'soundcloud:forss~flickermood',
+    'twitch:' + 'a'.repeat(128),
+    'bluesky:did.example~post',
+  ])('opens valid post IDs in every queue: %s', (start) => {
+    expect(sourceFromParams({ reacted: '1', start }).start).toBe(start)
+    expect(sourceFromParams({ feed: 'new', start }).start).toBe(start)
+  })
+  it.each([
+    'soundcloud:a/b',
+    'twitter:a?b',
+    'twitter:a:b',
+    'unknown:one',
+    'twitterX',
+    'twitter:' + 'a'.repeat(129),
+    ':id',
+  ])('rejects unsafe start IDs: %s', (start) => {
+    expect(sourceFromParams({ reacted: '1', start }).start).toBeNull()
+  })
+
   it('moves with repeat and videos only', () => {
     const items = [v1, p2, v3]
     expect(nextIndex(items, 0, { repeat: 'off', videosOnly: false })).toBe(1)
@@ -462,6 +482,155 @@ describe('TheaterV2', () => {
     )
     expect(screen.queryByRole('button', { name: 'Send' })).toBeNull()
   })
+
+  it('pages reactions beyond fifty, coalesces concurrent Next, and uses the full count', async () => {
+    const first = Array.from({ length: 50 }, (_, i) => result(String(i + 1), { video: true }))
+    let finish!: (r: Response) => void
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/posts/reacted?limit=50')
+        return new Response(
+          JSON.stringify({ items: first, total: 52, nextOffset: 50, name: 'Reactions' }),
+        )
+      if (url.includes('/api/posts/reacted?limit=50&offset=50'))
+        return new Promise<Response>((resolve) => {
+          finish = resolve
+        })
+      return new Response('{}')
+    })
+    render(<TheaterV2 source={sourceFromParams({ reacted: '1', start: 'twitter:50' })} />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('50'))
+    await waitFor(() => expect(finish).toBeTypeOf('function'))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    expect(fetchMock.mock.calls.filter(([u]) => String(u).includes('offset=50'))).toHaveLength(1)
+    await act(async () => {
+      finish(
+        new Response(
+          JSON.stringify({
+            items: [first[49], result('51', { video: true }), result('52', { video: true })],
+            total: 52,
+            nextOffset: null,
+          }),
+        ),
+      )
+    })
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('51'))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('52'))
+    expect(screen.getAllByText(/52/).length).toBeGreaterThan(0)
+  })
+
+  it('retries a failed reactions page before ending or adding recommendations', async () => {
+    let succeeds = false
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/posts/reacted?limit=50')
+        return new Response(JSON.stringify({ items: [v1], total: 2, nextOffset: 1 }))
+      if (url.includes('offset=1'))
+        return succeeds
+          ? new Response(JSON.stringify({ items: [v3], total: 2, nextOffset: null }))
+          : new Response('{}', { status: 503 })
+      return new Response('{}')
+    })
+    render(<TheaterV2 source={sourceFromParams({ reacted: '1' })} />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('1'))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('More posts are still loading'),
+    )
+    expect(fetchMock.mock.calls.some(([u]) => String(u).includes('/api/search/similar'))).toBe(
+      false,
+    )
+    succeeds = true
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('3'))
+  })
+
+  it('opens a selected reactions post beyond the first page', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/posts/reacted?limit=50')
+        return new Response(JSON.stringify({ items: [v1], total: 2, nextOffset: 1 }))
+      if (url.includes('offset=1'))
+        return new Response(JSON.stringify({ items: [v3], total: 2, nextOffset: null }))
+      return new Response('{}')
+    })
+    render(<TheaterV2 source={sourceFromParams({ reacted: '1', start: 'twitter:3' })} />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('3'))
+  })
+
+  it('ignores a late page from a previous queue even when the offsets match', async () => {
+    let visit = 0
+    const finish: Array<(r: Response) => void> = []
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/posts/reacted?limit=50') {
+        visit++
+        return new Response(
+          JSON.stringify({
+            items: [result(visit === 1 ? 'old' : 'new', { video: true })],
+            total: 2,
+            nextOffset: 1,
+          }),
+        )
+      }
+      if (url.includes('offset=1')) return new Promise<Response>((resolve) => finish.push(resolve))
+      return new Response('{}')
+    })
+    const view = render(<TheaterV2 source={sourceFromParams({ reacted: '1' })} />)
+    await waitFor(() => expect(finish).toHaveLength(1))
+    view.rerender(<TheaterV2 source={sourceFromParams({ reacted: '1' })} />)
+    await waitFor(() => expect(finish).toHaveLength(2))
+    await act(async () => {
+      finish[0](
+        new Response(
+          JSON.stringify({
+            items: [result('stale', { video: true })],
+            total: 99,
+            nextOffset: null,
+          }),
+        ),
+      )
+    })
+    expect(screen.getByTestId('stage')).toHaveTextContent('new')
+    await act(async () => {
+      finish[1](
+        new Response(
+          JSON.stringify({ items: [result('fresh', { video: true })], total: 2, nextOffset: null }),
+        ),
+      )
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('fresh'))
+  })
+
+  it.each([true, false])(
+    'holds the original sheet on its video and restores only previously playing video (%s)',
+    async (wasPlaying) => {
+      const pause = vi.fn(),
+        resume = vi.fn()
+      window.addEventListener('theater-pause', pause)
+      window.addEventListener('theater-resume', resume)
+      try {
+        render(<TheaterV2 source={source} />)
+        await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('1'))
+        act(() =>
+          window.dispatchEvent(
+            new CustomEvent('theater-playing-state', { detail: { playing: wasPlaying } }),
+          ),
+        )
+        fireEvent.click(screen.getByRole('button', { name: 'The original post on X' }))
+        const sheet = screen.getByRole('dialog', { name: 'The original post on X' })
+        const end = stageProps.mock.calls.at(-1)![0].onEnded
+        act(() => end()) // A queued native ended event must not advance under the reader.
+        expect(screen.getByTestId('stage')).toHaveTextContent('1')
+        expect(within(sheet).getByText('Author 1')).toBeInTheDocument()
+        expect(pause).toHaveBeenCalledTimes(wasPlaying ? 1 : 0)
+        fireEvent.keyDown(window, { key: 'Escape' })
+        expect(resume).toHaveBeenCalledTimes(wasPlaying ? 1 : 0)
+      } finally {
+        window.removeEventListener('theater-pause', pause)
+        window.removeEventListener('theater-resume', resume)
+      }
+    },
+  )
 
   it('keeps only who saved it over the media, and opens the original from the rail', async () => {
     const writeText = vi.fn(async () => {})

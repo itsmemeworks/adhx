@@ -68,6 +68,7 @@ final class AppModel: ObservableObject {
 
     /// Stores the key (pairing and email sign-in alike) and says hello.
     private func connected(server: URL, result: PairResult) async {
+        PostReactionsModel.forget()
         Store.connect(server: server, result: result)
         removedNote = nil
         YourFace.shared.reload()
@@ -232,6 +233,7 @@ final class AppModel: ObservableObject {
     }
 
     func disconnect() {
+        PostReactionsModel.forget()
         Store.disconnect()
         LiveAlertDelivery.forget()
         AuthImageLoader.shared.clear()

@@ -22,23 +22,20 @@ export function decodeHtmlEntities(text: string): string {
     '&nbsp;': ' ',
   }
 
-  // First handle named entities
-  let result = text.replace(
-    /&(?:amp|lt|gt|quot|#39|apos|nbsp);/g,
-    (match) => namedEntities[match] || match,
+  const result = text.replace(
+    /&(?:amp|lt|gt|quot|apos|nbsp);|&#(?:(\d+)|[xX]([0-9a-fA-F]+));/g,
+    (match, dec, hex) => {
+      if (namedEntities[match]) return namedEntities[match]
+      const codePoint = parseInt(dec ?? hex, dec === undefined ? 16 : 10)
+      // Invalid Unicode scalar values are replacement characters, never exceptions.
+      return !Number.isFinite(codePoint) ||
+        codePoint <= 0 ||
+        codePoint > 0x10ffff ||
+        (codePoint >= 0xd800 && codePoint <= 0xdfff)
+        ? '\uFFFD'
+        : String.fromCodePoint(codePoint)
+    },
   )
-
-  // Handle decimal numeric entities (&#12345;)
-  result = result.replace(/&#(\d+);/g, (_, dec) => {
-    const codePoint = parseInt(dec, 10)
-    return String.fromCodePoint(codePoint)
-  })
-
-  // Handle hexadecimal numeric entities (&#x1F600; or &#X1F600;)
-  result = result.replace(/&#[xX]([0-9a-fA-F]+);/g, (_, hex) => {
-    const codePoint = parseInt(hex, 16)
-    return String.fromCodePoint(codePoint)
-  })
 
   return result
 }

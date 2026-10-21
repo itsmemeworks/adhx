@@ -30,8 +30,8 @@ import {
 } from '@/lib/processing/jobs'
 import { remoteActivity } from '@/lib/processing/activity'
 import { workerAuthorized } from '@/lib/processing/auth'
-import { SEMANTIC_MODEL_VERSION, PRIORITY } from '@/lib/semantic/config'
-import { enqueuePosts } from '@/lib/semantic/queue'
+import { SEMANTIC_MODEL_VERSION, PRIORITY, MAX_ATTEMPTS } from '@/lib/semantic/config'
+import { enqueueBackfill, enqueuePosts } from '@/lib/semantic/queue'
 import { saveEmbedding } from '@/lib/semantic/store'
 import { POST } from '@/app/api/processing/jobs/route'
 import { GET } from '@/app/api/processing/media/route'
@@ -206,6 +206,64 @@ describe('durable remote leases', () => {
       post_id: 'visible',
     })
   })
+  it.each(['text', 'video'] as const)(
+    'bounds abandoned %s jobs without starving another post or reviving on backfill',
+    async (kind) => {
+      await saved(kind, 'abandoned')
+      await enqueuePosts([{ platform: 'twitter', postId: 'abandoned' }], PRIORITY.urgent, [kind])
+      let job = (await claim())!
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        instance.db.run(sql`UPDATE processing_leases SET expires_at=0 WHERE id=${job.id}`)
+        if (attempt === 1) {
+          await saved('text', 'healthy')
+          const healthy = (await claim())!
+          expect(
+            instance.sqlite
+              .prepare('SELECT post_id FROM processing_leases WHERE id=?')
+              .get(healthy.id),
+          ).toEqual({ post_id: 'healthy' })
+          await completeProcessingJob(healthy.id, healthy.lease, vector)
+        } else expect(await claim()).toBeNull()
+        await expect(heartbeat(job.id, job.lease)).rejects.toThrow('lease')
+        const q = instance.sqlite
+          .prepare(
+            "SELECT attempts,next_attempt_at FROM understanding_queue WHERE post_id='abandoned'",
+          )
+          .get() as { attempts: number; next_attempt_at: string } | undefined
+        if (attempt < MAX_ATTEMPTS) {
+          expect(q?.attempts).toBe(attempt)
+          expect(Date.parse(q!.next_attempt_at)).toBeGreaterThan(Date.now())
+          // A second claim during backoff must not charge the same expiration twice.
+          expect(await claim()).toBeNull()
+          instance.db.run(
+            sql`UPDATE understanding_queue SET next_attempt_at='2000-01-01' WHERE post_id='abandoned'`,
+          )
+          job = (await claim())!
+        } else expect(q).toBeUndefined()
+      }
+      expect(
+        instance.sqlite
+          .prepare('SELECT status FROM post_embeddings WHERE post_id=? AND kind=?')
+          .get('abandoned', kind),
+      ).toEqual({ status: 'failed' })
+      await enqueueBackfill()
+      expect(await claim()).toBeNull()
+    },
+  )
+
+  it('treats an expired source generation as cancellation rather than a failed attempt', async () => {
+    await saved('text')
+    const job = (await claim())!
+    instance.db.run(sql`UPDATE bookmarks SET text='A new generation of words'`)
+    instance.db.run(sql`UPDATE processing_leases SET expires_at=0`)
+    const replacement = (await claim())!
+    expect(replacement.text).toContain('A new generation')
+    expect(instance.sqlite.prepare('SELECT attempts FROM understanding_queue').get()).toEqual({
+      attempts: 0,
+    })
+    await expect(heartbeat(job.id, job.lease)).rejects.toThrow('lease')
+  })
+
   it('claims once, expires safely and rejects an old worker result', async () => {
     await saved('text')
     const first = (await claim())!
@@ -213,6 +271,8 @@ describe('durable remote leases', () => {
     expect(first.text).toContain('Useful public content')
     expect(await claim()).toBeNull()
     instance.db.run(sql`UPDATE processing_leases SET expires_at=0`)
+    expect(await claim()).toBeNull() // Expiration consumes a retry and enters backoff.
+    instance.db.run(sql`UPDATE understanding_queue SET next_attempt_at='2000-01-01'`)
     const replacement = (await claim())!
     expect(replacement.lease).not.toBe(first.lease)
     await expect(completeProcessingJob(first.id, first.lease, vector)).rejects.toThrow('lease')

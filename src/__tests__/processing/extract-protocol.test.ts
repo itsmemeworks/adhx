@@ -25,7 +25,7 @@ import {
 import { PROCESSING_PROTOCOL, SUPPORTED_PROTOCOLS, claimableKinds } from '@/lib/processing/protocol'
 import { claimConversionJob } from '@/lib/processing/conversion'
 import { SEMANTIC_MODEL_VERSION, PRIORITY, type JobKind } from '@/lib/semantic/config'
-import { enqueuePosts } from '@/lib/semantic/queue'
+import { enqueueBackfill, enqueuePosts } from '@/lib/semantic/queue'
 import { saveEmbedding } from '@/lib/semantic/store'
 import { extractedWords, getExtracted } from '@/lib/semantic/extracted'
 import { keywordSearch } from '@/lib/semantic/keywords'
@@ -324,6 +324,23 @@ describe('speech and on-screen text jobs', () => {
       (await POST(request({ action: 'extracted', id: job.id, lease: job.lease, text: 5 }))).status,
     ).toBe(400)
   })
+
+  it.each(['speech', 'screen'] as const)(
+    'bounds expired %s leases and keeps the terminal result on backfill',
+    async (kind) => {
+      await savedPost([kind])
+      for (let i = 0; i < 3; i++) {
+        instance.db.run(sql`UPDATE understanding_queue SET next_attempt_at='2000-01-01'`)
+        const job = (await claim(2, [kind]))!
+        expect(job.kind).toBe(kind)
+        instance.db.run(sql`UPDATE processing_leases SET expires_at=0`)
+        expect(await claim(2, [kind])).toBeNull()
+      }
+      expect(getExtracted('twitter', '100', kind)).toMatchObject({ status: 'failed' })
+      await enqueueBackfill()
+      expect(await claim(2, [kind])).toBeNull()
+    },
+  )
 
   it('records "nothing here" and gives up into failed without touching vectors', async () => {
     await savedPost(['speech', 'screen'])
