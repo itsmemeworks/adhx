@@ -3,8 +3,8 @@ package com.adhx.share.library
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
-import android.provider.Telephony
+import android.content.ClipData
+import android.content.ClipboardManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
@@ -63,7 +63,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Where the send sheet hands the files. */
-private enum class Target { Chat, Mail, Files, Phone, More }
+private enum class Target { WhatsApp, Files, Phone, More }
 
 /** The tiles' and track's colour on the sheet. */
 private val Tile = Color(0xFF3A352D)
@@ -71,8 +71,9 @@ private val Tile = Color(0xFF3A352D)
 /**
  * Send it (the rail's Share, for videos, sounds and photos): the copy your
  * ADHX kept comes down to the phone ("Sending the video itself", with how
- * far along), then goes to an app: Chat, Mail, Files, Save to phone, or
- * More (the share sheet). A choice made while it's downloading waits for it.
+ * far along), then goes to an app: WhatsApp, Files, Save to phone, or More
+ * (the share sheet). Copy copies the post's ADHX link straight away; a choice
+ * that needs the file and is made while it's downloading waits for it.
  * Under them, "Or straight to your people" ([SendToPeople]) sends the post
  * itself to a member.
  */
@@ -118,10 +119,11 @@ fun SendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDis
                 ShareKept.send(context, files.intent())
                 close()
             }
-            else -> {
-                launchIn(context, files, target)
+            Target.WhatsApp -> {
+                sendWithWhatsApp(context) { files.intent() }
                 close()
             }
+            Target.Phone -> Unit
         }
     }
 
@@ -171,10 +173,13 @@ fun SendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDis
         ) {
             Sending(post, server, progress, read, total, done = ready != null)
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Label("SEND WITH")
+                Label("SEND VIA")
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Choice(Glyphs.Chat, "Chat", waiting = pending == Target.Chat) { pick(Target.Chat) }
-                    Choice(Glyphs.Mail, "Mail", waiting = pending == Target.Mail) { pick(Target.Mail) }
+                    Choice(Glyphs.WhatsApp, "WhatsApp", waiting = pending == Target.WhatsApp) { pick(Target.WhatsApp) }
+                    Choice(Glyphs.Copy, "Copy", waiting = false) {
+                        onNotice(copyLink(context, post, server))
+                        close()
+                    }
                     // One file can be saved somewhere; an album goes through More.
                     if (ShareKept.files(post, server).size == 1) {
                         Choice(Glyphs.Folder, "Files", waiting = pending == Target.Files) { pick(Target.Files) }
@@ -188,7 +193,7 @@ fun SendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDis
     }
 }
 
-/** The send sheet for a post with no file: its words through Chat, Mail or More, and your people. */
+/** The send sheet for a post with no file: its words through WhatsApp or More, Copy (its ADHX link), and your people. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WordsSendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDismiss: () -> Unit) {
@@ -206,19 +211,8 @@ private fun WordsSendSheet(post: PhonePost, server: String, onNotice: (String) -
             onNotice("There’s nothing to share in this one")
             return close()
         }
-        val intent = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, words)
-        when (target) {
-            Target.Chat -> Telephony.Sms.getDefaultSmsPackage(context)?.let { intent.setPackage(it) }
-            Target.Mail -> intent.selector = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"))
-            else -> return ShareKept.send(context, intent).also { close() }
-        }
-        try {
-            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        } catch (_: ActivityNotFoundException) {
-            ShareKept.send(context, Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, words))
-        } catch (_: SecurityException) {
-            ShareKept.send(context, Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, words))
-        }
+        val intent = { Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, words) }
+        if (target == Target.WhatsApp) sendWithWhatsApp(context, intent) else ShareKept.send(context, intent())
         close()
     }
 
@@ -252,10 +246,13 @@ private fun WordsSendSheet(post: PhonePost, server: String, onNotice: (String) -
                 Text(words.ifBlank { "Nothing to send" }, fontSize = 13.sp, lineHeight = 19.sp, color = AdhxColors.Muted, maxLines = 3, overflow = TextOverflow.Ellipsis)
             }
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Label("SEND WITH")
+                Label("SEND VIA")
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                    Choice(Glyphs.Chat, "Chat", waiting = false) { send(Target.Chat) }
-                    Choice(Glyphs.Mail, "Mail", waiting = false) { send(Target.Mail) }
+                    Choice(Glyphs.WhatsApp, "WhatsApp", waiting = false) { send(Target.WhatsApp) }
+                    Choice(Glyphs.Copy, "Copy", waiting = false) {
+                        onNotice(copyLink(context, post, server))
+                        close()
+                    }
                     Choice(Glyphs.More, "More", waiting = false) { send(Target.More) }
                 }
             }
@@ -387,19 +384,33 @@ internal fun megabytes(bytes: Long, unit: Boolean = true): String {
     return if (unit) "$n MB" else n
 }
 
-/** Chat (the phone's messages app) or Mail; the share sheet when there's no such app. */
-private fun launchIn(context: Context, files: ShareKept.Ready, target: Target) {
-    val intent = files.intent()
-    when (target) {
-        Target.Chat -> Telephony.Sms.getDefaultSmsPackage(context)?.let { intent.setPackage(it) }
-        Target.Mail -> intent.selector = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"))
-        else -> Unit
+/** WhatsApp, then WhatsApp Business: the apps the WhatsApp choice tries, in order. */
+internal val WHATSAPP_PACKAGES = listOf("com.whatsapp", "com.whatsapp.w4b")
+
+/**
+ * Hands [intent] (made fresh for each try) straight to WhatsApp; the share
+ * sheet when it isn't on the phone.
+ */
+private fun sendWithWhatsApp(context: Context, intent: () -> Intent) {
+    for (app in WHATSAPP_PACKAGES) {
+        try {
+            context.startActivity(intent().setPackage(app).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            return
+        } catch (_: ActivityNotFoundException) {
+        } catch (_: SecurityException) {
+        }
     }
-    try {
-        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    } catch (_: ActivityNotFoundException) {
-        ShareKept.send(context, files.intent())
-    } catch (_: SecurityException) {
-        ShareKept.send(context, files.intent())
-    }
+    ShareKept.send(context, intent())
+}
+
+/** The post's link on your ADHX (else the original's), for Copy; null when it has neither. */
+internal fun linkToCopy(post: PhonePost, server: String): String? =
+    post.openPath?.takeIf { it.isNotBlank() }?.let { AdhxApi.resolve(server, it)?.toString() }
+        ?: post.sourceUrl?.takeIf { it.isNotBlank() }
+
+/** Copies [linkToCopy] and says how it went. */
+private fun copyLink(context: Context, post: PhonePost, server: String): String {
+    val link = linkToCopy(post, server) ?: return "There’s no link to copy for this one"
+    context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Link", link))
+    return "Link copied"
 }

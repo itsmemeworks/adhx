@@ -13,6 +13,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Web: the React button is on every post in `TheaterV2` (signed out → `/start`); yours floats at once; `useReactionReplay` floats the newest 12 when a post settles (600 ms, 350 ms apart, once per post per page load). PRIVACY.md and /privacy updated.
 - Follow-ups: the iOS and Android players against the same contract (separate work).
 
+## 2026-10-21 — Android: fit and dock, logo bylines, tappable links, hold to hide, photo timer
+
+- Player (`PlayerScreen.kt`): Sound and Fit video are remembered in `SettingsPrefs` (`soundOn`, new `fitVideo`), as on iPhone. Videos now fill the screen by default (the old upright-fills/wide-fits rule is gone); Fit shows them whole. More's picture-in-picture row is now "Dock".
+- Byline: the network's mark before who posted it (`bylineName`: name, else the network's name, else the handle) instead of "YouTube · name".
+- Links in captions, the words card and the reader are shortened to site/path and open in the browser (`Links.spans`/`Links.short`, `ui/LinkedText.kt`).
+- Hold the stage to hide the chrome; a tap brings it back, the next tap pauses/plays. Photos show 10s each (`PhotoTimer`, `afterPhoto`): next album photo, then the next save; tap pauses; Repeat loops the post; held while a sheet/picker is open. Progress uses the video line.
+- Search words tiles: serif words on a surface card below the pills (no more clipped first line), author and savers at the bottom. Channels → Your people: fewer than five sit left with a 14dp gap. Send sheet: "Send via" with WhatsApp (falls back to the share sheet), Copy (the ADHX link) and More.
+- Unit tests in `PlayerPolishTest`. Checked on the emulator against a parity server: mark bylines, hold/tap/tap on a video and a photo, album advance and pause, Fit and Sound kept in prefs, Dock row, send sheet (Copy, WhatsApp falls back to the share sheet), search words tiles, five people spread. Not seen there: links in post words (no linked posts in the seed) and fewer than five people.
+
 ## 2026-10-21 — Phones: no why chip repeating the byline; your face on your reactions
 
 - iOS and Android hide the why chip when its only reason is `fresh`/`yours` ("Ana saved this · 1d") and the post has savers, since the byline under it already says that. This matches the web's rule in `TheaterV2`.
