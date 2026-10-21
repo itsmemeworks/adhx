@@ -1,11 +1,10 @@
-import MessageUI
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
 /// Sending the file itself (board j4-4): the video or photos come down from
-/// your ADHX with a progress line, then go out through Messages, Mail, Files,
-/// Photos or the system share sheet, so what your friend gets still plays
+/// your ADHX with a progress line, then go out through WhatsApp, the
+/// clipboard, Files, Photos or the system share sheet, so what your friend gets still plays
 /// when the original link is long dead.
 @MainActor
 final class SendModel: ObservableObject {
@@ -133,16 +132,18 @@ struct SendSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             card
-            Text("SEND WITH")
+            Text("SEND VIA")
                 .font(Theme.sans(12, .heavy))
                 .tracking(0.96)
                 .foregroundStyle(Theme.faint)
                 .padding(.top, 6)
                 .accessibilityAddTraits(.isHeader)
             HStack(alignment: .top, spacing: 0) {
-                target("Chat", icon: "bubble.left") { open(.messages) }
+                target("WhatsApp", mark: AnyView(
+                    SVGShape(data: NetworkPaths.whatsapp).fill(Theme.ink).frame(width: 24, height: 24)
+                )) { sendToWhatsApp() }
                 Spacer(minLength: 4)
-                target("Mail", icon: "envelope") { open(.mail) }
+                target("Copy", icon: "doc.on.doc") { copyFiles() }
                 Spacer(minLength: 4)
                 target("Files", icon: "folder") { open(.files) }
                 Spacer(minLength: 4)
@@ -375,11 +376,15 @@ struct SendSheet: View {
     // MARK: Where it goes
 
     private func target(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+        target(title, mark: AnyView(Image(systemName: icon)
+            .font(.system(size: 22, weight: .regular))
+            .foregroundStyle(Theme.ink)), action: action)
+    }
+
+    private func target(_ title: String, mark: AnyView, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 22, weight: .regular))
-                    .foregroundStyle(Theme.ink)
+                mark
                     .frame(width: 60, height: 60)
                     .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.plate))
                 Text(title)
@@ -399,21 +404,31 @@ struct SendSheet: View {
     }
 
     private enum Composer: String, Identifiable {
-        case messages, mail, files, more
+        case files, more
         var id: String { rawValue }
     }
 
     private func open(_ composer: Composer) {
         guard ready else { return }
-        switch composer {
-        case .messages where !MFMessageComposeViewController.canSendText()
-            || !MFMessageComposeViewController.canSendAttachments():
-            composing = .more
-        case .mail where !MFMailComposeViewController.canSendMail():
-            composing = .more
-        default:
-            composing = composer
-        }
+        composing = composer
+    }
+
+    /// Straight into WhatsApp with the file. WhatsApp takes one file this way;
+    /// an album, or a phone without WhatsApp, gets the share sheet instead.
+    private func sendToWhatsApp() {
+        guard let files = model.export?.files, !files.isEmpty else { return }
+        if files.count == 1, WhatsApp.installed, WhatsApp.open(files[0].url, kind: post.kind) { return }
+        composing = .more
+    }
+
+    /// The file itself on the clipboard, to paste into any chat.
+    private func copyFiles() {
+        guard let files = model.export?.files, !files.isEmpty else { return }
+        let providers = files.compactMap { NSItemProvider(contentsOf: $0.url) }
+        guard !providers.isEmpty else { return }
+        UIPasteboard.general.itemProviders = providers
+        say(files.count > 1 ? "Photos copied. Paste them into any chat." : "Copied. Paste it into any chat.")
+        dismiss()
     }
 
     private func saveToPhotos() {
@@ -434,79 +449,13 @@ struct SendSheet: View {
             if sent { dismiss() }
         }
         switch composer {
-        case .messages: MessageComposer(files: urls, finish: finish)
-        case .mail: MailComposer(files: urls, finish: finish)
         case .files: FileExporter(files: urls, finish: finish)
         case .more: SystemShare(files: urls, finish: finish)
         }
     }
 }
 
-// MARK: - Apple's composers
-
-private func typeIdentifier(for url: URL) -> String {
-    UTType(filenameExtension: url.pathExtension)?.identifier ?? UTType.data.identifier
-}
-
-private func mimeType(for url: URL) -> String {
-    UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
-}
-
-private struct MessageComposer: UIViewControllerRepresentable {
-    let files: [URL]
-    let finish: (Bool) -> Void
-
-    func makeCoordinator() -> Coordinator { Coordinator(finish: finish) }
-
-    func makeUIViewController(context: Context) -> MFMessageComposeViewController {
-        let controller = MFMessageComposeViewController()
-        controller.messageComposeDelegate = context.coordinator
-        for url in files {
-            controller.addAttachmentURL(url, withAlternateFilename: url.lastPathComponent)
-        }
-        return controller
-    }
-
-    func updateUIViewController(_ controller: MFMessageComposeViewController, context: Context) {}
-
-    final class Coordinator: NSObject, MFMessageComposeViewControllerDelegate {
-        let finish: (Bool) -> Void
-        init(finish: @escaping (Bool) -> Void) { self.finish = finish }
-        func messageComposeViewController(_ controller: MFMessageComposeViewController,
-                                          didFinishWith result: MessageComposeResult) {
-            finish(result == .sent)
-        }
-    }
-}
-
-private struct MailComposer: UIViewControllerRepresentable {
-    let files: [URL]
-    let finish: (Bool) -> Void
-
-    func makeCoordinator() -> Coordinator { Coordinator(finish: finish) }
-
-    func makeUIViewController(context: Context) -> MFMailComposeViewController {
-        let controller = MFMailComposeViewController()
-        controller.mailComposeDelegate = context.coordinator
-        for url in files {
-            if let data = try? Data(contentsOf: url) {
-                controller.addAttachmentData(data, mimeType: mimeType(for: url), fileName: url.lastPathComponent)
-            }
-        }
-        return controller
-    }
-
-    func updateUIViewController(_ controller: MFMailComposeViewController, context: Context) {}
-
-    final class Coordinator: NSObject, MFMailComposeViewControllerDelegate {
-        let finish: (Bool) -> Void
-        init(finish: @escaping (Bool) -> Void) { self.finish = finish }
-        func mailComposeController(_ controller: MFMailComposeViewController,
-                                   didFinishWith result: MFMailComposeResult, error: Error?) {
-            finish(result == .sent || result == .saved)
-        }
-    }
-}
+// MARK: - Files and the share sheet
 
 private struct FileExporter: UIViewControllerRepresentable {
     let files: [URL]
@@ -541,4 +490,43 @@ private struct SystemShare: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}
+
+/// WhatsApp's own way in for a file: a copy with its extension, offered
+/// only to WhatsApp ("net.whatsapp.image" / "movie" / "audio").
+@MainActor
+private enum WhatsApp {
+    /// Needs `whatsapp` in LSApplicationQueriesSchemes.
+    static var installed: Bool {
+        URL(string: "whatsapp://app").map { UIApplication.shared.canOpenURL($0) } ?? false
+    }
+
+    /// Kept while WhatsApp's menu is up.
+    private static var interaction: UIDocumentInteractionController?
+
+    static func open(_ file: URL, kind: String) -> Bool {
+        let (ext, uti): (String, String) = switch kind {
+        case "photo": ("wai", "net.whatsapp.image")
+        case "audio": ("waa", "net.whatsapp.audio")
+        default: ("wam", "net.whatsapp.movie")
+        }
+        let copy = FileManager.default.temporaryDirectory.appendingPathComponent("adhx-whatsapp.\(ext)")
+        try? FileManager.default.removeItem(at: copy)
+        guard (try? FileManager.default.copyItem(at: file, to: copy)) != nil,
+              let top = topController() else { return false }
+        let controller = UIDocumentInteractionController(url: copy)
+        controller.uti = uti
+        interaction = controller
+        let anchor = CGRect(x: top.view.bounds.midX, y: top.view.bounds.maxY - 80, width: 1, height: 1)
+        return controller.presentOpenInMenu(from: anchor, in: top.view, animated: true)
+    }
+
+    private static func topController() -> UIViewController? {
+        let scene = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first { $0.activationState == .foregroundActive }
+        var top = scene?.windows.first(where: \.isKeyWindow)?.rootViewController
+        while let next = top?.presentedViewController { top = next }
+        return top
+    }
 }
