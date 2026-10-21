@@ -25,6 +25,28 @@ val hasReleaseSigning = releaseStoreFile != null &&
     signingValue("storePassword", "ADHX_KEYSTORE_PASSWORD") != null &&
     signingValue("keyAlias", "ADHX_KEY_ALIAS") != null
 
+// Which release this build is, shown in Settings: "2.2.0" on the vX.Y.Z tag
+// itself, else "2.2.0 +3 · abc1234" (three commits after it), with " · edited"
+// when the working tree had changes; just the commit without tags. Release
+// builds pass ADHX_VERSION_NAME instead.
+fun gitOutput(vararg args: String): String = runCatching {
+    providers.exec {
+        commandLine("git", *args)
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim()
+}.getOrDefault("")
+
+fun gitBuildName(): String? {
+    val described = gitOutput("describe", "--tags", "--match", "v[0-9]*", "--long", "--dirty")
+    val match = Regex("""^v(.+)-(\d+)-g([0-9a-f]+)(-dirty)?$""").find(described)
+    if (match != null) {
+        val (version, ahead, sha, dirty) = match.destructured
+        val edited = if (dirty.isNotEmpty()) " · edited" else ""
+        return if (ahead == "0" && edited.isEmpty()) version else "$version +$ahead · $sha$edited"
+    }
+    return gitOutput("rev-parse", "--short", "HEAD").ifEmpty { null }
+}
+
 android {
     namespace = "com.adhx.share"
     compileSdk = 37
@@ -34,7 +56,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = (System.getenv("ADHX_VERSION_CODE") ?: "1").toInt()
-        versionName = System.getenv("ADHX_VERSION_NAME") ?: "1.0.0"
+        versionName = System.getenv("ADHX_VERSION_NAME") ?: gitBuildName() ?: "1.0.0"
     }
 
     signingConfigs {
