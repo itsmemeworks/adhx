@@ -1647,7 +1647,10 @@ private struct OriginalSheet: View {
                             .foregroundStyle(Theme.ink)
                             .lineLimit(1)
                         HStack(spacing: 6) {
-                            NetworkMark(platform: post.platform, size: 13, color: Theme.muted)
+                            // The network's mark shows once: here only when their picture leads.
+                            if avatarURL != nil {
+                                NetworkMark(platform: post.platform, size: 13, color: Theme.muted)
+                            }
                             Text([handle, posted.map { "Posted \($0)" } ?? network].compactMap { $0 }.joined(separator: " · "))
                                 .font(Theme.sans(13))
                                 .foregroundStyle(Theme.muted)
@@ -1706,11 +1709,13 @@ private struct OriginalSheet: View {
         .scrollBounceBehavior(.basedOnSize)
     }
 
+    /// Their picture on the network, when it came with the post (X does; most don't).
+    private var avatarURL: URL? { ADHXClient.resolve(post.author.avatarUrl, against: server) }
+
     @ViewBuilder
     private var avatar: some View {
-        let url = ADHXClient.resolve(post.author.avatarUrl, against: server)
         Group {
-            if let url {
+            if let url = avatarURL {
                 AsyncImage(url: url) { phase in
                     if let image = phase.image { image.resizable().scaledToFill() } else { mark }
                 }
