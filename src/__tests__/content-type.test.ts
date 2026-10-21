@@ -23,9 +23,8 @@ describe('inferContentType', () => {
     ).toBe('article')
   })
 
-  it('keeps TikTok/YouTube single-format while Instagram follows resolved media', () => {
+  it('keeps TikTok single-format while Instagram follows resolved media', () => {
     expect(inferContentType({ platform: 'tiktok' })).toBe('video')
-    expect(inferContentType({ platform: 'youtube', hasPhoto: true })).toBe('video')
     expect(inferContentType({ platform: 'instagram', category: 'video' })).toBe('video')
     expect(inferContentType({ platform: 'instagram', hasPhoto: true })).toBe('photo')
     expect(

@@ -695,7 +695,10 @@ describe('StageVideo source supersession', () => {
     act(() => {
       video.dispatchEvent(new Event('error'))
     })
-    expect(fetchMock).toHaveBeenCalledWith(sourceB, { headers: { Range: 'bytes=0-1' } })
+    expect(fetchMock).toHaveBeenCalledWith(
+      sourceB,
+      expect.objectContaining({ headers: { Range: 'bytes=0-1' } }),
+    )
     expect(queryByText("This video couldn't load.")).not.toBeNull()
   })
 })
@@ -1279,10 +1282,99 @@ describe('StageVideo stage tap enters focus and resumes playback', () => {
     fetchMock.mockRestore()
   })
 
+  it('says why a video nobody saved yet isn’t here, without dropping the post', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ reason: 'Nobody here has saved this yet.' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    const gone = vi.fn()
+    window.addEventListener('theater-media-gone', gone)
+    const { container, findByText } = renderVideo()
+    const video = container.querySelector('video') as HTMLVideoElement
+    activateVideo(video, '/api/media/video?a=1')
+    fireEvent.error(video)
+    expect(await findByText('Nobody here has saved this yet.')).toBeInTheDocument()
+    expect(gone).not.toHaveBeenCalled()
+    window.removeEventListener('theater-media-gone', gone)
+    fetchMock.mockRestore()
+  })
+
   it('does not unmute on tap — sound stays on the chrome audio button', () => {
     const { container, onRequestUnmute } = renderVideo()
     fireEvent.click(container.firstElementChild as Element)
     expect(onRequestUnmute).not.toHaveBeenCalled()
+  })
+})
+
+describe('StageVideo retained preview recovery', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  const src = '/api/files/bluesky/preview-post/video-1'
+  const item = makeItem({ platform: 'bluesky', bookmarkId: 'preview-post' })
+  const saved = (key = 'bluesky:preview-post') =>
+    window.dispatchEvent(new CustomEvent('nx-post-saved', { detail: { key } }))
+  function renderPreview() {
+    return render(
+      <StageVideo item={item} src={src} poster={null} muted onRequestUnmute={vi.fn()} />,
+    )
+  }
+
+  it('reloads the same failed media element after saving its post', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ reason: 'Nobody here has saved this yet.' }), {
+        status: 404,
+      }),
+    )
+    const load = vi.spyOn(HTMLMediaElement.prototype, 'load')
+    const { container, findByText, queryByText } = renderPreview()
+    const video = container.querySelector('video') as HTMLVideoElement
+    activateVideo(video, src)
+    fireEvent.error(video)
+    expect(await findByText('Nobody here has saved this yet.')).toBeInTheDocument()
+    load.mockClear()
+
+    act(() => saved('bluesky:another-post'))
+    expect(load).not.toHaveBeenCalled()
+    act(() => saved())
+
+    expect(container.querySelector('video')).toBe(video)
+    expect(load).toHaveBeenCalledOnce()
+    expect(queryByText('Nobody here has saved this yet.')).not.toBeInTheDocument()
+    expect(video.src).toBe(new URL(src, document.baseURI).href)
+  })
+
+  it('ignores an old unsaved probe that settles after the save reload', async () => {
+    const response = deferred<Response>()
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(response.promise)
+    const { container, queryByText } = renderPreview()
+    const video = container.querySelector('video') as HTMLVideoElement
+    activateVideo(video, src)
+    fireEvent.error(video)
+    act(() => saved())
+    await act(async () => {
+      response.resolve(
+        new Response(JSON.stringify({ reason: 'Nobody here has saved this yet.' }), {
+          status: 404,
+        }),
+      )
+    })
+    expect(queryByText('Nobody here has saved this yet.')).not.toBeInTheDocument()
+  })
+
+  it('does not interrupt a playable video when its post is saved', () => {
+    const load = vi.spyOn(HTMLMediaElement.prototype, 'load')
+    const { container } = renderPreview()
+    const video = container.querySelector('video') as HTMLVideoElement
+    Object.defineProperty(video, 'readyState', { configurable: true, value: 4 })
+    video.currentTime = 7
+    load.mockClear()
+    act(() => saved())
+    expect(load).not.toHaveBeenCalled()
+    expect(video.currentTime).toBe(7)
   })
 })
 

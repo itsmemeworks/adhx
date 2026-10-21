@@ -45,7 +45,7 @@ describe('email identity claims', () => {
     ])
   })
 
-  it('retries username conflicts while preserving the numeric suffix', async () => {
+  it('retries username conflicts with a suffix that still fits the 15-character limit', async () => {
     await testInstance.db.insert(schema.users).values({
       id: 'existing',
       username: 'abcdefghijklmno',
@@ -54,8 +54,22 @@ describe('email identity claims', () => {
 
     const result = await findOrCreateUserForEmail('abcdefghijklmnopqrst@example.com')
 
-    expect(result.username).toBe('abcdefghijklmno2')
+    // The suffix fits inside the limit, so the suggestion can be claimed as is
+    // (a 16th character would be cut off by the chooser, back onto the taken name).
+    expect(result.username).toBe('abcdefghijklmn2')
+    const { sanitizeUsername } = await import('@/lib/auth/username-rules')
+    expect(sanitizeUsername(result.username)).toBe(result.username)
     expect(result.created).toBe(true)
+  })
+
+  it('suggests a claimable name for accounts that got an over-long one', async () => {
+    await testInstance.db.insert(schema.users).values([
+      { id: 'taken', username: 'abcdefghijklmno' },
+      { id: 'legacy', username: 'abcdefghijklmno2' },
+    ])
+    const { claimableUsernameSuggestion } = await import('@/lib/auth/account')
+    expect(await claimableUsernameSuggestion('abcdefghijklmno2', 'legacy')).toBe('abcdefghijklmn2')
+    expect(await claimableUsernameSuggestion('fine_name', 'legacy')).toBe('fine_name')
   })
 
   it('retries a cross-worker busy snapshot during first sign-in', async () => {

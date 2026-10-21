@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect } from 'react'
-import { RefreshCw, TriangleAlert } from 'lucide-react'
 import Link from 'next/link'
+import { RefreshCw } from 'lucide-react'
+import { NxLogo } from '@/components/next/PrimaryNav'
 
+/** Something broke while rendering a page. Full screen, in the new design. */
 export default function Error({
   error,
   reset,
@@ -18,37 +20,35 @@ export default function Error({
   }, [error])
 
   return (
-    <div className="min-h-screen bg-paper flex items-center justify-center p-8">
-      <div className="max-w-md w-full text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-surface border border-hairline mb-6">
-          <TriangleAlert className="w-7 h-7 text-clay" />
-        </div>
-
-        <h1 className="font-serif text-[30px] sm:text-[38px] font-semibold tracking-tight text-ink mb-2">
+    <div className="fixed inset-0 z-[60] flex flex-col bg-black font-nx-sans text-white">
+      <header className="px-4 py-3 md:px-7 md:py-[18px]">
+        <NxLogo />
+      </header>
+      <main className="flex flex-1 flex-col items-center justify-center gap-5 px-6 pb-24 text-center">
+        <h1 className="m-0 font-nx-serif text-[40px] font-normal leading-none md:text-[52px]">
           Something slipped
         </h1>
-        <p className="text-[15px] text-ink-2 mb-8">
-          An unexpected error occurred. Give it another try, or head back to Saved.
+        <p className="m-0 max-w-[420px] text-[15px] text-white/70">
+          That didn’t work. Give it another try, or head to Right now.
         </p>
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <div className="flex flex-wrap justify-center gap-2.5">
           <button
+            type="button"
             onClick={reset}
-            className="inline-flex min-h-[44px] w-full sm:w-auto items-center justify-center gap-1.5 rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
+            className="flex h-12 items-center gap-2 rounded-full bg-nx-accent px-6 text-[15px] font-extrabold text-black"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw aria-hidden className="h-4 w-4" />
             <span>Try again</span>
           </button>
           <Link
-            href="/"
-            className="inline-flex min-h-[44px] w-full sm:w-auto items-center justify-center gap-1.5 rounded-full border border-hairline bg-surface px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-inset"
+            href="/now"
+            className="flex h-12 items-center rounded-full border border-white/30 px-6 text-[15px] font-bold"
           >
-            Back to Saved
+            Right now
           </Link>
         </div>
-
-        {error.digest && <p className="text-xs text-ink-3 mt-6">Error ID: {error.digest}</p>}
-      </div>
+        {error.digest && <p className="m-0 text-xs text-white/45">{`Error ID: ${error.digest}`}</p>}
+      </main>
     </div>
   )
 }

@@ -1,3 +1,5 @@
+import { savePrivacyFingerprint } from '@/lib/bookmarks/privacy'
+import { keptSrc } from '@/lib/keep/src'
 import { db } from '@/lib/db'
 import {
   collectionAggregates,
@@ -11,7 +13,6 @@ import {
   oauthTokens,
 } from '@/lib/db/schema'
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm'
-import { getThumbnailUrl } from '@/lib/media/fxembed'
 import {
   moderationStateFingerprint,
   readBannedUserIds,
@@ -165,24 +166,9 @@ function resolveTileThumbnail(
   articleCover: string | undefined,
 ): string | undefined {
   if (articleCover) return articleCover
-  if (item.platform === 'tiktok') {
-    return `/api/media/tiktok/thumbnail?username=${encodeURIComponent(item.author)}&id=${encodeURIComponent(item.id)}`
-  }
-  if (item.platform === 'instagram') {
-    return `/api/media/instagram/thumbnail?id=${encodeURIComponent(item.id)}`
-  }
-  if (item.platform === 'youtube') {
-    return `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`
-  }
-  if (!firstMedia) return undefined
-  const mediaType = firstMedia.mediaType as 'photo' | 'video' | 'animated_gif'
-  return getThumbnailUrl({
-    tweetId: item.id,
-    author: item.author,
-    mediaType,
-    mediaIndex: 1,
-    previewUrl: firstMedia.previewUrl || undefined,
-  })
+  // ADHX's own kept poster (an X post with no media has none).
+  if (item.platform === 'twitter' && !firstMedia) return undefined
+  return keptSrc(item.platform, item.id, 'poster', item.author)
 }
 
 /**
@@ -226,7 +212,14 @@ function getTileDataForTags(
   const bookmarkResults = db
     .select()
     .from(bookmarks)
-    .where(and(inArray(bookmarks.userId, userIds), inArray(bookmarks.id, allBookmarkIds)))
+    .where(
+      and(
+        inArray(bookmarks.userId, userIds),
+        inArray(bookmarks.id, allBookmarkIds),
+        // Private wins: a public channel's tiles and count skip private saves.
+        eq(bookmarks.isPrivate, false),
+      ),
+    )
     .orderBy(desc(bookmarks.processedAt))
     .all()
   const bookmarkByKey = new Map(
@@ -537,6 +530,7 @@ function getCachedLeaderboard(window: RankWindow, mode: RankMode): LeaderboardEn
   const now = Date.now()
   const moderation = readLeaderboardModeration()
   if (!moderation) return []
+  moderation.key += `:${savePrivacyFingerprint()}`
   const hit = cache.get(key)
   if (hit && hit.expiresAt > now && hit.moderationKey === moderation.key) return hit.value
 

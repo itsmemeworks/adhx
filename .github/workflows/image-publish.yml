@@ -1,12 +1,15 @@
 name: Publish container image
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version to publish (for example, 1.66.2)'
+        description: 'Existing release version to recover, for example 2.1.3'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      version:
         required: true
         type: string
 
@@ -16,107 +19,185 @@ permissions:
   id-token: write
   attestations: write
 
-concurrency:
-  group: publish-container-${{ inputs.version || github.event.release.tag_name }}
-  cancel-in-progress: false
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-  RAW_VERSION: ${{ inputs.version || github.event.release.tag_name }}
-
 jobs:
-  publish:
+  prepare:
+    timeout-minutes: 5
     runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.plan.outputs.sha }}
+      image: ${{ steps.plan.outputs.image }}
+      version: ${{ steps.plan.outputs.version }}
+      package_version: ${{ steps.plan.outputs.package_version }}
     steps:
-      - name: Normalize release version
-        id: version
-        run: |
-          VERSION="${RAW_VERSION#v}"
-          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::Expected a semantic release version, got '$RAW_VERSION'"
-            exit 1
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7
         with:
-          ref: v${{ steps.version.outputs.version }}
+          fetch-depth: 0
+      - name: Resolve the immutable source revision
+        id: plan
+        env:
+          RAW_VERSION: ${{ inputs.version }}
+        run: node .github/scripts/image-plan.mjs
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+  publish:
+    timeout-minutes: 40
+    needs: prepare
+    runs-on: ubuntu-latest
+    # Release Please and manual recovery for one commit share an idempotent job.
+    # A retry reuses the immutable image instead of rebuilding it.
+    concurrency:
+      group: publish-container-${{ needs.prepare.outputs.sha }}
+      cancel-in-progress: false
+    env:
+      IMAGE: ${{ needs.prepare.outputs.image }}
+      SOURCE_SHA: ${{ needs.prepare.outputs.sha }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
-          registry: ${{ env.REGISTRY }}
+          ref: ${{ needs.prepare.outputs.sha }}
+          path: image-source
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract image metadata
-        id: meta
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          labels: |
-            org.opencontainers.image.title=ADHX
-            org.opencontainers.image.description=Save it. Lose it. Find it.
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.documentation=${{ github.server_url }}/${{ github.repository }}#self-hosting
-          tags: |
-            type=semver,pattern={{version}},value=${{ steps.version.outputs.version }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ steps.version.outputs.version }}
-            type=semver,pattern={{major}},value=${{ steps.version.outputs.version }}
-            type=raw,value=latest
-
-      - name: Build and publish multi-platform image
-        id: build
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            SENTRY_RELEASE=${{ steps.version.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          provenance: mode=max
-          sbom: true
-
-      - name: Attest image provenance
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          subject-digest: ${{ steps.build.outputs.digest }}
-          push-to-registry: true
-
-      # GHCR exposes no API for changing organization-owned package visibility.
-      # The first publish creates a private package; this check fails with the
-      # exact one-time settings URL until an owner switches it to Public.
-      - name: Verify anonymous pulls
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
+      - name: Reuse an image already built for this commit
+        id: existing
         run: |
-          docker logout "${{ env.REGISTRY }}"
-          if ! docker manifest inspect "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}" >/dev/null; then
-            echo "::error::The image was published but is not public. Set package visibility to Public, then rerun this workflow:"
-            echo "::error::https://github.com/orgs/${{ github.repository_owner }}/packages/container/${{ github.event.repository.name }}/settings"
+          if docker buildx imagetools inspect "$IMAGE:sha-$SOURCE_SHA" --raw > /tmp/existing-image.json 2>/tmp/image-inspect.err; then
+            test "$(jq -r '.annotations["org.opencontainers.image.revision"]' /tmp/existing-image.json)" = "$SOURCE_SHA"
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          elif grep -Eqi 'manifest unknown|not found|404' /tmp/image-inspect.err; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          else
+            cat /tmp/image-inspect.err >&2
             exit 1
           fi
-
-      - name: Publish summary
+      - name: Build and publish the release commit once
+        if: steps.existing.outputs.found != 'true'
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ./image-source
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.IMAGE }}:sha-${{ env.SOURCE_SHA }}
+          labels: |
+            org.opencontainers.image.title=ADHX
+            org.opencontainers.image.version=${{ needs.prepare.outputs.package_version }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ env.SOURCE_SHA }}
+            org.opencontainers.image.documentation=${{ github.server_url }}/${{ github.repository }}#run-your-own
+          annotations: index:org.opencontainers.image.revision=${{ env.SOURCE_SHA }}
+          build-args: SENTRY_RELEASE=${{ env.SOURCE_SHA }}
+          cache-from: type=gha,scope=adhx-main
+          cache-to: type=gha,scope=adhx-main,mode=max
+          provenance: mode=max
+          sbom: true
+      - name: Read the published digest
+        id: digest
         run: |
+          DIGEST=$(docker buildx imagetools inspect "$IMAGE:sha-$SOURCE_SHA" | awk '$1 == "Digest:" {print $2; exit}')
+          [[ "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+      - name: Scan the actual release digest (amd64)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_PLATFORM: linux/amd64
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          image-ref: ${{ env.IMAGE }}@${{ steps.digest.outputs.digest }}
+          version: v0.76.0
+          format: json
+          output: trivy-release-amd64.json
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          timeout: 15m
+      - name: Scan the actual release digest (arm64)
+        if: ${{ !cancelled() && steps.digest.outcome == 'success' }}
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_PLATFORM: linux/arm64
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          image-ref: ${{ env.IMAGE }}@${{ steps.digest.outputs.digest }}
+          version: v0.76.0
+          format: json
+          output: trivy-release-arm64.json
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          timeout: 15m
+      - name: Show release image findings in the job log
+        if: always()
+        run: node scripts/security/summarize-image.mjs trivy-release-amd64.json trivy-release-arm64.json
+      - name: Retain release vulnerability reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: release-image-security
+          path: trivy-release-*.json
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Attest the newly built image
+        if: steps.existing.outputs.found != 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.digest.outputs.digest }}
+          push-to-registry: true
+      - name: Promote tags without rebuilding
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIGEST: ${{ steps.digest.outputs.digest }}
+        run: |
+          LATEST_RELEASE=''
+          if [ -n "$VERSION" ]; then
+            LATEST_RELEASE=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
+          fi
+          export LATEST_RELEASE
+          node --input-type=module <<'JS' > /tmp/image-tags.txt
+          import { imagePlan } from './.github/scripts/image-plan.mjs'
+          const p = imagePlan({ sha: process.env.SOURCE_SHA, repository: process.env.GITHUB_REPOSITORY,
+            version: process.env.VERSION, latestRelease: process.env.LATEST_RELEASE })
+          console.log(p.tags.slice(1).join('\n'))
+          JS
+          TAG_ARGS=()
+          while IFS= read -r TAG; do
+            [ -z "$TAG" ] && continue
+            # Numbered releases are immutable; retrying cannot replace a release.
+            if [ -n "$VERSION" ] && [ "$TAG" = "$IMAGE:$VERSION" ]; then
+              if docker buildx imagetools inspect "$TAG" > /tmp/release-image.txt 2>/tmp/release-image.err; then
+                OLD_DIGEST=$(awk '$1 == "Digest:" {print $2; exit}' /tmp/release-image.txt)
+                [ "$OLD_DIGEST" = "$DIGEST" ] || { echo '::error::Release tag already points to a different digest'; exit 1; }
+              elif ! grep -Eqi 'manifest unknown|not found|404' /tmp/release-image.err; then
+                cat /tmp/release-image.err >&2
+                exit 1
+              fi
+            fi
+            TAG_ARGS+=(--tag "$TAG")
+          done < /tmp/image-tags.txt
+          if [ "${#TAG_ARGS[@]}" -gt 0 ]; then
+            docker buildx imagetools create "${TAG_ARGS[@]}" "$IMAGE@$DIGEST"
+          fi
+      - name: Verify anonymous pulls
+        env:
+          DIGEST: ${{ steps.digest.outputs.digest }}
+        run: |
+          docker logout ghcr.io
+          docker manifest inspect "$IMAGE@$DIGEST" >/dev/null
           {
-            echo "## Container image published"
-            echo ""
-            echo "- Image: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\`"
-            echo "- Version: \`${{ steps.version.outputs.version }}\`"
-            echo "- Platforms: \`linux/amd64\`, \`linux/arm64\`"
-            echo "- Digest: \`${{ steps.build.outputs.digest }}\`"
+            echo '## Container image published'
+            echo "- Commit: $SOURCE_SHA"
+            echo "- Image: $IMAGE@$DIGEST"
+            echo '- Platforms: linux/amd64, linux/arm64'
+            cat /tmp/image-tags.txt
           } >> "$GITHUB_STEP_SUMMARY"

@@ -1,11 +1,14 @@
+import { ALL_PLATFORMS } from '@/lib/platform/networks'
 import { NextRequest, type NextResponse } from 'next/server'
+import { adminOnlyResponse } from '@/lib/admin/only'
 import { ok, handleRouteError } from '@/lib/api/response'
 import { getTrendingItems } from '@/lib/trending/query'
 import { publicReadRateLimit } from '@/lib/rate-limit'
 import type { PlatformId } from '@/lib/platform/url'
 
 /**
- * GET /api/trending — public, anonymous, cross-network real-time trending JSON.
+ * GET /api/trending — admins only (a private friends server has no public
+ * audience for it): anonymous, cross-network real-time trending JSON.
  *
  * A thin wrapper over `getTrendingItems()` (the single audited choke point for
  * the anonymity invariant — `userId` is never selected there). Returns the same
@@ -32,11 +35,12 @@ function parsePlatform(value: string | null): PlatformId | undefined {
   if (!value) return undefined
   const v = value.toLowerCase()
   if (v === 'x' || v === 'twitter') return 'twitter'
-  if (v === 'instagram' || v === 'tiktok' || v === 'youtube') return v
-  return undefined
+  return (ALL_PLATFORMS as readonly string[]).includes(v) ? (v as PlatformId) : undefined
 }
 
 export async function GET(request: NextRequest) {
+  const denied = await adminOnlyResponse()
+  if (denied) return noStore(denied)
   const limited = publicReadRateLimit(request)
   if (limited) return noStore(limited)
 

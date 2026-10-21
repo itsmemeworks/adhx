@@ -33,6 +33,33 @@ export async function register(): Promise<void> {
 
   const { initSentry } = await import('@/lib/sentry')
   initSentry()
+
+  // Keyword search works independently of the optional model. Catch up saves
+  // made before the keyword index existed or while inference was disabled.
+  const { startKeywordIndex } = await import('@/lib/semantic/keywords')
+  startKeywordIndex()
+
+  // Understanding pipeline: child processes resume the durable queue, backfill
+  // older saves and embed search queries. The model never runs in this
+  // process. No-op when SEMANTIC_SEARCH=off or under test.
+  const { startSemanticProcesses } = await import('@/lib/semantic/supervisor')
+  startSemanticProcesses()
+
+  // New X bookmarks arrive within the hour without pressing Sync.
+  // Off with AUTO_SYNC_EVERY_MINUTES=0, and under test.
+  const { startAutoSync } = await import('@/lib/sync/auto')
+  startAutoSync()
+
+  // Download every saved post's media (best quality) so ADHX serves its own
+  // copies. Off with KEEP_MEDIA=off, and under test.
+  const { startKeeping } = await import('@/lib/keep/worker')
+  startKeeping()
+  // Links shared from the phone app, read and saved in the background.
+  const { startSaveQueue } = await import('@/lib/app/save-queue')
+  startSaveQueue()
+  // Optional cloud image decisions: bounded background work, never page latency.
+  const { startVisualChannels } = await import('@/lib/channels/visual')
+  startVisualChannels()
 }
 
 export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {

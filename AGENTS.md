@@ -4,14 +4,14 @@ Orientation for AI agents (and humans) starting work in this repo with no prior 
 
 ## What this project is
 
-**ADHX** (adhx.com) — _"Save it. Lose it. Find it."_ An open-source bookmark manager for people who save everything and read nothing. It syncs X/Twitter bookmarks, previews and saves Instagram Reels, TikToks, and YouTube Shorts via a URL-prefix trick (`x.com/...` → `adhx.com/...`), and turns the community's anonymous save/preview activity into public, crawlable pages (`/trending`). Next.js 16 App Router, SQLite + Drizzle, deployed on Fly.io (staging `adhx.fly.dev`, production `adhx.com`).
+**ADHX** — _"Your friends have better taste than the algorithm."_ A self-hosted, private, curated feed across fourteen social networks for one group of close friends and family per server. One Next.js 16 container holds SQLite, the kept media (every save downloaded once and served by the server) and on-server search models; an optional native Mac helper can take the heavy processing. Native iOS/Android apps share links into it and play New, Channels and Live. People join with an invite link (optionally approved by an admin) or sign in by email magic link; connecting X for bookmark sync is optional.
 
-Strategically, ADHX's growth engine is SEO/GEO: x.com is effectively uncrawlable, so ADHX preview pages act as the indexable, structured mirror of social content — every save creates a public long-tail landing page. Features that add per-user variable cost (metered AI) are deliberately out of scope for the free product.
+Saves are shared with the server's members by default and named to them; "Just for me" saves are private; signed-out visitors only ever see counts ("named to friends, never to strangers", see `docs/specs/friends-feed.md` and `PRIVACY.md`). Shared post previews, Right now and kept media files are intentionally reachable by anyone who can reach the instance, so operators choose their network boundary. `site/` is a separate static product website intended for adhx.com; deployment and domain cutover are separate from editing this repository. Deployment examples must remain vendor-neutral; never commit household settings or credentials.
 
 ## How to get context (read in this order)
 
 1. **`README.md`** — product tour, features, quick start.
-2. **`ARCHITECTURE.md`** — narrative walkthrough: data flow, auth, preview model, database design.
+2. **`ARCHITECTURE.md`** — narrative walkthrough with diagrams: system context, save-to-watch, the New blend, live moments, who sees what, phone auth, every table by plane.
 3. **`CLAUDE.md`** — the deep reference: conventions, security invariants (SSRF allowlists, token refresh coalescing, multi-user isolation, activity anonymity), API routes, gotchas. **Binding for all agents**, not just Claude Code.
 4. **`docs/WORKLOG.md`** — append-only, newest-first log of what's been done recently and why, including in-flight work and open follow-ups. Read at least the most recent entries before starting; this is where you learn what changed after the docs above were written.
 
@@ -24,7 +24,7 @@ If your change makes `README.md`, `ARCHITECTURE.md`, or `CLAUDE.md` inaccurate, 
 ## Non-negotiable invariants (details in CLAUDE.md)
 
 - Every user-data query filters by `userId` (and `platform` when touching `bookmarkId`). No `isNull(userId)` fallbacks.
-- `activity.userId` is stored but **never** exposed on any public surface.
+- `activity.userId` is stored but **never** exposed on any public surface. Other people's saves are read only through `visibleSave` / `visibleSaveFilter`, and names only through `saversFor` (members only).
 - Domain validation for proxies: exact match / `endsWith('.domain')` — never `.includes()`.
 - Every external `fetch()` gets `AbortSignal.timeout()`.
 - OAuth token refresh goes through `getValidTokens()` only.
@@ -33,7 +33,7 @@ If your change makes `README.md`, `ARCHITECTURE.md`, or `CLAUDE.md` inaccurate, 
 ## Verify your work
 
 ```bash
-pnpm typecheck && pnpm test   # 940+ tests
+pnpm typecheck && pnpm test
 pnpm lint && pnpm format:check
 ```
 
@@ -46,7 +46,7 @@ Agents **always** commit, push, and open or update a PR after substantive work. 
 
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 

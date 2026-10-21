@@ -1,0 +1,369 @@
+'use client'
+
+import Link from 'next/link'
+import { useEffect, useMemo, useState } from 'react'
+import { cn } from '@/lib/utils'
+import { networkLabel } from '@/lib/platform/networks'
+import { ChevronLeft, Lock, Play } from 'lucide-react'
+import { kindOf, resultKey, type SearchResultItem } from '../search/model'
+import { postWords } from '../theater/TheaterLayout'
+import { Masonry } from '../search/ResultViews'
+import { NxAvatar } from '../primitives'
+import { savesOf } from '../savers'
+import { friendPlayHref, recentPlayHref } from '../theater/queue'
+import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
+import { personColour } from '../moments/people'
+import { timeAgo } from '../moments/live'
+import { NxHeader } from './ChannelParts'
+
+type Show = 'all' | 'videos' | 'photos' | 'music' | 'posts'
+
+/** A channel tile, marked when you haven't saved or seen it (`isNew` from the queue). */
+type FriendItem = SearchResultItem & { isNew?: boolean }
+
+/** Their latest note on a save you may see (`note` on the friend queue). */
+export interface FriendNoteCard {
+  text: string
+  platform: string
+  id: string
+  savedAt: string
+}
+
+/** A post's title line, short enough for one line under a note. */
+function shortTitle(title: string): string | null {
+  const t = title.trim()
+  if (!t) return null
+  return t.length > 48 ? `${t.slice(0, 47).trimEnd()}…` : t
+}
+
+/** "3 days ago", "5h ago", "just now". */
+function noteAge(iso: string): string {
+  const t = Date.parse(iso)
+  if (!Number.isFinite(t)) return ''
+  const days = Math.floor((Date.now() - t) / 86_400_000)
+  if (days < 1) return timeAgo(iso)
+  if (days === 1) return 'yesterday'
+  if (days < 14) return `${days} days ago`
+  return `${Math.floor(days / 7)} weeks ago`
+}
+
+/**
+ * The note card (j3-2): a paper tile quoting a friend's latest note, linking
+ * to the post it's on. Only shown when they have a note other members may see.
+ */
+export function FriendNoteTile({
+  note,
+  friend,
+  title,
+  href,
+}: {
+  note: FriendNoteCard
+  friend: { username: string; name: string | null; avatarUrl: string | null }
+  /** The post's title, when it's in the channel. */
+  title: string | null
+  href: string
+}) {
+  const who = friend.name?.trim() || friend.username
+  const age = noteAge(note.savedAt)
+  const on = [title ? `on ${title}` : null, age].filter(Boolean).join(' · ')
+  return (
+    <Link
+      href={href}
+      aria-label={`${who}’s note: “${note.text}”${title ? `, on ${title}` : ''}`}
+      className="flex flex-col gap-2.5 rounded-[20px] bg-[#e4dac8] p-[18px] font-nx-sans text-[#141414] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nx-accent"
+    >
+      <span className="flex items-center gap-2 text-[12px] font-extrabold">
+        <NxAvatar
+          author={{ avatarUrl: friend.avatarUrl, handle: friend.username, name: who }}
+          size={22}
+        />
+        <span>{`${who}’s note`}</span>
+      </span>
+      <span
+        className="whitespace-pre-line break-words font-nx-serif text-[26px] leading-[0.95]"
+        translate="no"
+      >{`“${note.text}”`}</span>
+      {on && <span className="line-clamp-2 text-[12px] text-[#3a352d]">{on}</span>}
+    </Link>
+  )
+}
+
+/** The board's grid: newest along the top row, then the shortest column. */
+const ROW_COLUMNS = { base: 2, md: 3, xl: 4 }
+
+const SHOW_LABEL: Record<Show, string> = {
+  all: 'All',
+  videos: 'Videos',
+  photos: 'Photos',
+  music: 'Music',
+  posts: 'Posts',
+}
+
+/** Which filter a post falls under (SoundCloud is music, whatever its media). */
+function showOf(item: SearchResultItem): Exclude<Show, 'all'> {
+  if ((item.post.platform as string | undefined) === 'soundcloud') return 'music'
+  const kind = kindOf(item)
+  if (kind === 'video' || kind === 'gif') return 'videos'
+  if (kind === 'photo') return 'photos'
+  return 'posts'
+}
+
+/** "Mostly YouTube, X and SoundCloud." from the networks they save from most. */
+function mostlyFrom(items: SearchResultItem[]): string | null {
+  if (items.length < 3) return null
+  const counts = new Map<string, number>()
+  for (const i of items) {
+    const n = networkLabel(i.post.platform)
+    counts.set(n, (counts.get(n) ?? 0) + 1)
+  }
+  const top = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([n]) => n)
+  const list = top.length > 1 ? `${top.slice(0, -1).join(', ')} and ${top[top.length - 1]}` : top[0]
+  return `Mostly ${list}.`
+}
+
+/**
+ * A friend's channel (`/channels/friend/{username}`): their face, how many
+ * saves and how many you haven't seen, Play all, Play the new ones, and
+ * every post they kept for the group. Members only (never their private
+ * saves); the page says so.
+ */
+export function FriendChannelPage({
+  username,
+  name,
+  avatarUrl,
+  size,
+}: {
+  username: string
+  name: string | null
+  avatarUrl: string | null
+  size: number
+}) {
+  const [items, setItems] = useState<FriendItem[] | null>(null)
+  const [total, setTotal] = useState(size)
+  const [newCount, setNewCount] = useState(0)
+  const [failed, setFailed] = useState(false)
+  const [note, setNote] = useState<FriendNoteCard | null>(null)
+  const [show, setShow] = useState<Show>('all')
+  const title = savesOf({ name, username, isYou: false })
+  const paste = usePasteToSave({
+    savedAction: (post) => ({
+      label: 'Play',
+      onClick: () => window.location.assign(recentPlayHref(post.key)),
+    }),
+  })
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch(`/api/channels/friend/${encodeURIComponent(username)}`, {
+      signal: controller.signal,
+      credentials: 'same-origin',
+    })
+      .then((r) =>
+        r.ok
+          ? (r.json() as Promise<{
+              items: FriendItem[]
+              friend?: { size: number; newCount: number }
+              note?: FriendNoteCard | null
+            }>)
+          : Promise.reject(new Error('load')),
+      )
+      .then((d) => {
+        setItems(d.items)
+        setNote(d.note ?? null)
+        if (d.friend) {
+          setTotal(d.friend.size)
+          setNewCount(d.friend.newCount)
+        }
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return
+        setFailed(true)
+        setItems([])
+      })
+    return () => controller.abort()
+  }, [username])
+
+  const counts = useMemo(() => {
+    const c: Record<Show, number> = { all: 0, videos: 0, photos: 0, music: 0, posts: 0 }
+    for (const i of items ?? []) {
+      c.all++
+      c[showOf(i)]++
+    }
+    return c
+  }, [items])
+  const shown = useMemo(
+    () => (show === 'all' ? items : items?.filter((i) => showOf(i) === show)) ?? null,
+    [items, show],
+  )
+  const mostly = useMemo(() => mostlyFrom(items ?? []), [items])
+  // The note card sits in the last column under its first tile (only under All).
+  const noteTile = useMemo(() => {
+    if (!note || show !== 'all') return undefined
+    const key = `${note.platform}:${note.id}`
+    const on = items?.find((i) => resultKey(i) === key)
+    return {
+      key: `note:${key}`,
+      at: 1,
+      node: (
+        <FriendNoteTile
+          note={note}
+          friend={{ username, name, avatarUrl }}
+          title={on ? shortTitle(postWords(on.post).title) : null}
+          href={friendPlayHref(username, { start: key })}
+        />
+      ),
+    }
+  }, [note, show, items, username, name, avatarUrl])
+  const ring = personColour(username)
+
+  const savesLabel = total === 1 ? '1 save' : `${total.toLocaleString('en-GB')} saves`
+
+  return (
+    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
+      <NxHeader current="channels">
+        {/* Desktop pastes anywhere on the page (⌘V), the pill kept for keyboards; phones need it. */}
+        <PasteButton onClick={paste.pasteFromClipboard} keyboardOnlyFrom="md" />
+      </NxHeader>
+      <main className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 pb-16 pt-5 md:px-8 md:pt-7 lg:flex-row lg:items-start lg:gap-8">
+        <aside
+          aria-label="About this channel"
+          className="flex flex-col lg:sticky lg:top-[100px] lg:min-h-[calc(100dvh-128px)] lg:w-[320px] lg:shrink-0"
+        >
+          <Link
+            href="/channels"
+            className="hidden h-6 items-center gap-1.5 text-sm font-semibold text-nx-soft hover:text-nx-cream lg:flex"
+          >
+            <ChevronLeft aria-hidden className="h-4 w-4" />
+            <span>All channels</span>
+          </Link>
+          {/* Phones: the face beside the title, as on the phone app. */}
+          <div className="flex items-center gap-4 lg:block">
+            <NxAvatar
+              author={{ avatarUrl, handle: username, name: name ?? username }}
+              size={64}
+              className="lg:hidden"
+              style={{ boxShadow: `0 0 0 3px #0f0e0c, 0 0 0 5px ${ring}59` }}
+            />
+            <NxAvatar
+              author={{ avatarUrl, handle: username, name: name ?? username }}
+              size={112}
+              className="mt-[22px] hidden lg:block"
+              style={{ boxShadow: `0 0 0 6px #0f0e0c, 0 0 0 8px ${ring}59` }}
+            />
+            <div className="min-w-0 lg:contents">
+              <h1 className="m-0 truncate font-nx-serif text-[36px] font-normal leading-[0.95] tracking-[-0.01em] lg:mt-[22px] lg:whitespace-nowrap lg:text-[62px]">
+                {title}
+              </h1>
+              <p className="m-0 mt-1.5 text-[13px] font-semibold text-nx-soft lg:mt-3 lg:text-[17px]">
+                <span>{savesLabel}</span>
+                {newCount > 0 && (
+                  <>
+                    <span> · </span>
+                    <span className="text-nx-accent">{`${newCount} you haven’t seen`}</span>
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+          <p className="m-0 mt-2 hidden text-sm leading-normal text-nx-muted lg:block">
+            {mostly
+              ? `${mostly} Picked by hand, one at a time, like it’s 2009.`
+              : 'Picked by hand, one at a time, like it’s 2009.'}
+          </p>
+          <div className="mt-4 flex gap-2.5 lg:mt-[22px] lg:flex-col">
+            <Link
+              href={friendPlayHref(username)}
+              className="flex h-12 items-center justify-center gap-2.5 whitespace-nowrap rounded-full bg-nx-accent px-5 text-base font-extrabold text-black lg:h-[52px]"
+            >
+              <Play aria-hidden className="h-4 w-4" fill="currentColor" strokeWidth={0} />
+              <span>Play all</span>
+            </Link>
+            {newCount > 0 && (
+              <Link
+                href={friendPlayHref(username, { onlyNew: true })}
+                aria-label={newCount === 1 ? 'Play the new one' : `Play the ${newCount} new ones`}
+                className="flex h-12 min-w-0 items-center justify-center gap-2.5 whitespace-nowrap rounded-full border border-white/[0.08] bg-[#262320] px-5 text-base font-extrabold text-nx-cream lg:h-[52px]"
+              >
+                <span aria-hidden className="h-2 w-2 rounded-full bg-nx-accent" />
+                {/* Phones say it shorter, as the phone app does. */}
+                <span aria-hidden className="lg:hidden">
+                  {newCount === 1 ? 'Play the new one' : `Play the ${newCount} new`}
+                </span>
+                <span aria-hidden className="hidden lg:inline">
+                  {newCount === 1 ? 'Play the new one' : `Play the ${newCount} new ones`}
+                </span>
+              </Link>
+            )}
+          </div>
+          {counts.all > 0 && (
+            <div
+              role="group"
+              aria-label="Show"
+              className="-mx-4 mt-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] lg:mx-0 lg:mt-[22px] lg:flex-wrap lg:px-0 [&::-webkit-scrollbar]:hidden"
+            >
+              {(Object.keys(SHOW_LABEL) as Show[])
+                .filter((k) => k === 'all' || counts[k] > 0)
+                .map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    aria-pressed={show === k}
+                    onClick={() => setShow(k)}
+                    className={cn(
+                      'h-9 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[13px]',
+                      show === k
+                        ? 'bg-nx-cream font-extrabold text-black'
+                        : 'bg-nx-surface font-semibold text-nx-cream',
+                    )}
+                  >
+                    {k === 'all' ? SHOW_LABEL[k] : `${SHOW_LABEL[k]} ${counts[k]}`}
+                  </button>
+                ))}
+            </div>
+          )}
+          <p className="m-0 mt-3 flex items-center gap-2 text-[13px] text-nx-muted lg:mt-auto lg:pt-6">
+            <Lock aria-hidden className="h-3.5 w-3.5 shrink-0" />
+            <span>Only people on this server can see this page.</span>
+          </p>
+        </aside>
+        <section aria-label={title} className="min-w-0 flex-1">
+          {shown === null ? (
+            <div
+              aria-hidden
+              className="grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-3.5 xl:grid-cols-4"
+            >
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <span
+                  key={i}
+                  className="nx-shimmer animate-nx-shimmer block h-[220px] rounded-[14px] md:h-[300px]"
+                />
+              ))}
+            </div>
+          ) : shown.length === 0 ? (
+            <p className="m-0 text-white/65">
+              {failed
+                ? 'Their saves didn’t load. Refresh to try again.'
+                : 'Nothing here yet. Whatever they keep for the group shows up here.'}
+            </p>
+          ) : (
+            <Masonry
+              items={shown}
+              columns="columns-2 md:columns-3 xl:columns-4"
+              rowFirst={ROW_COLUMNS}
+              shape="tall"
+              hrefFor={(item) => friendPlayHref(username, { start: resultKey(item) })}
+              showStrength={false}
+              owner={username}
+              isNew={(item) => (item as FriendItem).isNew === true}
+              extra={noteTile}
+            />
+          )}
+        </section>
+      </main>
+      {paste.toast}
+    </div>
+  )
+}

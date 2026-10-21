@@ -7,23 +7,11 @@ import { eq, sql, and } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
 import { getOwnerCollectionStats } from '@/lib/discovery/rank'
 import { invalidateTagCollectionCache } from '@/lib/tags/query'
-import { recordAnalytic } from '@/lib/analytics/record'
+import { setTagVisibility } from '@/lib/tags/visibility'
 
 // Username for friendly share URLs — users-table-first (email-only accounts
 // have no oauth_tokens row; reading only that table 404'd their shares).
 const getUsername = getUsernameForUserId
-
-// Generate a short random code for sharing
-function generateShareCode(): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  let result = ''
-  const array = new Uint8Array(10)
-  crypto.getRandomValues(array)
-  for (let i = 0; i < 10; i++) {
-    result += chars[array[i] % chars.length]
-  }
-  return result
-}
 
 // GET /api/tags - List all unique tags with bookmark counts and share info
 export const GET = withAuth(async (_request, userId) => {
@@ -84,53 +72,12 @@ export const PATCH = withAuth(async (request, userId) => {
   if (!tag || typeof isPublic !== 'boolean') {
     return NextResponse.json({ error: 'Tag and isPublic are required' }, { status: 400 })
   }
-
-  // Get username for constructing friendly share URL
-  const username = await getUsername(userId)
-  if (!username) {
+  const result = await setTagVisibility(userId, tag, isPublic)
+  if (!result) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
   }
-
-  // Check if share record exists
-  const [existing] = await db
-    .select()
-    .from(tagShares)
-    .where(and(eq(tagShares.userId, userId), eq(tagShares.tag, tag)))
-    .limit(1)
-
-  if (existing) {
-    // better-sqlite3 mutations must `.run()` — `await` alone does not write.
-    db.update(tagShares)
-      .set({ isPublic, updatedAt: new Date().toISOString() })
-      .where(and(eq(tagShares.userId, userId), eq(tagShares.tag, tag)))
-      .run()
-  } else {
-    // Create new share record (shareCode still stored for backward compatibility)
-    const shareCode = generateShareCode()
-    db.insert(tagShares)
-      .values({
-        userId,
-        tag,
-        shareCode,
-        isPublic,
-        createdAt: new Date().toISOString(),
-      })
-      .run()
-  }
-
-  invalidateTagCollectionCache(username, tag)
-  revalidatePath(`/t/${username}/${tag}`)
-  revalidatePath(`/t/${username}`)
-
-  recordAnalytic({
-    name: isPublic ? 'playlist.publish' : 'playlist.unpublish',
-    userId,
-    tag,
-    surface: 'playlist',
-  })
-
-  // Return friendly URL format: /t/{username}/{tag}
-  return NextResponse.json({ success: true, shareUrl: `/t/${username}/${tag}`, isPublic })
+  // Friendly URL format: /t/{username}/{tag}
+  return NextResponse.json({ success: true, shareUrl: result.shareUrl, isPublic })
 })
 
 // DELETE /api/tags - Delete a tag from all bookmarks

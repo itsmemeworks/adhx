@@ -1,4 +1,4 @@
-# ADHX - Save it. Lose it. Find it.
+# ADHX - Your friends have better taste than the algorithm.
 # https://adhx.com
 
 User-agent: *

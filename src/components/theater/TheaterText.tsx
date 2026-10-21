@@ -93,8 +93,6 @@ export function mentionHref(platform: string, handle: string): string | null {
       return `https://www.tiktok.com/@${handle}`
     case 'instagram':
       return `https://www.instagram.com/${handle}/`
-    case 'youtube':
-      return `https://www.youtube.com/@${handle}`
     default:
       return null
   }

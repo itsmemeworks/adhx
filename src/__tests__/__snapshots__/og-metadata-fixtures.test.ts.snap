@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`OG Metadata with Real Fixtures > Full metadata generation > '4-images': generates valid content-first metadata 1`] = `
+exports[`OG Metadata with Real Fixtures > Full metadata generation > 4-images: generates valid content-first metadata 1`] = `
 {
   "description": "…500M views in 60 days. Dude spills some sauce on LinkedIn. Open this to… · 4 photos · 2.4K likes, 98 reposts · Read the full post — no X account needed.",
   "openGraph": {
@@ -33,7 +33,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > '4-images':
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-no-header': generates valid content-first metadata 1`] = `
+exports[`OG Metadata with Real Fixtures > Full metadata generation > article-no-header: generates valid content-first metadata 1`] = `
 {
   "description": "…This is not a short-term prediction. It is a structural… · @aliniikk on X · Article · 4.8K likes, 629 reposts · Read the full post — no X account needed.",
   "openGraph": {
@@ -66,7 +66,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-no
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-with-media': generates valid content-first metadata 1`] = `
+exports[`OG Metadata with Real Fixtures > Full metadata generation > article-with-media: generates valid content-first metadata 1`] = `
 {
   "description": "Guys. I finally did it. After years of fidgeting with… · @NoahRyanCo on X · Article · 4.4K likes, 220 reposts · Read the full post — no X account needed.",
   "openGraph": {
@@ -99,7 +99,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-wi
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > Full metadata generation > 'emoji-tweet': generates valid content-first metadata 1`] = `
+exports[`OG Metadata with Real Fixtures > Full metadata generation > emoji-tweet: generates valid content-first metadata 1`] = `
 {
   "description": "…Virtual Accounts powered by @moonpay & @iron 1️⃣ Claim your own named account in… · Video · 2.2K likes, 821 reposts · Watch and send it — no X app needed.",
   "openGraph": {
@@ -132,7 +132,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'emoji-twee
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-1-image': generates valid content-first metadata 1`] = `
+exports[`OG Metadata with Real Fixtures > Full metadata generation > long-text-1-image: generates valid content-first metadata 1`] = `
 {
   "description": "…We built a fully automated system that repurposes,… · @maverickecom on X · Photo · 4.5K likes, 491 reposts · Read the full post — no X account needed.",
   "openGraph": {
@@ -165,7 +165,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-2-images': generates valid content-first metadata 1`] = `
+exports[`OG Metadata with Real Fixtures > Full metadata generation > long-text-2-images: generates valid content-first metadata 1`] = `
 {
   "description": "…made clear last night speaking on the UK and Keir… · @BasilTheGreat on X · 2 photos · 3.0K likes, 538 reposts · Read the full post — no X account needed.",
   "openGraph": {
@@ -198,7 +198,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-with-quote': generates valid content-first metadata 1`] = `
+exports[`OG Metadata with Real Fixtures > Full metadata generation > long-text-with-quote: generates valid content-first metadata 1`] = `
 {
   "description": "…real. The reversal was real. This is… · @_The_Prophet__ on X · Quote post · 5.9K likes, 916 reposts · Read the full post — no X account needed.",
   "openGraph": {
@@ -231,7 +231,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > Full metadata generation > 'plain-text': generates valid content-first metadata 1`] = `
+exports[`OG Metadata with Real Fixtures > Full metadata generation > plain-text: generates valid content-first metadata 1`] = `
 {
   "description": "@TheCinesthetic on X · 4.9K likes, 401 reposts · Read the full post — no X account needed.",
   "openGraph": {
@@ -264,7 +264,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'plain-text
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-image-tweet': generates valid content-first metadata 1`] = `
+exports[`OG Metadata with Real Fixtures > Full metadata generation > quote-of-image-tweet: generates valid content-first metadata 1`] = `
 {
   "description": "@Nate_Google_ on X · Quote post · 1.1K likes · Read the full post — no X account needed.",
   "openGraph": {
@@ -297,7 +297,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-i
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-text-tweet': generates valid content-first metadata 1`] = `
+exports[`OG Metadata with Real Fixtures > Full metadata generation > quote-of-text-tweet: generates valid content-first metadata 1`] = `
 {
   "description": "Quote post · 3.2K likes, 423 reposts · Read the full post — no X account needed.",
   "openGraph": {
@@ -330,7 +330,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-t
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > Full metadata generation > 'reply-tweet': generates valid content-first metadata 1`] = `
+exports[`OG Metadata with Real Fixtures > Full metadata generation > reply-tweet: generates valid content-first metadata 1`] = `
 {
   "description": "…postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing… · 114 likes · Read the full post — no X account needed.",
   "openGraph": {
@@ -363,7 +363,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'reply-twee
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > Full metadata generation > 'text-quoting-video': generates valid content-first metadata 1`] = `
+exports[`OG Metadata with Real Fixtures > Full metadata generation > text-quoting-video: generates valid content-first metadata 1`] = `
 {
   "description": "…drop a model that is ~10x better than Stable Diffusion while being ~as small and… · Quote post · 636 likes · Read the full post — no X account needed.",
   "openGraph": {
@@ -396,7 +396,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'text-quoti
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > Full metadata generation > 'video-tweet': generates valid content-first metadata 1`] = `
+exports[`OG Metadata with Real Fixtures > Full metadata generation > video-tweet: generates valid content-first metadata 1`] = `
 {
   "description": "…space curves. Same numbers. Different geometry. Hidden order. · @Kekius_Sage on X · Video · 3.6K likes, 592 reposts · Watch and send it — no X app needed.",
   "openGraph": {
@@ -429,7 +429,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'video-twee
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > Full metadata generation > 'youtube-link': generates valid content-first metadata 1`] = `
+exports[`OG Metadata with Real Fixtures > Full metadata generation > youtube-link: generates valid content-first metadata 1`] = `
 {
   "description": "381 likes · Read the full post — no X account needed.",
   "openGraph": {
@@ -462,98 +462,98 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'youtube-li
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > '4-images': returns correct OG image 1`] = `
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 4-images: returns correct OG image 1`] = `
 {
   "ogImage": "https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg",
   "slug": "4-images",
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'article-no-header': returns correct OG image 1`] = `
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > article-no-header: returns correct OG image 1`] = `
 {
   "ogImage": "https://pbs.twimg.com/profile_images/1987673473108582402/yFQu0vw1_200x200.jpg",
   "slug": "article-no-header",
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'article-with-media': returns correct OG image 1`] = `
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > article-with-media: returns correct OG image 1`] = `
 {
   "ogImage": "https://pbs.twimg.com/media/G-E_92mXcAALnrI.jpg",
   "slug": "article-with-media",
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'emoji-tweet': returns correct OG image 1`] = `
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > emoji-tweet: returns correct OG image 1`] = `
 {
   "ogImage": "https://pbs.twimg.com/amplify_video_thumb/2009617113384706048/img/uUdl5DT48QRZSEHb.jpg",
   "slug": "emoji-tweet",
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'long-text-1-image': returns correct OG image 1`] = `
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > long-text-1-image: returns correct OG image 1`] = `
 {
   "ogImage": "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg",
   "slug": "long-text-1-image",
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'long-text-2-images': returns correct OG image 1`] = `
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > long-text-2-images: returns correct OG image 1`] = `
 {
   "ogImage": "https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png",
   "slug": "long-text-2-images",
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'long-text-with-quote': returns correct OG image 1`] = `
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > long-text-with-quote: returns correct OG image 1`] = `
 {
   "ogImage": "https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg",
   "slug": "long-text-with-quote",
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'plain-text': returns correct OG image 1`] = `
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > plain-text: returns correct OG image 1`] = `
 {
   "ogImage": "https://pbs.twimg.com/profile_images/1385452682517745667/mfcIUnoX_200x200.jpg",
   "slug": "plain-text",
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'quote-of-image-tweet': returns correct OG image 1`] = `
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > quote-of-image-tweet: returns correct OG image 1`] = `
 {
   "ogImage": "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg",
   "slug": "quote-of-image-tweet",
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'quote-of-text-tweet': returns correct OG image 1`] = `
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > quote-of-text-tweet: returns correct OG image 1`] = `
 {
   "ogImage": "https://pbs.twimg.com/profile_images/2008546467615580160/57KcqsTA_200x200.jpg",
   "slug": "quote-of-text-tweet",
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'reply-tweet': returns correct OG image 1`] = `
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > reply-tweet: returns correct OG image 1`] = `
 {
   "ogImage": "https://pbs.twimg.com/profile_images/1893219113717342208/Vgg2hEPa_200x200.jpg",
   "slug": "reply-tweet",
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'text-quoting-video': returns correct OG image 1`] = `
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > text-quoting-video: returns correct OG image 1`] = `
 {
   "ogImage": "https://pbs.twimg.com/amplify_video_thumb/2011825767634911237/img/rRqDWGszLMh8F1zp.jpg",
   "slug": "text-quoting-video",
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'video-tweet': returns correct OG image 1`] = `
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > video-tweet: returns correct OG image 1`] = `
 {
   "ogImage": "https://pbs.twimg.com/amplify_video_thumb/2011857732484423680/img/wFNhWwXUnF0woRwH.jpg",
   "slug": "video-tweet",
 }
 `;
 
-exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > 'youtube-link': returns correct OG image 1`] = `
+exports[`OG Metadata with Real Fixtures > getOgImage returns appropriate image for each tweet type > youtube-link: returns correct OG image 1`] = `
 {
   "ogImage": "https://pbs.twimg.com/profile_images/1557421659925237763/RzJu2YI3_200x200.jpg",
   "slug": "youtube-link",

@@ -205,7 +205,7 @@ describe('playlist social-card route', () => {
 
       const { html } = await renderRoute('secret-owner', 'secret-tag')
 
-      expect(html).toContain('Save it. Lose it. Find it.')
+      expect(html).toContain('Your friends have better taste than the algorithm.')
       expect(html).toContain('adhx.com')
       expect(html).not.toContain('secret-owner')
       expect(html).not.toContain('secret-tag')
@@ -225,7 +225,7 @@ describe('playlist social-card route', () => {
     )) as unknown as { element: ReactElement }
     const html = renderToStaticMarkup(result.element)
 
-    expect(html).toContain('Save it. Lose it. Find it.')
+    expect(html).toContain('Your friends have better taste than the algorithm.')
     expect(html).not.toContain('good-stuff')
     expect(html).not.toContain('curator')
     expect(mocks.getPublicTagCollection).not.toHaveBeenCalled()

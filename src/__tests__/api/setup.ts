@@ -1,6 +1,12 @@
+import { SAVE_VISIBILITY_DDL } from '@/lib/bookmarks/visibility-sql'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from '@/lib/db/schema'
+import { UNDERSTANDING_DDL } from '@/lib/semantic/schema-sql'
+import { BOARD_FEATURES_DDL } from '@/lib/sends/schema-sql'
+import { CHANNEL_VISUAL_DDL } from '@/lib/channels/visual-schema'
+import { ADMIN_COUNTS_DDL } from '@/lib/admin/schema-sql'
+import { POST_REACTIONS_DDL } from '@/lib/reactions/schema-sql'
 
 /**
  * Shared test database setup for API tests.
@@ -31,6 +37,8 @@ export const FULL_SCHEMA_SQL = `
     retweet_context TEXT,
     summary TEXT,
     source TEXT DEFAULT 'sync',
+    is_private INTEGER NOT NULL DEFAULT 0,
+    note TEXT,
     raw_json TEXT,
     PRIMARY KEY (user_id, platform, id)
   );
@@ -261,7 +269,16 @@ export const FULL_SCHEMA_SQL = `
     username_chosen INTEGER NOT NULL DEFAULT 0,
     username_change_count INTEGER NOT NULL DEFAULT 0,
     x_link_version INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    approval TEXT NOT NULL DEFAULT 'approved',
+    approval_snoozed_until INTEGER,
+    last_seen_at TEXT
+  );
+
+  CREATE TABLE server_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL
   );
 
   CREATE TABLE username_aliases (
@@ -289,8 +306,119 @@ export const FULL_SCHEMA_SQL = `
     return_to TEXT,
     expires_at INTEGER NOT NULL,
     used_at TEXT,
+    attempts INTEGER NOT NULL DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE access_keys (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      key_hash TEXT NOT NULL UNIQUE,
+      hint TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      last_used_at TEXT,
+      scope TEXT NOT NULL DEFAULT 'search',
+      platform TEXT
+    );
+    CREATE INDEX access_keys_user_id_idx ON access_keys(user_id);
+  CREATE TABLE app_pair_codes (
+    code_hash TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_at TEXT,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE admin_sign_in_links (
+    token_hash TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    url TEXT NOT NULL,
+    intent TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at INTEGER NOT NULL
+  );
+  CREATE TABLE invites (
+    id TEXT PRIMARY KEY,
+    token_hash TEXT NOT NULL UNIQUE,
+    created_by TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_by TEXT,
+    used_at TEXT,
+    revoked_at TEXT,
+    name_hint TEXT
+  );
+  CREATE INDEX invites_created_by_idx ON invites(created_by);
+  CREATE TABLE post_views (
+    user_id TEXT NOT NULL,
+    platform TEXT NOT NULL,
+    post_id TEXT NOT NULL,
+    seen_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, platform, post_id)
+  );
+  CREATE INDEX post_views_seen_at_idx ON post_views(seen_at);
+  CREATE TABLE keep_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+  CREATE TABLE phone_save_queue (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    request_id TEXT,
+    url TEXT NOT NULL,
+    status TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    next_attempt_at TEXT,
+    platform TEXT,
+    post_id TEXT,
+    already_saved INTEGER NOT NULL DEFAULT 0,
+    is_private INTEGER NOT NULL DEFAULT 0,
+    default_private INTEGER NOT NULL DEFAULT 0,
+    private_choice INTEGER,
+    publish_pending INTEGER NOT NULL DEFAULT 0,
+    privacy_intent_version INTEGER NOT NULL DEFAULT 0,
+    note TEXT,
+    error_code TEXT,
+    error TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX phone_save_queue_status_idx ON phone_save_queue(status, next_attempt_at);
+  CREATE INDEX phone_save_queue_user_id_idx ON phone_save_queue(user_id);
+  CREATE UNIQUE INDEX phone_save_queue_request_idx ON phone_save_queue(user_id, request_id);
+  CREATE TABLE keep_jobs (
+      platform TEXT NOT NULL,
+      post_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      next_attempt_at TEXT,
+      last_error TEXT,
+      bytes INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL,
+      accepted_at TEXT,
+      progress INTEGER,
+      PRIMARY KEY (platform, post_id)
+    );
+    CREATE INDEX keep_jobs_status_idx ON keep_jobs(status, next_attempt_at);
+    CREATE TABLE kept_files (
+      platform TEXT NOT NULL,
+      post_id TEXT NOT NULL,
+      slot TEXT NOT NULL,
+      path TEXT NOT NULL,
+      mime TEXT NOT NULL,
+      bytes INTEGER NOT NULL,
+      width INTEGER,
+      height INTEGER,
+      duration_ms INTEGER,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (platform, post_id, slot)
+    );
+
+${SAVE_VISIBILITY_DDL}
+${BOARD_FEATURES_DDL}
+${CHANNEL_VISUAL_DDL}
+${ADMIN_COUNTS_DDL}
+${POST_REACTIONS_DDL}
 `
 
 export interface TestDbInstance {
@@ -306,6 +434,7 @@ export function createTestDb(): TestDbInstance {
   const sqlite = new Database(':memory:')
   sqlite.pragma('foreign_keys = ON')
   sqlite.exec(FULL_SCHEMA_SQL)
+  sqlite.exec(UNDERSTANDING_DDL)
 
   const db = drizzle(sqlite, { schema })
 

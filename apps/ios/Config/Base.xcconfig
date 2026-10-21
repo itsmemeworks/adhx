@@ -1,0 +1,11 @@
+// ADHX Share build settings. To build your own copy, change these two lines
+// (or put them in Config/Local.xcconfig, which git ignores).
+
+// Your reverse-DNS prefix. The app is this id, the Share Extension is
+// <prefix>.ShareExtension and the App Group is group.<prefix>.
+ADHX_BUNDLE_PREFIX = com.example.adhxshare
+
+// Your Apple Developer Team ID (10 characters, from developer.apple.com → Membership).
+DEVELOPMENT_TEAM =
+
+#include? "Local.xcconfig"

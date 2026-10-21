@@ -391,11 +391,6 @@ describe('buildRenderSegments', () => {
         handle: 'bob',
         href: 'https://www.tiktok.com/@bob',
       })
-      expect(buildRenderSegments('@bob', undefined, undefined, 'youtube')[0]).toEqual({
-        type: 'mention',
-        handle: 'bob',
-        href: 'https://www.youtube.com/@bob',
-      })
     })
 
     it('excludes trailing dots from an instagram/tiktok handle', () => {
@@ -483,10 +478,10 @@ describe('mentionHref', () => {
     expect(mentionHref('twitter', 'alice')).toBe('https://x.com/alice')
     expect(mentionHref('tiktok', 'alice')).toBe('https://www.tiktok.com/@alice')
     expect(mentionHref('instagram', 'alice')).toBe('https://www.instagram.com/alice/')
-    expect(mentionHref('youtube', 'alice')).toBe('https://www.youtube.com/@alice')
   })
 
   it('returns null for an unrecognized platform', () => {
     expect(mentionHref('mastodon', 'alice')).toBeNull()
+    expect(mentionHref('youtube', 'alice')).toBeNull()
   })
 })

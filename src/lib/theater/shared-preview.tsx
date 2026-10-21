@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { SharedPostStatic, type SharedPostStaticProps } from '@/components/theater/SharedPostStatic'
-import { TheaterShell } from '@/components/theater/TheaterShell'
+import { PreviewTheater } from '@/components/next/theater/PreviewTheater'
 import { RelatedSaves } from '@/components/RelatedSaves'
 import { jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { buildSharedSeed } from './shared-seed'
@@ -47,37 +47,30 @@ export async function ResolvedSharedSeo({ resolve }: { resolve: Promise<SharedRe
   )
 }
 
-/** Crawlable article + theater — preview pages share this tail. */
+/**
+ * Crawlable article + the new theater — preview pages share this tail. The
+ * SEO sibling waits on the source inside Suspense; people see the theater's
+ * loading screen straight away (`PreviewTheater`).
+ */
 export function SharedPreviewPage({
   jsonLd,
   staticPost,
-  seed,
   sharedItem,
-  authed,
   unavailable,
   sharedResolve,
 }: {
   jsonLd?: unknown
   staticPost?: SharedPostStaticProps
-  seed: TheaterFeedSeed
-  sharedItem: TheaterItem
-  authed: boolean
+  /** Kept for callers; the new theater builds its own queue. */
+  seed?: TheaterFeedSeed
+  /** The URL stub; its `url` is the original post, offered if it can't be shown. */
+  sharedItem?: TheaterItem
+  authed?: boolean
   unavailable?: boolean
   /** Upstream resolve — do not await in the page; the shell paints first. */
   sharedResolve?: Promise<SharedResolveResult>
 }) {
-  if (unavailable) {
-    return (
-      <TheaterShell
-        seed={seed}
-        mode="shared"
-        sharedItem={sharedItem}
-        sharedUnavailable
-        sharedUnavailableReason="hidden"
-        authed={authed}
-      />
-    )
-  }
+  if (unavailable) return <PreviewTheater unavailable />
   return (
     <>
       {sharedResolve ? (
@@ -93,13 +86,7 @@ export function SharedPreviewPage({
           <SharedPostStatic {...staticPost} />
         </>
       ) : null}
-      <TheaterShell
-        seed={seed}
-        mode="shared"
-        sharedItem={sharedItem}
-        sharedResolve={sharedResolve}
-        authed={authed}
-      />
+      <PreviewTheater resolve={sharedResolve} originalUrl={sharedItem?.url} />
     </>
   )
 }

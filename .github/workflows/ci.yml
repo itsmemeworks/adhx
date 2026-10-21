@@ -3,8 +3,6 @@ name: CI
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
   # Manual trigger for debugging or special cases
   workflow_dispatch:
     inputs:
@@ -12,6 +10,11 @@ on:
         description: 'Git ref to run CI on'
         required: false
         type: string
+      check_models:
+        description: 'Run full pinned text/image/video CPU inference on both Linux architectures'
+        required: false
+        default: false
+        type: boolean
   # Trigger when Release Please workflow completes (to run CI on release PRs)
   # This works because workflow_run events ARE triggered even when the
   # original workflow used GITHUB_TOKEN
@@ -19,91 +22,72 @@ on:
     workflows: ['Release Please']
     types: [completed]
 
-# Permissions needed for:
-# - checks: write - to create check runs for release PRs
-# - contents: read - default permission to checkout code
+# Only the trusted metadata-check job may write checks.
 permissions:
-  checks: write
   contents: read
 
 jobs:
-  # Create check run for release PRs when triggered by Release Please workflow
-  # Uses GitHub Checks API to report status on the PR's HEAD commit
-  release-pr-check:
-    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' }}
+  release-compatibility:
     runs-on: ubuntu-latest
-    steps:
-      - name: Create check run for release PR
-        uses: actions/github-script@v9
-        with:
-          script: |
-            // Find open release PR
-            const { data: prs } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:release-please--branches--main`,
-              state: 'open'
-            });
-
-            if (prs.length === 0) {
-              console.log('No open release PR found, skipping');
-              return;
-            }
-
-            const pr = prs[0];
-            console.log(`Found release PR #${pr.number} with head SHA: ${pr.head.sha}`);
-
-            // Create check runs on the PR's HEAD commit to satisfy branch
-            // protection's required checks. Release PRs only bump version /
-            // changelog, so the real CI jobs are skipped — synthesize a passing
-            // check for each required context.
-            for (const name of ['build', 'format', 'test']) {
-              const { data: checkRun } = await github.rest.checks.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                name,
-                head_sha: pr.head.sha,
-                status: 'completed',
-                conclusion: 'success',
-                output: {
-                  title: `Release PR ${name} check`,
-                  summary: 'Release PRs skip full CI - only version/changelog updates.',
-                  text: `This check was created automatically for release PR #${pr.number}.\n\nRelease PRs only contain automated version bumps and changelog updates, so full CI is skipped.`
-                }
-              });
-              console.log(`✅ Created '${name}' check run ${checkRun.id} for PR #${pr.number}`);
-            }
-
-  build:
-    runs-on: ubuntu-latest
-    # Skip for workflow_run events (handled by release-pr-check job)
-    # For pull_request events, skip release-please PRs
-    # For push events, always run
-    if: |
-      github.event_name != 'workflow_run' &&
-      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v7
-
-      # Version is read from the "packageManager" field in package.json
       - uses: pnpm/action-setup@v6
-
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: 'pnpm'
+          cache-dependency-path: .github/release-please/pnpm-lock.yaml
+      - name: Install the pinned release compatibility tools
+        run: pnpm --dir .github/release-please install --frozen-lockfile --ignore-scripts
+      - name: Round-trip real upstream release PRs and tags without GitHub writes
+        run: pnpm --dir .github/release-please test
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+  # GITHUB_TOKEN-created release PRs do not need another full app CI run.
+  # Validate their actual diff before reporting the required branch checks.
+  release-pr-check:
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: write
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            await require('./.github/scripts/check-release-pr.cjs')({ github, context, core })
 
-      - name: Build
-        run: pnpm build
+  # Both native runner-image builds already compile the production app.
+  # Keep the required `build` context without compiling it a third time.
+  build:
+    needs: container-smoke
+    runs-on: ubuntu-latest
+    if: |
+      always() && github.event_name != 'workflow_run' &&
+      !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+        github.head_ref == 'release-please--branches--main' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
+    steps:
+      - name: Require both native image builds and smoke tests
+        env:
+          RESULT: ${{ needs.container-smoke.result }}
+        run: test "$RESULT" = success
 
   extension:
     runs-on: ubuntu-latest
     if: |
       github.event_name != 'workflow_run' &&
-      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+      !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+        github.head_ref == 'release-please--branches--main' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
     steps:
       - uses: actions/checkout@v7
 
@@ -131,103 +115,121 @@ jobs:
       - name: Validate emitted manifests
         run: pnpm --dir extension validate:manifests
 
+  # Native builds exercise the actual installed architecture, including SQLite,
+  # FFmpeg, yt-dlp and ONNX bindings. No QEMU inference and no image publishing.
   container-smoke:
     if: |
       github.event_name != 'workflow_run' &&
-      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
-    runs-on: ubuntu-latest
+      !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+        github.head_ref == 'release-please--branches--main' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
     env:
-      IMAGE_TAG: adhx-ci:${{ github.sha }}
-      CONTAINER_NAME: adhx-container-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+      IMAGE_TAG: adhx-ci:${{ github.sha }}-${{ matrix.arch }}
+      CHECK_MODELS: ${{ inputs.check_models || contains(github.event.pull_request.labels.*.name, 'validate-models') }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Build assembled runner image
         run: |
           docker build \
+            --platform linux/${{ matrix.arch }} \
             --target runner \
             --build-arg SENTRY_RELEASE="$GITHUB_SHA" \
             --tag "$IMAGE_TAG" \
             .
 
-      - name: Verify runner dependencies and migration
-        run: |
-          docker run --rm \
-            --env DATABASE_PATH=/tmp/adhx-migration-smoke.db \
-            --entrypoint sh \
-            "$IMAGE_TAG" \
-            -euc '
-              test "$(id -u)" = "1001"
-              test -x ./node_modules/.bin/tsx
-              ./node_modules/.bin/tsx --version
-              node -e '"'"'
-                const Database = require("better-sqlite3")
-                const db = new Database(":memory:")
-                if (db.prepare("select 1 as value").get().value !== 1) process.exit(1)
-                db.close()
-              '"'"'
-              ./node_modules/.bin/tsx src/lib/db/migrate.ts
-              node -e '"'"'
-                const Database = require("better-sqlite3")
-                const db = new Database(process.env.DATABASE_PATH)
-                const integrity = db.pragma("integrity_check", { simple: true })
-                const users = db.prepare(
-                  "select name from sqlite_master where type = ? and name = ?"
-                ).get("table", "users")
-                if (integrity !== "ok" || users?.name !== "users") process.exit(1)
-                db.close()
-              '"'"'
-            '
-
-      - name: Start runner and verify health
-        run: |
-          docker run --detach \
-            --name "$CONTAINER_NAME" \
-            --publish 127.0.0.1:3000:3000 \
-            --env DATABASE_PATH=/tmp/adhx-health-smoke.db \
-            --env NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000 \
-            --env SESSION_SECRET=ci-container-smoke-session-secret \
-            --env TWITTER_CLIENT_ID=ci-container-smoke \
-            --env TWITTER_CLIENT_SECRET=ci-container-smoke \
-            "$IMAGE_TAG"
-
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:3000/api/health \
-              --output /tmp/adhx-health.json; then
-              if python3 -c '
-          import json
-          with open("/tmp/adhx-health.json", encoding="utf-8") as response:
-              data = json.load(response)
-          assert data.get("status") == "healthy"
-          assert data.get("checks", {}).get("database", {}).get("status") == "healthy"
-          '; then
-                exit 0
-              fi
-            fi
-            echo "Health check attempt ${attempt}/30 not healthy yet"
-            sleep 2
-          done
-
-          echo "Runner did not become healthy within 60 seconds"
-          exit 1
-
-      - name: Show runner diagnostics
-        if: failure()
-        run: |
-          docker ps --all --filter "name=^/${CONTAINER_NAME}$"
-          docker inspect "$CONTAINER_NAME" || true
-          docker logs "$CONTAINER_NAME" || true
-
-      - name: Clean up runner
+      - name: Scan the assembled image for fixable high and critical advisories
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_TAG }}
+          version: v0.76.0
+          format: json
+          output: trivy-${{ matrix.arch }}.json
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          timeout: 15m
+      - name: Show image findings in the job log
         if: always()
-        run: docker rm --force "$CONTAINER_NAME" 2>/dev/null || true
+        run: node scripts/security/summarize-image.mjs trivy-${{ matrix.arch }}.json
+      - name: Retain the image vulnerability report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: image-security-${{ matrix.arch }}
+          path: trivy-${{ matrix.arch }}.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Check native media, auth, migrations and volume persistence
+        run: |
+          if [ "$CHECK_MODELS" = 'true' ]; then
+            bash scripts/container-smoke.sh --models
+          else
+            bash scripts/container-smoke.sh
+          fi
+
+  site-build:
+    if: |
+      github.event_name != 'workflow_run' &&
+      !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+        github.head_ref == 'release-please--branches--main' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      # Validation only: Pages publishing remains a separate manual workflow.
+      - run: pnpm site:build
+
+  dependency-audit:
+    if: |
+      github.event_name != 'workflow_run' &&
+      !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+        github.head_ref == 'release-please--branches--main' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Install extension dependency metadata
+        run: pnpm --dir extension install --frozen-lockfile --ignore-scripts
+      - name: Install pinned release-tool metadata
+        run: pnpm --dir .github/release-please install --frozen-lockfile --ignore-scripts
+      - name: Audit production and build dependencies in all lockfiles
+        run: pnpm check:dependencies
 
   # Dedicated formatting gate. Kept as its own job (rather than a step in `test`)
   # so it surfaces as a distinct required status check on PRs.
   format:
     if: |
       github.event_name != 'workflow_run' &&
-      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+      !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+        github.head_ref == 'release-please--branches--main' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -248,10 +250,11 @@ jobs:
 
   test:
     # Skip for release-please PRs (only update version/changelog) and workflow_run events
-    # For push events, always run
     if: |
       github.event_name != 'workflow_run' &&
-      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+      !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+        github.head_ref == 'release-please--branches--main' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -273,13 +276,31 @@ jobs:
       - name: Type check
         run: pnpm typecheck
 
+      - name: Install maintained media tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Run tests
         run: pnpm test
+
+      - name: Rehearse large queues, interrupted workers and video recovery
+        env:
+          ADHX_LOAD_REPORT_PATH: ${{ runner.temp }}/processing-load-report.json
+        run: pnpm exec vitest run --config scripts/verify-processing-load.config.ts
+      - name: Retain the processing rehearsal report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: processing-load-report
+          path: ${{ runner.temp }}/processing-load-report.json
+          if-no-files-found: ignore
+          retention-days: 14
 
   e2e:
     if: |
       github.event_name != 'workflow_run' &&
-      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+      !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+        github.head_ref == 'release-please--branches--main' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

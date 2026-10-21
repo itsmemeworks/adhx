@@ -1,5 +1,6 @@
 'use client'
 
+import { keptSrc } from '@/lib/keep/src'
 /** Compact in-reader player — parent or quoted video, with native controls. */
 export function StageInlineVideo({
   author,
@@ -12,7 +13,7 @@ export function StageInlineVideo({
   poster?: string | null
   testId?: string
 }) {
-  const src = `/api/media/video?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(bookmarkId)}&quality=hd`
+  const src = keptSrc('twitter', bookmarkId, 'video-1', author)
 
   return (
     <video

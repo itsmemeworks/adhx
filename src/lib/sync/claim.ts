@@ -1,9 +1,16 @@
-import { and, desc, eq, lt, sql } from 'drizzle-orm'
+import { and, desc, eq, isNull, lt, or, sql } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
 import { syncLogs } from '@/lib/db/schema'
 
 export const STALE_RUNNING_SYNC_MS = 30 * 60 * 1000
 export const STALE_RUNNING_SYNC_MESSAGE = 'Sync timed out (stuck in running state)'
+
+/** What started a sync: the Sync button (older rows have no trigger) or the hourly job. */
+export type SyncTrigger = 'manual' | 'auto'
+
+/** Rows started by hand. Only these count toward the once-an-hour Sync button. */
+export const MANUAL_SYNC = () =>
+  or(isNull(syncLogs.triggerType), eq(syncLogs.triggerType, 'manual'))
 
 export type SyncClaimResult =
   | { claimed: true; syncId: string; startedAt: string }
@@ -51,7 +58,12 @@ function isUniqueConstraintError(error: unknown): boolean {
  * claim details so additional connections can observe the existing run and keeps this helper correct in test
  * databases while their DDL is being upgraded.
  */
-export function claimSync(userId: string, syncId: string, now = new Date()): SyncClaimResult {
+export function claimSync(
+  userId: string,
+  syncId: string,
+  now = new Date(),
+  trigger: SyncTrigger = 'manual',
+): SyncClaimResult {
   return runInTransaction(() => {
     const startedAt = now.toISOString()
     const staleBefore = new Date(now.getTime() - STALE_RUNNING_SYNC_MS).toISOString()
@@ -91,7 +103,7 @@ export function claimSync(userId: string, syncId: string, now = new Date()): Syn
           startedAt,
           heartbeatAt: startedAt,
           status: 'running',
-          triggerType: 'manual',
+          triggerType: trigger,
         })
         .run()
     } catch (error) {

@@ -10,3 +10,13 @@ coverage
 .claude
 extension/dist
 extension/.extension-js
+# Xcode writes these in its own style
+apps/ios/**/*.xcassets
+# Native build outputs and local SDK/signing configuration are not source.
+apps/ios/build
+apps/ios/Config/Local.xcconfig
+apps/android/**/build
+apps/android/.gradle
+apps/android/.kotlin
+apps/android/local.properties
+apps/android/keystore.properties

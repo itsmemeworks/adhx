@@ -179,7 +179,7 @@ export function buildSnippetDescription({
 }
 
 /**
- * Shared OG / Twitter / canonical tail for Reels, TikTok, and Shorts.
+ * Shared OG / Twitter / canonical tail for Reels and TikTok.
  * The tweet page stays richer (article:author, creator, tombstone).
  */
 export function previewPageMetadata({

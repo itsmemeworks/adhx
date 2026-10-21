@@ -1,19 +1,19 @@
 import { expect, test } from '@playwright/test'
-import { PREVIEW_IG, PREVIEW_IG_PHOTO, PREVIEW_TT, PREVIEW_YT } from './constants'
-import { caption, expectTheaterReady } from './helpers'
+import { PREVIEW_IG, PREVIEW_IG_PHOTO, PREVIEW_TT } from './constants'
+import { caption, expectPreviewReady } from './helpers'
 
 test.describe('preview pages for every platform', () => {
   test('Instagram reel preview mounts the theater', async ({ page }) => {
     test.setTimeout(90_000)
     await page.goto(`/reels/${PREVIEW_IG.id}`)
-    await expectTheaterReady(page)
+    await expectPreviewReady(page)
     await expect(caption(page, PREVIEW_IG.text)).toBeVisible()
   })
 
   test('Instagram image carousel mounts every ordered slide without a video player', async ({
     page,
   }) => {
-    await page.route('**/api/media/instagram/thumbnail**', (route) =>
+    await page.route(/\/api\/files\/instagram\/[^/]+\/(photo-\d+|poster)/, (route) =>
       route.fulfill({
         contentType: 'image/svg+xml',
         body: '<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350"><rect width="100%" height="100%" fill="#e8795b"/></svg>',
@@ -21,7 +21,7 @@ test.describe('preview pages for every platform', () => {
     )
 
     await page.goto(`/p/${PREVIEW_IG_PHOTO.id}`)
-    await expectTheaterReady(page)
+    await expectPreviewReady(page)
     await expect(caption(page, PREVIEW_IG_PHOTO.text)).toBeVisible()
 
     const slides = page
@@ -31,7 +31,7 @@ test.describe('preview pages for every platform', () => {
     for (let index = 0; index < PREVIEW_IG_PHOTO.imageCount; index += 1) {
       await expect(slides.nth(index)).toHaveAttribute(
         'src',
-        `/api/media/instagram/thumbnail?id=${PREVIEW_IG_PHOTO.id}&index=${index + 1}`,
+        `/api/files/instagram/${PREVIEW_IG_PHOTO.id}/photo-${index + 1}`,
       )
     }
     await expect(slides.first()).toBeVisible()
@@ -42,15 +42,8 @@ test.describe('preview pages for every platform', () => {
   test('TikTok preview mounts the theater', async ({ page }) => {
     test.setTimeout(90_000)
     await page.goto(`/@${PREVIEW_TT.author}/video/${PREVIEW_TT.id}`)
-    await expectTheaterReady(page)
+    await expectPreviewReady(page)
     await expect(caption(page, PREVIEW_TT.text)).toBeVisible()
-  })
-
-  test('YouTube Shorts preview mounts the theater', async ({ page }) => {
-    test.setTimeout(90_000)
-    await page.goto(`/shorts/${PREVIEW_YT.id}`)
-    await expectTheaterReady(page)
-    await expect(caption(page, PREVIEW_YT.text)).toBeVisible()
   })
 })
 
@@ -59,21 +52,21 @@ for (const mobile of [false, true]) {
     page,
   }) => {
     if (mobile) await page.setViewportSize({ width: 390, height: 844 })
-    await page.route('**/api/media/instagram/video?**', (route) =>
+    await page.route(/\/api\/files\/instagram\/[^/]+\/video-1/, (route) =>
       route.fulfill({
         status: 409,
         contentType: 'application/json',
         body: JSON.stringify({ contentType: 'photo', photoCount: 2 }),
       }),
     )
-    await page.route('**/api/media/instagram/thumbnail**', (route) =>
+    await page.route(/\/api\/files\/instagram\/[^/]+\/(photo-\d+|poster)/, (route) =>
       route.fulfill({
         contentType: 'image/svg+xml',
         body: '<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350"><rect width="100%" height="100%" fill="#e8795b"/></svg>',
       }),
     )
     await page.goto(`/reels/${PREVIEW_IG.id}`)
-    await expectTheaterReady(page)
+    await expectPreviewReady(page)
     const slides = page.getByRole('region', { name: 'Photos, 2' }).locator('img')
     await expect(slides).toHaveCount(2)
     await expect(slides.first()).toBeVisible()
@@ -85,7 +78,7 @@ for (const mobile of [false, true]) {
     page,
   }) => {
     if (mobile) await page.setViewportSize({ width: 390, height: 844 })
-    await page.route('**/api/media/instagram/video?**', (route) =>
+    await page.route(/\/api\/files\/instagram\/[^/]+\/video-1/, (route) =>
       route.fulfill({
         status: 502,
         contentType: 'application/json',
@@ -96,7 +89,7 @@ for (const mobile of [false, true]) {
       route.fulfill({ contentType: 'text/html', body: 'Post unavailable' }),
     )
     await page.goto(`/reels/${PREVIEW_IG.id}`)
-    await expectTheaterReady(page)
+    await expectPreviewReady(page)
     await expect(
       page.getByText('We couldn’t load this video. Try the original post on Instagram.'),
     ).toBeVisible()

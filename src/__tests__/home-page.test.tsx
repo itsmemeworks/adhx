@@ -11,7 +11,7 @@ vi.mock('@/lib/theater/feed', () => ({
 vi.mock('@/lib/sentry', () => ({ metrics: { theaterOpened: vi.fn() } }))
 vi.mock('@/lib/analytics/record', () => ({ recordAnalytic: vi.fn() }))
 vi.mock('@/components/theater/TheaterStaticList', () => ({ TheaterStaticList: () => null }))
-vi.mock('@/components/theater/TheaterShell', () => ({ TheaterShell: () => null }))
+vi.mock('@/components/next/moments/PublicHome', () => ({ PublicHome: () => null }))
 vi.mock('next/navigation', () => ({
   redirect: vi.fn((path: string) => {
     throw new Error(`REDIRECT:${path}`)
@@ -21,25 +21,23 @@ vi.mock('next/navigation', () => ({
 describe('home destination', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('opens personal videos for signed-in viewers without fetching community posts', async () => {
+  it('opens New: what your people saved that you haven’t seen', async () => {
     vi.mocked(getCurrentUserId).mockResolvedValue('u1')
-    await expect(HomePage({ searchParams: Promise.resolve({}) })).rejects.toThrow('REDIRECT:/saved')
-    expect(getTheaterFeed).not.toHaveBeenCalled()
+    await expect(HomePage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
+      'REDIRECT:/play?feed=new',
+    )
   })
 
-  it.each(['success', 'duplicate'])(
-    'keeps an explicit %s add focused on its post',
-    async (added) => {
-      vi.mocked(getCurrentUserId).mockResolvedValue('u1')
-      await expect(
-        HomePage({
-          searchParams: Promise.resolve({ added, id: 'reel123', platform: 'instagram' }),
-        }),
-      ).rejects.toThrow('REDIRECT:/saved?open=reel123&platform=instagram')
-    },
-  )
+  it('starts on a just-added post', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('u1')
+    await expect(
+      HomePage({
+        searchParams: Promise.resolve({ added: 'success', id: 'reel123', platform: 'instagram' }),
+      }),
+    ).rejects.toThrow('REDIRECT:/play?recent=1&start=instagram%3Areel123')
+  })
 
-  it('keeps discovery available to signed-out visitors', async () => {
+  it('keeps the public theater for signed-out visitors', async () => {
     vi.mocked(getCurrentUserId).mockResolvedValue(null)
     await HomePage({ searchParams: Promise.resolve({}) })
     expect(redirect).not.toHaveBeenCalled()

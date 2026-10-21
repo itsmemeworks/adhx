@@ -17,10 +17,14 @@ const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
 
 describe('production container dependencies', () => {
   it('pins pnpm and installs the frozen lockfile', () => {
-    expect(packageJson.packageManager).toBe('pnpm@9.15.9')
+    expect(packageJson.packageManager).toMatch(/^pnpm@10\.\d+\.\d+$/)
+    const [, minor, patch] = packageJson.packageManager!.match(/^pnpm@10\.(\d+)\.(\d+)$/)!
+    expect(Number(minor) > 34 || (Number(minor) === 34 && Number(patch) >= 5)).toBe(true)
     expect(dockerfile).toContain('ENV PNPM_HOME="/pnpm"')
     expect(dockerfile).toContain('corepack enable')
-    expect(dockerfile).toContain('corepack prepare pnpm@9.15.9 --activate')
+    expect(dockerfile).toContain(`corepack prepare ${packageJson.packageManager} --activate`)
+    expect(dockerfile).toContain('COPY package.json pnpm-lock.yaml .npmrc ./')
+    expect(readFileSync(join(root, '.npmrc'), 'utf8')).toContain('strict-dep-builds=true')
     expect(dockerfile).toContain('pnpm install --frozen-lockfile')
     expect(dockerfile).toContain('pnpm run build')
   })
@@ -38,6 +42,17 @@ describe('production container dependencies', () => {
     expect(dockerfile).not.toMatch(/\b(?:npm|pnpm)\b[^\n]*(?:-g|--global)[^\n]*\btsx\b/)
   })
 
+  it('starts the runner from a fresh Node image and excludes package-manager toolchains', () => {
+    const runner = dockerfile.match(/^FROM (\S+) AS runner\n([\s\S]*)$/m)
+    expect(runner).not.toBeNull()
+    expect(runner![1]).toMatch(/^node:24-/)
+    expect(runner![2]).not.toMatch(/(?:corepack prepare|pnpm install|COPY --from=base)/)
+    expect(runner![2]).toContain('/usr/local/lib/node_modules/npm')
+    expect(runner![2]).toContain('/usr/local/lib/node_modules/corepack')
+    // The runtime smoke script checks the assembled filesystem on both Linux
+    // architectures; these source guards catch accidental stage inheritance early.
+  })
+
   it('keeps the standalone server and non-root runtime', () => {
     expect(dockerfile).toContain('COPY --from=builder /app/.next/standalone ./')
     expect(dockerfile).toContain('COPY --from=runtime-files --chown=nextjs:nodejs /runtime ./')
@@ -49,25 +64,11 @@ describe('production container CI smoke test', () => {
   it('builds the real runner under the normal CI guards', () => {
     expect(ciWorkflow).toContain('container-smoke:')
     expect(containerSmokeJob).toContain("github.event_name != 'workflow_run'")
-    expect(containerSmokeJob).toContain("!startsWith(github.head_ref || '', 'release-please--')")
     expect(containerSmokeJob).toContain('--target runner')
     expect(containerSmokeJob).toContain('IMAGE_TAG: adhx-ci:${{ github.sha }}')
   })
 
-  it('exercises the non-root runtime dependencies and migration', () => {
-    expect(containerSmokeJob).toContain('test "$(id -u)" = "1001"')
-    expect(containerSmokeJob).toContain('test -x ./node_modules/.bin/tsx')
-    expect(containerSmokeJob).toContain('require("better-sqlite3")')
-    expect(containerSmokeJob).toContain('./node_modules/.bin/tsx src/lib/db/migrate.ts')
-    expect(containerSmokeJob).toContain('integrity_check')
-  })
-
-  it('starts the image command, checks health, and always cleans up', () => {
-    expect(containerSmokeJob).toContain('docker run --detach')
-    expect(containerSmokeJob).toContain('http://127.0.0.1:3000/api/health')
-    expect(containerSmokeJob).toContain('for attempt in $(seq 1 30)')
-    expect(containerSmokeJob).toContain('- name: Show runner diagnostics')
-    expect(containerSmokeJob).toContain('if: always()')
-    expect(containerSmokeJob).toContain('docker rm --force "$CONTAINER_NAME"')
-  })
+  // Runtime dependency, health and cleanup checks now execute against the
+  // assembled image on both native Linux architectures in CI. Workflow-string
+  // assertions cannot establish those behaviours and duplicated its old layout.
 })

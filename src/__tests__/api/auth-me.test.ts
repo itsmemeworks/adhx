@@ -26,6 +26,7 @@ vi.mock('@/lib/auth/session', () => ({
       .get(mockSession.userId)
     return Promise.resolve(banned ? null : mockSession.userId)
   }),
+  renewSessionCookie: vi.fn(() => Promise.resolve(false)),
 }))
 
 describe('API: /api/auth/me', () => {
@@ -84,8 +85,10 @@ describe('API: /api/auth/me', () => {
       username: 'xuser',
       displayName: 'X User',
       avatarUrl: 'https://example.com/avatar.jpg',
+      avatarSource: 'x',
       usernameChosen: true,
       usernameChangeCount: 0,
+      privateDefault: false,
     })
     expect(data.identities.x).toEqual({
       providerId: 'x-user-1',
@@ -176,6 +179,43 @@ describe('API: /api/auth/me', () => {
     const { GET } = await import('@/app/api/auth/me/route')
     const data = await (await GET()).json()
     expect(data.isAdmin).toBe(true)
+  })
+
+  it('tells admins how many sign-in links are waiting, and nobody else', async () => {
+    vi.stubEnv('EMAIL_LINKS_TO_ADMIN', '1')
+    await testInstance.db.insert(schema.users).values([
+      { id: 'admin-1', username: 'owner', role: 'admin' },
+      { id: 'friend-1', username: 'sam' },
+    ])
+    const later = Date.now() + 10 * 60_000
+    const hold = async (tokenHash: string, email: string, usedAt: string | null) => {
+      await testInstance.db
+        .insert(schema.loginTokens)
+        .values({ tokenHash, email, intent: 'signin', expiresAt: later, usedAt })
+      await testInstance.db.insert(schema.adminSignInLinks).values({
+        tokenHash,
+        email,
+        url: `http://localhost:3000/api/auth/email/callback?token=${tokenHash}`,
+        intent: 'signin',
+        createdAt: new Date().toISOString(),
+        expiresAt: later,
+      })
+    }
+    await hold('t1', 'ana@friends.example', null)
+    await hold('t2', 'ben@friends.example', null)
+    await hold('t3', 'used@friends.example', new Date().toISOString())
+    const { GET } = await import('@/app/api/auth/me/route')
+
+    mockSession = { userId: 'admin-1', username: 'owner' }
+    expect((await (await GET()).json()).waitingSignIns).toBe(2)
+
+    mockSession = { userId: 'friend-1', username: 'sam' }
+    expect((await (await GET()).json()).waitingSignIns).toBeUndefined()
+
+    vi.stubEnv('EMAIL_LINKS_TO_ADMIN', '')
+    mockSession = { userId: 'admin-1', username: 'owner' }
+    expect((await (await GET()).json()).waitingSignIns).toBeUndefined()
+    vi.unstubAllEnvs()
   })
 
   it('returns the signed-out shape for a banned session', async () => {

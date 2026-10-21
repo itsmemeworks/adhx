@@ -7,7 +7,7 @@ describe('quoteRefFromSource', () => {
     expect(quoteRefFromSource({ author: { screen_name: '' }, text: '' })).toBeUndefined()
   })
 
-  it('maps FxTwitter quote media onto proxied photo URLs', () => {
+  it('maps FxTwitter quote media onto kept-file photo URLs', () => {
     const ref = quoteRefFromSource({
       id: '99',
       text: 'quoted',
@@ -26,8 +26,8 @@ describe('quoteRefFromSource', () => {
       bookmarkId: '99',
     })
     expect(ref?.photoUrls).toEqual([
-      '/api/media/image?author=mark_k&tweetId=99&index=1',
-      '/api/media/image?author=mark_k&tweetId=99&index=2',
+      '/api/files/twitter/99/photo-1?a=mark_k',
+      '/api/files/twitter/99/photo-2?a=mark_k',
     ])
     expect(ref?.thumbnailUrl).toBe(ref?.photoUrls?.[0])
     expect(ref?.hasVideo).toBeUndefined()
@@ -58,6 +58,6 @@ describe('quoteRefFromStoredContext', () => {
       media: { photos: [{ url: 'https://pbs.twimg.com/media/x.jpg' }] },
     })
     expect(ref?.bookmarkId).toBe('55')
-    expect(ref?.photoUrls).toEqual(['/api/media/image?author=alice&tweetId=55&index=1'])
+    expect(ref?.photoUrls).toEqual(['/api/files/twitter/55/photo-1?a=alice'])
   })
 })

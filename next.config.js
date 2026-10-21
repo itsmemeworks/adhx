@@ -43,7 +43,16 @@ const nextConfig = {
   // copy of the SDK into both the server and SSR chunk graphs, producing two
   // independent instances that each wrap http.Server.emit (httpServerIntegration)
   // and recurse into each other — a stack-overflow crash in production.
-  serverExternalPackages: ['better-sqlite3', '@sentry/node', 'react-email'],
+  serverExternalPackages: [
+    'better-sqlite3',
+    '@sentry/node',
+    'react-email',
+    'nodemailer',
+    // Understanding pipeline: native ONNX runtime, sharp, and the ffmpeg binary path.
+    '@huggingface/transformers',
+    'onnxruntime-node',
+    'sharp',
+  ],
 
   // Image optimization for Twitter media
   images: {
@@ -62,6 +71,19 @@ const nextConfig = {
       },
     ],
   },
+
+  // Retired public pages: their old links (bookmarks, search results,
+  // sitemaps) land on what replaced them. Permanent, so search engines move on.
+  redirects: async () => [
+    { source: '/live', destination: '/now', permanent: true },
+    { source: '/discover', destination: '/now', permanent: true },
+    { source: '/trending', destination: '/now', permanent: true },
+    { source: '/trending/:path*', destination: '/now', permanent: true },
+    { source: '/leaderboard', destination: '/channels', permanent: true },
+    { source: '/leaderboard/:path*', destination: '/channels', permanent: true },
+    { source: '/collections', destination: '/channels', permanent: true },
+    { source: '/collections/:path*', destination: '/channels', permanent: true },
+  ],
 
   // Security headers for production
   headers: async () => [
@@ -98,10 +120,35 @@ const nextConfig = {
             "media-src 'self' https://video.twimg.com https://*.twimg.com blob:",
             "font-src 'self' data:",
             "connect-src 'self' https://api.fxtwitter.com https://*.sentry.io",
-            // YouTube Shorts + Instagram Reel fallback (official embeds).
-            'frame-src https://www.youtube-nocookie.com https://www.youtube.com https://www.instagram.com',
+            // Instagram Reel fallback (official embed).
+            'frame-src https://www.instagram.com',
             "frame-ancestors 'none'",
           ].join('; '),
+        },
+      ],
+    },
+    {
+      // Invite pages (not /invite/done or /invite/waiting): script-free, token kept off referrers.
+      source: '/invite/:token((?!(?:done|waiting)$)[^/]+)',
+      headers: [
+        { key: 'Referrer-Policy', value: 'same-origin' },
+        {
+          key: 'Content-Security-Policy',
+          value:
+            "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+        },
+      ],
+    },
+    {
+      source: '/api/auth/email/callback',
+      headers: [
+        // Next's global headers can override Route Handler headers. Keep the
+        // token off cross-origin referrers while preserving the form's Origin.
+        { key: 'Referrer-Policy', value: 'same-origin' },
+        {
+          key: 'Content-Security-Policy',
+          value:
+            "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
         },
       ],
     },

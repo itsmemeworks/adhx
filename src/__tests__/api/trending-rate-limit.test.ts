@@ -1,4 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+
+// These reads are admin-only; the gate is covered in api/admin-only-reads.test.ts.
+vi.mock('@/lib/admin/only', () => ({ adminOnlyResponse: async () => null }))
 import { NextRequest } from 'next/server'
 import { createTestDb, type TestDbInstance } from './setup'
 import { __resetRateLimitState } from '@/lib/rate-limit'
@@ -64,6 +67,8 @@ describe('GET /api/trending — rate limiting', () => {
   })
 
   it('rate-limits per IP — a different IP is unaffected by another IP being limited', async () => {
+    // On Fly, where each visitor's address comes from Fly-Client-IP.
+    vi.stubEnv('FLY_APP_NAME', 'adhx')
     const hammered = '3.3.3.3'
     for (let i = 0; i < 121; i++) {
       await GET(requestFrom(hammered))

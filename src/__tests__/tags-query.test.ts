@@ -203,6 +203,29 @@ describe('getPublicTagCollection', () => {
     expect((await getPublicTagCollection(OWNER_USERNAME, 'secret-tag')).status).toBe('ok')
   })
 
+  it('going private reaches the page even when the PATCH ran in another module copy', async () => {
+    // Next builds route handlers and pages as separate module copies, each
+    // with its own cache; the API route's invalidate must clear the page's.
+    await seedOwner()
+    await testInstance.db.insert(tagShares).values({
+      userId: OWNER_ID,
+      tag: 'was-public',
+      shareCode: 'code-wp',
+      isPublic: true,
+    })
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'was-public')).status).toBe('ok')
+
+    await testInstance.db
+      .update(tagShares)
+      .set({ isPublic: false })
+      .where(eq(tagShares.tag, 'was-public'))
+    vi.resetModules()
+    const routeCopy = await import('@/lib/tags/query')
+    routeCopy.invalidateTagCollectionCache(OWNER_USERNAME, 'was-public')
+
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'was-public')).status).toBe('private')
+  })
+
   it('invalidates only the targeted username and tag cache entry', async () => {
     await seedOwner()
     await testInstance.db.insert(tagShares).values([
