@@ -54,6 +54,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.adhx.share.R
 import com.adhx.share.data.Connection
 import com.adhx.share.doing.DoingPillHost
+import com.adhx.share.library.LocalPlayerToast
+import com.adhx.share.library.ToastPill
 import com.adhx.share.doing.DoingViewModel
 import com.adhx.share.library.BarButton
 import com.adhx.share.library.LibraryViewModel
@@ -114,9 +116,14 @@ fun HomeScreen(
                 } else {
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                         HomeHeader(tab, onTab, actions.onSettings, actions.onSearch, overMedia = true, newBadge = b)
-                        // "3 on their way" over the player, while posts are processing.
-                        if (doing != null) {
-                            DoingPillHost(doing, connection.server, onSeeAll = actions.onDoing, modifier = Modifier.offset(y = (-14).dp))
+                        // "3 on their way" over the player, while posts are processing; a short
+                        // message from the player ("Link copied") takes its place while it's up.
+                        val toast = LocalPlayerToast.current
+                        Box(contentAlignment = Alignment.TopCenter) {
+                            if (doing != null) {
+                                DoingPillHost(doing, connection.server, onSeeAll = actions.onDoing, hidePill = toast != null, modifier = Modifier.offset(y = (-14).dp))
+                            }
+                            if (toast != null) ToastPill(toast, Modifier.offset(y = (-14).dp).padding(horizontal = 24.dp))
                         }
                     }
                 }

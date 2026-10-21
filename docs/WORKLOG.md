@@ -6,6 +6,27 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Android: the network button opens the original post; toasts take the pill's place
+
+- The player overlay no longer shows the network/author line or the caption; it keeps the why chip, a friend's note and the savers line (or the lock). A rail button with the network's own mark (above More) opens `OriginalSheet`: the poster's picture (else the mark in a round tile), their name (else handle, else the network), "@handle · Posted 18 Oct 2026" with the small mark only when their picture leads, all their words (a kept article in full, selectable, links tappable) or "No words with this one, just the video.", then Open on {network} and Copy link. It keeps the phone upright and holds the photo timer.
+- On New and My saves the player's short messages show in place of the "N on their way" pill (`toastInTopBar`, `LocalPlayerToast`, `ToastPill`); everywhere else they stay where they were. Toasts last 3 s.
+- Tests in `OriginalSheetTest` (name/handle/line rules, the mark once, the posted day). Checked on the emulator against a parity server: the overlay, the rail button, the sheet for a SoundCloud post without a picture, and "Link copied" replacing the pill for 3 s. Not checked: a poster with a picture, an article in the sheet.
+
+## 2026-10-21 — Android: landscape for watching, full articles and aligned bylines
+
+- The app is portrait everywhere (`android:screenOrientation="portrait"`); `OrientationHost` (`ui/Orientation.kt`) is a stack like iOS's: a player on a video, sound or photo says `MayTurn(true)`, every sheet, the React picker and the reader say `KeepUpright()`, newest wins (`SCREEN_ORIENTATION_USER`: sideways, never upside down, keeps the phone's rotation lock). Words posts and the end page stay upright.
+- Sideways the player hides all chrome and the system bars (re-hidden when a closing sheet gives the focus back), shows the media whole whatever Fit video says, and taps only pause/play; swiping still moves between posts; turning back restores the chrome as it was.
+- Kept X articles: `PhoneArticle.body` (optional) is parsed by `ArticleBody` (headings, lists, quotes, rules, bold/italic, links; pictures left out) and replaces the description and the post's own text in the words card and the reader.
+- Byline: under the savers line the network mark is centred under the first face in a column as wide as the faces, so the poster's name starts where "You saved this" starts. HTML entities in post words and article titles are decoded on the phone (`Entities`) for servers before #588.
+- Tests in `LandscapeArticlesTest`. Checked on the emulator: rotation on a video (bars gone, letterboxed, tap pauses, back to portrait with chrome), Search stays upright, a More sheet holds portrait until closed, the aligned byline. Not checked: an article body on screen (the test server doesn't send one yet).
+
+## 2026-10-21 — Android: React on every post, replayed when you watch it
+
+- The player has its own React (smiley at the top of the rail) on every post outside Live, with Live's `ReactPicker` (prompt "Say something"). Yours floats at once with your picture (`Connection.avatarUrl`), posts to `POST /api/app/reactions`, and is taken back with "Couldn’t send that. Try again." in the picker on failure (`PostFloats`).
+- When a post settles, `GET /api/app/reactions` (once per post per run, `PostReactionsMemory`) and Live's floating faces replay the newest 12, oldest first, 350 ms apart from 600 ms after settling (`replayPlan`, `replayWait`); moving on cancels them. Live keeps its own room and doesn't replay. The photo timer waits while the picker is open.
+- The picker's footnote now says reactions are kept ("Kept on the post. Your people see it when they watch."), since the server stores Live's too.
+- Tests in `PostReactionsTest`. Checked on the emulator against a parity server with six seeded reactions: the replay, your 😂 stored with your face, the timer held under the picker, and the failure (server stopped) taking yours back with the message.
+
 ## 2026-10-21 — The phone apps without the web: picture, invites, email code sign-in, a reactions feed
 
 - Owner: the apps shouldn't rely on the web any more. Server/web side of the shared contract (iOS/Android built in parallel): `POST|DELETE /api/app/me/avatar` (one handler with `/api/account/avatar`, `src/lib/avatar/handler.ts`), `GET /api/app/me` + `avatarSource`, `/api/app/invites` (+ `/{id}`, `/{id}/link`; own only; list `url` is null, links are shown once).
@@ -45,6 +66,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 - Sheets over the player are frosted (`FrostedSheetBackground`: ultra-thin material under the surface colour at 72%), so the picture shows through softly: More and In your saves (system sheets, via `frostedSheet()`) and every board sheet. On iOS 26+ the system sheets no longer force a 28 pt radius, so their floating corners follow the screen's own curve. The two remaining non-continuous rounded rectangles are now continuous.
 - Settings on both apps shows which release the build is, on its own line: "ADHX Share 2.2.0" on a tag, else "2.2.0 +3 · abc1234" (commits after the tag), " · edited" with uncommitted changes, the commit alone without tags. iOS: the "Stamp version" build phase runs `apps/ios/Config/stamp-version.sh` (git describe → `build-info.txt` in the app's resources; user-script sandboxing is off for the app target so it can read git). Android: `gitBuildName()` in `app/build.gradle.kts` sets `versionName` unless `ADHX_VERSION_NAME` is given (the release APK workflow).
+
+## 2026-10-21 — iPhone: React on every post, replayed when you watch it
+
+- The player has its own React button (smiley at the top of the rail) on every post outside Live, with the same picker as Live (`ReactPicker`, moved with `FloatingReactions` into `App/Library/Reactions.swift`). Yours floats at once with your picture (`Store.avatarUrl`), posts to `POST /api/app/reactions`, and is taken back with "Couldn’t send that. Try again." on failure.
+- `PostReactionsModel` replays a post's stored reactions when it settles (`GET /api/app/reactions`): the newest 12, oldest first, 350 ms apart after 600 ms, once per post per run of the app. Live keeps its own room and doesn't replay (its reactions are stored by the server since #589).
+- Verified in the simulator against the parity server: the replay request, the picker, and your 😂 floating with your face.
 
 ## 2026-10-21 — iPhone player polish from on-device testing
 

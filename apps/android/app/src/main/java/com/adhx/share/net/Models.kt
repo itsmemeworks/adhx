@@ -123,6 +123,7 @@ data class PhonePost(
     /** video · audio · photo · article · text — see [PostKind]. */
     val kind: String = PostKind.TEXT,
     val author: PhoneAuthor = PhoneAuthor(),
+    @Serializable(with = EntityTextSerializer::class)
     val text: String = "",
     val postedAt: String? = null,
     val savedAt: String? = null,
@@ -244,9 +245,17 @@ data class PhoneMedia(
 
 @Serializable
 data class PhoneArticle(
+    @Serializable(with = NullableEntityTextSerializer::class)
     val title: String? = null,
+    @Serializable(with = NullableEntityTextSerializer::class)
     val description: String? = null,
     val url: String? = null,
+    /**
+     * The whole article as markdown, when it was kept (`# heading`, `- ` lists,
+     * `> quote`, `**bold**`, `*italic*`, `[text](url)`, `![](img)`, `---`).
+     * Older servers leave it out. See [ArticleBody].
+     */
+    val body: String? = null,
 )
 
 @Serializable
@@ -593,6 +602,16 @@ data class LiveDetail(
 /** Compact privacy/name refresh for older posts already held by the player. */
 @Serializable
 data class LiveSaverUpdate(val key: String, val savers: List<Saver> = emptyList(), val isPrivate: Boolean = false)
+
+/**
+ * The reactions kept on a post (`GET /api/app/reactions`): each `{ id, emoji,
+ * text, at, saver }`, oldest first. Read like Live's; ones that won't read are skipped.
+ */
+@Serializable
+data class PostReactionsResponse(
+    @Serializable(with = LiveReactionsSerializer::class)
+    val reactions: List<LiveReaction> = emptyList(),
+)
 
 /** One reaction someone sent while tuned in: an emoji, or a few words. */
 @Serializable

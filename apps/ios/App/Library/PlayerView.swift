@@ -46,6 +46,14 @@ struct PlayerView: View {
     static let endKey = "adhx:end"
 
     @StateObject private var playback = Playback()
+    /// React on any post (Live brings its own room).
+    @StateObject private var reactions = PostReactionsModel()
+    @State private var picking = false
+    @State private var words = ""
+    @State private var reacting = false
+    @State private var reactNote: String?
+    @FocusState private var typing: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// A friend's channel, opened from the faces on a post.
     @State private var friend: Saver?
     /// The post whose file is being sent.
@@ -73,9 +81,40 @@ struct PlayerView: View {
         _current = State(initialValue: start ?? posts.first?.key)
     }
 
+    /// Live passes its own React button; everywhere else the player has one.
+    private var ownReact: Bool { extras.react == nil }
+
+    /// What the pages get: the player's React button when the screen has none.
+    private var pageExtras: PlayerExtras {
+        guard ownReact else { return extras }
+        var page = extras
+        page.react = .init(isOpen: picking, toggle: togglePicker)
+        if picking { page.bottomInset += 146 }
+        return page
+    }
+
     var body: some View {
         ZStack(alignment: .top) {
             pager
+            if ownReact {
+                FloatingReactions(reactions: reactions.floating, server: server)
+                    .padding(.top, 200)
+                    .padding(.trailing, 80)
+                    .frame(height: 500, alignment: .top)
+                    .allowsHitTesting(false)
+                if picking && !clean {
+                    VStack {
+                        Spacer()
+                        ReactPicker(words: $words, typing: $typing, sending: reacting, note: reactNote,
+                                    hint: "Up to \(LiveSay.maxText) characters. People who can see this post see it when they watch it.",
+                                    onEmoji: { react(.emoji($0)) }, onWords: reactWords)
+                            .padding(.horizontal, 12)
+                            .padding(.bottom, typing ? 8 : 30)
+                    }
+                    .ignoresSafeArea(.container, edges: .bottom)
+                    .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+                }
+            }
             // Inside the safe area, under the top bar.
             if let toast, !clean {
                 Text(toast)
@@ -90,6 +129,7 @@ struct PlayerView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: toast)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: picking)
         .fullScreenCover(item: $friend) { saver in
             FriendChannelScreen(friend: saver, server: server)
         }
@@ -103,13 +143,14 @@ struct PlayerView: View {
         .preference(key: PlayerToastUp.self, value: toast != nil && !clean)
         // Landscape is only for watching (OrientationGate).
         .mayTurnToWatch()
-        .uprightWhile(friend != nil || sending != nil)
+        .uprightWhile(friend != nil || sending != nil || picking)
         .onGeometryChange(for: Bool.self) { $0.size.width > $0.size.height } action: { turned in
             guard turned != landscape else { return }
             landscape = turned
             if turned {
                 cleanBeforeTurning = clean
                 clean = true
+                picking = false
             } else {
                 clean = cleanBeforeTurning
             }
@@ -121,10 +162,10 @@ struct PlayerView: View {
             LazyVStack(spacing: 0) {
                 ForEach(posts, id: \.key) { post in
                     PostPage(post: post, server: server, onScreen: post.key == current,
-                             playback: playback, clean: $clean, extras: extras, say: say,
+                             playback: playback, clean: $clean, extras: pageExtras, say: say,
                              openFriend: { friend = $0 }, send: { sending = $0 },
                              advance: { next() },
-                             held: sending != nil || extras.react?.isOpen == true, landscape: landscape)
+                             held: sending != nil || pageExtras.react?.isOpen == true, landscape: landscape)
                         .containerRelativeFrame([.horizontal, .vertical])
                         .id(post.key)
                 }
@@ -167,6 +208,12 @@ struct PlayerView: View {
     }
 
     private func showCurrent(_ key: String?) {
+        if ownReact {
+            picking = false
+            typing = false
+            reactNote = nil
+            reactions.arrive(key.flatMap { key in posts.first { $0.key == key } }?.ref)
+        }
         if key == Self.endKey {
             playback.show(nil)
             onShow(posts.count)
@@ -187,6 +234,39 @@ struct PlayerView: View {
         let next = index + 1 < posts.count ? posts[index + 1].key : extras.endPage != nil ? Self.endKey : nil
         guard let next else { return }
         withAnimation(.easeInOut(duration: 0.35)) { self.current = next }
+    }
+
+    private func togglePicker() {
+        picking.toggle()
+        if !picking { typing = false }
+        reactNote = nil
+    }
+
+    private func reactWords() {
+        let text = words.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        react(.text(text))
+    }
+
+    /// Floats at once with your face; kept for whoever watches it next.
+    private func react(_ say: LiveSay) {
+        guard !reacting, let current, let post = posts.first(where: { $0.key == current }) else { return }
+        reacting = true
+        reactNote = nil
+        let you = Saver(username: Store.username ?? "you", name: nil, avatarUrl: Store.avatarUrl, isYou: true)
+        Task {
+            let sent = await reactions.react(say, you: you, to: post.ref)
+            reacting = false
+            if sent {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                if case .text(let text) = say, words.trimmingCharacters(in: .whitespacesAndNewlines) == text { words = "" }
+                typing = false
+                picking = false
+            } else {
+                reactNote = "Couldn’t send that. Try again."
+                UIAccessibility.post(notification: .announcement, argument: reactNote)
+            }
+        }
     }
 
     /// A short message near the top.
