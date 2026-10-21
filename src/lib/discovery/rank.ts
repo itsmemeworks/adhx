@@ -30,7 +30,7 @@ import {
  * `collectionEvents`, `OwnerCollectionStats` — because the table, the API
  * paths and the indexed URLs are public contracts that were deliberately not
  * renamed. Comments below name the product concept (playlist) and the
- * identifiers as they are; see CLAUDE.md's "Home routing & the Theater" for
+ * identifiers as they are; see CLAUDE.md's "History" for
  * the full playlist / collection / library split.
  *
  * ANONYMITY INVARIANT: `collectionEvents.viewerId` is NEVER selected here.

@@ -23,6 +23,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - `CONTRIBUTING.md` (prerequisites incl. FFmpeg, five-step setup, tests/e2e/parity, commitlint rules, hooks), `SECURITY.md` (current scope and hosting advice), `CODE_OF_CONDUCT.md`, the PR template and issue forms (no emoji names, existing labels only, a "where" dropdown) refreshed.
 - Not done here: README, docs index, images, specs and deploy guides (handled in parallel PRs).
 
+## 2026-10-21 — README rewritten for newcomers; setup moved to docs/self-hosting.md
+
+- Owner asked for a full docs review: usable by an open-source community and by agents, accessible, a bit funny, with fresh images and diagrams.
+- README is now a front door: what it is, screenshots (`docs/images/`, captured from the parity harness's sample friends, never real saves), the fourteen networks, a Mermaid "how it works" with a text summary, a five-step Run your own, saving, the phone apps (email sign-in, APK on each release, TestFlight), agents, local dev with a command table, and a documentation map.
+- The long setup reference (sign-in links, who can sign up, settings, disk, search models, video formats, downloads, backups, Fly.io, X sync) moved verbatim to `docs/self-hosting.md` with the same headings, plus the phone's email-code sign-in and phone invites. `docs/README.md` lists every doc by what you're trying to do.
+
 ## 2026-10-21 — Upload the iPhone app to TestFlight on release
 
 - Add `.github/workflows/ios-testflight.yml` (workflow_dispatch + workflow_call, input `version`), called from Release Please next to the Android APK.

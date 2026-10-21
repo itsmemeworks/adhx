@@ -7,7 +7,7 @@ import { setClientEventAccount, subscribeClientEventAuthScopeChange } from '@/li
  * Shared client-side auth model — GET /api/auth/me. Unlike the legacy
  * /api/auth/twitter/status (X-only), this reports "authenticated" for both
  * X-connected AND email-only accounts, so email-only users aren't bounced
- * to the landing page. See CLAUDE.md's auth plumbing notes.
+ * to the landing page. See CLAUDE.md's "Accounts, invites and sign-in" notes.
  */
 export interface AuthMeUser {
   id: string

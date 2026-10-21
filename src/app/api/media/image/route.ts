@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     // author/tweetId are validated above, so the only variable in this URL
     // is a trusted, fixed FxTwitter host — but external fetches must always
-    // have a timeout per CLAUDE.md's Resilience Patterns.
+    // have a timeout per the timeout rule in CLAUDE.md's Security rules.
     const imageResponse = await fetchWithAllowlistedRedirects(imageUrl, {
       hosts: TWITTER_IMAGE_PROXY_HOSTS,
       timeoutMs: 10_000,
