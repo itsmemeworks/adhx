@@ -12,6 +12,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Migrate 28 fixture snapshot names for Vitest 5's table-title interpolation; every stored metadata value is byte-for-byte unchanged.
 - Retain Vitest 5's defaults and document supported Node majors in the package engine range; no test is disabled or assertion weakened.
 - Validation: all 3,705 tests pass in CI mode, type-checking passes and the matching V8 provider covers the real formatting utility (40 tests).
+- The 10,000-post rehearsal passes worker termination/lease recovery, scratch cleanup and 1080p H.264 conversion; constant vectors isolate queue behavior.
+
+## 2026-10-21 — Review the Gradle 9.8.1 wrapper upgrade
+
+- Verify the distribution and wrapper JAR against Gradle's official SHA-256 files; retain Java 17 and the existing Android plugin settings.
+- Normalize the Windows wrapper in Git while preserving its CRLF checkout policy and the upstream script changes.
+- Refresh the dependency PR against current main; Android compilation, regression tests and dependency audit must pass before merging.
 
 ## 2026-10-21 — Android: change your picture, invites, email sign-in and the reactions feed, with nothing opening the web
 
