@@ -14,6 +14,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Validation: all 3,705 tests pass in CI mode, type-checking passes and the matching V8 provider covers the real formatting utility (40 tests).
 - The 10,000-post rehearsal passes worker termination/lease recovery, scratch cleanup and 1080p H.264 conversion; constant vectors isolate queue behavior.
 
+## 2026-10-21 — Make the Node 26 container upgrade buildable
+
+- Bootstrap the exact reviewed pnpm version explicitly: Node 25+ no longer bundles Corepack. Disable bootstrap lifecycle scripts and retain frozen application installs.
+- Keep build and runtime on the same Node 26 image so native SQLite modules share the runtime ABI; production still excludes package-manager toolchains.
+- Extend the container guards for the bootstrap and matching runtimes; both architecture smoke tests and the normal application checks gate this dependency PR.
+
 ## 2026-10-21 — Review the Gradle 9.8.1 wrapper upgrade
 
 - Verify the distribution and wrapper JAR against Gradle's official SHA-256 files; retain Java 17 and the existing Android plugin settings.
