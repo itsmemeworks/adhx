@@ -1,7 +1,8 @@
 /**
- * Reactions while tuned in to a moment: an emoji from a short list, or a few
- * words to everyone watching. Members only, broadcast to the members watching
- * that moment, never stored. No imports, so client components can use it.
+ * Reactions: an emoji from a short list, or a few words. On any post (kept in
+ * `post_reactions`, shown to members who can see the post) and, while tuned
+ * in to a moment, also broadcast to the members watching it. No imports, so
+ * client components can use it.
  */
 
 /** The emoji you can send, in picker order, with what a screen reader says. */
