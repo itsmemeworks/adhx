@@ -18,6 +18,9 @@ struct PlayerExtras {
     var railSpacing: CGFloat = 10
     /// The progress line's colour (Live's is yellow, the feed's cream).
     var progressColour: Color = Theme.ink
+    /// The reactions feed: every post floats its reactions (fresh from the
+    /// server) each time it lands, even ones already replayed this run.
+    var replayReactions = false
 
     struct ReactButton {
         var isOpen: Bool
@@ -212,7 +215,7 @@ struct PlayerView: View {
             picking = false
             typing = false
             reactNote = nil
-            reactions.arrive(key.flatMap { key in posts.first { $0.key == key } }?.ref)
+            reactions.arrive(key.flatMap { key in posts.first { $0.key == key } }?.ref, again: extras.replayReactions)
         }
         if key == Self.endKey {
             playback.show(nil)
@@ -253,7 +256,7 @@ struct PlayerView: View {
         guard !reacting, let current, let post = posts.first(where: { $0.key == current }) else { return }
         reacting = true
         reactNote = nil
-        let you = Saver(username: Store.username ?? "you", name: nil, avatarUrl: Store.avatarUrl, isYou: true)
+        let you = YourFace.shared.you(from: post.savers.first(where: \.isYou))
         Task {
             let sent = await reactions.react(say, you: you, to: post.ref)
             reacting = false
@@ -902,17 +905,6 @@ private struct MoreSheet: View {
                         say("Words copied")
                     }
                 }
-                if let open = ADHXClient.resolve(post.openPath, against: server) {
-                    Button {
-                        openURL(open)
-                        dismiss()
-                    } label: {
-                        rowFace(title: "Open in my ADHX", detail: "This post on your ADHX, in the browser") {
-                            Gob(size: 24)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
             }
             Spacer(minLength: 0)
         }
@@ -1264,8 +1256,8 @@ private struct SharedFile: Identifiable {
     var id: URL { url }
 }
 
-/// The system share sheet, for a file.
-private struct ActivitySheet: UIViewControllerRepresentable {
+/// The system share sheet, for a file or a link.
+struct ActivitySheet: UIViewControllerRepresentable {
     let items: [Any]
     var onComplete: (() -> Void)? = nil
     func makeUIViewController(context: Context) -> UIActivityViewController {

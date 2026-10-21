@@ -217,12 +217,15 @@ struct PlayerScreen: View {
     var onShow: (Int) -> Void = { _ in }
     /// A From everyone channel: its name and "Keep this channel" on top.
     var group: GroupChannelRef? = nil
+    /// The reactions feed: each post floats its reactions every time.
+    var replayReactions = false
     @Environment(\.dismiss) private var dismiss
     @State private var clean = false
     @State private var scrubbing = false
 
     var body: some View {
-        PlayerView(posts: posts, server: server, clean: $clean, scrubbing: $scrubbing, start: start, onShow: onShow)
+        PlayerView(posts: posts, server: server, clean: $clean, scrubbing: $scrubbing, start: start,
+                   extras: PlayerExtras(replayReactions: replayReactions), onShow: onShow)
             .overlay(alignment: .top) {
                 if !clean && !scrubbing {
                     HStack(spacing: 10) {

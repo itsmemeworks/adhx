@@ -831,8 +831,8 @@ struct TunedInScreen: View {
 
     /// You, for your own reactions' faces.
     private var you: Saver {
-        model.watchers.first(where: \.isYou)
-            ?? Saver(username: Store.username ?? "you", name: nil, avatarUrl: Store.avatarUrl, isYou: true)
+        // Always your current picture: the room's copy of you may not have it.
+        YourFace.shared.you(from: model.watchers.first(where: \.isYou))
     }
 
     /// Six quick emoji, and a few words to everyone watching.

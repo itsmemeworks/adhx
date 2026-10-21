@@ -20,7 +20,7 @@
 		<string>whatsapp</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>To scan the code on your ADHX.</string>
+	<string>To scan the code from your ADHX and to take a selfie for your picture.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>To save a post to Photos when you tap Save.</string>
 	<key>NSLocalNetworkUsageDescription</key>

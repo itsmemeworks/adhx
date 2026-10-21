@@ -52,15 +52,68 @@ final class AppModel: ObservableObject {
         do {
             let client = ADHXClient(server: server, key: nil)
             let result = try await client.pair(code: code, name: UIDevice.current.model)
-            Store.connect(server: server, result: result)
-            welcome = true
-            connection = .connected
-            reload()
-            await refresh()
+            await connected(server: server, result: result)
         } catch APIError.offline, APIError.slow {
             pairError = "Can’t reach \(Links.displayHost(server)). Check the address and that your ADHX is on."
         } catch let error as APIError {
             pairError = error.message
+        } catch {
+            pairError = "That didn’t work. Try again."
+        }
+    }
+
+    /// Stores the key (pairing and email sign-in alike) and says hello.
+    private func connected(server: URL, result: PairResult) async {
+        Store.connect(server: server, result: result)
+        YourFace.shared.reload()
+        welcome = true
+        connection = .connected
+        reload()
+        await checkConnection(quietly: true)
+        await refresh()
+    }
+
+    // MARK: Signing in with an emailed code
+
+    /// Asks your ADHX to email a 6-digit code. It always says yes (it never
+    /// says whether there's an account), so errors here are about reaching it.
+    func requestCode(server: URL, email: String) async -> Bool {
+        pairing = true
+        pairError = nil
+        defer { pairing = false }
+        do {
+            try await ADHXClient(server: server, key: nil).requestSignInCode(email: email)
+            Store.lastServer = Links.displayHost(server)
+            return true
+        } catch let error as APIError where error.isMissing {
+            pairError = "This ADHX can’t sign in by email yet. Use the code from Settings → Phone app instead."
+        } catch APIError.offline, APIError.slow {
+            pairError = "Can’t reach \(Links.displayHost(server)). Check the address and that your ADHX is on."
+        } catch let error as APIError {
+            pairError = SignInWords.message(for: error)
+        } catch {
+            pairError = "That didn’t work. Try again."
+        }
+        return false
+    }
+
+    /// The code from the email: connects this phone like pairing does.
+    func verifyCode(server: URL, email: String, code: String) async {
+        guard SignInWords.code(code).count == 6 else {
+            pairError = "The code is 6 numbers."
+            return
+        }
+        pairing = true
+        pairError = nil
+        defer { pairing = false }
+        do {
+            let client = ADHXClient(server: server, key: nil)
+            let result = try await client.verifySignIn(email: email, code: code, name: UIDevice.current.model)
+            await connected(server: server, result: result)
+        } catch APIError.offline, APIError.slow {
+            pairError = "Can’t reach \(Links.displayHost(server)). Check the address and that your ADHX is on."
+        } catch let error as APIError {
+            pairError = SignInWords.message(for: error)
         } catch {
             pairError = "That didn’t work. Try again."
         }
@@ -88,9 +141,8 @@ final class AppModel: ObservableObject {
         if !quietly { connection = .checking }
         do {
             let me = try await client.me()
-            if let name = me.username { Store.username = name }
             if let phone = me.name { Store.phoneName = phone }
-            Store.avatarUrl = me.avatarUrl
+            YourFace.shared.update(me)
             connection = .connected
             reload()
         } catch APIError.badKey {
@@ -149,12 +201,9 @@ final class AppModel: ObservableObject {
         Store.disconnect()
         LiveAlertDelivery.forget()
         AuthImageLoader.shared.clear()
+        YourFace.shared.reload()
         connection = .checking
         reload()
     }
 
-    func openURL(for record: ShareRecord) -> URL? {
-        guard let server else { return nil }
-        return ADHXClient.resolve(record.openPath, against: server)
-    }
 }

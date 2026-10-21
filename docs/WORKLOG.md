@@ -27,6 +27,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - The picker's footnote now says reactions are kept ("Kept on the post. Your people see it when they watch."), since the server stores Live's too.
 - Tests in `PostReactionsTest`. Checked on the emulator against a parity server with six seeded reactions: the replay, your 😂 stored with your face, the timer held under the picker, and the failure (server stopped) taking yours back with the message.
 
+## 2026-10-21 — iPhone without the web: your picture, invites, email sign-in, the reactions feed
+
+- Owner: "the app shouldnt have to rely on the web app any more". iOS side of the decouple contract (server routes built in parallel, coded against their shapes): `Shared/AccountAPI.swift` (avatar, invites, `/api/app/signin`, `/api/app/reacted`, multipart bodies via a new `send(…data:contentType:)`).
+- Change picture is native (`App/Settings/PictureSheet.swift`): Choose a photo (PhotosPicker), Take a selfie (front camera; camera copy now covers both), a square crop with pan/pinch and a round preview (`AvatarCrop.swift`, sent as a pre-cropped JPEG, x=y=0.5, zoom=1), four Gob faces, Use my X photo (409 explained), Remove picture.
+- Your face everywhere: `YourFace` (People.swift) holds `/api/app/me`'s avatarUrl/avatarSource, refreshed on activation and after a change; `Face` draws it for any saver that is you (isYou or your username), so Live's own reactions, savers, people and Settings all agree. Letter only when there's no picture (`generated`).
+- Invites: Settings, Your people and Channels' Invite open `InviteSheet` (make a link → system share sheet; your live links with Revoke). Connect gains Sign in with email (address → email → 6-digit code, `.oneTimeCode`; bad_code/expired/busy in plain words); pairing stays.
+- Reactions row at the top of Channels (`App/Feed/ReactedFeed.swift`); it plays the paged queue, replaying each post's reactions every time (`PlayerExtras.replayReactions`).
+- No web hops left: More's Open in my ADHX, Shared lately's and My saves' Open my ADHX, Shared lately rows (player only), the share extension's Open (`adhx://open` or the post). Share an ADHX link stays.
+- Checked: simulator build, `Tests/DecoupleTests.swift` (60 checks) and the existing suites. Not checked: against a live server (routes not on a branch yet) or on screen.
+
 ## 2026-10-21 — The phone apps without the web: picture, invites, email code sign-in, a reactions feed
 
 - Owner: the apps shouldn't rely on the web any more. Server/web side of the shared contract (iOS/Android built in parallel): `POST|DELETE /api/app/me/avatar` (one handler with `/api/account/avatar`, `src/lib/avatar/handler.ts`), `GET /api/app/me` + `avatarSource`, `/api/app/invites` (+ `/{id}`, `/{id}/link`; own only; list `url` is null, links are shown once).
