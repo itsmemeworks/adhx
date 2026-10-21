@@ -10,7 +10,7 @@ Thank you for your interest in contributing to ADHX!
 
 **Agents:** start at [AGENTS.md](AGENTS.md) / [CLAUDE.md](CLAUDE.md). Put operator-only `gh` accounts and Fly app names in gitignored `CLAUDE.local.md`, not in committed rules.
 
-Use Node.js 24 (or another version allowed by `package.json`), the pinned pnpm
+Use Node.js 26 (or another version allowed by `package.json`), the pinned pnpm
 version and Git 2.32 or newer. The development toolchain requires at least
 Node.js 22.22.1.
 
