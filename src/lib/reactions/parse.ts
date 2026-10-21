@@ -1,4 +1,5 @@
 import { checkRateLimit } from '@/lib/rate-limit'
+import { POST_ID_PATTERN } from '@/lib/platform/networks'
 import {
   cleanReactionText,
   MAX_REACTION_TEXT,
@@ -15,7 +16,7 @@ import {
  */
 
 const PLATFORM = /^[a-z]{1,16}$/
-const POST_ID = /^[A-Za-z0-9_-]{1,128}$/
+const POST_ID = POST_ID_PATTERN
 /** Every reaction: a burst is fine (it's a laugh); a stream of them isn't. */
 export const REACT_LIMIT = { windowMs: 60_000, max: 20 }
 /** Messages, on top: fewer, so the room stays readable. */

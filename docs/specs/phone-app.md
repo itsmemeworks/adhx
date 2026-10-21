@@ -746,16 +746,18 @@ freeBytes, processing, remoteConnected } }`. `thumbnail` (like Shared lately's
 Gob opens Settings, in this order:
 
 - **You**: your face (Gob shaped, ringed in your colour, with a pencil),
-  name, "@pete · 214 saves" and **Change picture**. There's no phone route
-  for pictures yet (`/api/account/avatar` takes a signed-in browser), so it
-  opens Settings on your ADHX in the browser (`/settings#you`).
+  name, "@pete · 214 saves" and **Change picture**: a sheet in the app with
+  Choose a photo, Take a selfie, a Gob face, Use my X photo and Remove
+  picture; photos are cropped on the phone (square, pan and pinch, round
+  preview) and sent to `POST /api/app/me/avatar`.
 - **Waiting for you** (admins with someone waiting): "Ben wants in",
   "Invited by Jo · 10m ago", **Let Ben in**, **Not now** (hides it for a few
   days) and **Decline** (asks first: "Keep Ben out?").
 - Rows: **Your people** (faces and a count; the list has everyone with their
   saves, role and when they last saved, and opens a friend's channel),
-  **Invite someone** (when you may invite; no phone route makes invites yet,
-  so it opens `/settings#people` in the browser), **What's in your feed**
+  **Invite someone** (when you may invite: a sheet in the app that makes a
+  link and shares it, and lists your open invites with Share again and
+  Revoke, over `/api/app/invites`), **What's in your feed**
   (the New filter sheet), **Just for me by default**, **Sound on by
   default** (videos start with sound), **What your ADHX is doing** ("3 on
   their way · 1 needs you", opening the full list).
