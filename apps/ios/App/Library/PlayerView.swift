@@ -68,6 +68,8 @@ struct PlayerView: View {
     @State private var landscape = false
     /// Whether the buttons were hidden before turning, to put back after.
     @State private var cleanBeforeTurning = false
+    /// A post opened with "Open in ADHX" is playing over this one.
+    @State private var covered = false
     @Environment(\.scenePhase) private var scenePhase
 
     init(posts: [PhonePost], server: URL, clean: Binding<Bool>,
@@ -193,10 +195,18 @@ struct PlayerView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                playback.resume()
+                if !covered { playback.resume() }
             } else if !playback.keepsPlayingOutside {
                 playback.stop()
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .adhxOpeningPost)) { _ in
+            covered = true
+            playback.stop()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .adhxOpenedPostClosed)) { _ in
+            // Back on this one: paused where it was, a tap plays it.
+            covered = false
         }
         .onAppear {
             playback.onEnded = { next() }

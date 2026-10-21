@@ -221,6 +221,8 @@ struct PlayerScreen: View {
     var replayReactions = false
     /// A queue that says where you are ("Reactions · 1 of 12"), beside Close.
     var position: ((Int) -> String)? = nil
+    /// Closing when it wasn't presented by SwiftUI ("Open in ADHX").
+    var onClose: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var clean = false
     @State private var scrubbing = false
@@ -236,7 +238,7 @@ struct PlayerScreen: View {
                 if !clean && !scrubbing {
                     HStack(spacing: 10) {
                         Button {
-                            dismiss()
+                            if let onClose { onClose() } else { dismiss() }
                         } label: {
                             Image(systemName: "chevron.down")
                                 .font(.system(size: 18, weight: .semibold))

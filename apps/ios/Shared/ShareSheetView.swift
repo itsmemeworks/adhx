@@ -146,20 +146,13 @@ private struct Poster: View {
     let platform: String?
     let wide: Bool
     var showPlay = false
+    var attempt = ""
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: wide ? 12 : 14, style: .continuous)
         ZStack {
             shape.fill(Theme.placeholder)
-            if let url {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill()
-                    } else {
-                        Color.clear
-                    }
-                }
-            }
+            PosterImage(url: url, platform: platform, markSize: 22, attempt: attempt)
             if showPlay {
                 Circle()
                     .fill(Color.black.opacity(0.45))
@@ -397,7 +390,8 @@ private struct SavedContent: View {
             HStack(alignment: .top, spacing: 16) {
                 Group {
                     if hasPoster {
-                        TallPoster(url: flow.posterURL, wide: wide)
+                        TallPoster(url: flow.posterURL, platform: flow.platform, wide: wide,
+                                   attempt: flow.keep?.status ?? "")
                     } else {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .fill(Theme.placeholder)
@@ -423,14 +417,15 @@ private struct SavedContent: View {
                         .tightLines(34)
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityAddTraits(.isHeader)
-                    Text(flow.networkName)
-                        .font(Theme.sans(13))
-                        .foregroundStyle(Theme.faint)
-                        .lineLimit(1)
-                    if !hasPoster, let title = flow.title {
-                        Text(title)
-                            .font(Theme.sans(14, .semibold))
-                            .lineLimit(2)
+                    NetworkLabel(platform: flow.platform, text: flow.byline)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(flow.bylineLabel)
+                    if let words = flow.cardWords {
+                        Text(words)
+                            .font(Theme.sans(14))
+                            .foregroundStyle(Theme.ink.opacity(0.85))
+                            .lineLimit(3)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 0)
                     KeepProgress(keep: flow.keep)
@@ -450,18 +445,56 @@ private struct SavedContent: View {
 /// The post's poster on the Saved card: tall (84×148), or a wide one cropped to fit.
 private struct TallPoster: View {
     let url: URL?
+    let platform: String?
     let wide: Bool
+    var attempt = ""
 
     var body: some View {
         Theme.placeholder
-            .overlay {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image { image.resizable().scaledToFill() } else { Color.clear }
-                }
-            }
+            .overlay { PosterImage(url: url, platform: platform, markSize: 28, attempt: attempt) }
             .frame(width: 84, height: wide ? 84 : 148)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .accessibilityHidden(true)
+    }
+}
+
+/// A post's poster, filling its box. A fresh save's poster can take a moment
+/// on your ADHX, so it asks again a few times (and again whenever `attempt`
+/// changes, as the copy is kept), showing the network's mark until it comes.
+private struct PosterImage: View {
+    let url: URL?
+    let platform: String?
+    var markSize: CGFloat = 24
+    var attempt = ""
+    @State private var image: UIImage?
+    @State private var loadedFor: URL?
+
+    var body: some View {
+        ZStack {
+            if let image, loadedFor == url {
+                Image(uiImage: image).resizable().scaledToFill()
+                    .transition(.opacity)
+            } else {
+                NetworkMark(platform: platform, size: markSize)
+                    .opacity(0.55)
+            }
+        }
+        .task(id: "\(url?.absoluteString ?? "")|\(attempt)") { await load() }
+    }
+
+    private func load() async {
+        guard let url, loadedFor != url || image == nil else { return }
+        for wait: UInt64 in [0, 1, 2, 3, 5, 8] {
+            if wait > 0 { try? await Task.sleep(nanoseconds: wait * 1_000_000_000) }
+            guard !Task.isCancelled else { return }
+            if let got = await AuthImageLoader.shared.image(for: url) {
+                withAnimation(.easeOut(duration: 0.25)) {
+                    image = got
+                    loadedFor = url
+                }
+                return
+            }
+        }
     }
 }
 
@@ -543,7 +576,7 @@ private struct AlreadySavedContent: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .center, spacing: 14) {
                 if flow.posterURL != nil {
-                    Poster(url: flow.posterURL, platform: flow.platform, wide: true)
+                    Poster(url: flow.posterURL, platform: flow.platform, wide: true, attempt: flow.keep?.status ?? "")
                 } else {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(Theme.placeholder)

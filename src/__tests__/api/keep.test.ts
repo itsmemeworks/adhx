@@ -168,6 +168,31 @@ describe('kept media', () => {
       )
     })
 
+    it('hands over a fresh X save’s poster at once instead of waiting for the download', async () => {
+      save('twitter', '456')
+      testInstance.sqlite
+        .prepare(
+          `INSERT INTO bookmark_media (id, user_id, platform, bookmark_id, media_type, original_url, preview_url)
+           VALUES ('m1', 'u1', 'twitter', '456', 'video', 'https://video.twimg.com/v.mp4', 'https://pbs.twimg.com/still.jpg')`,
+        )
+        .run()
+      testInstance.sqlite
+        .prepare(
+          `INSERT INTO keep_jobs (platform, post_id, status, attempts, updated_at) VALUES ('twitter', '456', 'running', 0, ?)`,
+        )
+        .run(now())
+      const started = Date.now()
+      const poster = await get('/api/files/twitter/456/poster?a=alice')
+      expect(Date.now() - started).toBeLessThan(500)
+      expect(poster.status).toBe(307)
+      expect(poster.headers.get('location')).toBe('https://pbs.twimg.com/still.jpg')
+      // A photo post with no stored still: its first photo.
+      const photo = await get('/api/files/twitter/789/poster?a=alice')
+      expect(photo.headers.get('location')).toBe(
+        '/api/media/image?author=alice&tweetId=789&index=1',
+      )
+    })
+
     it('tells the player why a video isn’t here on a network with no proxy', async () => {
       viewer = 'u1'
       const unsaved = await get('/api/files/vimeo/1/video-1')

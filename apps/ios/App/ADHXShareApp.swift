@@ -72,8 +72,9 @@ enum BackgroundFlush {
 }
 
 #if DEBUG
-/// `-adhxSharePreview saved|private`: the share card's Saved state over a
-/// blurred post, without sharing anything (Debug builds, to look at it).
+/// `-adhxSharePreview saved|private [-adhxSharePlatform twitter]`: the share
+/// card's Saved state over a blurred post, without sharing anything (Debug
+/// builds, to look at it).
 struct DebugSharePreview: View {
     let isPrivate: Bool
     @State private var flow: ShareFlow?
@@ -92,7 +93,9 @@ struct DebugSharePreview: View {
             guard let client = Store.client(),
                   let page = try? await client.feed(mode: .everyone, cursor: nil) else { return }
             let posts = page.items.filter { $0.posterUrl != nil }
-            guard let post = posts.first(where: { $0.platform == "instagram" }) ?? posts.first else { return }
+            // `-adhxSharePlatform twitter`: a post from that network.
+            let wanted = UserDefaults.standard.string(forKey: "adhxSharePlatform") ?? "instagram"
+            guard let post = posts.first(where: { $0.platform == wanted }) ?? posts.first else { return }
             poster = ADHXClient.resolve(post.posterUrl, against: client.server)
             flow = .preview(post: post, server: client.server, private: isPrivate)
         }
