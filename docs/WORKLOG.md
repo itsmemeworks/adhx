@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Review the Gradle 9.8.1 wrapper upgrade
+
+- Verify the distribution and wrapper JAR against Gradle's official SHA-256 files; retain Java 17 and the existing Android plugin settings.
+- Normalize the Windows wrapper in Git while preserving its CRLF checkout policy and the upstream script changes.
+- Refresh the dependency PR against current main; Android compilation, regression tests and dependency audit must pass before merging.
+
 ## 2026-10-21 — Android: change your picture, invites, email sign-in and the reactions feed, with nothing opening the web
 
 - Owner ask: the apps no longer lean on the web app. Coded against the shared decouple contract (server ↔ web ↔ iOS ↔ Android); the server routes were built in parallel.
