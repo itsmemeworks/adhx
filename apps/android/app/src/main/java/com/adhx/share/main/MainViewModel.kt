@@ -22,6 +22,7 @@ import com.adhx.share.net.PairResponse
 import com.adhx.share.net.KeepStatus
 import com.adhx.share.net.QueuedState
 import com.adhx.share.ui.Copy
+import com.adhx.share.ui.SettingsCopy
 import com.adhx.share.work.SaveQueue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -70,6 +71,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _reach = MutableStateFlow(Reach.Checking)
     val reach: StateFlow<Reach> = _reach.asStateFlow()
+
+    /** Remove this phone is asking the server to drop the key. */
+    private val _removing = MutableStateFlow(false)
+    val removing: StateFlow<Boolean> = _removing.asStateFlow()
+
+    /** Shown on Connect after Remove this phone couldn't reach the server. */
+    private val _removedNote = MutableStateFlow<String?>(null)
+    val removedNote: StateFlow<String?> = _removedNote.asStateFlow()
+
+    fun dismissRemovedNote() {
+        _removedNote.value = null
+    }
 
     private var refreshing = false
 
@@ -147,6 +160,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         _reach.value = Reach.Connected
         _avatarSource.value = null
+        _removedNote.value = null
         Welcome.pending = true
         return problem
     }
@@ -372,6 +386,29 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Returns how many links were waiting. */
     fun sendWaitingNow(): Int = SaveQueue.sendWaitingNow(getApplication<Application>())
+
+    /**
+     * Remove this phone: ask the server to revoke this key, then forget it
+     * here whatever the answer (offline included). [onForgotten] runs once
+     * the key is gone from this phone.
+     */
+    fun removeThisPhone(onForgotten: () -> Unit) {
+        if (_removing.value) return
+        val connection = store.current() ?: return
+        _removing.value = true
+        viewModelScope.launch {
+            try {
+                val result = AdhxApi(connection).removeThisPhone()
+                val note = SettingsCopy.removedNote(result, Links.host(connection.server))
+                if (disconnect()) {
+                    _removedNote.value = note
+                    onForgotten()
+                }
+            } finally {
+                _removing.value = false
+            }
+        }
+    }
 
     /** Forget the key and the history, and drop links still waiting. */
     fun disconnect(): Boolean {

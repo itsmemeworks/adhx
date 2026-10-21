@@ -140,9 +140,11 @@ it in from Mail, and the app gets its phone key from
    removed the phone on your ADHX, the app forgets the key and goes back to
    Connect.
 
-Disconnect in Settings forgets the key, the list and any waiting links on the
-phone. Your saves stay on your ADHX. To remove the phone there too, use
-Settings → Phone app on your ADHX.
+**Remove this phone** in Settings cancels the key on your ADHX
+(`DELETE /api/app/me`), then forgets the key, the list and any waiting links on
+the phone. Your saves stay on your ADHX. If your ADHX can't be reached it still
+forgets them here, and Connect says the phone may still show in Settings →
+Phone app there.
 
 Addresses without `http://` or `https://` get `https://`, except local ones
 (`localhost`, `*.local`, IP addresses), which get `http://`. Plain `http://`
