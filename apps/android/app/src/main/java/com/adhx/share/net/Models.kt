@@ -21,6 +21,81 @@ data class MeResponse(
     val name: String? = null,
     /** Your picture; older servers don't send it. */
     val avatarUrl: String? = null,
+    /** Where your picture came from ([AvatarSource]); older servers don't send it. */
+    val avatarSource: String? = null,
+)
+
+/** Where your picture came from (`avatarSource` on `/api/app/me`). */
+object AvatarSource {
+    const val UPLOAD = "upload"
+    const val GOB = "gob"
+    const val X = "x"
+
+    /** No picture: the face drawn from your username. */
+    const val GENERATED = "generated"
+}
+
+/** `POST /api/app/me/avatar` with JSON: a Gob face (`colour`) or your X photo. */
+@Serializable
+data class AvatarRequest(val source: String, val colour: String? = null)
+
+/** What `POST|DELETE /api/app/me/avatar` answers: your picture now (null: the drawn face). */
+@Serializable
+data class AvatarResponse(val avatarUrl: String? = null, val source: String? = null)
+
+/** One of your invite links that still works (`GET /api/app/invites`). */
+@Serializable
+data class Invite(
+    val id: String = "",
+    /** The link itself, when the server can still say it (it may keep only a hash). */
+    val url: String? = null,
+    @Serializable(with = LooseTimeSerializer::class)
+    val createdAt: String? = null,
+    @Serializable(with = LooseTimeSerializer::class)
+    val expiresAt: String? = null,
+    val uses: Int = 0,
+)
+
+@Serializable
+data class InvitesResponse(
+    @Serializable(with = LenientInvitesSerializer::class)
+    val invites: List<Invite> = emptyList(),
+    val canInvite: Boolean? = null,
+)
+
+/** A new invite link (`POST /api/app/invites`). */
+@Serializable
+data class CreatedInvite(val id: String = "", val url: String = "", val expiresAt: String? = null)
+
+/** `POST /api/app/signin { email, name? }`: email a 6-digit code. */
+@Serializable
+data class SignInRequest(val email: String, val name: String? = null)
+
+/** `POST /api/app/signin/verify { email, code, name? }`: answers like [PairResponse]. */
+@Serializable
+data class SignInVerifyRequest(val email: String, val code: String, val name: String? = null)
+
+/** `GET /api/app/reacted`: posts with reactions, newest reaction first. */
+@Serializable
+data class ReactedResponse(
+    val items: List<PhonePost> = emptyList(),
+    val nextOffset: Int? = null,
+)
+
+/** A post's reactions on `/api/app/reacted`: how many, and the newest. */
+@Serializable
+data class ReactionSummary(
+    val count: Int = 0,
+    val last: LastReaction? = null,
+)
+
+/** The newest reaction on a post: an emoji or a few words, who, and when. */
+@Serializable
+data class LastReaction(
+    val emoji: String? = null,
+    val text: String? = null,
+    val at: String? = null,
+    val saver: Saver? = null,
 )
 
 @Serializable
@@ -155,6 +230,9 @@ data class PhonePost(
     val whyReasons: List<WhyReason> = emptyList(),
     /** You haven't saved or seen it ("New" on a channel tile). Only on group and friend channels. */
     val isNew: Boolean = false,
+    /** How many reactions it has and the newest. Only on `/api/app/reacted`; read loosely. */
+    @Serializable(with = ReactionSummarySerializer::class)
+    val reactions: ReactionSummary? = null,
 ) {
     /** Someone sent it to you and you haven't seen it yet ("Pete sent you this"). */
     val sentToYou: Boolean get() = whyReasons.any { it.kind == WhyKind.SENT }

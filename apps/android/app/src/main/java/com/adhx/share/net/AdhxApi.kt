@@ -14,6 +14,7 @@ import okhttp3.Callback
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -47,6 +48,89 @@ class AdhxApi(private val server: String, private val key: String?) {
         val body = json.encodeToString(PairRequest.serializer(), PairRequest(code, name))
         val request = Request.Builder().url(url).post(body.toRequestBody(JSON)).build()
         return send(request, PairResponse.serializer())
+    }
+
+    /**
+     * Sign in with email (`POST /api/app/signin`): the server emails a 6-digit
+     * code to an existing account. It always answers `{ ok: true }`.
+     */
+    suspend fun signIn(email: String, name: String?): ApiResult<Unit> {
+        val url = url("api/app/signin") ?: return badAddress
+        val body = json.encodeToString(SignInRequest.serializer(), SignInRequest(email, name))
+        val request = Request.Builder().url(url).header("Accept", "application/json").post(body.toRequestBody(JSON)).build()
+        return send(request) { _, _ -> }
+    }
+
+    /**
+     * Spend the emailed code for a phone key (`POST /api/app/signin/verify`):
+     * the same answer as [pair]. 400 `bad_code`, 410 `expired`, 429 `busy`.
+     */
+    suspend fun verifySignIn(email: String, code: String, name: String?): ApiResult<PairResponse> {
+        val url = url("api/app/signin/verify") ?: return badAddress
+        val body = json.encodeToString(SignInVerifyRequest.serializer(), SignInVerifyRequest(email, code, name))
+        val request = Request.Builder().url(url).header("Accept", "application/json").post(body.toRequestBody(JSON)).build()
+        return send(request, PairResponse.serializer())
+    }
+
+    /**
+     * Your picture from a photo (`POST /api/app/me/avatar`, multipart): the
+     * JPEG in `file`, and the square's centre ([x], [y], 0–1) and [zoom] (1–4).
+     * A photo already cropped square goes with 0.5, 0.5 and 1.
+     */
+    suspend fun uploadAvatar(jpeg: ByteArray, x: Double = 0.5, y: Double = 0.5, zoom: Double = 1.0): ApiResult<AvatarResponse> {
+        val url = url("api/app/me/avatar") ?: return badAddress
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("file", "picture.jpg", jpeg.toRequestBody(JPEG))
+            .addFormDataPart("x", x.toString())
+            .addFormDataPart("y", y.toString())
+            .addFormDataPart("zoom", zoom.toString())
+            .build()
+        return send(authed(url).post(body).build(), AvatarResponse.serializer(), uploads)
+    }
+
+    /** A Gob face or your X photo as your picture. 409 `no_x_picture` without an X photo. */
+    suspend fun setAvatar(request: AvatarRequest): ApiResult<AvatarResponse> {
+        val url = url("api/app/me/avatar") ?: return badAddress
+        val body = json.encodeToString(AvatarRequest.serializer(), request)
+        return send(authed(url).post(body.toRequestBody(JSON)).build(), AvatarResponse.serializer())
+    }
+
+    /** No picture: back to the face drawn from your username. */
+    suspend fun removeAvatar(): ApiResult<AvatarResponse> {
+        val url = url("api/app/me/avatar") ?: return badAddress
+        return send(authed(url).delete().build()) { _, text ->
+            if (text.isBlank()) AvatarResponse(null, AvatarSource.GENERATED) else json.decodeFromString(AvatarResponse.serializer(), text)
+        }
+    }
+
+    /** Your invite links that still work. */
+    suspend fun invites(): ApiResult<InvitesResponse> {
+        val url = url("api/app/invites") ?: return badAddress
+        return send(authed(url).get().build(), InvitesResponse.serializer())
+    }
+
+    /** A new invite link to share. 403 when only the admin may invite, 409 with too many waiting. */
+    suspend fun createInvite(): ApiResult<CreatedInvite> {
+        val url = url("api/app/invites") ?: return badAddress
+        return send(authed(url).post("{}".toRequestBody(JSON)).build(), CreatedInvite.serializer())
+    }
+
+    /** Revoke one invite link. */
+    suspend fun revokeInvite(id: String): ApiResult<Unit> {
+        val base = url("api/app/invites") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(id).build()
+        return send(authed(url).delete().build()) { _, _ -> }
+    }
+
+    /** A page of the posts with reactions you can see, newest reaction first. */
+    suspend fun reacted(offset: Int, limit: Int = PAGE): ApiResult<ReactedResponse> {
+        val base = url("api/app/reacted") ?: return badAddress
+        val url = base.newBuilder()
+            .addQueryParameter("offset", offset.toString())
+            .addQueryParameter("limit", limit.coerceIn(1, 50).toString())
+            .build()
+        return send(authed(url).get().build(), ReactedResponse.serializer())
     }
 
     suspend fun me(): ApiResult<MeResponse> {
@@ -412,15 +496,16 @@ class AdhxApi(private val server: String, private val key: String?) {
     }
 
     // On the IO dispatcher: reading the body blocks, and callers are on Main.
-    private suspend fun <T> send(request: Request, serializer: KSerializer<T>): ApiResult<T> =
-        send(request) { _, text -> json.decodeFromString(serializer, text) }
+    private suspend fun <T> send(request: Request, serializer: KSerializer<T>, using: OkHttpClient = client): ApiResult<T> =
+        send(request, using) { _, text -> json.decodeFromString(serializer, text) }
 
     private suspend fun <T> send(
         request: Request,
+        using: OkHttpClient = client,
         decode: (code: Int, text: String) -> T,
     ): ApiResult<T> = withContext(Dispatchers.IO) {
         try {
-            client.newCall(request).await().use { response ->
+            using.newCall(request).await().use { response ->
                 val text = response.body?.string().orEmpty()
                 when {
                     response.code in 502..504 -> ApiResult.Offline
@@ -456,6 +541,7 @@ class AdhxApi(private val server: String, private val key: String?) {
         /** Notes on saves are at most this long. */
         const val NOTE_MAX = 140
         private val JSON = "application/json; charset=utf-8".toMediaType()
+        private val JPEG = "image/jpeg".toMediaType()
         private const val NOT_ADHX = "That address didn’t answer like an ADHX."
 
         private val badAddress = ApiResult.Failed(0, "bad_address", "That address doesn’t look right.")
@@ -472,6 +558,15 @@ class AdhxApi(private val server: String, private val key: String?) {
             .writeTimeout(15, TimeUnit.SECONDS)
             .callTimeout(15, TimeUnit.SECONDS)
             .build()
+
+        /** For sending a photo: a slow phone network gets a minute. */
+        private val uploads: OkHttpClient by lazy {
+            client.newBuilder()
+                .writeTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .callTimeout(60, TimeUnit.SECONDS)
+                .build()
+        }
 
         /**
          * Why a file won't play: a video the server can't serve answers 404 or

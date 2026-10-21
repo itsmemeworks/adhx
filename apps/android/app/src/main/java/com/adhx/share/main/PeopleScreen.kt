@@ -117,7 +117,7 @@ private fun PersonRow(person: Person, server: String, onClick: () -> Unit) {
             .semantics(mergeDescendants = true) { },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Avatar(person.username, person.label, person.avatarUrl, server, 44.dp)
+        Avatar(person.username, person.label, person.avatarUrl, server, 44.dp, isYou = person.isYou)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
