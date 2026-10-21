@@ -58,8 +58,8 @@ class ShareActivity : ComponentActivity() {
                         // The sheet has already slid away; skip the window animation.
                         overridePendingTransition(0, 0)
                     },
-                    onOpenInAdhx = { server, post ->
-                        openPostInApp(this, server, post?.platform, post?.id, post?.openPath)
+                    onOpenInAdhx = { _, post ->
+                        openPostInApp(this, post?.platform, post?.id)
                     },
                     onOpenApp = {
                         startActivity(
