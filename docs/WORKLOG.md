@@ -6,6 +6,11 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Align the killed-runner rehearsal with bounded lease retries
+
+- The large-queue CI rehearsal still required immediate reclamation of an expired job, contradicting the new retry policy. It now verifies one charged attempt, a future retry deadline, completion of another due post, then safe reclamation after advancing only the fixture deadline.
+- Preserve the old-token rejection, fresh-lease completion, queue responsiveness, scratch cleanup and long-video coverage checks. No production settings or deployment changes.
+
 ## 2026-10-21 — Fix nine feature-complete review findings
 
 - Isolate and bound iOS reaction memory by connection; invalidate in-flight responses at reconnect. Web and Android Reactions visits fetch fresh answers, while ordinary playback keeps its once-per-session behavior.
