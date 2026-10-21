@@ -22,6 +22,11 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Search words tiles: serif words on a surface card below the pills (no more clipped first line), author and savers at the bottom. Channels → Your people: fewer than five sit left with a 14dp gap. Send sheet: "Send via" with WhatsApp (falls back to the share sheet), Copy (the ADHX link) and More.
 - Unit tests in `PlayerPolishTest`. Checked on the emulator against a parity server: mark bylines, hold/tap/tap on a video and a photo, album advance and pause, Fit and Sound kept in prefs, Dock row, send sheet (Copy, WhatsApp falls back to the share sheet), search words tiles, five people spread. Not seen there: links in post words (no linked posts in the seed) and fewer than five people.
 
+## 2026-10-21 — iPhone: the network button opens the original post; toasts take the pill's place
+
+- Owner: "in most cases, the user doesn't care about the original post". The overlay now has only the why chip, a friend's note and who saved it; the network line and the caption are gone. A rail button with the network's mark (above More) opens `OriginalSheet`: who posted it (picture, name, handle), when, their words in full (a kept article whole, selectable, links tappable), Open on {network} and Copy link. Default rail spacing is 10 now there's one more button.
+- On New and My saves, a player message ("Words copied") takes the "on their way" pill's place for 3 s instead of stacking under it (`PlayerToastUp` preference; toasts last 3 s everywhere).
+
 ## 2026-10-21 — Landscape for watching; full articles, words and tiles on phones
 
 - Landscape is only for watching (iOS `App/Orientation.swift`): the plist allows landscape, `AppDelegate` answers from `OrientationGate`, where each player says "may turn" while it's showing (`mayTurnToWatch()`) and anything over it says "upright" while it's up (`uprightWhile`: board sheets, More, the reader, the send sheet, a friend's channel). Newest wins; losing landscape turns the phone back. Turned sideways the player hides its chrome, fits the media whole and taps only pause; turning back restores the chrome. Debug: `-adhxTurn landscape -adhxTurnAfter 6`.
