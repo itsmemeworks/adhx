@@ -190,9 +190,12 @@ export async function GET(
   if (kept) {
     let file: string
     let size: number
+    let modified: number
     try {
       file = absolutePath(kept.path)
-      size = fs.statSync(file).size
+      const stat = fs.statSync(file)
+      size = stat.size
+      modified = Math.floor(stat.mtimeMs)
     } catch {
       return notFound()
     }
@@ -203,8 +206,19 @@ export async function GET(
         ? 'private, no-store'
         : conversionPending(platform, id, kept.slot)
           ? 'no-store'
-          : 'public, max-age=604800',
+          : // A poster can be remade (a black one is replaced once), so it's
+            // checked again hourly; the ETag keeps that a cheap 304.
+            kept.slot === 'poster'
+            ? 'public, max-age=3600'
+            : 'public, max-age=604800',
       'X-Content-Type-Options': 'nosniff',
+    }
+    if (kept.slot === 'poster' && !privateToOwner) {
+      const etag = `"${size}-${modified}"`
+      headers['ETag'] = etag
+      if (request.headers.get('if-none-match') === etag) {
+        return new NextResponse(null, { status: 304, headers })
+      }
     }
     if (request.nextUrl.searchParams.get('download') === '1') {
       const ext = kept.path.split('.').pop()
