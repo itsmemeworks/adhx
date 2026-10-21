@@ -416,6 +416,42 @@ describe('reactions', () => {
   })
 })
 
+describe('live reactions, kept on the post', () => {
+  it('keep each one under the id the room saw, for members who can see the post', async () => {
+    await seedFrogs()
+    const slug = await frogSlug()
+    const ben = await openStream(USER_B, slug)
+    const post = { platform: 'twitter', id: 'frog0' }
+    const sent = await reactAs(USER_A, slug, { emoji: '😂', ...post })
+    expect(sent.status).toBe(200)
+    const { id, at } = await sent.json()
+    const said = await (await reactAs(USER_A, slug, { text: 'again!', ...post })).json()
+    await settle()
+    expect(ben.of('reaction').map((e) => e.data.id)).toEqual([id, said.id])
+
+    const { GET: listGET } = await import('@/app/api/posts/reactions/route')
+    const listAs = (who: string | null) =>
+      as(who, () =>
+        listGET(new NextRequest(`${BASE}/api/posts/reactions?platform=twitter&id=frog0`)),
+      )
+    const res = await listAs(USER_B)
+    expect(res.status).toBe(200)
+    expect((await res.json()).reactions).toEqual([
+      {
+        id,
+        emoji: '😂',
+        text: null,
+        at,
+        saver: { username: 'ana', name: 'Ana', avatarUrl: null, isYou: false },
+      },
+      expect.objectContaining({ id: said.id, emoji: null, text: 'again!' }),
+    ])
+    // Signed out: nothing.
+    expect((await listAs(null)).status).toBe(401)
+    await ben.close()
+  })
+})
+
 describe('the phone, live', () => {
   const key = () => createAccessKey(USER_A, 'iPhone', 'phone')!.key
   const phoneReq = (path: string, k?: string, init: RequestInit = {}) =>

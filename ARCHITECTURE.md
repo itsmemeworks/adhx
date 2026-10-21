@@ -311,8 +311,15 @@ flowchart TD
   signed-out responses keep the anonymous shape.
 - **Watching together.** `presence.ts` counts watchers per account across web
   streams and 15-second phone leases. Members can react (six emoji, or up to
-  40 cleaned characters, 20 a minute, 6 of them words); reactions go only to
-  members watching that moment and are never stored.
+  40 cleaned characters, 20 a minute, 6 of them words); a Live reaction goes
+  to the members watching that moment and is also kept on its post (below).
+- **Reactions on every post** (`src/lib/reactions/`, `post_reactions`):
+  `GET|POST /api/posts/reactions` (web) and `/api/app/reactions` (phone),
+  `DELETE …/{id}` for your own. Visible, with names, only to members who can
+  see the post (`seenBy`); never from banned members; none on a hidden post
+  (moderation read fail-closed). Live reactions are stored with the id the
+  room saw. Players replay the newest 12 when a post settles, once per post
+  per visit (`useReactionReplay`).
 - **Bells and alerts** (`alerts.ts`): `PUT|DELETE
 /api/moments/forming/{id}/alert` (phone: `/api/app/live/forming/{id}/alert`)
   stores a bell. Bells follow merges and regroups (`reconcileForming`), fire
@@ -622,6 +629,7 @@ guards. Tables are easier to understand by plane than as one long list.
 | Saves                      | `bookmarks`, `bookmark_media`, `bookmark_links`, `bookmark_tags`, `archived_posts`                                                           | One save per saver, with `is_private` (Just for me) and `note`; media rows, rich links, tags, private archive state.                               |
 | Feed                       | `post_views`                                                                                                                                 | Each member's watched list (pruned after 180 days).                                                                                                |
 | Sends                      | `post_sends`                                                                                                                                 | Member-to-member sends with an optional note and `seen_at`.                                                                                        |
+| Reactions                  | `post_reactions`                                                                                                                             | An emoji or a few words a member left on a post (Live ones too), shown to members who can see the post.                                            |
 | Moments and alerts         | `moment_alert_subs`, `moment_alerts`                                                                                                         | Bells on forming groups and the alerts they fire. Moments themselves live in memory.                                                               |
 | Channels                   | `tag_shares`, `group_channels`, `auto_channels`                                                                                              | Public/private tag channels; server-wide From everyone channels (no `user_id`); per-person Made for you channels.                                  |
 | Phone and keys             | `access_keys`, `app_pair_codes`, `phone_save_queue`                                                                                          | Hashed phone (`phone`) and search (`search`) keys; one-time pairing codes; the share sheet's durable save queue.                                   |
@@ -1108,7 +1116,8 @@ streams and phones, checked against active credentials, and named only for
 members. A bounded known-post list refreshes saver metadata and removes posts
 the server no longer considers visible without losing older playable entries.
 Reaction drafts remain attached to their original post until acknowledged;
-failed sends keep the words and offer Retry. These are ephemeral reactions.
+failed sends keep the words and offer Retry. Live reactions are also kept on
+their post (`post_reactions`) and replay later for members who can see it.
 
 The Doing summary counts the complete visible queue in SQLite; filters and
 status priority apply before the 60-row display limit. Summary-only requests

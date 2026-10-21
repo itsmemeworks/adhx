@@ -73,12 +73,15 @@ import kotlinx.coroutines.launch
  */
 /**
  * The player's own switches, which live in More so the column on the right
- * stays as on the boards: Sound and Repeat (null for photos and words), the
- * small window (null when it can't), and Hide.
+ * stays as on the boards: Sound (null for photos and words), Fit video (videos
+ * only), Repeat (null for words), Dock (the small window; null when it
+ * can't) and Hide. Sound and Fit video are remembered.
  */
 class PlayerControls(
     val muted: Boolean?,
     val onToggleMute: () -> Unit,
+    val fit: Boolean?,
+    val onToggleFit: () -> Unit,
     val repeat: Boolean?,
     val onToggleRepeat: () -> Unit,
     val onPip: (() -> Unit)?,
@@ -132,9 +135,20 @@ fun MoreSheet(
                     MoreRow(
                         icon = painterResource(if (muted) R.drawable.ic_sound_on else R.drawable.ic_sound_off),
                         title = if (muted) "Sound on" else "Sound off",
-                        subtitle = if (muted) "Playing without sound" else "Playing with sound",
+                        subtitle = if (muted) "Every video plays with sound until you turn it off" else "Every video plays without sound",
                         onClick = {
                             controls.onToggleMute()
+                            close()
+                        },
+                    )
+                }
+                controls.fit?.let { fit ->
+                    MoreRow(
+                        icon = painterResource(R.drawable.ic_fit_video),
+                        title = if (fit) "Fill the screen" else "Fit video",
+                        subtitle = if (fit) "Videos cover the whole screen" else "The whole video at its own shape",
+                        onClick = {
+                            controls.onToggleFit()
                             close()
                         },
                     )
@@ -153,8 +167,8 @@ fun MoreSheet(
                 controls.onPip?.let { pip ->
                     MoreRow(
                         icon = painterResource(R.drawable.ic_pip),
-                        title = "Keep playing in a small window",
-                        subtitle = "Carries on over your other apps",
+                        title = "Dock",
+                        subtitle = "Keeps playing in a small window over your other apps",
                         onClick = {
                             close()
                             pip()
@@ -164,7 +178,7 @@ fun MoreSheet(
                 MoreRow(
                     icon = painterResource(R.drawable.ic_hide_overlay),
                     title = "Hide controls",
-                    subtitle = "Tap the post to bring them back",
+                    subtitle = "Or hold the post. A tap brings them back",
                     onClick = {
                         controls.onHide()
                         close()

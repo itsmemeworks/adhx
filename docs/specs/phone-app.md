@@ -31,7 +31,7 @@ Offline, Shared lately, Android sheet).
 Phone keys are rows in `access_keys` with `scope = 'phone'` (the Search from
 Claude keys are `scope = 'search'`). Same shape (`adhx_` + 43 URL-safe
 characters), only the SHA-256 is kept, up to 10 per account. A phone key is
-accepted by `/api/app/save`, `/api/app/private`, `/api/app/note`, `/api/app/status`,
+accepted by `/api/app/save`, `/api/app/private`, `/api/app/note`, `/api/app/reactions`, `/api/app/status`,
 `/api/app/me`, `/api/app/saves`, `/api/app/search`, the friends feed
 endpoints below (`feed`, `seen`, `channels`, `live`), Settings' `people` and
 `doing`, members' pictures (`/api/files/avatar/<hash>`) and the owner's own
@@ -182,6 +182,54 @@ Set or clear the note on one of your saves ("Add a note"). `note` is a string
 - `200 { note }` — the note as stored, or `null`
 - `400 { code: 'bad_request' }` · `401 { code: 'bad_key' }` ·
   `404 { code: 'not_saved' }`
+
+### Reactions on any post — `/api/app/reactions`
+
+Reactions are kept on posts (`post_reactions`) and shown, with names and
+faces, only to members who can see the post (anyone's shared save, or your
+own save; a post saved only Just for me keeps its reactions to its owner).
+Banned members' reactions are never returned; a post an admin hid has none.
+The web uses the same handlers at `/api/posts/reactions` (session).
+
+- `GET /api/app/reactions?platform=&id=` → oldest first, the newest 100,
+  `no-store`:
+
+  ```json
+  {
+    "reactions": [
+      {
+        "id": "rmh2k3x9a1b2c3d4e5f6",
+        "emoji": "😂",
+        "text": null,
+        "at": "2026-10-21T09:12:03.000Z",
+        "saver": {
+          "username": "ana",
+          "name": "Ana",
+          "avatarUrl": "/api/files/avatar/…",
+          "isYou": false
+        }
+      }
+    ]
+  }
+  ```
+
+  Exactly one of `emoji` / `text` is set. `avatarUrl` is null when they chose
+  the generated icon. 404 `not_found` when you can't see any save of the post.
+
+- `POST /api/app/reactions` `{ platform, id, emoji }` (😂 🔥 😭 👀 💀 ❤️) or
+  `{ platform, id, text }` (at most 40 characters, cleaned; show it as text,
+  never HTML) → `{ "id", "at" }`. Errors: 400 `bad_reaction` / `bad_text` /
+  `bad_post`, 404 `not_found` (you can't see the post), 429 `busy` with
+  `Retry-After` (the same per-person budget as Live: 20 a minute, 6 of them
+  words).
+- `DELETE /api/app/reactions/{id}` → `{ "ok": true }` for your own reaction,
+  404 `not_found` otherwise.
+- **Replay**: when a post settles on screen, fetch its reactions once per
+  post per visit (keep the answer for the session) and float the newest 12,
+  oldest first, ~350 ms apart, starting ~600 ms after it settles, each with
+  the reactor's face. Don't replay a post again in the same session. Yours
+  floats at once (your face from `/api/app/me` `avatarUrl`); on failure a
+  quiet "Couldn't send that. Try again." and nothing is kept.
 
 ### `GET /api/app/saves?offset&limit`
 
@@ -436,7 +484,9 @@ watching, watchers?, covers, live, recentSaves, windowMinutes }] }`; a 404
   disconnected/background phones expire after 15 s. Accounts count once across
   web tabs and phones. `GET /api/app/live/{slug}/stream` remains available.
 - `POST /api/app/live/{slug}/react { emoji } | { text }, platform, id` (text at
-  most 40 characters).
+  most 40 characters). It goes to the room and is also kept on the post under
+  the same `id`, so `GET /api/app/reactions` replays it later; skip ids you
+  already floated live.
 - `GET /api/app/people` → `{ members: [{ username, name, avatarUrl, saves,
 lastSavedAt, role: owner|admin|member, banned, isYou }], isAdmin, canInvite,
 inviteMode, requests? }`; `requests` (admins only) are
@@ -537,8 +587,8 @@ freeBytes, processing, remoteConnected } }`. `thumbnail` (like Shared lately's
   each as the sender's face ringed in their colour, with the emoji as a
   sticker on its corner or the words in a bubble of their colour. Yours shows
   after acknowledgement; failed words stay in the composer with Retry, bound
-  to the original post even if playback advances. Reactions are ephemeral, not
-  stored chat. Ones that arrive together rise 0.7 s apart.
+  to the original post even if playback advances. Reactions are kept on the
+  post (see Reactions on any post) and replay when someone watches it later. Ones that arrive together rise 0.7 s apart.
 - **Faces**: up to 3 overlapping avatars (their photo, or their initial on
   their colour) and "Ana and Ben saved this" / "Ana and 3 others saved this"
   on the player byline and search tiles. Tapping a face opens that friend's

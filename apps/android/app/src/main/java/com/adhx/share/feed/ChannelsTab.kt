@@ -129,12 +129,13 @@ fun ChannelsTab(feed: FeedViewModel, server: String, actions: HomeActions, heade
                 }
             }
             item(key = "people") {
-                // Spread across the width when they fit (four friends and Invite); scrolls past that.
+                // Fewer than five (faces and Invite) sit left with a 14dp gap; five spread across
+                // the width; past that it scrolls.
                 val invite = actions.onInvite
                 val count = channels.friends.size + if (invite != null) 1 else 0
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = if (count <= 5) Arrangement.SpaceBetween else Arrangement.spacedBy(14.dp),
+                    horizontalArrangement = if (peopleRowSpreads(count)) Arrangement.SpaceBetween else Arrangement.spacedBy(PEOPLE_GAP),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     items(channels.friends, key = { it.username }) { friend ->
@@ -325,6 +326,12 @@ private fun PersonBubble(friend: FriendChannel, server: String, onClick: () -> U
         Text(friend.label, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
+
+/** The gap between faces in Your people when they don't spread across the width. */
+private val PEOPLE_GAP = 14.dp
+
+/** Your people spread across the width only with exactly five (faces and Invite): fewer sit left, more scroll. */
+internal fun peopleRowSpreads(count: Int): Boolean = count == 5
 
 /** Invite: a dashed yellow circle with a plus. */
 @Composable

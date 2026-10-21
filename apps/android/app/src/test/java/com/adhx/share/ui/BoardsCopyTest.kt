@@ -4,7 +4,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.adhx.share.feed.tileHeight
 import com.adhx.share.library.foundHeading
-import com.adhx.share.library.isUpright
 import com.adhx.share.library.matchLabel
 import com.adhx.share.net.PhoneMedia
 import com.adhx.share.net.PhonePost
@@ -61,10 +60,7 @@ class BoardsCopyTest {
     }
 
     @Test
-    fun uprightVideosFillAndChannelTilesFollowTheirShape() {
-        assertTrue(isUpright(352.0, 640.0))
-        assertFalse(isUpright(1280.0, 720.0))
-        assertFalse(isUpright(null, 640.0))
+    fun channelTilesFollowTheirShape() {
         fun post(w: Double?, h: Double?) = PhonePost(platform = "x", id = "1", media = listOf(PhoneMedia(width = w, height = h)))
         assertEquals(290.dp, tileHeight(post(352.0, 640.0)))
         assertEquals(180.dp, tileHeight(post(1280.0, 720.0)))

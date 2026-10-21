@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic'
  * POST /api/app/live/{slug}/react `{ emoji | text, platform, id }` — a reaction
  * while tuned in: one of 😂 🔥 😭 👀 💀 ❤️, or a few words (≤40 characters,
  * control characters dropped; show it as text, never HTML). Rate-limited per
- * person and never stored; the members watching get it as a `reaction` event.
+ * person; the members watching get it as a `reaction` event, and it is kept on
+ * the post with the same id (`GET /api/app/reactions` replays it later).
  * → `{ id, at }`. Errors: `bad_reaction`, `bad_text`, `bad_post`, `busy`, `no_moment`.
  */
 export async function POST(request: Request, ctx: { params: Promise<{ slug: string }> }) {
