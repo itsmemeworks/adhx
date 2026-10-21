@@ -13,6 +13,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Player messages (`flash`) last 3 s, replace each other, and take the stage's top row: the pills there ("Shared with your people", "Kept on your ADHX", the via note, a moment's arrivals) step aside while one is up. Copy the text now also says "Words copied". `hasFullArticle` moved to `post.ts`.
 - Tests: `theater-original-sheet.component.test.tsx` (name/handle/day rules, mark once incl. a broken picture, article, focus trap), the overlay/rail/sheet path in `next-theater`, the toast/pill swap in `feed-theater`; e2e previews read the words from the sheet. Checked on a parity server at 1280×800 and 390×844. Not seen live: a poster with a picture (the parity world has none) and an article in the sheet; the browser pane blocks the clipboard, so "Link copied" was checked with a stubbed clipboard.
 
+## 2026-10-21 — Run CI and local development on Node 26 like the image
+
+- The container moved to Node 26 while `.nvmrc` and every workflow `node-version` stayed on 24, so tests ran on a different major than what ships.
+- `.nvmrc`, `ci.yml` (all seven jobs) and `site.yml` now use 26; README and CONTRIBUTING recommend 26. The engines range is unchanged, so 22.22.1+ and 24 still work locally.
+- Workflows install pnpm with `pnpm/action-setup`, so Node 26 shipping without Corepack does not affect CI.
+- Follow-up: the Mac worker docs still say ARM64 Node 24 (any version the engines allow works); bump them once the worker has been measured on 26.
+
 ## 2026-10-21 — Posters that aren't black (the History channel's black covers)
 
 - The owner's History channel showed four near-black cover tiles over bright canyon and forest videos. Covers are each post's kept poster, and those posters came out black: a network's own thumbnail of a black first frame, or our grab one second in, inside a fade. (Sampled the public moments snapshot: 2 of 29 posters dark, both genuinely dark screen recordings, so it's specific posts, not every poster.)
