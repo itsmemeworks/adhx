@@ -379,6 +379,10 @@ enum APIError: Error {
     }
 }
 
+private struct RemovedAnswer: Decodable {
+    let ok: Bool?
+}
+
 private struct PrivateAnswer: Decodable {
     let `private`: Bool?
 }
@@ -419,6 +423,12 @@ struct ADHXClient {
 
     func me() async throws -> MeResult {
         try await send("GET", "/api/app/me")
+    }
+
+    /// Remove this phone: the server revokes this key (and only this key).
+    /// A short wait, since the phone forgets the key either way.
+    func removeThisPhone() async throws {
+        let _: RemovedAnswer = try await send("DELETE", "/api/app/me", timeout: 8)
     }
 
     /// `isPrivate` saves it "Just for me"; nil leaves the server's default

@@ -117,6 +117,21 @@ class WithoutWebModelsTest {
     }
 
     @Test
+    fun removeThisPhoneDeletesItsOwnKey() = runBlocking {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setBody("""{"ok":true}"""))
+            server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error":"gone","code":"bad_key"}"""))
+            val api = AdhxApi(server.url("/").toString(), "phone-key")
+            assertTrue(api.removeThisPhone() is ApiResult.Ok)
+            val request = server.takeRequest()
+            assertEquals("DELETE", request.method)
+            assertEquals("/api/app/me", request.path)
+            assertEquals("Bearer phone-key", request.getHeader("Authorization"))
+            assertEquals(401, (api.removeThisPhone() as ApiResult.Failed).status)
+        }
+    }
+
+    @Test
     fun removingAPictureIsADelete() = runBlocking {
         MockWebServer().use { server ->
             server.enqueue(MockResponse().setBody("""{"avatarUrl":null,"source":"generated"}"""))

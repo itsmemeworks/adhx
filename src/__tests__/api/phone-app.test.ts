@@ -252,6 +252,45 @@ describe('connected phones', () => {
     expect((await after.json()).code).toBe('bad_key')
   })
 
+  it('lets a phone remove itself with DELETE /api/app/me, leaving the other phones', async () => {
+    const mine = await phoneKey('iPhone')
+    const other = await phoneKey('Pixel')
+    sessionUser = 'user-2'
+    const theirs = await phoneKey('Their phone')
+    sessionUser = 'user-1'
+
+    const me = await import('@/app/api/app/me/route')
+    const remove = (key?: string) =>
+      me.DELETE(
+        new NextRequest(`${BASE}/api/app/me`, {
+          method: 'DELETE',
+          ...(key ? { headers: { authorization: `Bearer ${key}` } } : {}),
+        }),
+      )
+
+    // No key, no removal.
+    expect((await remove()).status).toBe(401)
+
+    const removed = await remove(mine)
+    expect(removed.status).toBe(200)
+    expect(await removed.json()).toEqual({ ok: true })
+
+    // The removed key is refused everywhere from now on, removing again included.
+    const after = await me.GET(get('/api/app/me', mine))
+    expect(after.status).toBe(401)
+    expect((await after.json()).code).toBe('bad_key')
+    const again = await remove(mine)
+    expect(again.status).toBe(401)
+    expect((await again.json()).code).toBe('bad_key')
+
+    // Your other phone and someone else's phone carry on.
+    expect((await me.GET(get('/api/app/me', other))).status).toBe(200)
+    expect((await me.GET(get('/api/app/me', theirs))).status).toBe(200)
+    const { GET } = await import('@/app/api/app/phones/route')
+    const phones = await (await GET(get('/api/app/phones'))).json()
+    expect(phones.phones.map((p: { name: string }) => p.name)).toEqual(['Pixel'])
+  })
+
   it('keeps each phone to its own account', async () => {
     await phoneKey()
     sessionUser = 'user-2'
