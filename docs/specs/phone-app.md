@@ -583,6 +583,17 @@ it; on a server without these endpoints (404) the app falls back as noted.
 
 ### API
 
+- `GET /api/app/feed?mode=lineup&cursor&types=…` is New on both phones: the
+  lineup, always in the same order. **Just saved** (your people's posts you
+  haven't seen, saved or sent to you since you last looked: the newest view
+  before a 30-minute gap, at most two days back; the last day if you've never
+  looked), then **Not seen yet** (the rest of the last 14 days), both newest
+  first, then **For you**: posts others saved and you didn't (older unseen
+  ones first, then ones you've watched), closest to what you keep, each with
+  its "Like … you kept" reason. Each item carries `section`
+  (`just` · `unseen` · `foryou`) and the page carries
+  `sections: { just, unseen, foryou }` for the whole lineup. An older server
+  answers 400 `bad_query`; the apps then ask for `mode=new` from then on.
 - `GET /api/app/feed?mode=new|everyone|friends|mine&cursor&types=video,photo,text,article`
   → `{ items: PhonePost[] (each with why?), nextCursor, caughtUp, hidden? }`.
   `hidden` (also sent as `waiting`) counts what the filter left out, `{ text: 4 }`. The
@@ -731,7 +742,17 @@ freeBytes, processing, remoteConnected } }`. `thumbnail` (like Shared lately's
   middle, Search on the right. New carries a small yellow badge over its
   top-right corner with how many unseen posts are left ("7", "19+" while
   more pages may come, capped at "99+"). Shared lately moved into Settings.
-- **New** (the default) plays the feed in the player. A post counts as seen
+- **New** (the default) plays the lineup in the player, so opening the app
+  always plays the newest first. A strip under the tabs shows its parts
+  ("Just saved 2 · Not seen yet 6 · For you"; empty parts are left out), the
+  one playing lit and filling as you go. A pill above the byline says where
+  you are ("Just saved · 1 of 2") and opens **Up next**: the lineup in its
+  three parts, a yellow dot on each post you haven't watched, Now playing
+  highlighted, who saved each one (or "Ana sent you this", which is why it's
+  that high), For you with its reason; tap a post to play from there. The
+  New badge counts the Just saved and Not seen yet posts you haven't watched
+  (skipping ahead doesn't count them). Back after 30 minutes away, New starts
+  again at the top of the lineup. A post counts as seen
   after 2 s on stage, or as soon as you swipe past it (not when you go back).
   The why chip sits over the byline; tapping it opens **Why this one**: the
   post, every reason, and Whose saves (Everyone · Friends only · Mine:

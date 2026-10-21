@@ -238,6 +238,8 @@ data class PhonePost(
     /** How many reactions it has and the newest. Only on `/api/app/reacted`; read loosely. */
     @Serializable(with = ReactionSummarySerializer::class)
     val reactions: ReactionSummary? = null,
+    /** New's lineup: just · unseen · foryou ([Lineup]). Only on `mode=lineup`. */
+    val section: String? = null,
 ) {
     /** Someone sent it to you and you haven't seen it yet ("Pete sent you this"). */
     val sentToYou: Boolean get() = whyReasons.any { it.kind == WhyKind.SENT }
@@ -430,6 +432,32 @@ object FeedMode {
     const val MINE = "mine"
 }
 
+/**
+ * New's lineup (`mode=lineup`): always in this order, so opening the app is
+ * predictable. Just saved (since you last looked), Not seen yet, both newest
+ * first, then For you, closest to what you keep.
+ */
+object Lineup {
+    const val MODE = "lineup"
+    const val JUST = "just"
+    const val UNSEEN = "unseen"
+    const val FOR_YOU = "foryou"
+
+    val parts = listOf(JUST, UNSEEN, FOR_YOU)
+
+    /** Away this long and New starts again from the top of the lineup. */
+    const val FRESH_AFTER_MS = 30 * 60_000L
+
+    fun title(part: String): String = when (part) {
+        JUST -> "Just saved"
+        UNSEEN -> "Not seen yet"
+        else -> "For you"
+    }
+
+    /** Posts you haven't seen (the New badge counts these). */
+    fun isUnseen(part: String?): Boolean = part == JUST || part == UNSEEN
+}
+
 /** `GET /api/app/feed?mode&cursor`. */
 @Serializable
 data class FeedResponse(
@@ -446,6 +474,8 @@ data class FeedResponse(
      */
     @Serializable(with = HiddenSerializer::class)
     val hidden: Map<String, Int> = emptyMap(),
+    /** The lineup: how many posts each part holds (`{ just, unseen, foryou }`). Null outside it. */
+    val sections: Map<String, Int>? = null,
 )
 
 /** The kinds of post the feed filter picks between (`types=` on `/api/app/feed`). */

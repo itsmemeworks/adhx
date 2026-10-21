@@ -28,6 +28,9 @@ class SeenBatcher(
 
     val waiting: Int get() = pending.size
 
+    /** Every post counted as seen so far (`platform:id`), sent or not. */
+    val counted: Set<String> get() = done
+
     /** Enough are waiting to send a batch now. */
     val full: Boolean get() = pending.size >= batchSize
 

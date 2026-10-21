@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — New on the phones is the lineup (boards 13.3 and 13.5)
+
+- Owner ask: opening the app should always autoplay something, predictably: newest, then what you haven't seen, then topics from what you interact with. Picked 13.3 (the lineup) and 13.5 (Up next in three parts) from the design canvas.
+- Server: `mode=lineup` in the blend (`lineup()` in `src/lib/feed/blend.ts`, pure). Just saved = unseen saves/sends since you last looked (`lastLookedAt`: newest view before a 30-minute gap; ≤48 h; 24 h on a first visit), Not seen yet = the rest of the 14-day window, both newest first; For you = others' posts you didn't save (unwatched first, then watched), closest to your taste, "Like … you kept" leading. Items carry `section`; pages carry `sections`. Pool also takes 300 older saves for For you.
+- iOS + Android: New asks for the lineup (falls back to `new` on 400 `bad_query`), strip under the tabs, pill above the byline, Up next sheet (dots for unwatched, Now playing, sent posts say "Ana sent you this", tap to jump), badge counts unwatched Just saved + Not seen yet, and New restarts at the top after 30 minutes away.
+- Checked: unit + API tests; iOS simulator and Android emulator against the parity server (strip, pill, sheet, jump, badge).
+
 ## 2026-10-21 — A post opened from the share card loops
 
 - Owner: viewing a post from the share card should loop it. Open in ADHX now starts the player with Repeat on (iOS `PlayerScreen(startRepeating:)` → `PlayerExtras.startRepeating`, applied once so returning from a friend's channel doesn't switch it back on; Android `PlayerScreen(startRepeating = true)` from `PostLinkScreen`). Like the web, where a shared preview starts on Repeat one.

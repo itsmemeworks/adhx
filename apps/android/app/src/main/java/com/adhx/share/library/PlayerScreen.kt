@@ -236,6 +236,9 @@ fun PlayerScreen(
     toastInTopBar: Boolean = false,
     /** Repeat on from the start: a post opened from the share card loops. */
     startRepeating: Boolean = false,
+    /** Go to this post (`platform:id`), then say so with [onJumped] (Up next). */
+    jumpTo: String? = null,
+    onJumped: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -399,6 +402,13 @@ fun PlayerScreen(
                 reactError = POST_REACT_FAILED
             }
         }
+    }
+
+    LaunchedEffect(jumpTo) {
+        val key = jumpTo ?: return@LaunchedEffect
+        val at = posts.indexOfFirst { it.key == key }
+        if (at >= 0) goTo(at)
+        onJumped()
     }
 
     // Something new on top (saved while the app was away, or a save that was

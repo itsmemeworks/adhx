@@ -45,6 +45,8 @@ struct LibraryHome: View {
     @State private var showingDoing = false
     /// Everything your ADHX is doing, pushed from that sheet.
     @State private var seeAllDoing = false
+    /// Up next, the lineup in its three parts, is up.
+    @State private var showingUpNext = false
 
     /// The player is showing, so its "On their way" pill asks every 5 s.
     private var watchingDoing: Bool { onScreen && scenePhase == .active && tab == .new }
@@ -81,7 +83,14 @@ struct LibraryHome: View {
             .onPreferenceChange(PlayerToastUp.self) { up in playerToast = up }
             if !playerChromeHidden {
                 header
-                if tab == .new && !playerToast { newPills.padding(.top, headerHeight + 6) }
+                if let strip = lineupStrip {
+                    strip
+                        .padding(.horizontal, 16)
+                        .padding(.top, headerHeight + 8)
+                }
+                if tab == .new && !playerToast {
+                    newPills.padding(.top, headerHeight + (lineupStrip == nil ? 6 : 44))
+                }
             }
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: library.preparing)
@@ -126,8 +135,13 @@ struct LibraryHome: View {
             if phase == .active {
                 // New shares land in your saves; pick them up when you come back.
                 Task { await library.reload() }
-                if feed.items.isEmpty || feed.loadError != nil { Task { await feed.reload() } }
+                if feed.items.isEmpty || feed.loadError != nil {
+                    Task { await feed.reload() }
+                } else {
+                    Task { await feed.cameBack() }
+                }
             } else {
+                feed.wentAway()
                 Task { await feed.flushSeen() }
             }
         }
@@ -155,6 +169,11 @@ struct LibraryHome: View {
                    setWeight: { username, weight in Task { await feed.setWeight(username, weight) } },
                    openPost: { ref in model.open(ref) })
                 .task { await feed.loadWeights() }
+            }
+        }
+        .boardSheet(isPresented: $showingUpNext, height: 660) {
+            if let server = model.server {
+                UpNextSheet(feed: feed, server: server) { key in jumpTo = key }
             }
         }
         .boardSheet(isPresented: $showingDoing, height: 540) {
@@ -212,9 +231,13 @@ struct LibraryHome: View {
                 caughtUp(server, topInset: headerHeight + 40)
             } else {
                 PlayerView(posts: feed.items, server: server, clean: $clean, scrubbing: $scrubbing,
-                           start: feed.currentKey,
+                           jumpTo: $jumpTo, start: feed.currentKey,
                            extras: PlayerExtras(onWhy: { why = $0 }, toastTop: headerHeight + 6,
-                                                endPage: feed.atEnd ? AnyView(caughtUp(server, topInset: endPageTop)) : nil)) { index in
+                                                endPage: feed.atEnd ? AnyView(caughtUp(server, topInset: endPageTop)) : nil,
+                                                queuePill: feed.sections == nil ? nil : { post in
+                                                    guard let spot = feed.spot(for: post.key) else { return nil }
+                                                    return AnyView(LineupPill(spot: spot) { showingUpNext = true })
+                                                })) { index in
                     feed.shown(index)
                 }
             }
@@ -289,10 +312,23 @@ struct LibraryHome: View {
         }
     }
 
+    /// New's lineup strip, over the player while a lineup post is on screen.
+    private var lineupStrip: LineupStrip? {
+        guard tab == .new, let counts = feed.sections, feed.currentIndex < feed.items.count,
+              feed.lineupParts.count > 0 else { return nil }
+        return LineupStrip(parts: feed.lineupParts, counts: counts,
+                           spot: feed.currentKey.flatMap { feed.spot(for: $0) })
+    }
+
     /// The New tab's badge: unseen posts left ("99+" past that; "20+" while
     /// more pages are still to come). Nil outside New's own mode.
     private var newBadge: String? {
         guard !feed.unsupported, feed.mode == .new, feed.currentIndex < feed.items.count else { return nil }
+        if feed.sections != nil {
+            // The lineup knows how many you haven't seen, For you aside.
+            let left = feed.unseenLeft
+            return left == 0 ? nil : left > 99 ? "99+" : "\(left)"
+        }
         let left = feed.items.count - feed.currentIndex
         guard left > 0 else { return nil }
         if left > 99 { return "99+" }

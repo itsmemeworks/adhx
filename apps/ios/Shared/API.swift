@@ -229,6 +229,8 @@ struct PhonePost: Decodable, Hashable {
     /// In a group or friend channel: you haven't saved or seen it ("New" on
     /// the tile). Nil elsewhere and on older servers.
     var isNew: Bool?
+    /// New's lineup: Just saved, Not seen yet or For you. Nil elsewhere.
+    var section: LineupSection? = nil
 
     /// Unique across networks (the same number can be an X and a TikTok id).
     var key: String { "\(platform):\(postId)" }
@@ -238,7 +240,7 @@ struct PhonePost: Decodable, Hashable {
 
     private enum CodingKeys: String, CodingKey {
         case platform, postId = "id", kind, author, text, postedAt, savedAt, sourceUrl, openPath,
-             media, article, match, learning, savers, isPrivate, why, whyReasons, isNew
+             media, article, match, learning, savers, isPrivate, why, whyReasons, isNew, section
     }
 
     init(platform: String, postId: String, kind: String, author: PhoneAuthor, text: String,
@@ -285,6 +287,7 @@ struct PhonePost: Decodable, Hashable {
         savers = (try? c.decodeIfPresent(Lossy<Saver>.self, forKey: .savers))?.items ?? []
         isPrivate = (try? c.decodeIfPresent(Bool.self, forKey: .isPrivate)) ?? false
         isNew = (try? c.decodeIfPresent(Bool.self, forKey: .isNew)) ?? nil
+        section = ((try? c.decodeIfPresent(String.self, forKey: .section)) ?? nil).flatMap(LineupSection.init(rawValue:))
         let reasons = (try? c.decodeIfPresent(Lossy<WhyReason>.self, forKey: .whyReasons))?.items ?? []
         whyReasons = reasons
         let why = (try? c.decodeIfPresent(String.self, forKey: .why)) ?? nil

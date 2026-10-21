@@ -176,6 +176,24 @@ enum FeedMode: String, CaseIterable {
     case mine
 }
 
+/// New's lineup (`mode=lineup`): always in this order, so opening the app is
+/// predictable. Just saved (since you last looked), Not seen yet, both newest
+/// first, then For you, closest to what you keep.
+enum LineupSection: String, CaseIterable, Hashable {
+    case just, unseen, foryou
+
+    var title: String {
+        switch self {
+        case .just: return "Just saved"
+        case .unseen: return "Not seen yet"
+        case .foryou: return "For you"
+        }
+    }
+
+    /// Posts you haven't seen (the New badge counts these).
+    var isUnseen: Bool { self != .foryou }
+}
+
 /// What the feed plays. Videos and photos by default; words are opt-in.
 enum FeedType: String, CaseIterable, Codable, Identifiable {
     case video, photo, text, article
@@ -217,16 +235,19 @@ struct FeedPage: Decodable {
     let hidden: [FeedType: Int]
     /// Nothing new on the whole server yet (not "you've seen it all").
     let nothingYet: Bool
+    /// The lineup: how many posts each part holds (nil outside it, or on older servers).
+    let sections: [LineupSection: Int]?
 
-    private enum Keys: String, CodingKey { case items, nextCursor, caughtUp, hidden, nothingYet }
+    private enum Keys: String, CodingKey { case items, nextCursor, caughtUp, hidden, nothingYet, sections }
 
     init(items: [PhonePost], nextCursor: String?, caughtUp: Bool, hidden: [FeedType: Int] = [:],
-         nothingYet: Bool = false) {
+         nothingYet: Bool = false, sections: [LineupSection: Int]? = nil) {
         self.items = items
         self.nextCursor = nextCursor
         self.caughtUp = caughtUp
         self.hidden = hidden
         self.nothingYet = nothingYet
+        self.sections = sections
     }
 
     init(from decoder: Decoder) throws {
@@ -240,6 +261,13 @@ struct FeedPage: Decodable {
             if let type = FeedType(rawValue: key), value > 0 { hidden[type] = value }
         }
         self.hidden = hidden
+        if let counts = c.loose([String: Int].self, .sections) {
+            var sections: [LineupSection: Int] = [:]
+            for (key, value) in counts { if let section = LineupSection(rawValue: key) { sections[section] = max(0, value) } }
+            self.sections = sections
+        } else {
+            sections = nil
+        }
     }
 }
 
@@ -698,8 +726,11 @@ private struct Nothing: Decodable {}
 
 extension ADHXClient {
     /// The friends feed, a page at a time.
-    func feed(mode: FeedMode, cursor: String?, types: Set<FeedType> = FeedType.standard) async throws -> FeedPage {
-        var query = [URLQueryItem(name: "mode", value: mode.rawValue),
+    /// `lineup`: New in its three parts (`mode=lineup`) instead of the blend.
+    func feed(mode: FeedMode, cursor: String?, types: Set<FeedType> = FeedType.standard,
+              lineup: Bool = false) async throws -> FeedPage {
+        let name = lineup && mode == .new ? "lineup" : mode.rawValue
+        var query = [URLQueryItem(name: "mode", value: name),
                      URLQueryItem(name: "types", value: FeedType.query(types))]
         if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
         return try await send("GET", "/api/app/feed", query: query)

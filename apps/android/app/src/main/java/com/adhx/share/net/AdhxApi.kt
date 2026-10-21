@@ -293,11 +293,14 @@ class AdhxApi(private val server: String, private val key: String?) {
         }
     }
 
-    /** A page of the friends feed ([FeedMode]), only of [types] ([MediaType]) when given. */
-    suspend fun feed(mode: String, cursor: String? = null, types: Collection<String>? = null): ApiResult<FeedResponse> {
+    /**
+     * A page of the friends feed ([FeedMode]), only of [types] ([MediaType]) when given.
+     * [lineup]: New in its three parts (`mode=lineup`) instead of the blend.
+     */
+    suspend fun feed(mode: String, cursor: String? = null, types: Collection<String>? = null, lineup: Boolean = false): ApiResult<FeedResponse> {
         val base = url("api/app/feed") ?: return badAddress
         val url = base.newBuilder()
-            .addQueryParameter("mode", mode)
+            .addQueryParameter("mode", if (lineup && mode == FeedMode.NEW) Lineup.MODE else mode)
             .apply { if (cursor != null) addQueryParameter("cursor", cursor) }
             .apply { if (!types.isNullOrEmpty()) addQueryParameter("types", MediaType.all.filter { it in types }.joinToString(",")) }
             .build()

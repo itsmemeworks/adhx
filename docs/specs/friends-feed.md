@@ -86,6 +86,7 @@ All of these require sign-in unless marked public.
 - `POST /api/app/private` with body `{ platform, id, private }` → `{ private }`.
 - `POST /api/app/save` accepts `note` (in the async queue too); `POST /api/app/note` with body `{ platform, id, note }` → `{ note }` (404 `not_saved`). `PhonePost.savers[].note` as above.
 - `GET /api/app/feed?mode=new|everyone|friends|mine&types&cursor&limit` → `{ items: PhonePost[], nextCursor, caughtUp, nothingYet, total, types, waiting, hidden }`; each item adds `why` and `whyReasons`. `types` as on the web; `hidden` repeats `waiting` under the name the phone apps read.
+- `mode=lineup` (the phones' New, also accepted by `/api/feed/blend`): Just saved since you last looked, Not seen yet, then For you, always in that order (`lineup()` in `src/lib/feed/blend.ts`). Each item adds `section`; the page adds `sections: { just, unseen, foryou }`. See `docs/specs/phone-app.md` → The friends feed on the phone.
 - `GET|PUT /api/app/feed/types`: the same stored choice as `/api/feed/types`.
 - `GET /api/app/feed/weights` → `{ weights: { username: -1 | 1 } }` and `PUT { username, weight: -1 | 0 | 1 }` → `{ weights }`: the same stored "Show less / Show more from …" as `/api/feed/weights` (400 `bad_weight`, 404 `no_member` for yourself or no such member).
 - `POST /api/app/seen` with body `{ posts: [{ platform, id }] }` → 204.

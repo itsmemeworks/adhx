@@ -23,6 +23,8 @@ struct PlayerExtras {
     var replayReactions = false
     /// Opened from the share card: Repeat starts on, so the post loops.
     var startRepeating = false
+    /// New's lineup: "Just saved · 1 of 2" above the byline, for each post.
+    var queuePill: ((PhonePost) -> AnyView?)?
 
     struct ReactButton {
         var isOpen: Bool
@@ -541,6 +543,9 @@ private struct PostPage: View {
     private var caption: some View {
         HStack(alignment: .bottom, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
+                if let pill = extras.queuePill?(post) {
+                    pill.padding(.bottom, 10)
+                }
                 if let moment = extras.inMoment {
                     HStack(spacing: 6) {
                         Text("In").foregroundStyle(Theme.muted)
@@ -1359,7 +1364,7 @@ private struct ProgressLine: View {
     }
 }
 
-private extension View {
+extension View {
     /// The soft shadow words get when they sit on a video or photo.
     @ViewBuilder func overMediaShadow(_ on: Bool) -> some View {
         // A tight dark edge plus a soft glow: readable on white pictures too.

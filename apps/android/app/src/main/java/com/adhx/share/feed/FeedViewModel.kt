@@ -13,6 +13,7 @@ import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.ApiResult
 import com.adhx.share.net.ChannelsResponse
 import com.adhx.share.net.FeedMode
+import com.adhx.share.net.Lineup
 import com.adhx.share.net.FormingMoment
 import com.adhx.share.net.FriendNote
 import com.adhx.share.net.LiveMoment
@@ -56,6 +57,10 @@ data class FeedUi(
     val hiddenByServer: Map<String, Int> = emptyMap(),
     /** Left out on the phone (a server that didn't filter them). */
     val hiddenHere: Map<String, Int> = emptyMap(),
+    /** New's lineup: how many posts each part holds. Null outside it, or on an older server. */
+    val sections: Map<String, Int>? = null,
+    /** Posts watched in this lineup (2 s on stage, or swiped past): the badge and Up next go by these. */
+    val watched: Set<String> = emptySet(),
 ) {
     /** What the filter is hiding, by type, for "4 text posts waiting". */
     val hidden: Map<String, Int>
@@ -203,6 +208,10 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
     private val reactionsSeen = HashSet<String>()
 
     private val seen = SeenBatcher()
+    /** The server knows `mode=lineup` (until it says otherwise). */
+    private var lineupSupported = true
+    /** When the app went to the background (0: it hasn't). */
+    private var awayAt = 0L
     private var feedJob: Job? = null
     private var flushJob: Job? = null
     private var channelJob: Job? = null
@@ -246,9 +255,15 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
         val connection = store.current() ?: return
         val mode = now.mode
         val types = now.types
+        val lineup = mode == FeedMode.NEW && lineupSupported
         _feed.value = now.copy(loading = true, error = null)
         feedJob = viewModelScope.launch {
-            val result = AdhxApi(connection).feed(mode, now.nextCursor, types)
+            var result = AdhxApi(connection).feed(mode, now.nextCursor, types, lineup)
+            if (lineup && result is ApiResult.Failed && result.status == 400 && result.code == "bad_query") {
+                // An older server: New is the blend there.
+                lineupSupported = false
+                result = AdhxApi(connection).feed(mode, now.nextCursor, types)
+            }
             val current = _feed.value
             if (current.mode != mode || current.types != types) return@launch
             _feed.value = when (result) {
@@ -272,6 +287,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
                         loadedOnce = true,
                         hiddenByServer = page.hidden.ifEmpty { current.hiddenByServer },
                         hiddenHere = hiddenHere,
+                        sections = if (mode == FeedMode.NEW && lineupSupported) page.sections ?: current.sections else null,
                     )
                 }
                 is ApiResult.Failed -> {
@@ -347,6 +363,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
         feedPage = page
         val now = _feed.value
         seen.onStage(now.items.getOrNull(page)?.ref, page, System.currentTimeMillis())
+        noteWatched()
         sendSeenSoon()
         if (now.error == null && page >= now.items.size - NEAR_END) loadMoreFeed()
     }
@@ -354,6 +371,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
     /** Called a moment after a page settles: the post on stage may count as seen now. */
     fun tickSeen() {
         seen.tick(System.currentTimeMillis())
+        noteWatched()
         sendSeenSoon()
     }
 
@@ -361,6 +379,27 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
     fun onPause() {
         seen.tick(System.currentTimeMillis())
         flushSeen()
+        if (awayAt == 0L) awayAt = System.currentTimeMillis()
+    }
+
+    /**
+     * Back in the app: after [Lineup.FRESH_AFTER_MS] away, New starts again
+     * at the top of the lineup, so opening the app always plays the newest first.
+     */
+    fun onResume() {
+        val away = awayAt
+        awayAt = 0L
+        val now = _feed.value
+        if (away == 0L || now.mode != FeedMode.NEW || now.items.isEmpty()) return
+        if (System.currentTimeMillis() - away >= Lineup.FRESH_AFTER_MS) reloadFeed()
+    }
+
+    /** The lineup's badge and Up next follow what's been counted as seen. */
+    private fun noteWatched() {
+        val now = _feed.value
+        if (now.sections == null) return
+        val counted = now.items.mapNotNullTo(HashSet()) { post -> post.key.takeIf { it in seen.counted } }
+        if (counted != now.watched) _feed.value = now.copy(watched = counted)
     }
 
     private fun sendSeenSoon() {

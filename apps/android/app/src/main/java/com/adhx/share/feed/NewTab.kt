@@ -118,18 +118,27 @@ fun NewTab(
     connection: Connection,
     reach: Reach,
     actions: HomeActions,
-    /** Over the player; [atEnd] is a solid page (caught up, loading, can't load), whose row sits on the surface colour. */
-    header: @Composable (newBadge: String?, atEnd: Boolean) -> Unit,
+    /**
+     * Over the player; [atEnd] is a solid page (caught up, loading, can't load), whose row sits on
+     * the surface colour. [strip] is the lineup's strip, under the tabs, when there is one.
+     */
+    header: @Composable (newBadge: String?, atEnd: Boolean, strip: (@Composable () -> Unit)?) -> Unit,
 ) {
     val ui by feed.feed.collectAsStateWithLifecycle()
     val server = connection.server
     var page by remember { mutableIntStateOf(feed.feedPage) }
     var why by remember { mutableStateOf<PhonePost?>(null) }
+    var upNext by remember { mutableStateOf(false) }
+    var jumpTo by remember { mutableStateOf<String?>(null) }
 
     // Leaving New, or the app: send what's been seen.
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) feed.onPause() }
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) feed.onPause()
+            // Back after a while: New starts again at the top of the lineup.
+            if (event == Lifecycle.Event.ON_START) feed.onResume()
+        }
         lifecycle.addObserver(observer)
         onDispose {
             lifecycle.removeObserver(observer)
@@ -147,7 +156,7 @@ fun NewTab(
             vm = library,
             connection = connection,
             reach = reach,
-            bar = { header(null, false) },
+            bar = { header(null, false, null) },
             contentTop = 90.dp,
             onSaver = actions.openPerson,
         )
@@ -172,7 +181,7 @@ fun NewTab(
     when {
         ui.items.isEmpty() && (!ui.loadedOnce || ui.loading) -> Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Spinner(size = 34.dp, stroke = 3.dp) }
-            header(null, true)
+            header(null, true, null)
         }
         ui.items.isEmpty() && ui.error != null -> Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
             Column(
@@ -185,11 +194,11 @@ fun NewTab(
                 Text(ui.error ?: Copy.FEED_CANT_LOAD, fontSize = 15.sp, lineHeight = 22.sp, color = AdhxColors.Muted)
                 OutlineButton("Try again", onClick = feed::reloadFeed, minHeight = 44.dp)
             }
-            header(null, true)
+            header(null, true, null)
         }
         ui.items.isEmpty() -> Box(Modifier.fillMaxSize()) {
             end()
-            header(null, true)
+            header(null, true, null)
         }
         else -> PlayerScreen(
             posts = ui.items,
@@ -199,12 +208,38 @@ fun NewTab(
                 feed.onFeedPage(it)
                 page = it
             },
-            topBar = { header(badge, page >= ui.items.size) },
+            topBar = {
+                val playing = ui.items.getOrNull(page)?.key
+                val strip: (@Composable () -> Unit)? = if (ui.sections != null && playing != null) {
+                    { LineupStrip(ui, playing, Modifier.padding(horizontal = 16.dp)) }
+                } else {
+                    null
+                }
+                header(badge, page >= ui.items.size, strip)
+            },
             hideTopBarWhileSending = true,
             toastInTopBar = true,
             onSaver = actions.openPerson,
-            aboveCaption = { post -> WhyChip(post, server) { why = post } },
+            aboveCaption = { post ->
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    lineupSpot(ui, post.key)?.let { spot -> LineupPill(spot) { upNext = true } }
+                    WhyChip(post, server) { why = post }
+                }
+            },
             end = if (ui.ended) end else null,
+            jumpTo = jumpTo,
+            onJumped = { jumpTo = null },
+        )
+    }
+
+    if (upNext) {
+        UpNextSheet(
+            ui = ui,
+            playingKey = ui.items.getOrNull(page)?.key,
+            server = server,
+            onPick = { jumpTo = it },
+            onNearEnd = feed::loadMoreFeed,
+            onDismiss = { upNext = false },
         )
     }
 

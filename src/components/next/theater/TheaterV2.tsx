@@ -209,6 +209,7 @@ const FEED_TITLES: Record<BlendMode, string> = {
   everyone: 'Everyone',
   friends: 'Friends only',
   mine: 'Mine',
+  lineup: 'New',
 }
 
 /** Blended feed items are plain posts; "saved" is whether you're among the savers. */

@@ -20,8 +20,15 @@
  * beyond "seen" — these are the only reasons.
  */
 
-export type BlendMode = 'new' | 'everyone' | 'friends' | 'mine'
-export const BLEND_MODES: readonly BlendMode[] = ['new', 'everyone', 'friends', 'mine']
+export type BlendMode = 'new' | 'everyone' | 'friends' | 'mine' | 'lineup'
+export const BLEND_MODES: readonly BlendMode[] = ['new', 'everyone', 'friends', 'mine', 'lineup']
+
+/**
+ * The lineup (the phones' New): always the same order, so opening the app is
+ * predictable. Just saved (since you last looked), then Not seen yet, both
+ * newest first; then For you, closest to what you keep and react to.
+ */
+export type LineupSection = 'just' | 'unseen' | 'foryou'
 
 export function isBlendMode(value: unknown): value is BlendMode {
   return typeof value === 'string' && (BLEND_MODES as readonly string[]).includes(value)
@@ -86,6 +93,8 @@ export interface BlendContext {
   weights: Record<string, FeedWeight>
   /** Snapshot seed: the same seed gives the same order. */
   seed?: string
+  /** Lineup: when the viewer last looked (epoch ms; null when never or unknown). */
+  lastLookedAt?: number | null
 }
 
 export interface BlendPick {
@@ -100,6 +109,8 @@ export interface BlendPick {
   ownOnly: boolean
   /** Newest unseen send to the viewer (epoch ms), when someone sent it. */
   sentAt?: number
+  /** Lineup: which part of it the post is in. */
+  section?: LineupSection
 }
 
 export const BLEND_WEIGHTS = {
@@ -116,6 +127,17 @@ export const BLEND_WEIGHTS = {
   less: 0.4,
   /** Largest tie-break nudge from the seed. */
   jitter: 0.04,
+} as const
+
+export const LINEUP = {
+  /** Just saved reaches back at most this far, however long you've been away. */
+  justHours: 48,
+  /** Never looked before: Just saved is the last day. */
+  firstVisitHours: 24,
+  /** Not seen yet goes back this far (New's window); older unseen posts can be For you. */
+  unseenDays: 14,
+  /** For you holds at most this many. */
+  forYou: 60,
 } as const
 
 /** Fresh decays as e^(-hours / FRESH_HOURS). */
@@ -366,12 +388,87 @@ export function applyVariety(sorted: BlendPick[], mode: BlendMode): BlendPick[] 
   return out
 }
 
+/**
+ * The lineup, in its three parts. Just saved and Not seen yet are your
+ * people's posts you haven't seen from the last `unseenDays`, newest save (or
+ * send) first, split at when you last looked. For you is the rest of the pool
+ * that others saved and you didn't (older unseen posts before watched ones),
+ * closest to your taste first (the blend's order where nothing is understood),
+ * with variety applied and its "Like …" reason leading.
+ */
+export function lineup(candidates: BlendCandidate[], ctx: BlendContext): BlendPick[] {
+  const likes = likeScores(candidates)
+  type Entry = { c: BlendCandidate; scored: Scored; like: number; at: number }
+  const unseen: Entry[] = []
+  const rest: Entry[] = []
+  for (const c of candidates) {
+    const like = likes.get(c.key) ?? 0
+    const others = c.saves.filter((s) => s.userId !== ctx.viewerId)
+    const at = Math.max(0, c.sent?.[0]?.at ?? 0, ...others.map((s) => s.savedAt))
+    const asNew = scoreCandidate(c, ctx, 'new', like)
+    if (asNew && at >= ctx.now - LINEUP.unseenDays * 24 * HOUR) {
+      unseen.push({ c, scored: asNew, like, at })
+      continue
+    }
+    // For you is what you haven't saved yourself.
+    if (c.saves.some((s) => s.userId === ctx.viewerId)) continue
+    const asAll = scoreCandidate(c, ctx, 'everyone', like)
+    if (asAll) rest.push({ c, scored: asAll, like, at })
+  }
+  const byNewest = (a: Entry, b: Entry) =>
+    b.at - a.at || (a.c.key < b.c.key ? -1 : a.c.key > b.c.key ? 1 : 0)
+  unseen.sort(byNewest)
+  const floor = ctx.now - LINEUP.justHours * HOUR
+  const cutoff = Math.max(floor, ctx.lastLookedAt ?? ctx.now - LINEUP.firstVisitHours * HOUR)
+  const pick = (e: Entry, section: LineupSection, reasons = e.scored.reasons): BlendPick => ({
+    key: e.c.key,
+    score: e.scored.score,
+    why: reasons[0]?.text ?? '',
+    reasons,
+    saver: e.scored.saver,
+    topic: e.like >= LIKE_SHOWN ? (e.c.like?.topic ?? null) : null,
+    ownOnly: e.scored.ownOnly,
+    ...(e.c.sent?.length ? { sentAt: e.c.sent[0].at } : {}),
+    section,
+  })
+  const just = unseen.filter((e) => e.at > cutoff).map((e) => pick(e, 'just'))
+  const notSeen = unseen.filter((e) => e.at <= cutoff).map((e) => pick(e, 'unseen'))
+  const understood = rest.some((e) => e.c.similarity !== null)
+  // Unwatched first, then watched; each closest to your taste first.
+  rest.sort(
+    (a, b) =>
+      Number(a.c.seen) - Number(b.c.seen) ||
+      (understood
+        ? (b.c.similarity ?? -2) - (a.c.similarity ?? -2)
+        : b.scored.score - a.scored.score) ||
+      byNewest(a, b),
+  )
+  const forYou = applyVariety(
+    rest.slice(0, LINEUP.forYou).map((e) => {
+      // For you always says what it's like when it knows, however close.
+      const like: WhyReason[] = e.scored.reasons.filter((r) => r.kind === 'like')
+      if (like.length === 0 && e.c.like?.label && e.c.similarity !== null) {
+        like.push({
+          kind: 'like',
+          text: `Like ${e.c.like.label} you kept`,
+          ...(e.c.like.post ? { post: { ...e.c.like.post } } : {}),
+        })
+      }
+      const likeFirst = [...like, ...e.scored.reasons.filter((r) => r.kind !== 'like')]
+      return pick(e, 'foryou', likeFirst)
+    }),
+    'everyone',
+  )
+  return [...just, ...notSeen, ...forYou]
+}
+
 /** The whole feed for one mode, best first, with variety applied. */
 export function blend(
   candidates: BlendCandidate[],
   ctx: BlendContext,
   mode: BlendMode,
 ): BlendPick[] {
+  if (mode === 'lineup') return lineup(candidates, ctx)
   const likes = likeScores(candidates)
   const newest = new Map<string, number>()
   const picks: BlendPick[] = []
