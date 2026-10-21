@@ -23,7 +23,12 @@ final class Playback: ObservableObject {
     @Published private(set) var problem: String?
     @Published private(set) var currentURL: URL?
     /// On: the video loops. Off (the default): the next save plays when it ends.
-    @Published var repeatOne = false
+    /// Switched on after a video has run out (the last post), it plays again.
+    @Published var repeatOne = false {
+        didSet { if repeatOne, atEnd { replay() } }
+    }
+    /// Played to the end with nothing after it to move on to.
+    private var atEnd = false
     /// Where it is and how long it is, in seconds (0 until known).
     @Published private(set) var time: Double = 0
     @Published private(set) var duration: Double = 0
@@ -128,6 +133,7 @@ final class Playback: ObservableObject {
             return
         }
         currentURL = url
+        atEnd = false
         problem = nil
         ready = false
         paused = false
@@ -151,9 +157,9 @@ final class Playback: ObservableObject {
             Task { @MainActor in
                 guard let self else { return }
                 if self.repeatOne {
-                    self.player.seek(to: .zero)
-                    self.player.play()
+                    self.replay()
                 } else {
+                    self.atEnd = true
                     self.onEnded()
                 }
             }
@@ -171,8 +177,17 @@ final class Playback: ObservableObject {
 
     func togglePause() {
         guard currentURL != nil else { return }
+        if atEnd { return replay() }
         paused.toggle()
         if paused { player.pause() } else { player.play() }
+    }
+
+    /// From the top again.
+    private func replay() {
+        atEnd = false
+        paused = false
+        player.seek(to: .zero)
+        player.play()
     }
 
     /// Leaving the player (or the app going to the background).

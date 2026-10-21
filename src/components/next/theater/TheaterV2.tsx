@@ -1208,6 +1208,19 @@ export function TheaterV2({
       else void next()
     },
   })
+  // Repeat chosen after the queue ran out ("That's all"): play this post
+  // again rather than sit at the end. Repeat all then goes round the queue.
+  // (The menu steps Off → All → One, so All mustn't jump away from it.)
+  useEffect(() => {
+    if (!ended || repeat === 'off') return
+    setEnded(false)
+    if (isVideo) {
+      stage.seek(0)
+      stage.resume()
+    } else {
+      dwell.seek(0)
+    }
+  }, [ended, repeat, isVideo, dwell])
   const paused = isVideo ? !video.playing : timedPaused
   const reading =
     !!current &&

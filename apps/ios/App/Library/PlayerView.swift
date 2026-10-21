@@ -482,7 +482,8 @@ private struct PostPage: View {
     /// The photo timer runs while this photo is on screen and nothing is over it.
     private var photoTimerKey: String {
         let running = onScreen && !photoPaused && !held && !more && !savedSheet && sharing == nil
-        return "\(running)-\(photo)"
+        // Repeat switched on after the last post's time ran out starts it again.
+        return "\(running)-\(photo)-\(playback.repeatOne)"
     }
 
     /// Photos move on by themselves, `PhotoTimer.seconds` each: the next photo
@@ -497,6 +498,9 @@ private struct PostPage: View {
             guard photoTime >= PhotoTimer.seconds else { continue }
             photoTime = 0
             switch PhotoTimer.next(page: photo, count: post.media.count, repeatOne: playback.repeatOne) {
+            case .page(let page) where page == photo:
+                // One photo on repeat: round again (the key doesn't change).
+                continue
             case .page(let page): withAnimation(.easeInOut(duration: 0.3)) { photo = page }
             case .post: advance()
             }
