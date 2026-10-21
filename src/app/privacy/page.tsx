@@ -68,8 +68,11 @@ export default function PrivacyPage() {
           session cookie (30 days). Sign-in links are stored as a hash; when the server holds them
           for an admin to pass on, admins can see the link and the email it was asked for, and
           admins’ own links (or any before there is an admin) are also printed in the server’s log.
-          An uploaded picture is re-made as a 512-pixel JPEG without its photo metadata, shown only
-          to members, and deleted when you change it or delete your account. Saves, notes, tags,
+          The phone app can sign in with a 6-digit emailed code instead: sent only to an address
+          that already has an account, by email only, stored as a keyed hash, good once for 15
+          minutes and used up by five wrong tries; spending it adds a phone key to your account. An
+          uploaded picture is re-made as a 512-pixel JPEG without its photo metadata, shown only to
+          members, and deleted when you change it or delete your account. Saves, notes, tags,
           archive and preferences are keyed by your account. A “Just for me” save writes no public
           pulse, and making a save private removes its earlier ones. “Just for me by default” covers
           every new save: the web, the phone apps, X bookmark sync and Keep this channel. If X is
@@ -94,8 +97,9 @@ export default function PrivacyPage() {
           save. A post saved only “Just for me” keeps its reactions to its owner. Signed out,
           reactions and their counts are never shown; a banned member’s reactions never are, and a
           post an admin hid shows none. You can delete your own; they go when you clear your data or
-          delete your account. The admin area shows only how many each member sends per day, by
-          kind.
+          delete your account. The Reactions row on Channels lists posts with reactions under the
+          same rule, with the newest reaction’s name and face. The admin area shows only how many
+          each member sends per day, by kind.
         </Section>
 
         <Section title="Right now and watching together">

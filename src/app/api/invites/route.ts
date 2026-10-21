@@ -4,6 +4,7 @@ import { isAdminUserId } from '@/lib/admin/guard'
 import { checkRateLimit } from '@/lib/rate-limit'
 import {
   createInvite,
+  inviteUrl,
   listPendingInvites,
   MAX_PENDING_INVITES,
   mayCreateInvites,
@@ -69,11 +70,10 @@ export const POST = withAuth(async (request: NextRequest, userId) => {
           { status: 403, headers: NO_STORE },
         )
   }
-  const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   return NextResponse.json(
     {
       id: created.id,
-      url: `${base.replace(/\/+$/, '')}/invite/${created.token}`,
+      url: inviteUrl(created.token),
       expiresAt: created.expiresAt,
     },
     { status: 201, headers: NO_STORE },

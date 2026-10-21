@@ -966,11 +966,12 @@ export const usernameAliases = sqliteTable('username_aliases', {
 export const loginTokens = sqliteTable('login_tokens', {
   tokenHash: text('token_hash').primaryKey(),
   email: text('email').notNull(), // lowercased
-  intent: text('intent').notNull(), // 'signin' | 'change'
-  userId: text('user_id'), // set for 'change' — the account confirming a new email
+  intent: text('intent').notNull(), // 'signin' | 'change' | 'phone' (an emailed 6-digit code)
+  userId: text('user_id'), // set for 'change' — the account confirming a new email; for 'phone', the account (null: no such account)
   returnTo: text('return_to'),
   expiresAt: integer('expires_at').notNull(), // epoch ms
   usedAt: text('used_at'),
+  attempts: integer('attempts').notNull().default(0), // wrong 'phone' codes tried
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 })
 
