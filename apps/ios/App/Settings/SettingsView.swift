@@ -44,12 +44,19 @@ struct SettingsView: View {
                 if model.waiting > 0 { waitingLinks }
                 if let library { sharedLately(library) }
 
-                Text("ADHX Share \(Self.version) · Your friends have better taste than the algorithm.")
-                    .font(Theme.sans(12))
-                    .foregroundStyle(Theme.faint)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 6)
+                VStack(spacing: 4) {
+                    // Which release this phone runs, to match against the GitHub tags.
+                    Text("ADHX Share \(Self.version)")
+                        .font(Theme.sans(12, .bold))
+                        .foregroundStyle(Theme.muted)
+                        .textSelection(.enabled)
+                    Text("Your friends have better taste than the algorithm.")
+                        .font(Theme.sans(12))
+                        .foregroundStyle(Theme.faint)
+                }
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 6)
             }
             .padding(.horizontal, 16)
             .padding(.top, 0)
@@ -424,9 +431,16 @@ struct SettingsView: View {
         openURL(url)
     }
 
-    private static var version: String {
-        (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "1.0"
-    }
+    /// Which release this build is: "2.2.0", or "2.2.0 +3 · abc1234" when
+    /// it's built from commits after that tag (written by Config/stamp-version.sh).
+    static let version: String = {
+        if let url = Bundle.main.url(forResource: "build-info", withExtension: "txt"),
+           let words = try? String(contentsOf: url, encoding: .utf8)
+            .trimmingCharacters(in: .whitespacesAndNewlines), !words.isEmpty {
+            return words
+        }
+        return (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "1.0"
+    }()
 }
 
 // MARK: - Rows
