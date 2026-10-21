@@ -210,6 +210,10 @@ enum SignInWords {
         case "bad_code": return "That code didn’t work. Check it and try again."
         case "expired": return "That code has run out. Send a new one."
         case "busy": return "That’s a lot of tries. Wait a minute and try again."
+        case "too_soon": return "A code is already on its way. Give it a minute."
+        case "too_many": return "This account has ten phones already. Remove one on another phone first."
+        case "no_email": return "This ADHX can’t send email. Scan or type the code from Settings → Phone app instead."
+        case "send_failed": return "The email didn’t go. Try again in a moment, or use the code from Settings → Phone app."
         case "offline": return error.message
         default: return error.message
         }
