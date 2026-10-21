@@ -36,7 +36,6 @@ const PREVIEW_PATHS = [
   /^\/[A-Za-z0-9_]{1,15}\/status\/\d+\/?$/,
   /^\/reels?\/[A-Za-z0-9_-]+\/?$/,
   /^\/@[A-Za-z0-9._]{1,30}\/video\/\d{6,25}\/?$/,
-  /^\/shorts\/[A-Za-z0-9_-]{1,16}\/?$/,
 ]
 
 /** On-ADHX preview routes — the only places a shared-lead autosave can fire. */

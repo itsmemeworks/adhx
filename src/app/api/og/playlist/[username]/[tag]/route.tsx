@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og'
 import type { NextRequest } from 'next/server'
 import { getPublicTagCollection, type TagCollection, type TagItem } from '@/lib/tags/query'
-import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { PUBLIC_BASE_URL, PUBLIC_HOST } from '@/lib/routes/base-url'
 import { fetchWithAllowlistedRedirects, readResponseBodyWithLimit } from '@/lib/media/proxy'
 
 export const runtime = 'nodejs'
@@ -30,8 +30,6 @@ const IMAGE_HOSTS = [
   'd.fxtwitter.com',
   'pbs.twimg.com',
   '.twimg.com',
-  'i.ytimg.com',
-  '.ytimg.com',
   '.cdninstagram.com',
   '.tiktokcdn.com',
   '.tiktokcdn-us.com',
@@ -95,7 +93,6 @@ function platformChip(item: TagItem): string {
   if (item.contentType === 'article') return 'ARTICLE'
   if (item.platform === 'instagram') return 'IG'
   if (item.platform === 'tiktok') return 'TT'
-  if (item.platform === 'youtube') return 'YT'
   return 'X'
 }
 
@@ -174,7 +171,7 @@ function privateCard(fontData: ArrayBuffer | null): ImageResponse {
           color: '#F4F1EA',
         }}
       >
-        Save it. Lose it. Find it.
+        Your friends have better taste than the algorithm.
       </div>
       <div
         style={{
@@ -185,7 +182,7 @@ function privateCard(fontData: ArrayBuffer | null): ImageResponse {
           color: '#b3a893',
         }}
       >
-        adhx.com
+        {PUBLIC_HOST}
       </div>
     </div>,
     fontData,

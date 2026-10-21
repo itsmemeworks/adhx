@@ -1,3 +1,5 @@
+import { ALL_PLATFORMS } from '@/lib/platform/networks'
+
 /**
  * Allowlisted analytics event names and dimensions.
  *
@@ -27,9 +29,23 @@ export const ANALYTIC_EVENTS = [
   'auth.complete',
   'auth.fail',
   'sync.complete',
+  'sync.auto',
   'theater.open',
   'shortcut.install',
   'welcome.complete',
+  // Admin analytics (counts only). `app.open`: someone came back after half an
+  // hour away (source = web | ios | android | phone). `search.found` /
+  // `search.none`: a finished search, with its mode as the source (meaning |
+  // words), never its words. `post.finish`: a video played to its end.
+  // `channel.play` / `channel.keep`: a shared channel's queue was played or
+  // kept (surface = group | channel; the channel's key, `slug` or
+  // `username/tag`, goes in bookmark_id).
+  'app.open',
+  'search.found',
+  'search.none',
+  'post.finish',
+  'channel.play',
+  'channel.keep',
 ] as const
 
 export type AnalyticEventName = (typeof ANALYTIC_EVENTS)[number]
@@ -38,6 +54,7 @@ export type AnalyticEventName = (typeof ANALYTIC_EVENTS)[number]
 export const CLIENT_ANALYTIC_EVENTS = [
   'post.send',
   'post.play',
+  'post.finish',
   'post.copy',
   'post.open',
   'shortcut.install',
@@ -45,7 +62,7 @@ export const CLIENT_ANALYTIC_EVENTS = [
 
 export type ClientAnalyticEventName = (typeof CLIENT_ANALYTIC_EVENTS)[number]
 
-export const ANALYTIC_PLATFORMS = ['twitter', 'instagram', 'tiktok', 'youtube'] as const
+export const ANALYTIC_PLATFORMS = ALL_PLATFORMS
 export type AnalyticPlatform = (typeof ANALYTIC_PLATFORMS)[number]
 
 export const ANALYTIC_CONTENT_TYPES = ['video', 'photo', 'text', 'article'] as const
@@ -61,6 +78,8 @@ export const ANALYTIC_SURFACES = [
   'preview',
   'welcome',
   'settings',
+  'group',
+  'channel',
 ] as const
 export type AnalyticSurface = (typeof ANALYTIC_SURFACES)[number]
 
@@ -73,8 +92,15 @@ export const ANALYTIC_SOURCES = [
   'shortcut',
   'oauth',
   'email',
+  'invite',
   'share',
   'download',
+  'web',
+  'ios',
+  'android',
+  'phone',
+  'meaning',
+  'words',
 ] as const
 export type AnalyticSource = (typeof ANALYTIC_SOURCES)[number]
 

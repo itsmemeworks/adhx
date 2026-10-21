@@ -1,16 +1,11 @@
+import { visibleSaveFilter } from '@/lib/people/savers'
 import { MetadataRoute } from 'next'
 import { db } from '@/lib/db'
 import { tagShares, bookmarks, users, activity, userBans } from '@/lib/db/schema'
 import { and, eq, desc, isNull, sql } from 'drizzle-orm'
 import { previewPath } from '@/lib/activity/record'
 import type { PlatformId } from '@/lib/platform/url'
-import { FILTER_SLUGS } from '@/lib/trending/filter'
-import { RANK_WINDOWS, windowToPath } from '@/lib/discovery/rank'
-import {
-  isValidTwitterHandle,
-  passesThinContentGate,
-  completedWeekSlugs,
-} from '@/lib/sitemap/queries'
+import { isValidTwitterHandle, passesThinContentGate } from '@/lib/sitemap/queries'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 import { readBannedUserIds, readModeratedPostKeys } from '@/lib/admin/moderation'
 
@@ -32,8 +27,6 @@ import { readBannedUserIds, readModeratedPostKeys } from '@/lib/admin/moderation
  *
  * Widened inventory (on top of hubs + public tags + saved/previewed content):
  *  - Author hubs (`/{username}`) for every X handle behind a sitemap-eligible post.
- *  - Trending archive (`/trending/archive` + one URL per completed ISO week).
- *  - Discovery leaderboard (`/leaderboard` + the 3 non-default window paths).
  * Activity-derived (never-saved) preview URLs pass through a thin-content gate
  * (`passesThinContentGate`) so a flood of low-effort previewed-but-unsaved posts
  * can't dilute site-wide quality signals — see `src/lib/sitemap/queries.ts`.
@@ -42,8 +35,8 @@ export const dynamic = 'force-dynamic'
 
 const baseUrl = PUBLIC_BASE_URL
 
-/** The four content platforms whose saved/previewed posts map to preview URLs. */
-const PLATFORMS: PlatformId[] = ['twitter', 'instagram', 'tiktok', 'youtube']
+/** The content platforms whose saved/previewed posts map to preview URLs. */
+const PLATFORMS: PlatformId[] = ['twitter', 'instagram', 'tiktok']
 
 /** Backstop so a runaway table can't produce an oversized sitemap (limit 50k). */
 const URL_CAP = 45_000
@@ -68,53 +61,14 @@ function trackAuthor(
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date()
 
-  // Hubs: homepage, the cross-network /trending hub, the per-lens hubs, and
-  // the trending archive hub. All are static routes that render fine with an
-  // empty DB (e.g. zero completed weeks), so they're unconditional — not
-  // gated behind a query's success like the per-week archive URLs below.
+  // Hubs: the homepage and Right now (live, public), and the privacy page.
+  // /trending and /leaderboard were retired (they redirect to /now and
+  // /channels), so they're no longer listed.
   const entries: MetadataRoute.Sitemap = [
     { url: baseUrl, lastModified: now, changeFrequency: 'daily', priority: 1 },
-    { url: `${baseUrl}/trending`, lastModified: now, changeFrequency: 'hourly', priority: 0.9 },
-    {
-      url: `${baseUrl}/trending/archive`,
-      lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.6,
-    },
+    { url: `${baseUrl}/now`, lastModified: now, changeFrequency: 'hourly', priority: 0.9 },
+    { url: `${baseUrl}/privacy`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
   ]
-  for (const slug of FILTER_SLUGS) {
-    entries.push({
-      url: `${baseUrl}/trending/${slug}`,
-      lastModified: now,
-      changeFrequency: 'hourly',
-      priority: 0.8,
-    })
-  }
-
-  // /leaderboard — the Discovery leaderboard hub (week, the default window)
-  // plus the three non-default window paths. Renders fine with an empty
-  // board, so unconditional like the other static hubs above.
-  entries.push({
-    url: `${baseUrl}/leaderboard`,
-    lastModified: now,
-    changeFrequency: 'weekly',
-    priority: 0.6,
-  })
-  entries.push({
-    url: `${baseUrl}/privacy`,
-    lastModified: now,
-    changeFrequency: 'yearly',
-    priority: 0.3,
-  })
-  for (const w of RANK_WINDOWS) {
-    if (w.id === 'week') continue // already the bare /leaderboard above
-    entries.push({
-      url: `${baseUrl}${windowToPath(w.id)}`,
-      lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.6,
-    })
-  }
 
   // All database-derived URLs depend on moderation. If either moderation
   // table is unreadable, emit only the unconditional static hubs rather than
@@ -130,13 +84,27 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   // Public tag-collection pages (`/t/{user}/{tag}`) plus the bare curator
   // profile (`/t/{user}`) for every distinct username behind at least one
-  // public tag. Private tags are excluded.
+  // public tag. Private tags, and public ones holding only private saves, are excluded.
   try {
     const publicShares = db
       .select({ tag: tagShares.tag, username: users.username, userId: users.id })
       .from(tagShares)
       .innerJoin(users, eq(tagShares.userId, users.id))
-      .where(eq(tagShares.isPublic, true))
+      .where(
+        and(
+          eq(tagShares.isPublic, true),
+          // Private saves never show on a public channel, so one made only of
+          // them is left out (no tagged saves at all keeps the old behaviour).
+          sql`(NOT EXISTS (
+            SELECT 1 FROM bookmark_tags bt
+            WHERE bt.user_id = ${tagShares.userId} AND bt.tag = ${tagShares.tag}
+          ) OR EXISTS (
+            SELECT 1 FROM bookmark_tags bt
+            JOIN bookmarks b ON b.user_id = bt.user_id AND b.platform = bt.platform AND b.id = bt.bookmark_id
+            WHERE bt.user_id = ${tagShares.userId} AND bt.tag = ${tagShares.tag} AND b.is_private = 0
+          ))`,
+        ),
+      )
       .all()
     const curators = new Set<string>()
     for (const share of publicShares) {
@@ -184,8 +152,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
           END`,
         })
         .from(bookmarks)
-        .leftJoin(userBans, eq(userBans.userId, bookmarks.userId))
-        .where(and(eq(bookmarks.platform, platform), isNull(userBans.userId)))
+        // Visible saves only: a post kept just for someone never reaches the sitemap.
+        .where(and(eq(bookmarks.platform, platform), visibleSaveFilter))
         .groupBy(bookmarks.id)
         .orderBy(desc(sql`max(${bookmarks.processedAt})`))
         .limit(SOURCE_CAP)
@@ -277,33 +245,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }
   } catch (error) {
     console.error('Sitemap: failed to build author hub URLs:', error)
-  }
-
-  // Trending archive weeks: one URL per COMPLETED ISO week present in the
-  // activity log (the current in-progress week isn't archived yet — it's
-  // still live at /trending). Archived weeks are historical and immutable, so
-  // they get no lastModified and a 'yearly' changeFrequency. (The archive hub
-  // itself is pushed unconditionally above, alongside the other static hubs.)
-  try {
-    const days = db
-      .selectDistinct({ day: sql<string>`date(${activity.createdAt})` })
-      .from(activity)
-      .leftJoin(userBans, eq(userBans.userId, activity.userId))
-      .where(and(eq(activity.hidden, 0), isNull(userBans.userId)))
-      .all()
-    const weeks = completedWeekSlugs(
-      days.map((d) => d.day).filter((d): d is string => !!d),
-      now,
-    )
-    for (const week of weeks) {
-      entries.push({
-        url: `${baseUrl}/trending/archive/${week}`,
-        changeFrequency: 'yearly',
-        priority: 0.6,
-      })
-    }
-  } catch (error) {
-    console.error('Sitemap: failed to query trending archive weeks:', error)
   }
 
   if (entries.length > URL_CAP) {

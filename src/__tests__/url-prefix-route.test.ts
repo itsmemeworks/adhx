@@ -1,5 +1,5 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 
 const moderationMocks = vi.hoisted(() => ({
   readPostModeration: vi.fn(),
@@ -146,6 +146,12 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
   })
 
   describe('Metadata generation', () => {
+    // The page pulls in the whole theater; its first import can take longer
+    // than a test's 5 s budget on a busy machine, so load it once up front.
+    beforeAll(async () => {
+      await import('@/app/[username]/status/[id]/page')
+    }, 60_000)
+
     it('returns fallback metadata for invalid username', async () => {
       const { generateMetadata } = await import('@/app/[username]/status/[id]/page')
 
@@ -153,8 +159,10 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         params: Promise.resolve({ username: 'invalid-user', id: '123' }),
       })
 
-      expect(metadata.title).toBe('ADHX - Save it. Lose it. Find it.')
-      expect(metadata.description).toBe('For people who bookmark everything and read nothing.')
+      expect(metadata.title).toBe('ADHX - Your friends have better taste than the algorithm.')
+      expect(metadata.description).toBe(
+        'Every app wants your attention. ADHX just wants your friends’ opinions.',
+      )
     })
 
     it('returns fallback metadata for invalid tweet ID', async () => {
@@ -164,7 +172,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         params: Promise.resolve({ username: 'validuser', id: 'not-numeric' }),
       })
 
-      expect(metadata.title).toBe('ADHX - Save it. Lose it. Find it.')
+      expect(metadata.title).toBe('ADHX - Your friends have better taste than the algorithm.')
     })
 
     it('returns a minimal noindex tombstone when FxTwitter cannot resolve the tweet (deleted/private/suspended)', async () => {
@@ -323,7 +331,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       expect(result).not.toBeNull()
     })
 
-    it('renders the tombstone theater without starting upstream resolution when moderation is unavailable', async () => {
+    it('renders the removed-post page without starting upstream resolution when moderation is unavailable', async () => {
       const { fetchTweetData } = await import('@/lib/media/fxembed')
       moderationMocks.readPostModeration.mockReturnValueOnce({
         ok: false,
@@ -337,7 +345,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const element = result as React.ReactElement<any>
 
-      expect(element.props.sharedUnavailable).toBe(true)
+      expect(element.props.unavailable).toBe(true)
       expect(element.props.sharedResolve).toBeUndefined()
       expect(fetchTweetData).not.toHaveBeenCalled()
     })

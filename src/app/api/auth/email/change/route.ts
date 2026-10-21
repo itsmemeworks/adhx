@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api/with-auth'
 import { createLoginToken, hasRecentLoginToken, invalidateLoginToken } from '@/lib/auth/account'
-import { sendMagicLinkEmail } from '@/lib/email/magic-link'
+import { sendMagicLinkEmail, signInDelivery } from '@/lib/email/magic-link'
+import { loginTokenTtlMs } from '@/lib/auth/login-token-policy'
 import { isValidEmail } from '@/lib/utils/email'
 import { db } from '@/lib/db'
 import { userIdentities } from '@/lib/db/schema'
@@ -40,7 +41,12 @@ export const POST = withAuth(async (req: NextRequest, userId: string) => {
     )
   }
 
-  const token = await createLoginToken({ email, intent: 'change', userId })
+  const token = await createLoginToken({
+    email,
+    intent: 'change',
+    userId,
+    ttlMs: loginTokenTtlMs(signInDelivery()),
+  })
   const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const url = new URL('/api/auth/email/callback', base)
   url.searchParams.set('token', token)

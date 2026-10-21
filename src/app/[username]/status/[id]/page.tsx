@@ -7,7 +7,6 @@ import {
   buildTweetSeoDescription,
   buildTweetOgDescription,
 } from '@/lib/utils/tweet-metadata'
-import { TheaterShell } from '@/components/theater/TheaterShell'
 import { buildSharedSeed, stubTweetTheaterItem } from '@/lib/theater/shared-seed'
 import { getCachedTweet, resolveTweetShared } from '@/lib/theater/resolve-shared-preview'
 import { SharedPreviewPage, MODERATED_PAGE_METADATA } from '@/lib/theater/shared-preview'
@@ -36,16 +35,7 @@ export default async function QuickAddPage({ params }: Props) {
   const { seed } = await buildSharedSeed(stub)
 
   if (unavailable) {
-    return (
-      <TheaterShell
-        seed={seed}
-        mode="shared"
-        sharedItem={stub}
-        sharedUnavailable
-        sharedUnavailableReason="hidden"
-        authed={!!userId}
-      />
-    )
+    return <SharedPreviewPage seed={seed} sharedItem={stub} authed={false} unavailable />
   }
 
   // Do not await FxTwitter / OG here — chrome paints on the stub, then
@@ -65,8 +55,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!/^\w{1,15}$/.test(username) || !/^\d+$/.test(id)) {
     return {
-      title: 'ADHX - Save it. Lose it. Find it.',
-      description: 'For people who bookmark everything and read nothing.',
+      title: 'ADHX - Your friends have better taste than the algorithm.',
+      description: 'Every app wants your attention. ADHX just wants your friends’ opinions.',
     }
   }
 

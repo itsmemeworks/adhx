@@ -13,7 +13,13 @@ const TIKTOK =
   /(?:https?:\/\/)?(?:www\.|vm\.|m\.)?tiktok\.com\/@[A-Za-z0-9._]{1,30}\/video\/\d{6,25}/i
 const TIKTOK_SHORT =
   /https?:\/\/(?:(?:vm|vt)\.tiktok\.com\/[A-Za-z0-9]+|(?:www\.)?tiktok\.com\/t\/[A-Za-z0-9]+)/i
-const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/
+/**
+ * The other networks ADHX keeps (YouTube, Facebook, Reddit, LinkedIn, Vimeo,
+ * SoundCloud, Pinterest, Twitch, Threads, Imgur, Bluesky). The app works out
+ * whether the page is one post; the extension only checks the site.
+ */
+const OTHER_NETWORKS =
+  /^https?:\/\/(?:[a-z0-9-]+\.)*(?:youtube\.com|youtu\.be|facebook\.com|fb\.watch|reddit\.com|redd\.it|linkedin\.com|vimeo\.com|soundcloud\.com|pinterest\.[a-z.]{2,6}|pin\.it|twitch\.tv|threads\.(?:net|com)|imgur\.com|bsky\.app)\/\S+/i
 
 export const DEFAULT_APP_ORIGIN = 'https://adhx.com'
 
@@ -21,10 +27,13 @@ export function isSupportedShareUrl(raw: string): boolean {
   if (/\s/.test(raw.trim())) return false
   const url = normalizeHttpUrl(raw)
   if (!url) return false
-  if (TWITTER.test(url) || INSTAGRAM.test(url) || TIKTOK.test(url) || TIKTOK_SHORT.test(url)) {
-    return true
-  }
-  return extractYouTubeId(url) !== null
+  return (
+    TWITTER.test(url) ||
+    INSTAGRAM.test(url) ||
+    TIKTOK.test(url) ||
+    TIKTOK_SHORT.test(url) ||
+    OTHER_NETWORKS.test(url)
+  )
 }
 
 /** First supported http(s) URL across tab / link / selected text. */
@@ -56,17 +65,4 @@ function normalizeHttpUrl(raw: string): string | null {
   if (/^\/\//.test(trimmed)) return null
   if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) return null
   return `https://${trimmed}`
-}
-
-function extractYouTubeId(input: string): string | null {
-  let parsed: URL
-  try {
-    parsed = new URL(input.startsWith('http') ? input : `https://${input}`)
-  } catch {
-    return null
-  }
-  const host = parsed.hostname.replace(/^www\.|^m\./, '')
-  if (host !== 'youtube.com') return null
-  const path = parsed.pathname.match(/^\/shorts\/([A-Za-z0-9_-]{11})(?:\/|$)/)
-  return path && YOUTUBE_ID.test(path[1]) ? path[1] : null
 }

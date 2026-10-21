@@ -1,5 +1,107 @@
 # Changelog
 
+## [2.3.0](https://github.com/itsmemeworks/adhx/compare/v2.2.0...v2.3.0) (2026-10-21)
+
+
+### Features
+
+* **android:** change your picture, invites, email sign-in and the reactions feed without the web ([#599](https://github.com/itsmemeworks/adhx/issues/599)) ([5f56a38](https://github.com/itsmemeworks/adhx/commit/5f56a3839009bade351b5d90a3a75f19ed3bf304))
+* **android:** reactions on every post, landscape for watching, full articles and the original-post button ([#596](https://github.com/itsmemeworks/adhx/issues/596)) ([c3d6e8a](https://github.com/itsmemeworks/adhx/commit/c3d6e8ae78d63ab7102a611c4531a2b711628001))
+* **apps:** frosted sheets, landscape for watching, full articles and the build's version ([#592](https://github.com/itsmemeworks/adhx/issues/592)) ([cabf5c5](https://github.com/itsmemeworks/adhx/commit/cabf5c56c48937a7a9e7e42b04c743d3b037f4c0))
+* **ios:** change your picture, invites, email sign-in and reactions feed, nothing opening the web ([#598](https://github.com/itsmemeworks/adhx/issues/598)) ([c786402](https://github.com/itsmemeworks/adhx/commit/c786402ead767c60cbb072889964ff8dd96127e0))
+* **ios:** react on every post and replay what people said ([#590](https://github.com/itsmemeworks/adhx/issues/590)) ([7c38743](https://github.com/itsmemeworks/adhx/commit/7c387438d655e22173012f8cd2c6390f9c9fc651))
+* **ios:** remember sound and fit for every video ([#586](https://github.com/itsmemeworks/adhx/issues/586)) ([8161349](https://github.com/itsmemeworks/adhx/commit/8161349c35f3ed9a7ee649c15adefb08efcacdc9))
+* **ios:** the network button opens the original post, and toasts take the pill's place ([#594](https://github.com/itsmemeworks/adhx/issues/594)) ([89dee0b](https://github.com/itsmemeworks/adhx/commit/89dee0b44345989bcd85e2efc5031677f5f3fc28))
+* keep reactions on every post and replay them ([#589](https://github.com/itsmemeworks/adhx/issues/589)) ([bc657ab](https://github.com/itsmemeworks/adhx/commit/bc657ab168a1c3c85935c0c9824ae28cc13ce36f))
+* phone routes so the apps never need the web, and a reactions feed ([#597](https://github.com/itsmemeworks/adhx/issues/597)) ([d1eece5](https://github.com/itsmemeworks/adhx/commit/d1eece57846558e9ceb9d8d0aef0c67dc58b12f6))
+
+
+### Bug Fixes
+
+* **android:** drop the header row from the connected screen ([#581](https://github.com/itsmemeworks/adhx/issues/581)) ([85ce6f5](https://github.com/itsmemeworks/adhx/commit/85ce6f5f1cb158940908a7ff4b328be9e49f8796))
+* **android:** fit and dock, logo bylines, tappable links, hold to hide, photo timer ([#591](https://github.com/itsmemeworks/adhx/issues/591)) ([21b1455](https://github.com/itsmemeworks/adhx/commit/21b1455d6f2f19275612d3311799723bc6b51f8d))
+* **android:** include you in the connected faces row ([#582](https://github.com/itsmemeworks/adhx/issues/582)) ([0d47fa5](https://github.com/itsmemeworks/adhx/commit/0d47fa53b43b494ceeccee80dfb662bd27494b3d))
+* **android:** use the one-row header on every home screen ([#580](https://github.com/itsmemeworks/adhx/issues/580)) ([e51efef](https://github.com/itsmemeworks/adhx/commit/e51efef1c611956fbd6a44ddc3f52f7e1d64b302))
+* **apps:** keep posts sent to you past the phone's kind filter ([#579](https://github.com/itsmemeworks/adhx/issues/579)) ([344e27c](https://github.com/itsmemeworks/adhx/commit/344e27c7ab7363bfd8fd8dad9eb8e6aafc205968))
+* **apps:** stop the why chip repeating the byline and show your face on reactions ([#587](https://github.com/itsmemeworks/adhx/issues/587)) ([6e1d997](https://github.com/itsmemeworks/adhx/commit/6e1d9979f0bd6d4b4e940aa89de2be00e1489233))
+* **ios:** hold to hide, photo timer, logo bylines, tappable links, words tiles and send via whatsapp ([#588](https://github.com/itsmemeworks/adhx/issues/588)) ([d2c97df](https://github.com/itsmemeworks/adhx/commit/d2c97df5fa816c4d5d17df31680e387c0c2afd1d))
+* **ios:** let a swipe move past a single photo ([#577](https://github.com/itsmemeworks/adhx/issues/577)) ([be2733b](https://github.com/itsmemeworks/adhx/commit/be2733bb360e79f53fe02a6a8350168d218213b7))
+* match moment titles to the boards on phone web, iphone and android ([#583](https://github.com/itsmemeworks/adhx/issues/583)) ([1c69725](https://github.com/itsmemeworks/adhx/commit/1c697258ad99f3148aa01d7889a79b8e06e7a50c))
+* **web:** keep the right now lead card its size on a busy server ([#584](https://github.com/itsmemeworks/adhx/issues/584)) ([a676c14](https://github.com/itsmemeworks/adhx/commit/a676c14c85a38b3f17297462166e1e9bc6595888))
+
+## [2.2.0](https://github.com/itsmemeworks/adhx/compare/v2.1.2...v2.2.0) (2026-10-20)
+
+
+### Features
+
+* **admin:** the new admin area ([#571](https://github.com/itsmemeworks/adhx/issues/571)) ([9b94762](https://github.com/itsmemeworks/adhx/commit/9b94762109159c9960eb45da6d8ae4383f3cb94d))
+* curate generated channels with optional typesafe images ([#570](https://github.com/itsmemeworks/adhx/issues/570)) ([75b32f7](https://github.com/itsmemeworks/adhx/commit/75b32f7f1e6b852f7db06b14bafcddc826597b17))
+* move app strings to the new voice ([#559](https://github.com/itsmemeworks/adhx/issues/559)) ([3ede6e5](https://github.com/itsmemeworks/adhx/commit/3ede6e555a41d92204501082c8ba624fe61eba32))
+* **site:** the new adhx.com for the friends feed ([#563](https://github.com/itsmemeworks/adhx/issues/563)) ([085c196](https://github.com/itsmemeworks/adhx/commit/085c196b237a24eb3ffff83ba51e60d7ff4e4d6d))
+* the friends feed ([#562](https://github.com/itsmemeworks/adhx/issues/562)) ([99e6850](https://github.com/itsmemeworks/adhx/commit/99e685000120c17a5a746e895c2348a04029f558))
+
+
+### Bug Fixes
+
+* **android:** match the phone boards in a final parity pass ([#574](https://github.com/itsmemeworks/adhx/issues/574)) ([14ac279](https://github.com/itsmemeworks/adhx/commit/14ac2797cee64561aea0a70d35c48951ca35390c))
+* **app:** show kept posters in shared lately and on their way ([#575](https://github.com/itsmemeworks/adhx/issues/575)) ([59e841a](https://github.com/itsmemeworks/adhx/commit/59e841a0eaa8007995775c2a0cc804713a17bc81))
+* **feed:** let a post sent to you skip the kind filter ([#576](https://github.com/itsmemeworks/adhx/issues/576)) ([8eeffc8](https://github.com/itsmemeworks/adhx/commit/8eeffc8b3ee443f169b2a2a478e50dff504c5e15))
+* **ios:** match the phone boards in a final parity pass ([#572](https://github.com/itsmemeworks/adhx/issues/572)) ([b56fb8a](https://github.com/itsmemeworks/adhx/commit/b56fb8af0975a97b2b170d13908904b848691e29))
+* **privacy:** close the just for me gaps ([#569](https://github.com/itsmemeworks/adhx/issues/569)) ([07e1a70](https://github.com/itsmemeworks/adhx/commit/07e1a70eb2537e86c8d49ab301dd390323483fd0))
+
+
+### Performance Improvements
+
+* reduce mac model memory and benchmark video processing ([#568](https://github.com/itsmemeworks/adhx/issues/568)) ([c147c44](https://github.com/itsmemeworks/adhx/commit/c147c4445948db945f5b35b422d6f2baff8278f8))
+
+## [2.1.2](https://github.com/itsmemeworks/adhx/compare/v2.1.1...v2.1.2) (2026-10-19)
+
+
+### Bug Fixes
+
+* protect sign-in links from previews and extend admin expiry ([#556](https://github.com/itsmemeworks/adhx/issues/556)) ([44ceb6d](https://github.com/itsmemeworks/adhx/commit/44ceb6d1361671808e7a36b04d02b1894c1f4c80))
+
+## [2.1.1](https://github.com/itsmemeworks/adhx/compare/v2.1.0...v2.1.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* avoid background throttling in mac worker ([#553](https://github.com/itsmemeworks/adhx/issues/553)) ([a722aa7](https://github.com/itsmemeworks/adhx/commit/a722aa74c01d497e4af08aeb96f06cc0964b7060))
+* match grouped root release components ([#552](https://github.com/itsmemeworks/adhx/issues/552)) ([5e407a4](https://github.com/itsmemeworks/adhx/commit/5e407a49c4af4b3f018b90bd72a34347603e122a))
+
+## [2.1.0](https://github.com/itsmemeworks/adhx/compare/v2.0.1...v2.1.0) (2026-10-19)
+
+
+### Features
+
+* offload video processing to a native mac worker ([#551](https://github.com/itsmemeworks/adhx/issues/551)) ([76fb61b](https://github.com/itsmemeworks/adhx/commit/76fb61b82d373778d0b83705d9a8f6abe364d899))
+* save phone shares in the background and show posts once ready ([#550](https://github.com/itsmemeworks/adhx/issues/550)) ([b9c5ae3](https://github.com/itsmemeworks/adhx/commit/b9c5ae3b27828e856cdf5b04d13bda190cd5895d))
+
+
+### Bug Fixes
+
+* keep paging x bookmarks and tidy the ios app from a live review ([#545](https://github.com/itsmemeworks/adhx/issues/545)) ([455a079](https://github.com/itsmemeworks/adhx/commit/455a07991826d329d8d2d32cc96f33077a3bde06))
+* publish container images only for releases ([#548](https://github.com/itsmemeworks/adhx/issues/548)) ([065d914](https://github.com/itsmemeworks/adhx/commit/065d914d8a8ea49a228f5542d14a72c50df1135f))
+* publish main images independently of releases ([#544](https://github.com/itsmemeworks/adhx/issues/544)) ([50290a7](https://github.com/itsmemeworks/adhx/commit/50290a7659bc88ae05fb7eaa6b17cf98971dc08e))
+
+## [2.0.1](https://github.com/itsmemeworks/adhx/compare/v2.0.0...v2.0.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* improve first-save playback and nas setup ([#542](https://github.com/itsmemeworks/adhx/issues/542)) ([c95eb8a](https://github.com/itsmemeworks/adhx/commit/c95eb8a2df572b9de7077d7dd87d0cef5abdc5b5))
+
+## [2.0.0](https://github.com/itsmemeworks/adhx/compare/v1.73.0...v2.0.0) (2026-10-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* the old Shorts-only support and its saved Shorts are removed (Shorts now save as YouTube posts), and the previous look and its next_ui flag are gone.
+
+### Features
+
+* self-hosted adhx with search by meaning, kept media and phone apps ([#538](https://github.com/itsmemeworks/adhx/issues/538)) ([0b834b4](https://github.com/itsmemeworks/adhx/commit/0b834b496351bf2d73839b03a5a72490b93ce995))
+
 ## [1.73.0](https://github.com/itsmemeworks/adhx/compare/v1.72.0...v1.73.0) (2026-09-15)
 
 

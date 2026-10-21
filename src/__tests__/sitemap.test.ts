@@ -22,10 +22,7 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-// homepage + /trending + /trending/archive + 5 per-lens hubs (latest/videos/photos/text/articles)
-// + /leaderboard + 3 non-default leaderboard windows (today/month/all-time)
-// + /privacy
-const HUB_COUNT = 13
+const HUB_COUNT = 3 // home, /now, /privacy
 
 function seedBannedUser(userId: string, username: string) {
   testInstance.db.insert(schema.users).values({ id: userId, username }).run()
@@ -49,44 +46,20 @@ describe('Dynamic Sitemap', () => {
     const { default: sitemap } = await import('@/app/sitemap')
     const entries = sitemap()
 
-    expect(entries).toHaveLength(HUB_COUNT)
-    expect(entries[0].url).toBe('https://adhx.com')
+    expect(entries.map((e) => e.url)).toEqual([
+      'https://adhx.com',
+      'https://adhx.com/now',
+      'https://adhx.com/privacy',
+    ])
     expect(entries[0].priority).toBe(1)
-    expect(entries.find((e) => e.url === 'https://adhx.com/trending')).toBeDefined()
-    expect(entries.find((e) => e.url === 'https://adhx.com/trending/videos')).toBeDefined()
-    expect(entries.find((e) => e.url === 'https://adhx.com/leaderboard')).toBeDefined()
-    expect(entries.find((e) => e.url === 'https://adhx.com/privacy')).toBeDefined()
-    // No tag pages
-    expect(entries.find((e) => e.url.includes('/t/'))).toBeUndefined()
   })
 
-  it('includes the homepage + cross-network + per-lens trending hubs', async () => {
+  it('no longer lists the retired /trending, /leaderboard and /collections pages', async () => {
     const { default: sitemap } = await import('@/app/sitemap')
-    const entries = sitemap()
-
-    expect(entries.find((e) => e.url === 'https://adhx.com')).toBeDefined()
-    expect(entries.find((e) => e.url === 'https://adhx.com/trending')).toBeDefined()
-    expect(entries.find((e) => e.url === 'https://adhx.com/trending/archive')).toBeDefined()
-    // "latest" is the bare /trending hub now; "popular" is the ranked sub-path.
-    for (const slug of ['popular', 'videos', 'photos', 'text', 'articles']) {
-      expect(entries.find((e) => e.url === `https://adhx.com/trending/${slug}`)).toBeDefined()
+    const urls = sitemap().map((e) => e.url)
+    for (const retired of ['/trending', '/leaderboard', '/collections', '/live']) {
+      expect(urls.some((u) => u.startsWith(`https://adhx.com${retired}`))).toBe(false)
     }
-  })
-
-  it('includes the /leaderboard hub + its non-default window paths', async () => {
-    const { default: sitemap } = await import('@/app/sitemap')
-    const entries = sitemap()
-
-    // "week" is the bare /leaderboard hub now (the default window); the
-    // other three windows get their own tidy path.
-    expect(entries.find((e) => e.url === 'https://adhx.com/leaderboard')).toBeDefined()
-    for (const slug of ['today', 'month', 'all-time']) {
-      expect(entries.find((e) => e.url === `https://adhx.com/leaderboard/${slug}`)).toBeDefined()
-    }
-    // "week" itself must not also get its own sub-path (it's the bare hub).
-    expect(entries.find((e) => e.url === 'https://adhx.com/leaderboard/week')).toBeUndefined()
-    // The old /collections URLs must NOT appear in the sitemap going forward.
-    expect(entries.find((e) => e.url === 'https://adhx.com/collections')).toBeUndefined()
   })
 
   it('includes tag page URLs for public tags', async () => {
@@ -675,51 +648,6 @@ describe('Dynamic Sitemap', () => {
       const entries = sitemap()
 
       expect(entries.filter((e) => e.url === 'https://adhx.com/prolific')).toHaveLength(1)
-    })
-  })
-
-  describe('trending archive', () => {
-    it('always includes the archive hub', async () => {
-      const { default: sitemap } = await import('@/app/sitemap')
-      const entries = sitemap()
-
-      const hub = entries.find((e) => e.url === 'https://adhx.com/trending/archive')
-      expect(hub).toBeDefined()
-      expect(hub!.priority).toBe(0.6)
-    })
-
-    it('includes a URL for a completed week present in activity, excluding the current week', async () => {
-      const now = new Date()
-      const lastWeek = new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000)
-
-      testInstance.db
-        .insert(schema.activity)
-        .values([
-          {
-            action: 'preview',
-            platform: 'twitter',
-            bookmarkId: 'archive-old',
-            author: 'archiveauthor',
-            url: 'https://x.com/archiveauthor/status/archive-old',
-            createdAt: lastWeek.toISOString(),
-          },
-          {
-            action: 'preview',
-            platform: 'twitter',
-            bookmarkId: 'archive-current',
-            author: 'archiveauthor',
-            url: 'https://x.com/archiveauthor/status/archive-current',
-            createdAt: now.toISOString(),
-          },
-        ])
-        .run()
-
-      const { default: sitemap } = await import('@/app/sitemap')
-      const entries = sitemap()
-
-      const archiveEntries = entries.filter((e) => e.url.includes('/trending/archive/20'))
-      expect(archiveEntries.length).toBeGreaterThanOrEqual(1)
-      expect(archiveEntries.every((e) => e.changeFrequency === 'yearly')).toBe(true)
     })
   })
 

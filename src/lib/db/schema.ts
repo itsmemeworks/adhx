@@ -1,4 +1,12 @@
-import { sqliteTable, text, integer, primaryKey, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import {
+  sqliteTable,
+  text,
+  integer,
+  blob,
+  primaryKey,
+  index,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core'
 import { relations, sql } from 'drizzle-orm'
 
 // ===========================================
@@ -6,9 +14,9 @@ import { relations, sql } from 'drizzle-orm'
 // ===========================================
 
 // Main bookmarks table - PK: (userId, platform, id)
-// `platform` is one of 'twitter' | 'instagram' | 'tiktok' | 'youtube' — added so
-// a TikTok video id (numeric, 19 digits) can't collide with a tweet id (also
-// numeric, 18-19 digits), and YouTube's 11-char id stays in its own namespace.
+// `platform` is 'twitter' | 'instagram' | 'tiktok' or one of the link networks
+// in src/lib/platform/networks.ts — so a TikTok video id (numeric, 19 digits)
+// can't collide with a tweet id (also numeric, 18-19 digits).
 // All bookmark-derived tables (tags/media/links/archived_posts)
 // carry platform too so the foreign-key tuple matches. It's a free-text column
 // (no enum/migration needed to add a platform).
@@ -17,7 +25,7 @@ export const bookmarks = sqliteTable(
   {
     id: text('id').notNull(), // Source-native ID (tweet id, reel shortcode, tiktok video id)
     userId: text('user_id').notNull(), // Owner of the bookmark
-    platform: text('platform').notNull().default('twitter'), // 'twitter' | 'instagram' | 'tiktok' | 'youtube'
+    platform: text('platform').notNull().default('twitter'), // 'twitter' | 'instagram' | 'tiktok'
     author: text('author').notNull(),
     authorName: text('author_name'),
     authorProfileImageUrl: text('author_profile_image_url'),
@@ -41,6 +49,15 @@ export const bookmarks = sqliteTable(
 
     // How this bookmark was added: 'sync', 'manual', 'url_prefix', 'quoted'
     source: text('source').default('sync'),
+
+    // Just for me: kept, searchable and playable by its owner, but no other
+    // member sees it, counts it or is told who saved it.
+    isPrivate: integer('is_private', { mode: 'boolean' }).notNull().default(false),
+
+    // A few words for your people ("making this Sunday"), shown next to your
+    // face to members only, never to strangers. Cleaned and capped at 140
+    // characters (`cleanNote`); null when there's none.
+    note: text('note'),
 
     // Original JSON for debugging
     rawJson: text('raw_json'),
@@ -201,6 +218,138 @@ export const archivedPosts = sqliteTable(
   }),
 )
 
+// Posts a member has seen in the feed (`post_views`): on stage for 2s, or
+// skipped. New (`/api/feed/blend?mode=new`) plays only posts without a row;
+// the blend also reads it for "close to you". PK: (userId, platform, postId).
+// User-linked (account guard; cleared with the account). Rows older than 180
+// days are pruned at migrate.
+export const postViews = sqliteTable(
+  'post_views',
+  {
+    userId: text('user_id').notNull(),
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    seenAt: text('seen_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.platform, table.postId] }),
+    seenAtIdx: index('post_views_seen_at_idx').on(table.seenAt),
+  }),
+)
+
+// "Send straight to your people" (`post_sends`): one member sent a post to
+// another. The recipient sees it first in New ("Pete sent you this") until
+// `seen_at` (set when they see the post). PK: (fromUserId, toUserId,
+// platform, postId). Both user columns are account-guarded; rows go with
+// either account. DDL: `src/lib/sends/schema-sql.ts`.
+export const postSends = sqliteTable(
+  'post_sends',
+  {
+    fromUserId: text('from_user_id').notNull(),
+    toUserId: text('to_user_id').notNull(),
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    note: text('note'),
+    createdAt: text('created_at').notNull(),
+    seenAt: text('seen_at'),
+  },
+  (table) => ({
+    pk: primaryKey({
+      columns: [table.fromUserId, table.toUserId, table.platform, table.postId],
+    }),
+    toIdx: index('post_sends_to_idx').on(table.toUserId, table.seenAt),
+  }),
+)
+
+// "Tell me when it's live": a member's bell on a forming group (an engine
+// id, carried across regroups and merges by `src/lib/moments/alerts.ts`).
+export const momentAlertSubs = sqliteTable(
+  'moment_alert_subs',
+  {
+    userId: text('user_id').notNull(),
+    formingId: text('forming_id').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.formingId] }),
+    formingIdx: index('moment_alert_subs_forming_idx').on(table.formingId),
+  }),
+)
+
+// One alert per subscriber when their forming group goes live. Unseen ones
+// are listed for 24 hours (`GET /api/moments/alerts`, `/api/app/alerts`).
+export const momentAlerts = sqliteTable(
+  'moment_alerts',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: text('user_id').notNull(),
+    slug: text('slug').notNull(),
+    title: text('title').notNull(),
+    createdAt: text('created_at').notNull(),
+    seenAt: text('seen_at'),
+  },
+  (table) => ({
+    userIdx: index('moment_alerts_user_idx').on(table.userId, table.createdAt),
+  }),
+)
+
+// Admin counts (DDL in src/lib/admin/schema-sql.ts). Reactions are counted per
+// member, per UTC day, per kind (an emoji's id or 'text'); the words, the post
+// and the moment are never stored.
+export const reactionCounts = sqliteTable(
+  'reaction_counts',
+  {
+    day: text('day').notNull(),
+    userId: text('user_id').notNull(),
+    kind: text('kind').notNull(),
+    count: integer('count').notNull().default(0),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.day, table.userId, table.kind] }),
+    userIdx: index('reaction_counts_user_idx').on(table.userId, table.day),
+  }),
+)
+
+// Reactions kept on posts (`post_reactions`): an emoji or a few words a
+// member left on a post, shown (with names) only to members who can see the
+// post, and replayed when they watch it. Live reactions are kept here too,
+// with the id the room saw. User-linked; rows go with the account.
+// DDL: `src/lib/reactions/schema-sql.ts`.
+export const postReactions = sqliteTable(
+  'post_reactions',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    emoji: text('emoji'),
+    text: text('text'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    postIdx: index('post_reactions_post_idx').on(table.platform, table.postId, table.createdAt),
+    userIdx: index('post_reactions_user_idx').on(table.userId),
+  }),
+)
+
+// One row per live moment that formed. No user ids.
+export const momentLog = sqliteTable(
+  'moment_log',
+  {
+    slug: text('slug').primaryKey(),
+    title: text('title').notNull(),
+    formedAt: text('formed_at').notNull(),
+    tuneIns: integer('tune_ins').notNull().default(0),
+    peakWatching: integer('peak_watching').notNull().default(0),
+    reactions: integer('reactions').notNull().default(0),
+    alerts: integer('alerts').notNull().default(0),
+    alertsOpened: integer('alerts_opened').notNull().default(0),
+  },
+  (table) => ({
+    formedIdx: index('moment_log_formed_idx').on(table.formedAt),
+  }),
+)
+
 // Tag shares - track which tags are shared publicly
 export const tagShares = sqliteTable(
   'tag_shares',
@@ -229,6 +378,180 @@ export const userPreferences = sqliteTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.key] }),
+  }),
+)
+
+// Sign-in links waiting for an admin to hand over (EMAIL_LINKS_TO_ADMIN, for
+// a self-hosted ADHX with no email service). Holds the link itself, so rows
+// live only as long as the admin-held login token (60 minutes) and go once it's used.
+export const adminSignInLinks = sqliteTable('admin_sign_in_links', {
+  tokenHash: text('token_hash').primaryKey(),
+  email: text('email').notNull(),
+  url: text('url').notNull(),
+  intent: text('intent').notNull(),
+  createdAt: text('created_at').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+})
+
+// Kept media: every saved post's files, downloaded once per post (not per
+// saver) into MEDIA_DIR and served by /api/files. See src/lib/keep.
+export const keepSettings = sqliteTable('keep_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+})
+
+// Server-wide settings an admin changes at runtime (who can invite, …).
+// Environment variables only give the first default; see src/lib/settings/server.ts.
+export const serverSettings = sqliteTable('server_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: text('updated_at').notNull(),
+})
+
+/**
+ * Links shared from the phone app, saved in the background: the share sheet
+ * gets an answer at once, and the post appears once it's read and kept.
+ */
+export const phoneSaveQueue = sqliteTable(
+  'phone_save_queue',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    /** Stable per-share phone id; omitted by legacy clients. */
+    requestId: text('request_id'),
+    url: text('url').notNull(),
+    /** waiting · working · saved · failed */
+    status: text('status').notNull(),
+    attempts: integer('attempts').notNull().default(0),
+    nextAttemptAt: text('next_attempt_at'),
+    /** Set once saved. */
+    platform: text('platform'),
+    postId: text('post_id'),
+    alreadySaved: integer('already_saved', { mode: 'boolean' }).notNull().default(false),
+    /** Shared as "Just for me": the save it makes is private. */
+    isPrivate: integer('is_private', { mode: 'boolean' }).notNull().default(false),
+    /** Shared without saying, while the owner had "Just for me by default" on: a new save is private. */
+    defaultPrivate: integer('default_private', { mode: 'boolean' }).notNull().default(false),
+    /** Explicit choice, including false; null preserves repeat-save privacy. */
+    privateChoice: integer('private_choice', { mode: 'boolean' }),
+    /** New saves stay private until the phone acknowledges its intent. */
+    publishPending: integer('publish_pending', { mode: 'boolean' }).notNull().default(false),
+    /** Highest acknowledged phone intent; replay never overrides a later web edit. */
+    privacyIntentVersion: integer('privacy_intent_version').notNull().default(0),
+    /** The note shared with it (cleaned): '' clears an existing note; null leaves it. */
+    note: text('note'),
+    /** Set once failed: a code the apps know, and words fit to show. */
+    errorCode: text('error_code'),
+    error: text('error'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => ({
+    statusIdx: index('phone_save_queue_status_idx').on(table.status, table.nextAttemptAt),
+    userIdx: index('phone_save_queue_user_id_idx').on(table.userId),
+    requestIdx: uniqueIndex('phone_save_queue_request_idx').on(table.userId, table.requestId),
+  }),
+)
+
+export const keepJobs = sqliteTable(
+  'keep_jobs',
+  {
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    /** pending · running · done · failed (retrying) · unavailable (gave up) */
+    status: text('status').notNull(),
+    attempts: integer('attempts').notNull().default(0),
+    nextAttemptAt: text('next_attempt_at'),
+    lastError: text('last_error'),
+    /** Total bytes on disk for this post. */
+    bytes: integer('bytes').notNull().default(0),
+    updatedAt: text('updated_at').notNull(),
+    /** A saver chose "Keep the link only" for a job that gave up: it stops asking for them. */
+    acceptedAt: text('accepted_at'),
+    /**
+     * Last download percent the worker wrote (0–99, in steps), so "Getting it
+     * ready · 62%" survives the in-memory progress. Cleared on each claim.
+     */
+    progress: integer('progress'),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.platform, table.postId] }),
+    statusIdx: index('keep_jobs_status_idx').on(table.status, table.nextAttemptAt),
+  }),
+)
+
+export const keptFiles = sqliteTable(
+  'kept_files',
+  {
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    /** `video-1`, `photo-2`, `audio-1`, `poster` */
+    slot: text('slot').notNull(),
+    /** Path under MEDIA_DIR. */
+    path: text('path').notNull(),
+    mime: text('mime').notNull(),
+    bytes: integer('bytes').notNull(),
+    width: integer('width'),
+    height: integer('height'),
+    durationMs: integer('duration_ms'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.platform, table.postId, table.slot] }),
+  }),
+)
+
+// Personal access keys — read-only search from outside the browser (the adhx
+// skill). Only a SHA-256 of the key is stored; the key itself is shown once.
+export const accessKeys = sqliteTable(
+  'access_keys',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    name: text('name').notNull(),
+    keyHash: text('key_hash').notNull().unique(),
+    /** Last four characters, so people can tell their keys apart. */
+    hint: text('hint').notNull(),
+    createdAt: text('created_at').notNull(),
+    lastUsedAt: text('last_used_at'),
+    /** `search` (the adhx skill: read-only search) or `phone` (the phone app: save + status). */
+    scope: text('scope').notNull().default('search'),
+    /** A phone key's kind of phone, `ios` | `android`, once its requests say (null: not known). */
+    platform: text('platform'),
+  },
+  (table) => ({
+    userIdIdx: index('access_keys_user_id_idx').on(table.userId),
+  }),
+)
+
+/** One-time codes that connect the phone app (Settings → Phone app). */
+export const appPairCodes = sqliteTable('app_pair_codes', {
+  codeHash: text('code_hash').primaryKey(),
+  userId: text('user_id').notNull(),
+  expiresAt: integer('expires_at').notNull(), // epoch ms
+  usedAt: text('used_at'),
+  createdAt: text('created_at').notNull(),
+})
+
+// Invite links (`/invite/<token>`): an admin, or any member with
+// INVITES=members, makes one; the person who opens it picks a name and joins
+// with no email. Only the token's SHA-256 is stored. Single use, 7 days, and
+// revocable; `id` is the public handle for listing and revoking.
+export const invites = sqliteTable(
+  'invites',
+  {
+    id: text('id').primaryKey(),
+    tokenHash: text('token_hash').notNull().unique(),
+    createdBy: text('created_by').notNull(),
+    createdAt: text('created_at').notNull(),
+    expiresAt: integer('expires_at').notNull(), // epoch ms
+    usedBy: text('used_by'),
+    usedAt: text('used_at'),
+    revokedAt: text('revoked_at'),
+    nameHint: text('name_hint'),
+  },
+  (table) => ({
+    createdByIdx: index('invites_created_by_idx').on(table.createdBy),
   }),
 )
 
@@ -415,6 +738,118 @@ export const moderatedPosts = sqliteTable(
   }),
 )
 
+// Understanding pipeline (`src/lib/semantic/`): EmbeddingGemma 2 vectors
+// behind search-by-meaning, plus the durable work queue that produces them.
+// Keyed by the POST, not the saver — only public post content is understood,
+// so one row serves everyone who saved it. Per-user reads always join
+// `bookmarks`. DDL lives in `src/lib/semantic/schema-sql.ts`.
+export const postEmbeddings = sqliteTable(
+  'post_embeddings',
+  {
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    kind: text('kind').notNull(), // 'text' | 'image' | 'video'
+    model: text('model').notNull(),
+    contentHash: text('content_hash').notNull(),
+    dims: integer('dims').notNull().default(0),
+    vector: blob('vector', { mode: 'buffer' }),
+    status: text('status').notNull().default('ok'), // 'ok' | 'none' | 'failed'
+    error: text('error'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.platform, table.postId, table.kind] }),
+    statusIdx: index('post_embeddings_status_idx').on(table.kind, table.status),
+  }),
+)
+
+export const understandingQueue = sqliteTable(
+  'understanding_queue',
+  {
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    kind: text('kind').notNull(),
+    priority: integer('priority').notNull().default(10),
+    attempts: integer('attempts').notNull().default(0),
+    enqueuedAt: text('enqueued_at').notNull(),
+    nextAttemptAt: text('next_attempt_at').notNull(),
+    lastError: text('last_error'),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.platform, table.postId, table.kind] }),
+    nextIdx: index('understanding_queue_next_idx').on(table.nextAttemptAt, table.priority),
+  }),
+)
+
+// Words read out of a post's media (speech, text on screen), keyed by post.
+// DDL lives in `src/lib/semantic/schema-sql.ts`.
+export const postExtractedText = sqliteTable(
+  'post_extracted_text',
+  {
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    kind: text('kind').notNull(), // 'speech' | 'screen'
+    model: text('model').notNull(),
+    contentHash: text('content_hash').notNull(),
+    status: text('status').notNull(), // 'ok' | 'none' | 'failed'
+    text: text('text'),
+    language: text('language'),
+    error: text('error'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.platform, table.postId, table.kind] }),
+  }),
+)
+
+// "Made for you" channels: one user's saves grouped by meaning and named.
+// Derived and private (never shown to anyone else); recomputed when stale.
+// Keeping one turns it into an ordinary tag channel.
+export const autoChannels = sqliteTable(
+  'auto_channels',
+  {
+    userId: text('user_id').notNull(),
+    slug: text('slug').notNull(),
+    name: text('name').notNull(),
+    /** JSON array of `platform:id`, closest to the group's centre first. */
+    postKeys: text('post_keys').notNull(),
+    size: integer('size').notNull(),
+    position: integer('position').notNull(),
+    model: text('model').notNull(),
+    /** The user's save count when computed (staleness check). */
+    savesAtCompute: integer('saves_at_compute').notNull(),
+    computedAt: text('computed_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.slug] }),
+  }),
+)
+
+// "From everyone" channels: the whole server's visible saves (never private,
+// quoted or a banned saver's) grouped by meaning and named, like Made for
+// you. Server-wide and derived: no user_id. `savers` is a JSON object of
+// saver user id -> posts in the channel at compute time; reads re-check every
+// post's visible savers, so a deleted or banned account drops out at once.
+export const groupChannels = sqliteTable('group_channels', {
+  slug: text('slug').primaryKey(),
+  name: text('name').notNull(),
+  size: integer('size').notNull(),
+  /** JSON array of `platform:id`, closest to the group's centre first. */
+  postKeys: text('post_keys').notNull(),
+  savers: text('savers').notNull(),
+  position: integer('position').notNull(),
+  /** Visible saves on the server when computed (staleness check). */
+  savesAtCompute: integer('saves_at_compute').notNull(),
+  computedAt: text('computed_at').notNull(),
+  modelVersion: text('model_version').notNull(),
+})
+
+export type PostEmbedding = typeof postEmbeddings.$inferSelect
+export type PostExtractedText = typeof postExtractedText.$inferSelect
+export type UnderstandingJob = typeof understandingQueue.$inferSelect
+export type AutoChannel = typeof autoChannels.$inferSelect
+export type GroupChannel = typeof groupChannels.$inferSelect
+
 // Banned accounts — session + sign-in treated as signed-out. Public
 // profile / playlist pages 404; leaderboards skip the owner. Data is kept
 // so an unban restores access.
@@ -476,6 +911,17 @@ export const users = sqliteTable('users', {
   // flight cannot recreate an identity or token row afterward.
   xLinkVersion: integer('x_link_version').notNull().default(0),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  // Whether this account may use the server: 'approved' (everyone before
+  // join approvals existed), 'pending' (joined from a member's invite while
+  // "Anyone, I approve" is on, waiting for an admin) or 'declined'. Anything
+  // but approved is signed out everywhere except the waiting page and its
+  // status endpoint (`getCurrentUserId`). See src/lib/auth/approval.ts.
+  approval: text('approval').notNull().default('approved'),
+  // "Not now" on a waiting join: hidden from the admin's queue until then (epoch ms).
+  approvalSnoozedUntil: integer('approval_snoozed_until'),
+  // When the person last used ADHX (a session or phone-key request), written
+  // at most once every 5 minutes (src/lib/people/last-seen.ts). Admins only.
+  lastSeenAt: text('last_seen_at'),
 })
 
 // Linked sign-in identities for a user — X OAuth and/or email magic link.
@@ -486,8 +932,9 @@ export const users = sqliteTable('users', {
 export const userIdentities = sqliteTable(
   'user_identities',
   {
-    provider: text('provider').notNull(), // 'x' | 'email'
-    providerId: text('provider_id').notNull(), // X user id, or lowercased email
+    provider: text('provider').notNull(), // 'x' | 'email' | 'invite'
+    // X user id, lowercased email, or the invite id an account joined with
+    providerId: text('provider_id').notNull(),
     userId: text('user_id').notNull(),
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   },
@@ -514,16 +961,17 @@ export const usernameAliases = sqliteTable('username_aliases', {
 })
 
 // One-time magic-link tokens for email sign-in / email-change confirmation.
-// Only the sha256 hash is stored — the raw token exists only in the emailed
-// URL, so a DB read (or leak) can never produce a usable login token.
+// This table stores only the sha256 hash. Admin delivery also retains the raw
+// link in admin_sign_in_links until use/expiry; protect that table as credentials.
 export const loginTokens = sqliteTable('login_tokens', {
   tokenHash: text('token_hash').primaryKey(),
   email: text('email').notNull(), // lowercased
-  intent: text('intent').notNull(), // 'signin' | 'change'
-  userId: text('user_id'), // set for 'change' — the account confirming a new email
+  intent: text('intent').notNull(), // 'signin' | 'change' | 'phone' (an emailed 6-digit code)
+  userId: text('user_id'), // set for 'change' — the account confirming a new email; for 'phone', the account (null: no such account)
   returnTo: text('return_to'),
   expiresAt: integer('expires_at').notNull(), // epoch ms
   usedAt: text('used_at'),
+  attempts: integer('attempts').notNull().default(0), // wrong 'phone' codes tried
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 })
 
@@ -605,5 +1053,7 @@ export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type UserIdentity = typeof userIdentities.$inferSelect
 export type NewUserIdentity = typeof userIdentities.$inferInsert
+export type Invite = typeof invites.$inferSelect
+export type PostView = typeof postViews.$inferSelect
 export type LoginToken = typeof loginTokens.$inferSelect
 export type NewLoginToken = typeof loginTokens.$inferInsert

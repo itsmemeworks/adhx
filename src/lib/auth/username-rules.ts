@@ -14,6 +14,9 @@
  */
 export const MAX_USERNAME_CHANGES = 2
 
+/** The longest username anyone can claim (the chooser and new accounts alike). */
+export const USERNAME_MAX_LENGTH = 15
+
 /**
  * Public username grammar: lowercase `[a-z0-9_]` (underscore only — hyphens
  * are a TAG character; keeping the two grammars disjoint disambiguates
@@ -27,5 +30,5 @@ export const MAX_USERNAME_CHANGES = 2
 export function sanitizeUsername(raw: string): string {
   const stripped = raw.toLowerCase().replace(/[^a-z0-9_]/g, '')
   const startsAlnum = stripped.replace(/^_+/, '')
-  return startsAlnum.slice(0, 15)
+  return startsAlnum.slice(0, USERNAME_MAX_LENGTH)
 }

@@ -1,0 +1,58 @@
+name: Native apps
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/android/**'
+      - 'apps/ios/**'
+      - '!apps/**/README.md'
+      - 'src/app/api/app/**'
+      - 'scripts/security/check-android.mjs'
+      - '.github/workflows/native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-37.0 build-tools;36.0.0'
+      - name: Build debug app and run regression tests
+        working-directory: apps/android
+        run: ./gradlew --no-daemon --max-workers=2 assembleDebug testDebugUnitTest exportRuntimeDependencies
+      - name: Audit resolved Android runtime libraries
+        run: node scripts/security/check-android.mjs apps/android/app/build/reports/runtime-dependencies.json
+
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Test live queue privacy, playback identity and Unicode handling
+        run: |
+          swiftc apps/ios/Shared/API.swift apps/ios/Shared/FriendsAPI.swift apps/ios/Shared/LiveQueue.swift apps/ios/Tests/LiveReliabilityTests.swift -o "$RUNNER_TEMP/adhx-live-tests"
+          "$RUNNER_TEMP/adhx-live-tests"
+      - name: Test queued privacy restoration and concurrent app-extension history
+        run: |
+          swiftc -D ADHX_HISTORY_TEST apps/ios/Shared/API.swift apps/ios/Shared/FriendsAPI.swift apps/ios/Shared/Network.swift apps/ios/Shared/NetworkPaths.swift apps/ios/Shared/SVGPath.swift apps/ios/Shared/Storage.swift apps/ios/Tests/QueuedPrivacyTests.swift -o "$RUNNER_TEMP/adhx-privacy-tests"
+          "$RUNNER_TEMP/adhx-privacy-tests"
+      - name: Build unsigned app and share extension for the simulator
+        run: >-
+          xcodebuild -project apps/ios/ADHXShare.xcodeproj -scheme "ADHX Share"
+          -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath "$RUNNER_TEMP/adhx-ios" CODE_SIGNING_ALLOWED=NO build

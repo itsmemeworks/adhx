@@ -124,7 +124,10 @@ describe('checkRateLimit', () => {
 })
 
 describe('getClientIp', () => {
-  it('prefers Fly-Client-IP over spoofed forwarding headers', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  it('prefers Fly-Client-IP over spoofed forwarding headers on Fly', () => {
+    vi.stubEnv('FLY_APP_NAME', 'adhx')
     vi.stubEnv('TRUST_PROXY_IP_HEADERS', 'true')
     const request = new Request('https://example.com', {
       headers: {
@@ -134,6 +137,17 @@ describe('getClientIp', () => {
       },
     })
     expect(getClientIp(request)).toBe('203.0.113.10')
+  })
+
+  it('ignores Fly-Client-IP off Fly, where a visitor could send it', () => {
+    vi.stubEnv('FLY_APP_NAME', '')
+    vi.stubEnv('TRUST_PROXY_IP_HEADERS', 'true')
+    const request = new Request('https://example.com', {
+      headers: { 'fly-client-ip': '203.0.113.10', 'x-forwarded-for': '1.2.3.4' },
+    })
+    expect(getClientIp(request)).toBe('1.2.3.4')
+    vi.stubEnv('TRUST_PROXY_IP_HEADERS', '')
+    expect(getClientIp(request)).toBe('unknown')
   })
 
   it('ignores spoofable forwarding headers by default', () => {

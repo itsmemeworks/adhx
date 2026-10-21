@@ -11,9 +11,17 @@ describe('MagicLinkEmail', () => {
     expect(html).toContain('One tap, no password')
     expect(html).toContain('Sign in')
     expect(html).toContain('https://adhx.com/logo-dark.png')
-    expect(html).toContain('Save it. Lose it. Find it.')
+    expect(html).toContain('Your friends have better taste than the algorithm.')
     expect(html).toContain(URL)
     expect(html).toContain('#08070a')
+    // A self-hosted ADHX's mail loads the logo from itself.
+    const own = await render(
+      MagicLinkEmail({
+        url: 'https://adhx.home.example/api/auth/email/callback?token=x',
+        intent: 'signin',
+      }),
+    )
+    expect(own).toContain('https://adhx.home.example/logo-dark.png')
     expect(html).toContain('#201b16')
     expect(html).toContain('#e88a5e')
     expect(html).not.toContain('<script')
@@ -38,6 +46,24 @@ describe('MagicLinkEmail', () => {
     const text = toPlainText(html)
     expect(text).toMatch(/SIGN IN TO ADHX/i)
     expect(text).toContain(URL)
+    expect(text).toContain('15 minutes')
+  })
+})
+
+describe('SignInCodeEmail', () => {
+  it('shows the phone code in the same dark card, with no link to open', async () => {
+    const { SignInCodeEmail } = await import('@/emails/sign-in-code')
+    const html = await render(
+      SignInCodeEmail({ code: '482913', origin: 'https://adhx.home.example' }),
+    )
+    expect(html).toContain('Your sign-in code')
+    expect(html).toContain('482913')
+    expect(html).toContain('https://adhx.home.example/logo-dark.png')
+    expect(html).toContain('#201b16')
+    expect(html).not.toContain('<script')
+    expect(html).not.toContain('/api/auth/email/callback')
+    const text = toPlainText(html)
+    expect(text).toContain('482913')
     expect(text).toContain('15 minutes')
   })
 })

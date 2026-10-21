@@ -46,7 +46,23 @@ function requireModerationRead<T>(result: ModerationReadResult<T>): T {
 }
 
 export type AdminAuditAction =
-  'hide_post' | 'unhide_post' | 'hide_playlist' | 'unhide_playlist' | 'ban_user' | 'unban_user'
+  | 'hide_post'
+  | 'unhide_post'
+  | 'hide_playlist'
+  | 'unhide_playlist'
+  | 'ban_user'
+  | 'unban_user'
+  | 'approve_join'
+  | 'decline_join'
+  | 'set_invite_mode'
+  | 'clear_note'
+  | 'make_admin'
+  | 'remove_admin'
+  | 'remove_phone'
+  | 'pause_work'
+  | 'resume_work'
+  | 'retry_failed'
+  | 'keep_link_only'
 
 function nowIso(): string {
   return new Date().toISOString()

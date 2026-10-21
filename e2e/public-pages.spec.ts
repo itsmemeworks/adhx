@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { E2E_USERNAME, PLAYLIST_TAG, POST } from './constants'
-import { expectTheaterReady } from './helpers'
+import { expectPreviewReady } from './helpers'
 
 test.describe('public pages', () => {
   test('/api/health reports healthy', async ({ request }) => {
@@ -10,35 +10,39 @@ test.describe('public pages', () => {
     expect(body.status).toBe('healthy')
   })
 
-  test('/trending lists the pulse and opens a preview', async ({ page }) => {
-    await page.goto('/trending')
-    await expect(page.getByRole('link', { name: 'Leaderboard →' })).toBeVisible()
-    await expect(page.getByText(POST.preview.text).first()).toBeVisible()
-    await page.locator(`a[href="/${POST.preview.author}/status/${POST.preview.id}"]`).last().click()
-    await expect(page).toHaveURL(new RegExp(`/${POST.preview.author}/status/${POST.preview.id}`))
-    await expectTheaterReady(page)
+  test('retired pages send old links somewhere useful', async ({ page }) => {
+    for (const path of ['/live', '/trending', '/trending/videos', '/discover']) {
+      await page.goto(path)
+      await expect(page).toHaveURL(/\/now$/)
+    }
+    // Channels is for signed-in people: sign in, then land there.
+    for (const path of ['/leaderboard', '/leaderboard/today', '/collections']) {
+      await page.goto(path)
+      await expect(page).toHaveURL(/\/start\?returnTo=%2Fchannels$/)
+    }
   })
 
-  test('/leaderboard ranks the public playlist', async ({ page }) => {
-    await page.goto('/leaderboard')
-    await expect(page.getByRole('heading', { name: 'The most-watched playlists' })).toBeVisible()
-    await expect(page.getByText(`#${PLAYLIST_TAG}`).first()).toBeVisible()
-    await page.getByRole('link', { name: `View #${PLAYLIST_TAG}` }).click()
+  test('a curator profile lists their public channels', async ({ page }) => {
+    await page.goto(`/t/${E2E_USERNAME}`)
+    await expect(page.getByRole('heading', { level: 2, name: 'Channels' })).toBeVisible()
+    await page
+      .getByRole('link', { name: /E2e pl/ })
+      .first()
+      .click()
     await expect(page).toHaveURL(new RegExp(`/t/${E2E_USERNAME}/${PLAYLIST_TAG}`))
-    await expectTheaterReady(page)
+    await expect(page.getByRole('heading', { level: 1, name: 'E2e pl' })).toBeVisible()
   })
 
-  test('legacy discovery URLs redirect', async ({ page }) => {
-    await page.goto('/discover')
-    await expect(page).toHaveURL(/\/trending/)
-    await page.goto('/collections')
-    await expect(page).toHaveURL(/\/leaderboard/)
+  test('privacy reads in the new design', async ({ page }) => {
+    await page.goto('/privacy')
+    await expect(page.getByRole('heading', { level: 1, name: 'Privacy' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'adhx home' })).toBeVisible()
   })
 
   test('/share maps an X URL onto the preview theater', async ({ page }) => {
     await page.goto(`/share?url=https://x.com/${POST.preview.author}/status/${POST.preview.id}`)
     await expect(page).toHaveURL(new RegExp(`/${POST.preview.author}/status/${POST.preview.id}`))
-    await expectTheaterReady(page)
+    await expectPreviewReady(page)
   })
 
   test('/share rejects an unsupported link', async ({ page }) => {
@@ -46,15 +50,20 @@ test.describe('public pages', () => {
     await expect(page.getByRole('heading', { name: 'Not a supported link' })).toBeVisible()
   })
 
-  test('paste-to-preview on Live opens the shared post', async ({ page }) => {
+  test('the signed-out home: paste a link to watch it, and Right now underneath', async ({
+    page,
+  }) => {
     await page.goto('/')
-    await expectTheaterReady(page)
-    await page.getByRole('button', { name: 'Paste link' }).click()
-    const input = page.getByLabel('Paste a link to preview')
+    await expect(page.locator('#nx-home-title')).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible()
+    const input = page.getByLabel('Paste a link to watch it')
+    await input.fill('https://example.com/not-a-post')
+    await input.press('Enter')
+    await expect(page.getByText('That isn’t a post link we can play yet.')).toBeVisible()
     await input.fill(`https://x.com/${POST.alpha.author}/status/${POST.alpha.id}`)
     await input.press('Enter')
     await expect(page).toHaveURL(new RegExp(`/${POST.alpha.author}/status/${POST.alpha.id}`))
-    await expectTheaterReady(page)
+    await expectPreviewReady(page)
     await expect(page.getByText(POST.alpha.text).first()).toBeVisible()
   })
 })

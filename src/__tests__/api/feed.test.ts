@@ -145,7 +145,7 @@ describe('API: /api/feed', () => {
       return data.items.find((i: { id: string }) => i.id === id)?.media?.[0]
     }
 
-    it('Instagram video → IG stream + download + thumbnail proxy URLs (NOT the Twitter proxy)', async () => {
+    it('Instagram video → instagram kept-file stream + download + poster URLs (NOT the Twitter route)', async () => {
       await testInstance.db.insert(schema.bookmarks).values(
         createTestBookmark(USER_A, 'DXVsqQ7CSXw', {
           platform: 'instagram',
@@ -165,13 +165,13 @@ describe('API: /api/feed', () => {
 
       const media = await feedMedia('DXVsqQ7CSXw')
       expect(media.mediaType).toBe('video')
-      expect(media.url).toBe('/api/media/instagram/video?id=DXVsqQ7CSXw')
-      expect(media.shareUrl).toBe('/api/media/instagram/video/download?id=DXVsqQ7CSXw')
-      expect(media.thumbnailUrl).toBe('/api/media/instagram/thumbnail?id=DXVsqQ7CSXw')
-      expect(media.url).not.toContain('/api/media/video?author=')
+      expect(media.url).toBe('/api/files/instagram/DXVsqQ7CSXw/video-1')
+      expect(media.shareUrl).toBe('/api/files/instagram/DXVsqQ7CSXw/video-1?download=1')
+      expect(media.thumbnailUrl).toBe('/api/files/instagram/DXVsqQ7CSXw/poster')
+      expect(media.url).not.toContain('/api/files/twitter/')
     })
 
-    it('TikTok video → TikTok stream + download + thumbnail proxy URLs', async () => {
+    it('TikTok video → tiktok kept-file stream + download + poster URLs', async () => {
       await testInstance.db.insert(schema.bookmarks).values(
         createTestBookmark(USER_A, '7648011069385919752', {
           platform: 'tiktok',
@@ -190,13 +190,17 @@ describe('API: /api/feed', () => {
 
       const media = await feedMedia('7648011069385919752')
       expect(media.url).toBe(
-        '/api/media/tiktok/video?username=animalsunseenofficial&id=7648011069385919752',
+        '/api/files/tiktok/7648011069385919752/video-1?a=animalsunseenofficial',
       )
-      expect(media.shareUrl).toContain('/api/media/tiktok/video/download')
-      expect(media.thumbnailUrl).toContain('/api/media/tiktok/thumbnail')
+      expect(media.shareUrl).toBe(
+        '/api/files/tiktok/7648011069385919752/video-1?a=animalsunseenofficial&download=1',
+      )
+      expect(media.thumbnailUrl).toBe(
+        '/api/files/tiktok/7648011069385919752/poster?a=animalsunseenofficial',
+      )
     })
 
-    it('Instagram photo row → poster + IG link-out (graceful fallback, not a dead player)', async () => {
+    it('Instagram photo row → its kept photo, not a dead player', async () => {
       await testInstance.db.insert(schema.bookmarks).values(
         createTestBookmark(USER_A, 'photopost1', {
           platform: 'instagram',
@@ -215,8 +219,9 @@ describe('API: /api/feed', () => {
 
       const media = await feedMedia('photopost1')
       expect(media.mediaType).toBe('photo')
-      expect(media.url).toBe('/api/media/instagram/thumbnail?id=photopost1')
-      expect(media.shareUrl).toBe('/api/media/instagram/thumbnail?id=photopost1&download=1')
+      expect(media.url).toBe('/api/files/instagram/photopost1/photo-1')
+      expect(media.thumbnailUrl).toBe(media.url)
+      expect(media.shareUrl).toBe('/api/files/instagram/photopost1/photo-1?download=1')
     })
 
     it('returns Instagram carousel images in numeric slide order with sendable URLs', async () => {
@@ -248,8 +253,8 @@ describe('API: /api/feed', () => {
         Array.from({ length: 11 }, (_, index) => `${id}_photo_${index}`),
       )
       expect(item.media[10]).toMatchObject({
-        url: `/api/media/instagram/thumbnail?id=${id}&index=11`,
-        shareUrl: `/api/media/instagram/thumbnail?id=${id}&index=11&download=1`,
+        url: `/api/files/instagram/${id}/photo-11`,
+        shareUrl: `/api/files/instagram/${id}/photo-11?download=1`,
       })
     })
   })

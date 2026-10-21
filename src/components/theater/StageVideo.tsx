@@ -20,7 +20,7 @@
  * "sound" on every single video. Reusing the element lets an unmute survive
  * across items rendered by the same StageVideo instance (Stage.tsx renders
  * this component for both twitter and tiktok, so X→TikTok→X keeps it;
- * swapping to a non-video item — text/article/YouTube/a re-probing
+ * swapping to a non-video item — text/article/a re-probing
  * Instagram reel — unmounts this component entirely, an accepted gap).
  *
  * `src`/`muted` are applied imperatively (not as controlled JSX attributes)
@@ -30,10 +30,10 @@
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { usePostPlayback } from './usePostPlayback'
+import { usePostFinished, usePostPlayback } from './usePostPlayback'
 import { useVideoPictureInPicture } from './useVideoPictureInPicture'
 import { Play, RotateCcw } from 'lucide-react'
-import { logSV } from './YtDebugOverlay'
+import { logSV } from './AvDebugOverlay'
 import {
   dispatchTheaterStageTap,
   dispatchTheaterUserPlaybackState,
@@ -42,6 +42,7 @@ import {
 } from './useTheaterStageEvents'
 import { nextAlbumIndex, StageAlbumDots, StageAlbumScroller } from './StageAlbumChrome'
 import type { TheaterItem } from './types'
+import { POST_KEPT, POST_SAVED } from '@/lib/theater/client-events'
 
 /**
  * How long a failed video stays on screen before the queue moves on. Matches
@@ -138,7 +139,9 @@ export function StageVideo({
   // load-failure state (retry is worth offering).
   const [unavailableReason, setUnavailableReason] = useState<string | null>(null)
   const [playing, setPlaying] = useState(false)
+  const [reloadVersion, setReloadVersion] = useState(0)
   const recordPlayback = usePostPlayback(item)
+  const recordFinished = usePostFinished(item)
   // Mirrors the live element's `.muted`. Initialized from the `muted` prop,
   // which is only the extern/initial signal from here on — once the user
   // (or a fallback below) changes the element's mute state directly, this is
@@ -199,6 +202,35 @@ export function StageVideo({
     video.muted = muted
     setEffectiveMuted(muted)
   }, [muted])
+
+  // Unsaved previews can fail before there is a retained file. Saving queues
+  // that same URL for download, so changing only the Save button cannot recover
+  // the media element. Reload the existing element once the matching save
+  // succeeds; /api/files waits for an in-progress download. Leave an already
+  // playable video alone so saving never interrupts it or resets its position.
+  useEffect(() => {
+    const onSaved = (event: Event) => {
+      const key = (event as CustomEvent<{ key?: unknown }>).detail?.key
+      const video = videoRef.current
+      if (
+        covered ||
+        key !== `${item.platform || 'twitter'}:${item.bookmarkId}` ||
+        !src.startsWith('/api/files/') ||
+        !video ||
+        video.readyState > 0
+      ) {
+        return
+      }
+      setReloadVersion((version) => version + 1)
+    }
+    window.addEventListener(POST_SAVED, onSaved)
+    // The same when its copy has just been kept ("Getting it ready" ended).
+    window.addEventListener(POST_KEPT, onSaved)
+    return () => {
+      window.removeEventListener(POST_SAVED, onSaved)
+      window.removeEventListener(POST_KEPT, onSaved)
+    }
+  }, [item.platform, item.bookmarkId, src, covered])
 
   // The top progress line is an interactive scrubber. Seek the persistent
   // media element in place so its iOS sound grant survives, and ignore the
@@ -265,6 +297,19 @@ export function StageVideo({
     return () => window.removeEventListener('theater-set-muted', handler)
   }, [])
 
+  // Volume (0–1) from the next_ui theater's slider. The element is persistent,
+  // so the level carries across posts like the mute state does.
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const volume = (event as CustomEvent<{ volume?: unknown }>).detail?.volume
+      const video = videoRef.current
+      if (!video || typeof volume !== 'number' || !Number.isFinite(volume)) return
+      video.volume = Math.min(1, Math.max(0, volume))
+    }
+    window.addEventListener('theater-set-volume', handler)
+    return () => window.removeEventListener('theater-set-volume', handler)
+  }, [])
+
   // A render can commit before the passive source-loading effect below runs.
   // Invalidate A synchronously in the commit's layout phase so a queued media
   // event (or a settling play promise) cannot observe A as current while the
@@ -274,7 +319,7 @@ export function StageVideo({
     sourceGenerationRef.current += 1
     currentSrcRef.current = src
     activeLifecycleRef.current = null
-  }, [src])
+  }, [src, reloadVersion])
 
   // New item: reset per-video UI state, then swap the element's source in
   // place and play it. This is the ONLY place that calls play() for a
@@ -341,7 +386,7 @@ export function StageVideo({
         sourceGenerationRef.current += 1
       }
     }
-  }, [src])
+  }, [src, reloadVersion])
 
   // Cover transitions. Pausing is unconditional (a covered video must never be
   // heard under a text post); resuming only touches a video this component
@@ -580,6 +625,7 @@ export function StageVideo({
     catchUpPendingRef.current = false
     setEnded(true)
     setPlaying(false)
+    recordFinished()
     window.dispatchEvent(new CustomEvent('theater-video-progress', { detail: { progress: 1 } }))
     const finishEnded = () => {
       if (!repeat && albumCount > 1 && albumIndex < albumCount - 1 && onAlbumIndexChange) {
@@ -602,7 +648,7 @@ export function StageVideo({
   // but vetoed going unmuted without a gesture, signalled ONLY by an
   // unexpected `pause` while `catchUpPendingRef` is armed — never a timer
   // (the same evidence-only discipline as this file's `theater-pause`
-  // handlers and StageYouTube's `fallBackToMuted`: a successful, silent
+  // handlers: a successful, silent
   // unmute produces no event at all, so silence can never mean rejection).
   // Drops back to muted and resumes, exactly like the mount effect's own
   // rejected-unmuted-continuation fallback above.
@@ -701,21 +747,34 @@ export function StageVideo({
   // the same src: our video routes serve GET (no HEAD), so a 2-byte Range
   // request is the cheapest way to read the real status without pulling
   // the whole file. A 410 body carries `{ error: 'unavailable', reason }`;
-  // anything else (including a non-410 error) leaves the generic
-  // load-failure state with its retry button in place.
+  // a 404 may carry a `reason` too (a post nobody here has saved yet);
+  // anything else leaves the generic load-failure state with its retry
+  // button in place.
   const handleVideoError = (event: React.SyntheticEvent<HTMLVideoElement>) => {
     if (!isCurrentLifecycleEvent(event.currentTarget)) return
     const { generation, src: operationSrc } = captureSource()
     setErrored(true)
-    fetch(operationSrc, { headers: { Range: 'bytes=0-1' } })
-      .then((res) => {
+    fetch(operationSrc, {
+      headers: { Range: 'bytes=0-1' },
+      signal: AbortSignal.timeout(30_000),
+    })
+      .then(async (res) => {
         if (!isCurrentSource(generation, operationSrc)) return null
-        return res.status === 410 ? res.json() : null
+        if (res.status !== 410 && res.status !== 404) return null
+        const body = (await res.json().catch(() => null)) as { reason?: unknown } | null
+        return { gone: res.status === 410, reason: body?.reason }
       })
-      .then((body) => {
+      .then((probe) => {
         if (!isCurrentSource(generation, operationSrc)) return
-        if (body && typeof body.reason === 'string') {
-          setUnavailableReason(body.reason)
+        if (probe && typeof probe.reason === 'string') {
+          setUnavailableReason(probe.reason)
+          // Lets the theater skip a post that's gone for good. A 404 with a
+          // reason (nobody here has saved it yet) stays: saving it fixes it.
+          if (probe.gone) {
+            window.dispatchEvent(
+              new CustomEvent('theater-media-gone', { detail: { src: operationSrc } }),
+            )
+          }
         }
       })
       .catch(() => {

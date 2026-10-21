@@ -8,12 +8,13 @@ import {
   oauthState,
   usernameAliases,
 } from '@/lib/db/schema'
-import { and, desc, eq, gt, isNull, lt, ne, sql } from 'drizzle-orm'
-import { MAX_USERNAME_CHANGES, sanitizeUsername } from './username-rules'
+import { and, eq, gt, isNull, lt, ne, sql } from 'drizzle-orm'
+import { MAX_USERNAME_CHANGES, sanitizeUsername, USERNAME_MAX_LENGTH } from './username-rules'
+import { EMAIL_LOGIN_TOKEN_TTL_MS } from './login-token-policy'
+import { isOwnPicture } from '@/lib/avatar/paths'
 
 export { MAX_USERNAME_CHANGES, sanitizeUsername }
 
-const TOKEN_TTL_MS = 15 * 60 * 1000
 const MAX_EMAIL_CLAIM_ATTEMPTS = 100
 
 // ===========================================
@@ -127,7 +128,7 @@ function sanitizeLocalPart(email: string): string {
     .replace(/[^a-z0-9_]/g, '_')
     .replace(/_+/g, '_')
     .replace(/^_|_$/g, '')
-    .slice(0, 15)
+    .slice(0, USERNAME_MAX_LENGTH)
   return cleaned || 'reader'
 }
 
@@ -162,6 +163,25 @@ export type ChooseUsernameResult =
  * inside one `runInTransaction()` so a change can never be spent twice, and
  * a crash mid-change can never leave a name aliased with no real owner.
  */
+/**
+ * A name the welcome screen can offer and the chooser will accept as is.
+ * Accounts made before names were capped at 15 characters may hold a longer
+ * one, which the chooser would cut down (possibly onto someone else's name).
+ */
+export async function claimableUsernameSuggestion(
+  current: string,
+  userId: string,
+): Promise<string> {
+  if (sanitizeUsername(current) === current) return current
+  const base = sanitizeUsername(current) || 'reader'
+  for (let n = 1; n < 1000; n++) {
+    const suffix = n === 1 ? '' : String(n)
+    const candidate = `${base.slice(0, Math.max(1, USERNAME_MAX_LENGTH - suffix.length))}${suffix}`
+    if (!(await isUsernameTaken(candidate, userId))) return candidate
+  }
+  return base
+}
+
 export async function chooseUsername(userId: string, raw: string): Promise<ChooseUsernameResult> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
   if (!user) return { error: 'invalid' }
@@ -282,8 +302,12 @@ function finalizeXIdentityAndProfile(params: {
     if (x.name && (onlyFillMissingProfile ? !user.displayName : x.name !== user.displayName)) {
       updates.displayName = x.name
     }
+    // A picture chosen in Settings (an upload or a Gob, served from this
+    // server) is never replaced by the X photo; "Use your X picture" brings it back.
+    const keepsOwnPicture = isOwnPicture(user.avatarUrl)
     if (
       x.profileImageUrl &&
+      !keepsOwnPicture &&
       (onlyFillMissingProfile ? !user.avatarUrl : x.profileImageUrl !== user.avatarUrl)
     ) {
       updates.avatarUrl = x.profileImageUrl
@@ -490,7 +514,9 @@ export async function findOrCreateUserForEmail(
   for (let attempt = 0; attempt < MAX_EMAIL_CLAIM_ATTEMPTS; attempt++) {
     const userId = `u_${randomHex(8)}`
     const suffix = usernameAttempt === 0 ? '' : String(usernameAttempt + 1)
-    const username = `${base.slice(0, Math.max(1, 20 - suffix.length))}${suffix}`
+    // Keep the suffix inside the length the name chooser accepts, or the
+    // suggested name can't be claimed (the chooser would cut the suffix off).
+    const username = `${base.slice(0, Math.max(1, USERNAME_MAX_LENGTH - suffix.length))}${suffix}`
 
     try {
       return runInTransaction(() => {
@@ -617,11 +643,13 @@ export async function createLoginToken(params: {
   intent: 'signin' | 'change'
   userId?: string
   returnTo?: string
+  ttlMs?: number
 }): Promise<string> {
   const email = params.email.trim().toLowerCase()
   const raw = crypto.randomBytes(32).toString('base64url')
   const tokenHash = crypto.createHash('sha256').update(raw).digest('hex')
-  const expiresAt = Date.now() + TOKEN_TTL_MS
+  const now = Date.now()
+  const expiresAt = now + (params.ttlMs ?? EMAIL_LOGIN_TOKEN_TTL_MS)
 
   // Opportunistic cleanup of expired tokens — no separate sweeper needed.
   await db.delete(loginTokens).where(lt(loginTokens.expiresAt, Date.now()))
@@ -633,6 +661,7 @@ export async function createLoginToken(params: {
     userId: params.userId ?? null,
     returnTo: params.returnTo ?? null,
     expiresAt,
+    createdAt: new Date(now).toISOString(),
   })
 
   return raw
@@ -671,17 +700,35 @@ export async function consumeLoginToken(
   return row ? { ...row, usedAt: null } : null
 }
 
+/** Inspect a link without consuming it: link previews and HEAD must be harmless. */
+export async function readLoginToken(
+  rawToken: string,
+): Promise<typeof loginTokens.$inferSelect | null> {
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex')
+  const [row] = await db
+    .select()
+    .from(loginTokens)
+    .where(
+      and(
+        eq(loginTokens.tokenHash, tokenHash),
+        isNull(loginTokens.usedAt),
+        gt(loginTokens.expiresAt, Date.now()),
+      ),
+    )
+    .limit(1)
+  return row ?? null
+}
+
 /**
  * True if an unexpired, unused login token for this email was created within
  * the last `withinMs` (default 60s) — used to rate-limit the request/change
- * endpoints. `expiresAt` is always set to creation time + TOKEN_TTL_MS, so we
- * back out the creation time from it rather than parsing the SQLite
- * CURRENT_TIMESTAMP text column (which has no timezone marker).
+ * endpoints. Use creation time, not expiry: admin and emailed links have
+ * different lifetimes. Legacy SQLite timestamps without an offset are UTC.
  */
 export async function hasRecentLoginToken(email: string, withinMs = 60_000): Promise<boolean> {
   const normalized = email.trim().toLowerCase()
   const rows = await db
-    .select({ expiresAt: loginTokens.expiresAt })
+    .select({ createdAt: loginTokens.createdAt })
     .from(loginTokens)
     .where(
       and(
@@ -690,10 +737,9 @@ export async function hasRecentLoginToken(email: string, withinMs = 60_000): Pro
         gt(loginTokens.expiresAt, Date.now()),
       ),
     )
-    .orderBy(desc(loginTokens.expiresAt))
-    .limit(1)
-
-  if (rows.length === 0) return false
-  const createdAtMs = rows[0].expiresAt - TOKEN_TTL_MS
-  return Date.now() - createdAtMs < withinMs
+  return rows.some(({ createdAt }) => {
+    if (!createdAt) return false
+    const timestamp = createdAt.includes('T') ? createdAt : createdAt.replace(' ', 'T') + 'Z'
+    return Date.now() - Date.parse(timestamp) < withinMs
+  })
 }

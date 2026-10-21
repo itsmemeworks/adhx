@@ -81,6 +81,16 @@ export async function pauseTheater(page: Page): Promise<void> {
 }
 
 /** Caption text is also in the dock / SEO list — never assert it as a singleton. */
+/** The new theater (search, channels, Tune in, shared posts) is up: its post rail shows. */
+export async function expectPreviewReady(page: Page): Promise<void> {
+  await expect(page.locator('[data-app-account-scope="trusted"]')).toHaveCount(1, {
+    timeout: 30_000,
+  })
+  await expect(page.getByRole('navigation', { name: 'Post actions' })).toBeVisible({
+    timeout: 30_000,
+  })
+}
+
 export function caption(page: Page, text: string) {
   return page.getByText(text, { exact: true }).first()
 }
@@ -97,7 +107,7 @@ export function readToggle(page: Page) {
 
 export async function expectSignInModal(page: Page): Promise<void> {
   await expect(page.getByRole('dialog')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Email me a magic link' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Get a sign-in link' })).toBeVisible()
 }
 
 export function countActivity(action: string): number {
@@ -227,6 +237,29 @@ export function deleteUserBookmark(id: string, platform = 'twitter', userId = E2
     sqlite
       .prepare('DELETE FROM bookmarks WHERE user_id = ? AND platform = ? AND id = ?')
       .run(userId, platform, id)
+  })
+}
+
+/** A fresh account the session cookie can sign in as (`users` row + email identity). */
+export function insertUser(id: string, username: string): void {
+  withDb((sqlite) => {
+    const email = `${username}@example.com`
+    sqlite
+      .prepare(
+        `INSERT INTO users (id, username, display_name, email, username_chosen, username_change_count)
+         VALUES (?, ?, ?, ?, 1, 0)`,
+      )
+      .run(id, username, username, email)
+    sqlite
+      .prepare('INSERT INTO user_identities (provider, provider_id, user_id) VALUES (?, ?, ?)')
+      .run('email', email, id)
+  })
+}
+
+export function deleteUser(id: string): void {
+  withDb((sqlite) => {
+    sqlite.prepare('DELETE FROM user_identities WHERE user_id = ?').run(id)
+    sqlite.prepare('DELETE FROM users WHERE id = ?').run(id)
   })
 }
 

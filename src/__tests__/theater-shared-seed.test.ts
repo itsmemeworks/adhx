@@ -24,7 +24,6 @@ import {
   instagramToTheaterItem,
   reelToTheaterItem,
   tiktokToTheaterItem,
-  youtubeToTheaterItem,
 } from '@/lib/theater/shared-seed'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterItem } from '@/components/theater/types'
@@ -393,21 +392,5 @@ describe('per-platform mappers', () => {
 
     expect(out.author).toBe('someone')
     expect(Number.isNaN(new Date(out.createdAt).getTime())).toBe(false)
-  })
-
-  it('youtubeToTheaterItem is always contentType video with the i.ytimg.com thumbnail', () => {
-    const out = youtubeToTheaterItem({
-      id: 'dQw4w9WgXcQ',
-      author: '@somechannel',
-      authorName: 'Some Channel',
-      text: 'a title',
-    })
-
-    expect(out).not.toHaveProperty('userId')
-    expect(out.platform).toBe('youtube')
-    expect(out.contentType).toBe('video')
-    expect(out.author).toBe('somechannel')
-    expect(out.thumbnailUrl).toBe('https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg')
-    expect(out.url).toBe('https://www.youtube.com/shorts/dQw4w9WgXcQ')
   })
 })

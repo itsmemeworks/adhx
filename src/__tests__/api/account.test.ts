@@ -61,6 +61,9 @@ async function seedUserData(userId: string) {
     .insert(schema.userPreferences)
     .values([{ userId, key: 'theme', value: 'dark' }])
   await testInstance.db
+    .insert(schema.postViews)
+    .values([{ userId, platform: 'twitter', postId: 't1', seenAt: '2024-01-01T10:00:00Z' }])
+  await testInstance.db
     .insert(schema.syncLogs)
     .values([
       { id: `log-${userId}`, userId, startedAt: '2024-01-01T10:00:00Z', status: 'completed' },
@@ -182,6 +185,10 @@ describe('API: /api/account/clear', () => {
     expect(archivedPostses).toHaveLength(0)
     expect(prefs).toHaveLength(0)
     expect(syncLogs).toHaveLength(0)
+    // The feed's seen list starts over; the other account's is untouched.
+    const views = await testInstance.db.select().from(schema.postViews)
+    expect(views.map((v) => v.userId)).not.toContain(USER_A)
+    expect(views.map((v) => v.userId)).toContain(USER_B)
 
     // OAuth token should still exist
     const oauth = await testInstance.db
@@ -229,6 +236,31 @@ describe('API: /api/account', () => {
   const EMAIL_A = 'user-a@example.com'
   const EMAIL_B = 'user-b@example.com'
 
+  it('deletes queued shares for this account without touching another account', async () => {
+    testInstance.db
+      .insert(schema.phoneSaveQueue)
+      .values(
+        [USER_A, USER_B].map((userId) => ({
+          id: userId,
+          userId,
+          url: 'https://youtu.be/private-share',
+          status: 'waiting',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })),
+      )
+      .run()
+    const { DELETE } = await import('@/app/api/account/route')
+    expect((await DELETE()).status).toBe(200)
+    expect(
+      testInstance.db
+        .select()
+        .from(schema.phoneSaveQueue)
+        .all()
+        .map((row) => row.userId),
+    ).toEqual([USER_B])
+  })
+
   beforeEach(async () => {
     testInstance = createTestDb()
     mockUserId = USER_A
@@ -238,14 +270,24 @@ describe('API: /api/account', () => {
     await seedUserData(USER_B)
     await seedAccountData(USER_A, EMAIL_A)
     await seedAccountData(USER_B, EMAIL_B)
-    await testInstance.db.insert(schema.activity).values({
-      action: 'save',
-      bookmarkId: 't1',
-      author: 'testauthor',
-      url: '/testauthor/status/t1',
-      userId: USER_A,
-      createdAt: new Date().toISOString(),
-    })
+    await testInstance.db.insert(schema.activity).values([
+      {
+        action: 'save',
+        bookmarkId: 't1',
+        author: 'testauthor',
+        url: '/testauthor/status/t1',
+        userId: USER_A,
+        createdAt: new Date().toISOString(),
+      },
+      {
+        action: 'preview',
+        bookmarkId: 't1',
+        author: 'testauthor',
+        url: '/testauthor/status/t1',
+        userId: USER_A,
+        createdAt: new Date().toISOString(),
+      },
+    ])
     await testInstance.db.insert(schema.analyticsEvents).values({
       name: 'post.save',
       userId: USER_A,
@@ -309,6 +351,8 @@ describe('API: /api/account', () => {
     const response = await DELETE()
 
     expect(response.status).toBe(200)
+    const views = await testInstance.db.select().from(schema.postViews)
+    expect(views.map((v) => v.userId)).toEqual([USER_B])
 
     // Verify User A's bookmark data is completely deleted
     const bookmarks = await testInstance.db
@@ -362,13 +406,14 @@ describe('API: /api/account', () => {
     expect(tokensByEmail).toHaveLength(0)
 
     // Historical aggregates survive without retaining this account's private
-    // actor/viewer ID. Owner-keyed playlist events and a target ban are gone.
+    // actor/viewer ID; its public save pulses go with its saves. Owner-keyed
+    // playlist events and a target ban are gone.
     expect(
       await testInstance.db
         .select()
         .from(schema.activity)
         .where(eq(schema.activity.bookmarkId, 't1')),
-    ).toMatchObject([{ userId: null }])
+    ).toMatchObject([{ action: 'preview', userId: null }])
     expect(await testInstance.db.select().from(schema.analyticsEvents)).toMatchObject([
       { userId: null },
     ])

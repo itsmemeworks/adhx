@@ -6,6 +6,970 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Android: change your picture, invites, email sign-in and the reactions feed, with nothing opening the web
+
+- Owner ask: the apps no longer lean on the web app. Coded against the shared decouple contract (server ↔ web ↔ iOS ↔ Android); the server routes were built in parallel.
+- Change picture (`main/PictureSheet.kt`, `Picture.kt`, `PictureImage.kt`): Choose a photo (Photo Picker), Take a selfie (TakePicture into the FileProvider's `camera/`, CAMERA asked first since the manifest declares it), then a square crop (drag, pinch 1–4×, round preview; `CropMath`), sent as a ≤1024px JPEG with x=0.5, y=0.5, zoom=1 to `POST /api/app/me/avatar`; plus a Gob face (four colours), my X photo (409 `no_x_picture` said plainly) and Remove (`DELETE`). The connection's picture is replaced and `/api/app/me` re-read.
+- Your face everywhere: `LocalMe` (`ui/Me.kt`) from the connection and `/api/app/me`'s `avatarSource`; `Avatar` draws your own picture whenever the face is you (`isYou` or your username), so Live reactions, savers, people and Settings all agree. A letter only when `avatarSource` is `generated`.
+- Invites (`main/InviteSheet.kt`): Settings → Invite someone and Channels → Invite open one sheet: make a link and share it with the system share sheet, list live links (for whom, or their code), Share again (`POST /api/app/invites/{id}/link`, a fresh link: the list never carries links), Revoke; no Make button without `canInvite`.
+- Connect: Sign in with email first (address + email → "Check your email for a 6-digit code" → code with the one-time-code autofill hint, auto-submits at six digits → `POST /api/app/signin/verify`, kept exactly like pairing via `connectWith`); bad_code / expired / busy / too_many / 404, and on sending no_email (a 503 read as an answer, not offline) / send_failed / too_soon (goes on to the code) in plain words (`EmailSignIn`). The pairing code is "the other way in".
+- Reactions row at the top of Channels (`feed/ReactionsRow.kt`, `FeedViewModel.loadReacted`, `Route.ReactedPlayer`): posters with the last reaction's face and emoji, "12 posts with reactions", Play all; the player replays reactions and React works as on any post.
+- Gone: every `openInAdhx` (Settings, the /settings#invite hop, More's "Open in my ADHX", "Open my ADHX" on My saves and Shared lately, Shared lately's fallback to the post's ADHX page, the share card's website fallback). Kept: Share an ADHX link, links inside posts, originals on their networks.
+- Tests: `WithoutWebModelsTest` (shapes, multipart, routes), `WithoutWebLogicTest` (crop math incl. agreement with the server's `cropRect`, sign-in words and resend wait, `Me` rules, invite lines, reactions copy). End to end on the emulator against the server branch (feat/apps-without-web): email sign-in as Ana (wrong code, then the logged code; the field clears and keeps the keyboard after a miss), a cropped photo upload showing at once, a coral Gob, X photo's 409, Remove back to the letter, invites (make + system share, Share again, Revoke), a reaction floating with her own picture and the Reactions row ("1 post with reactions"). Found server-side: reactions on link-network posts with `~` in the id (`soundcloud:forss~flickermood`) answer 400 `bad_post` (`POST_ID` in `src/lib/reactions/parse.ts`). `docs/specs/phone-app.md` still describes the web hop for Change picture (left to the server PR).
+
+## 2026-10-21 — Android: the network button opens the original post; toasts take the pill's place
+
+- The player overlay no longer shows the network/author line or the caption; it keeps the why chip, a friend's note and the savers line (or the lock). A rail button with the network's own mark (above More) opens `OriginalSheet`: the poster's picture (else the mark in a round tile), their name (else handle, else the network), "@handle · Posted 18 Oct 2026" with the small mark only when their picture leads, all their words (a kept article in full, selectable, links tappable) or "No words with this one, just the video.", then Open on {network} and Copy link. It keeps the phone upright and holds the photo timer.
+- On New and My saves the player's short messages show in place of the "N on their way" pill (`toastInTopBar`, `LocalPlayerToast`, `ToastPill`); everywhere else they stay where they were. Toasts last 3 s.
+- Tests in `OriginalSheetTest` (name/handle/line rules, the mark once, the posted day). Checked on the emulator against a parity server: the overlay, the rail button, the sheet for a SoundCloud post without a picture, and "Link copied" replacing the pill for 3 s. Not checked: a poster with a picture, an article in the sheet.
+
+## 2026-10-21 — Android: landscape for watching, full articles and aligned bylines
+
+- The app is portrait everywhere (`android:screenOrientation="portrait"`); `OrientationHost` (`ui/Orientation.kt`) is a stack like iOS's: a player on a video, sound or photo says `MayTurn(true)`, every sheet, the React picker and the reader say `KeepUpright()`, newest wins (`SCREEN_ORIENTATION_USER`: sideways, never upside down, keeps the phone's rotation lock). Words posts and the end page stay upright.
+- Sideways the player hides all chrome and the system bars (re-hidden when a closing sheet gives the focus back), shows the media whole whatever Fit video says, and taps only pause/play; swiping still moves between posts; turning back restores the chrome as it was.
+- Kept X articles: `PhoneArticle.body` (optional) is parsed by `ArticleBody` (headings, lists, quotes, rules, bold/italic, links; pictures left out) and replaces the description and the post's own text in the words card and the reader.
+- Byline: under the savers line the network mark is centred under the first face in a column as wide as the faces, so the poster's name starts where "You saved this" starts. HTML entities in post words and article titles are decoded on the phone (`Entities`) for servers before #588.
+- Tests in `LandscapeArticlesTest`. Checked on the emulator: rotation on a video (bars gone, letterboxed, tap pauses, back to portrait with chrome), Search stays upright, a More sheet holds portrait until closed, the aligned byline. Not checked: an article body on screen (the test server doesn't send one yet).
+
+## 2026-10-21 — Android: React on every post, replayed when you watch it
+
+- The player has its own React (smiley at the top of the rail) on every post outside Live, with Live's `ReactPicker` (prompt "Say something"). Yours floats at once with your picture (`Connection.avatarUrl`), posts to `POST /api/app/reactions`, and is taken back with "Couldn’t send that. Try again." in the picker on failure (`PostFloats`).
+- When a post settles, `GET /api/app/reactions` (once per post per run, `PostReactionsMemory`) and Live's floating faces replay the newest 12, oldest first, 350 ms apart from 600 ms after settling (`replayPlan`, `replayWait`); moving on cancels them. Live keeps its own room and doesn't replay. The photo timer waits while the picker is open.
+- The picker's footnote now says reactions are kept ("Kept on the post. Your people see it when they watch."), since the server stores Live's too.
+- Tests in `PostReactionsTest`. Checked on the emulator against a parity server with six seeded reactions: the replay, your 😂 stored with your face, the timer held under the picker, and the failure (server stopped) taking yours back with the message.
+
+## 2026-10-21 — iPhone without the web: your picture, invites, email sign-in, the reactions feed
+
+- Owner: "the app shouldnt have to rely on the web app any more". iOS side of the decouple contract (server routes built in parallel, coded against their shapes): `Shared/AccountAPI.swift` (avatar, invites, `/api/app/signin`, `/api/app/reacted`, multipart bodies via a new `send(…data:contentType:)`).
+- Change picture is native (`App/Settings/PictureSheet.swift`): Choose a photo (PhotosPicker), Take a selfie (front camera; camera copy now covers both), a square crop with pan/pinch and a round preview (`AvatarCrop.swift`, sent as a pre-cropped JPEG, x=y=0.5, zoom=1), four Gob faces, Use my X photo (409 explained), Remove picture.
+- Your face everywhere: `YourFace` (People.swift) holds `/api/app/me`'s avatarUrl/avatarSource, refreshed on activation and after a change; `Face` draws it for any saver that is you (isYou or your username), so Live's own reactions, savers, people and Settings all agree. Letter only when there's no picture (`generated`).
+- Invites: Settings, Your people and Channels' Invite open `InviteSheet` (make a link → system share sheet; your live links with Revoke). Connect gains Sign in with email (address → email → 6-digit code, `.oneTimeCode`; bad_code/expired/busy in plain words); pairing stays.
+- Reactions row at the top of Channels (`App/Feed/ReactedFeed.swift`); it plays the paged queue, replaying each post's reactions every time (`PlayerExtras.replayReactions`).
+- No web hops left: More's Open in my ADHX, Shared lately's and My saves' Open my ADHX, Shared lately rows (player only), the share extension's Open (`adhx://open` or the post). Share an ADHX link stays.
+- Checked: simulator build, `Tests/DecoupleTests.swift` (60 checks) and the existing suites. Not checked: against a live server (routes not on a branch yet) or on screen.
+
+## 2026-10-21 — The phone apps without the web: picture, invites, email code sign-in, a reactions feed
+
+- Owner: the apps shouldn't rely on the web any more. Server/web side of the shared contract (iOS/Android built in parallel): `POST|DELETE /api/app/me/avatar` (one handler with `/api/account/avatar`, `src/lib/avatar/handler.ts`), `GET /api/app/me` + `avatarSource`, `/api/app/invites` (+ `/{id}`, `/{id}/link`; own only; list `url` is null, links are shown once).
+- Sign in on the phone: `POST /api/app/signin` emails a 6-digit code (`login_tokens` intent `phone`, new `attempts` column via guarded ALTER, HMAC-stored, 15 min, 5 wrong tries burn it, a stand-in code for unknown/banned/waiting addresses so nothing enumerates); `/verify` returns `pair`'s `{ key, name, username }`. Servers that only hold links for an admin answer `503 no_email` (pairing code stays the way in).
+- Reactions feed: `reactedPosts()` (`src/lib/reactions/reacted.ts`) → `GET /api/app/reacted` and `GET /api/posts/reacted`; web plays it at `/play?reacted=1` from a new Reactions row on `/channels`.
+- Faces audit: every saver/reactor/watcher path already used `memberAvatar`; added a test covering Live reaction events, post reactions, savers, members and the feed. Uploaded/Gob pictures are members-only `/api/files/avatar/<hash>`: phones must send the key when loading them, or they fall back to the letter.
+- Docs: phone-app.md (API), PRIVACY.md + /privacy (code sign-in, the Reactions row), CLAUDE.md. Not pushed. Follow-ups: the apps' side (§6 of the contract); HEIC isn't decoded (phones send JPEG).
+
+## 2026-10-21 — Reactions kept on every post, and replayed
+
+- Owner ask: react on any post, not just Live, and see them again when you watch it. New `post_reactions` table (account-guarded, gone with Clear data / account delete) and `src/lib/reactions/` (parse shared with Live, one rate budget). Web `GET|POST /api/posts/reactions`, phone `/api/app/reactions`, `DELETE …/{id}` own only; shapes in `docs/specs/phone-app.md` → Reactions on any post.
+- Visibility follows the post (`seenBy`): a Just for me–only post keeps its reactions to its owner; banned reactors never shown; hidden posts return none; nothing signed out. Live reactions are now stored too, with the id the room saw.
+- Web: the React button is on every post in `TheaterV2` (signed out → `/start`); yours floats at once; `useReactionReplay` floats the newest 12 when a post settles (600 ms, 350 ms apart, once per post per page load). PRIVACY.md and /privacy updated.
+- Follow-ups: the iOS and Android players against the same contract (separate work).
+
+## 2026-10-21 — Android: fit and dock, logo bylines, tappable links, hold to hide, photo timer
+
+- Player (`PlayerScreen.kt`): Sound and Fit video are remembered in `SettingsPrefs` (`soundOn`, new `fitVideo`), as on iPhone. Videos now fill the screen by default (the old upright-fills/wide-fits rule is gone); Fit shows them whole. More's picture-in-picture row is now "Dock".
+- Byline: the network's mark before who posted it (`bylineName`: name, else the network's name, else the handle) instead of "YouTube · name".
+- Links in captions, the words card and the reader are shortened to site/path and open in the browser (`Links.spans`/`Links.short`, `ui/LinkedText.kt`).
+- Hold the stage to hide the chrome; a tap brings it back, the next tap pauses/plays. Photos show 10s each (`PhotoTimer`, `afterPhoto`): next album photo, then the next save; tap pauses; Repeat loops the post; held while a sheet/picker is open. Progress uses the video line.
+- Search words tiles: serif words on a surface card below the pills (no more clipped first line), author and savers at the bottom. Channels → Your people: fewer than five sit left with a 14dp gap. Send sheet: "Send via" with WhatsApp (falls back to the share sheet), Copy (the ADHX link) and More.
+- Unit tests in `PlayerPolishTest`. Checked on the emulator against a parity server: mark bylines, hold/tap/tap on a video and a photo, album advance and pause, Fit and Sound kept in prefs, Dock row, send sheet (Copy, WhatsApp falls back to the share sheet), search words tiles, five people spread. Not seen there: links in post words (no linked posts in the seed) and fewer than five people.
+
+## 2026-10-21 — iPhone: the network button opens the original post; toasts take the pill's place
+
+- Owner: "in most cases, the user doesn't care about the original post". The overlay now has only the why chip, a friend's note and who saved it; the network line and the caption are gone. A rail button with the network's mark (above More) opens `OriginalSheet`: who posted it (picture, name, handle), when, their words in full (a kept article whole, selectable, links tappable), Open on {network} and Copy link. Default rail spacing is 10 now there's one more button.
+- On New and My saves, a player message ("Words copied") takes the "on their way" pill's place for 3 s instead of stacking under it (`PlayerToastUp` preference; toasts last 3 s everywhere).
+
+## 2026-10-21 — Landscape for watching; full articles, words and tiles on phones
+
+- Landscape is only for watching (iOS `App/Orientation.swift`): the plist allows landscape, `AppDelegate` answers from `OrientationGate`, where each player says "may turn" while it's showing (`mayTurnToWatch()`) and anything over it says "upright" while it's up (`uprightWhile`: board sheets, More, the reader, the send sheet, a friend's channel). Newest wins; losing landscape turns the phone back. Turned sideways the player hides its chrome, fits the media whole and taps only pause; turning back restores the chrome. Debug: `-adhxTurn landscape -adhxTurnAfter 6`.
+- Phones get the whole kept X article as markdown (`article.body`, from `articleContent` via `articleBlocksToMarkdown`); iOS draws it (headings, paragraphs, lists, quotes, inline bold/italic/links, pictures left out) in place of the summary. The save result and Shared lately decode entities too; iOS also decodes them itself for older servers.
+- Search words tiles were drawn under the opaque surface colour (dark on dark): the cream is now the tile's base. The byline's network mark sits in a column as wide as the face above, so the poster's name lines up with "You saved this".
+
+## 2026-10-21 — Frosted sheets on iPhone; which build is installed, in Settings
+
+- Sheets over the player are frosted (`FrostedSheetBackground`: ultra-thin material under the surface colour at 72%), so the picture shows through softly: More and In your saves (system sheets, via `frostedSheet()`) and every board sheet. On iOS 26+ the system sheets no longer force a 28 pt radius, so their floating corners follow the screen's own curve. The two remaining non-continuous rounded rectangles are now continuous.
+- Settings on both apps shows which release the build is, on its own line: "ADHX Share 2.2.0" on a tag, else "2.2.0 +3 · abc1234" (commits after the tag), " · edited" with uncommitted changes, the commit alone without tags. iOS: the "Stamp version" build phase runs `apps/ios/Config/stamp-version.sh` (git describe → `build-info.txt` in the app's resources; user-script sandboxing is off for the app target so it can read git). Android: `gitBuildName()` in `app/build.gradle.kts` sets `versionName` unless `ADHX_VERSION_NAME` is given (the release APK workflow).
+
+## 2026-10-21 — iPhone: React on every post, replayed when you watch it
+
+- The player has its own React button (smiley at the top of the rail) on every post outside Live, with the same picker as Live (`ReactPicker`, moved with `FloatingReactions` into `App/Library/Reactions.swift`). Yours floats at once with your picture (`Store.avatarUrl`), posts to `POST /api/app/reactions`, and is taken back with "Couldn’t send that. Try again." on failure.
+- `PostReactionsModel` replays a post's stored reactions when it settles (`GET /api/app/reactions`): the newest 12, oldest first, 350 ms apart after 600 ms, once per post per run of the app. Live keeps its own room and doesn't replay (its reactions are stored by the server since #589).
+- Verified in the simulator against the parity server: the replay request, the picker, and your 😂 floating with your face.
+
+## 2026-10-21 — iPhone player polish from on-device testing
+
+- Hold the stage to hide everything but the media; a tap brings it back; a tap with the chrome showing pauses (`tapOrHold`: the hold never also counts as a tap). Photos move on by themselves after 10 s each (`PhotoTimer`: next photo in an album, then the next post; Repeat loops), with the bottom progress line, paused while a sheet or Live's picker is open or after a tap.
+- The byline is the network's mark then who posted it (just the mark when no one's named); Live's savers line no longer ends with the network's name. "Small window" is now "Dock".
+- Links in post words are tappable and shown short (`LinkedText`). `toPhonePost` now sends `postBody()` (t.co swapped for where it goes, entities decoded), which moved to the plain `src/lib/feed/post-body.ts` so server code can use it.
+- Search/channel tiles with no picture are the web's cream words card (chip and meter above the words, never on them).
+- Send via (was "Send with"): WhatsApp (its own `net.whatsapp.*` open-in route; an album or no WhatsApp falls back to the share sheet), Copy (the file itself on the clipboard), Files, Save to Photos, More. Messages/Mail composers removed.
+- Not checked on screen: search tiles (the parity server runs without the query process) and WhatsApp (not on the simulator).
+
+## 2026-10-21 — Phones: no why chip repeating the byline; your face on your reactions
+
+- iOS and Android hide the why chip when its only reason is `fresh`/`yours` ("Ana saved this · 1d") and the post has savers, since the byline under it already says that. This matches the web's rule in `TheaterV2`.
+- `GET /api/app/me` now returns `avatarUrl` (`memberAvatar`, so it's null for the generated icon). The apps store it (iOS `Store.avatarUrl`; Android `Connection.avatarUrl`, encrypted with the rest) and use it for your own reactions' faces in Tune in. Live's `watchers` leaves you out, so those faces had always fallen back to your initial. A server without this change still shows the initial.
+
+## 2026-10-20 — A signed Android APK on every release
+
+- `.github/workflows/android-release.yml` builds the release tag's app with `assembleRelease`, signs it with the owner's key from four repository secrets (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, optional `ANDROID_KEY_PASSWORD`), checks it with apksigner and attaches `adhx-<version>.apk` + `.sha256` to the GitHub release. Version code = major×10000 + minor×100 + patch.
+- Release Please calls it after creating a release (explicitly, like the image publisher, since `GITHUB_TOKEN` releases fire no events); it skips with a notice until the secrets exist. Manual: `gh workflow run android-release.yml -f version=2.2.0`. Friends install from the latest release page or Obtainium. Verified locally with a throwaway key: signed, versionCode 20200 / versionName 2.2.0.
+
+## 2026-10-20 — iPhone: sound and fit remembered, people row, 720p
+
+- Sound: the player's sound button now sets "Sound on by default" (`Playback.setSound`), so turning sound on keeps it on for every video, every feed and after a restart, until it's turned off. Open players follow the change (`Playback.choicesChanged`), and so does Settings' toggle.
+- Fit video: a new More toggle beside Sound. Off (the default) fills the screen like the boards; on shows each video whole at its own shape. Remembered in `Prefs.fitVideo`; the poster follows it too. Checked in the simulator: both choices carried to the next video and were saved.
+- Channels → Your people: fewer than five sit together from the left (a lone face and Invite drifted apart before); five spread across the row as on the board; more scroll.
+- The More sheet names video quality by the short side (720×1280 is 720p, not 1280p), as Android and the send sheet already do.
+
+## 2026-10-20 — Right now: the lead card keeps its size on a busy server
+
+- With many moments, every one stacked beside the lead, so the lead card stretched to their height and left a huge empty card (seen on real data: AI music beside six moments). Now two sit beside the lead, as on the board, and the rest wrap into a three-column row below (`SIDE_CARDS` in `RightNow.tsx`). Component test covers six moments.
+
+## 2026-10-20 — Moment titles checked with the boards' real names
+
+- The parity server names moments without the model ("Baby", "Dark"), so a proxy swapped in the boards' names ("Babies vs objects", "Sunday roast energy", "Kitchen synths") to check how they lay out on web, iPhone and Android. Every name fits on one line as on the boards.
+- Mobile web Tuned in now has the boards' "In {moment}" chip over the byline (TheaterV2), and "Jo just saved one" moves below the top chips when LIVE and the watchers wrap onto two rows, instead of covering them.
+- Live lead card, measured against j7-3 to within 0.5: iPhone's title uses `tightLines(32)` plus a small nudge. Android's uses `serifLineBox(32.sp, 30.4.sp)`, and a new `sansLineBox` trims Hanken Grotesk's taller Compose line on the meta line (22dp against CSS's 17.6). Both cards are padded 10, because the board's 2px ring sits outside its 8px padding while iOS `strokeBorder` and Compose `border` draw inside.
+- Parity server limit: the babies moment drops out about 25 minutes after seeding, so capture j7 screens from a freshly started server.
+
+## 2026-10-20 — Android Connected faces row includes you
+
+- The j5-6 board's faces row starts with your own face. Android's left it out and listed every name. It now shows you first, then everyone else, up to 5 faces. `Copy.youAnd` stops at four names and then says "and N other(s)". Both now match the iPhone ("You, Ana, Jo, Ben and 1 other").
+
+## 2026-10-20 — Connected screen has no header on Android either
+
+- Android's just-paired screen (`main/ConnectedScreen.kt`) dropped its Gob + "adhx" + Search/Settings row, as iPhone and the updated j5-6 board have it: the welcome is its own moment and Start watching is the way in. The unused header Gob vector and the `onSearch`/`onSettings` parameters are gone.
+
+## 2026-10-20 — Android: one-row header everywhere
+
+- Caught up, Channels, a friend's channel and Live used the old two-row header (Gob + "adhx", Search and Settings/sliders, then a tabs pill). They now share the player's one row, as on iPhone: Gob (Settings), New · Channels · Live with New's 99+ badge, Search. `HomeHeader(overMedia)` is the only header: see-through pill over the player, surface (#1a1814) pill and Search on solid pages. `PageHeader` is gone.
+- Tuned in shows only the LIVE row (LIVE, watching with you, Leave); New's row steps aside while the send sheet is up (`PlayerScreen(hideTopBarWhileSending)`). Content tops moved up to match (caught up, Channels, Live, a friend's channel).
+- Checked at 390dp on a :3620 parity server against the iPhone captures (j2-1, j2-4, j3-3, j4-4, j6-3, j7-3, j7-4).
+
+## 2026-10-20 — iPhone: swipe past a single photo
+
+- In New, swiping up on a one-photo post didn't move to the next save: the photo sat in a paging `TabView`, which swallowed the vertical swipe. A single photo is now drawn without the pager (albums keep it). Checked in the simulator: the same 500 pt swipe from the middle of the photo stays put on `main` and moves on with the fix.
+
+## 2026-10-20 — Phones keep sent posts past their own kind filter
+
+- Both apps re-filter New by kind on the phone (for servers that ignore `types`), which dropped a sent text post #576 lets through on the server. `PhonePost.sentToYou` (a `sent` reason) now passes that filter on iOS (`FeedModel.load`) and Android (`FeedViewModel`), found by the Android parity re-check on final main.
+
+## 2026-10-20 — Channel curation reconciled with current main
+
+- Integrated the latest privacy, admin and phone updates without replacing their schema or documentation. Both admin counters and image-curation tables install together; account-reference regression expectations include both sets of guards.
+- Image refinement now honours the admin processing pause; Clear data removes only that account’s private curation jobs. Regressions cover pause/resume without spending budget and scoped cache removal. Updated the new privacy page and policy for the separate image opt-in. No live service or private setting changed.
+
+## 2026-10-20 — Optional image-aware generated channel curation
+
+- In flight: `TYPESAFE_CHANNEL_IMAGES=on` plus a key enables background naming, conservative borderline checks, repeat spacing and channel cover-post selection for Made for you/From everyone. Default off; slugs, saves, files and manual/friend channels stay intact.
+- One durable scoped queue/cache: one task/minute, 48 attempts/UTC day, 256 entries/7 days, max8 existing stills, 15s requests, three tries. No page waits, remote thumbnail fetch, FFmpeg or local inference for this pass.
+- Upload only eligible public-source captions/posters/photos using opaque ids; private-only/quoted/hidden/banned/orphaned sources, saver details, notes, tags and extracted words stay out. Visibility/media/policy revisions and leases reject stale results; account deletion cascades private jobs.
+- Known-name choices, confidence gates, a four-member floor, transitive duplicate spacing/cover diversity and collision fallback keep changes conservative. Poster-only/video posts cannot be excluded based on one still. Covers select existing posts, not new video frames; repetition checks are sampled, not exhaustive.
+- Regression coverage includes opt-in, bounded transport, account/privacy races, original/path safety, budgets, restart/stale-claim recovery, uncertainty and no-loss playback ordering. A real synthetic-only eight-image request completed in ~0.5s; no real-library quality claim.
+- README, architecture, environment/Compose examples and `docs/channel-image-curation.md` explain the opt-in cloud boundary and evaluation steps. No live service, private configuration or network was changed.
+
+## 2026-10-20 — A sent post skips "What's in your feed"
+
+- New's kind filter (videos and photos by default) hid text posts and articles someone sent you, so "Pete sent you this" never arrived for most people. A post with an unseen send now passes the filter in every mode that shows sends (`inFeed` in `src/lib/feed/blend-db.ts`); it isn't counted as "waiting". Found by the Android parity pass (#574).
+
+## 2026-10-20 — Phone posters through kept files
+
+- `posterFor()` (`src/lib/app/phone-app.ts`, behind Shared lately's `posterUrl` and On their way's `thumbnail`) now always returns an `/api/files/…/poster` path for Instagram, TikTok and X posts with a picture or video, so a kept poster shows instead of a network thumbnail that may be unreachable (iOS j8-5 showed placeholders).
+
+## 2026-10-20 — iPhone: final design-parity pass
+
+- Compared every phone board (j1-2, j1-3, j2-1–j2-4, j2-7, j3-3, j4-3, j4-4, j5-6, j6-3, j7-3, j7-4, j8-4, j8-5, the note bubble) side by side with the app in the simulator against a fresh parity server.
+- Fixed: two-line serif headings now sit at the boards' 0.95 line height (caught up, Live, Connected, the share card via `tightLines`, iOS 26 only for wrapping text); the note bubble's tail is the board's 45° corner; "Saved together" in Why this one shows every saver's face; the tuned-in byline keeps the names whole and drops the network, then shortens the time; the send sheet's poster is upright 54×96 with the kind on a dark disc; the connected Gob's grin uses the board's own curves.
+- Unchanged on purpose: one-row header, data-only differences (moment names, counts, order), system sheets.
+
+## 2026-10-20 — Android: final phone-board parity pass
+
+- Side by side of every phone board (j1-2/3, j2-1/2/3/4/7, j3-3, j4-3/4, j5-6, j6-3, j7-3/4, j8-4/5, the note bubble) at 390dp against a :3613 parity server.
+- Fixed: words over the player and the search field fell back to Roboto (no `fontFamily`), now Hanken Grotesk; Instrument Serif headings set tighter than the font kept its full ascent/descent, so `serifLineBox` trims them to the CSS line box (share card title, caught-up title); the caught-up shadow is an ellipse, not a pill; Settings' Remove this phone / Decline are 36dp quiet buttons and the This phone card has the boards' padding and line heights; the share card's keep line and bar sit together at the poster's foot.
+- Left as is: the one-row player header, data-only differences (moment names, counts, order), system UI.
+
+## 2026-10-20 — Android: send text posts to your people
+
+- Share on a text post or article now opens the send sheet too ("Sending the words"): Chat, Mail and More send its words, and "Or straight to your people" sends the post, as for videos and photos. Before, words went straight to the system share sheet, so text posts couldn't be sent to a member from the phone (board j4-4 gap).
+
+## 2026-10-20 — Mac allocation tuning and isolated throughput experiments
+
+- In flight: opt-in `SEMANTIC_MEMORY_PROFILE=compact` disables ONNX CPU arenas/patterns without changing the pinned model, precision, inputs or index version; standard remains the application default.
+- Native M4 shared-host trials repeated a lower physical footprint (1.9–2.2 vs 2.6–2.8 GiB), with byte-identical CPU vectors; inference speed improvement did not repeat reliably.
+- CoreML compiled but rejected absent-modality tensors at inference. Dispose the accelerated session before one warm CPU fallback; CPU failures still propagate. A vision-only prototype hit the memory guard and was discarded.
+- Synthetic-only harnesses compare representative frames, batched FFmpeg extraction and one-batch-ahead preparation. These prototypes never enter production claims or change light/normal/deep sampling; quality/fairness/cleanup gates remain explicit.
+- Optional TypeSafe image smoke test sends generated colours only; experimental typed judgments are not search vectors. No private media uploaded.
+- Regression tests cover allocation options, runtime fallback, timestamp validation, representative coverage, exact batch/reference frames and abort/EOF cleanup. Setup/architecture docs link measured results and reproduction steps.
+- No installed worker, server, queue, model cache, private credential or network setting changed. Release-matched rollout and real-library retrieval evaluation remain separate follow-ups.
+
+## 2026-10-20 — Just for me privacy gaps closed
+
+- **Send sheet** `has` counts shared saves only (`holders()` in `src/lib/sends/sends.ts`), so a Just for me save is never revealed; that person can simply be sent the post.
+- **Just for me by default** now covers X sync (`saveBookmark(..., isPrivate)`, no pulse for private sync saves) and Keep this channel (`group-keep.ts`), like clones.
+- **Admin-only reads**: GET `/api/activity`, `/api/trending`, `/api/analytics` go through `adminOnlyResponse()` (`src/lib/admin/only.ts`); `public/llms.txt` rewritten for a private friends server.
+- **Kept files** (`src/lib/keep/file-access.ts`): a post whose only saves are Just for me is served only to an owner (session, phone key, or the post's HMAC `?k=` file token that `toPhonePost` and Shared lately add to the owner's own URLs, since AVPlayer/ExoPlayer send no headers), with `private, no-store`; anyone else gets the unsaved-post answer, and not-kept reasons are told to members only.
+- **Lifecycle**: clear data and account delete drop the account's "saved" pulses and `auto_channels` (now account-guarded, 56 triggers); removing one save drops its pulse; `AFTER DELETE ON bookmarks` triggers remove a post's vectors, queue and keyword rows with its last save.
+- PRIVACY.md, `/privacy`, ARCHITECTURE.md, CLAUDE.md and the NAS guide updated (on top of #567's rewrite, merged into this branch).
+
+## 2026-10-20 — Whole-system docs brought up to the friends feed
+
+- README: send to your people, notes, Show more / less, forming moments with "Tell me when it's live", Keep this channel, Getting it ready, `/doing`, invites with approval; phone app section matches the apps. Fixed stale setup lines (`ADMIN_USER_IDS` instead of `ADMIN_USERNAMES`, Android link default, PR wording, `INVITES` not passed by the Compose examples) and the garbled `KEEP_H264` comment in `.env.example`.
+- ARCHITECTURE.md rewritten around the current product: nine Mermaid diagrams (system context, save to watch, the New blend, live moments, who sees what, phone pairing and auth, plus the kept sign-in, understanding and search diagrams with quoted labels), every table by plane checked against `schema.ts`/`migrate.ts`, sections on New, sends, moments and bells, channels, invites and approval, the phone API. `TheaterShell`, Discover and the X-first flow removed or marked legacy.
+- PRIVACY.md and `/privacy` rewritten from the code: who sees what per data kind, notes, sends, viewing marks, weights, reactions, bells, invites, approvals, phone keys, avatars, kept files (unauthenticated, cached 7 days, existence visible), the Mac helper, Jev, analytics, admins, retention, clear vs delete.
+- CLAUDE.md top is now a ~25-line current overview with links; legacy sections are marked (history), the dead old-Header section is gone, test count is 3,558. AGENTS.md and `docs/remote-processing.md` overview lines corrected.
+- Privacy gaps found and documented, not fixed: the send sheet's `has` counts private saves; admin counts include private saves; kept files serve "Just for me" posts and reveal whether a post was saved; X sync and Keep this channel ignore Just for me by default; `GET /api/analytics` is public; Clear keeps `activity.user_id`; `auto_channels`, `post_embeddings` and `post_text_fts` outlive deletion.
+
+## 2026-10-20 — The admin area, to the "10 · Admin" boards
+
+- `/admin` is now nine sections plus a person page (`/admin/people/{username}`) in the new design (`components/next/admin/`, `AdminShell`: NxHeader + Admin chip, a section nav that's a chip row on phones). Server pages read `src/lib/admin/boards/*`; `GET /api/admin/boards/{board}` returns the same. The old Matter `AdminClient` is gone; every capability stayed (hide/show, ban/unban, clear notes, invites, sign-in links, playlist hide, the log). Spec: `docs/specs/admin.md`.
+- Privacy: Just for me saves are counts only (lists come from `postCards`/`sharedSavers`, shared saves only; the rest say "N Just for me"); never what anyone searched or watched; Made for you/private channels never in Top channels.
+- New data: `reaction_counts` (member/day/kind, never words/post/moment) from `react()`; `moment_log` (no user ids: formed, tune-ins once per member, peak, reactions, alerts sent/opened); `users.last_seen_at` (≤ 5 min, `/api/auth/me` + `phoneCaller`); `access_keys.platform`; events `app.open`, `search.found|none` (mode only), `post.finish`, `channel.play|keep`. `server_settings processing.paused` = Pause new work (keep worker, Mac helper claims, local understanding).
+- Actions: make/remove admin (audited; never the last admin), remove a phone, clear a member's notes, Retry failed / retry one / link only. Every `/api/admin/*` answer is `private, no-store` (`withAdmin`).
+- Parity: `seed-admin.ts` (Ana is an admin), captures `admin-1` … `admin-10`. Scores 1.5–5.3. Limits in `e2e/parity/README.md` (server name, filler save times and networks, sign-in links need `EMAIL_LINKS_TO_ADMIN`).
+- Follow-ups: PRIVACY.md got an admins-and-counts section on main's text; PR #567 rewrote PRIVACY.md, so merge by hand. The funnel's third row is reactions sent (reactions carry no post); phone saves aren't split iPhone/Android; no Mac helper Remove (its token is env).
+
+## 2026-10-20 — Android: send to your people, forming alerts, like thumbnail, Keep this channel
+
+- Send sheet (j4-4): "Or straight to your people" from `GET /api/app/send`: 52dp faces, dimmed with "Jo already has it." when they have it, a tap posts `/api/app/send` and leaves a tick; a private save says "Just for you. Share it first to send it." The sheet expands once the row loads (M3 sheets don't grow on their own). New's `sent` reason is the why chip "Pete sent you this" with his face.
+- Live (j7-3): forming rows show `people` faces and a bell (`PUT|DELETE /api/app/live/forming/{id}/alert`); the first bell asks for POST_NOTIFICATIONS. `alerts/LiveAlerts.kt` reads `/api/app/alerts` every minute while open and from a 15-minute WorkManager job, posts "X is live · Tune in" on a "Live" channel (opens `adhx://live?slug=`), then marks them seen; without permission the open app toasts instead.
+- Why this one (j2-2): a `like` reason's `post.posterUrl` is a 38dp Gob thumbnail that opens that post. Group channels have Keep this channel → Kept · Open (opens your channel).
+- Verified live on a :3610 parity server with the server branch merged in; JVM tests in `BoardFeaturesTest`. Text posts still skip the send sheet, so they can't be sent to people from the phone yet.
+
+## 2026-10-20 — iPhone: send to your people, live alerts, like thumbnail, keep channel
+
+- Send sheet (j4-4): "Or straight to your people" from `GET/POST /api/app/send`; 52 pt faces, has-it dimmed with "Jo already has it." (beside the faces up to four, else under), a yellow tick on send, "Just for you. Share it first to send it." when not `sendable`. New's `sent` reason is the why chip "Pete sent you this" with the sender's face (a paper plane in the why sheet); unknown reason kinds show as their words.
+- Live (j7-3): forming rows show `people` faces and a bell (`PUT|DELETE /api/app/live/forming/{id}/alert`); the first bell asks for notifications. `App/Feed/LiveAlerts.swift` polls `/api/app/alerts` every 60 s while open and from a BGAppRefreshTask (`<prefix>.alerts`, scheduled 48 h after a bell), posts local notifications, marks them seen, remembers the last 100 shown; a tap tunes in (`-adhxTuneIn <slug>` does the same in Debug).
+- Why sheet (j2-2): the `like` reason's 38 pt Gob-shaped thumbnail opens that post. Group channels play with their name and Keep this channel → Kept · Open (plays `/api/app/channels/mine/{tag}`).
+- Verified live in the simulator against the merged server branch on a parity server: send to Mum/Ana with ticks, Ana's New leads with Pete's sent post, like thumbnail, bell → permission → subscription, a fired alert as a notification (the alert row was inserted by hand: the seed has no group that forms), tune in, keep. Fixture tests: `apps/ios/Tests/BoardFeaturesTests.swift`.
+- Follow-ups: tapping a notification in the simulator's shade wasn't drivable, so the tap path was checked through the debug argument; "Just for you" was checked by API and fixtures, not on screen.
+
+## 2026-10-20 — Board features: send to your people, forming bells, like thumbnail, keep group channels
+
+- **Send** (j4-4): `post_sends` + `GET|POST /api/posts/send` and `/api/app/send` (`src/lib/sends/`): every other member with `has`/`sent`; a post only you keep privately isn't sendable, another person's private post is 404. New leads with `{ kind: 'sent', text: 'Pete sent you this', username }` until seen (`markSeen` sets `seen_at`), however old; the note rides on the sender's saver (and on the reason). Web: "Or straight to your people" in the Share sheet; the why chip shows the sender's face.
+- **Forming** (j7-1/j7-3): `FormingView.people` (≤4 faces from the group's own saves) and `alert`, members only; `PUT|DELETE /api/moments/forming/{id}/alert` (+ phone), alerts at `/api/moments/alerts` (+ phone). Bells are carried by `reconcileForming` after merges/regroups and fire once when the group goes live. Forming ids now carry a per-process part. Web: faces + "Tell me when it's live" on the card, `MomentAlerts` toast + browser notification on every signed-in page.
+- **Like thumbnail** (j2-2): the like reason's `post: { platform, id, posterUrl }` (`cover.ts`, shared with the phone live view); `LikeThumb` in Why this one. **Keep this channel** (j6-2): `POST /api/channels/group/{slug}/keep` (+ phone) saves what you lack (`channel_keep`, not private) and tags it `food-youll-cook`; queues carry `kept`.
+- Parity: Ana sends Pete the bridge; `parity:serve` makes a forming group after Next starts; new j2-2 capture (mobile web vs the phone why sheet). Scores before → after: j6-2 9.4 → 9.0, j7-1 7.8 → 8.2 (web) and 22.3 → 22.2 (mobile), j2-2 11.4 → 11.6 (mobile); the forming card, Keep this channel and the thumbnail are now reached.
+- Follow-ups: forming names stay "Something new" without the model; group keep isn't on the phone-width web side panel (same as Made for you keep).
+
+## 2026-10-20 — Android: Show less/more, New marks, note card, live span, second parity pass
+
+- New server fields used: Why this one has Show less/more pills (`/api/app/feed/weights`, last and first friend who saved it); channels mark `isNew` tiles, add Play the N new and the friend's `note` as a paper tile; Live says "3 saves in 10 min · names" (`recentSaves`/`windowMinutes`) and lists `forming` groups as dashed rows.
+- Parity fixes from a side-by-side of every phone board at 390dp (Hanken Grotesk merged in): header shadow no longer pushes the On their way pill 240dp down; Gob drawn at the boards' size without a second −4° tilt; caught-up sliders open the filter; tighter line heights on Channels, Connected, Settings and the processing sheet (moving first, needs-you last); 68dp face rings; video quality by short side (720p); hairline outline buttons; Decline in the request row; Shared lately after This phone; Your people counts others.
+- Debug only: `DebugConnectActivity --ez noSeen true` keeps a seeded server untouched.
+- Gaps (no server route): "Or straight to your people" in the send sheet, faces and the bell on forming rows, "Saved together" chips on channel tiles. Kept on purpose: one-row header over the player (j2-3), wide videos fit rather than crop, the corner badge instead of "12 you haven't seen".
+
+## 2026-10-20 — Web design parity, round two
+
+- **Friend channel** (j3-2): `Masonry rowFirst` lays tiles out row by row into the shortest column (`placeTiles`, measured heights, DOM stays in reading order), upright `shape="tall"` tiles, the note card in the last column under its first tile; "Play the N new" on phones. Tiles of titled networks show the title only (`postTitleLine`). Friend covers prefer kept posts.
+- **Theater**: a saver's note sits on its own line over the byline (it squeezed the faces in narrow stages); the arriving-save toast is one button sitting beside the stage; a moment's byline time is plain; the why panel says "Saved together" in full (`whyDetail`). Caught up on phones follows j2-4; Tonight skips a channel made of the live moment's posts; a lone side moment on Right now keeps its half height.
+- **Settings/doing**: Change picture frames the crop inside the photo (thirds, yellow slider, "From @x on X"), and previews your face on one of your shares; invites list newest first and say "Made by Ana"; /doing says "Instagram Reel".
+- **Harness**: remote processing with a heartbeat-only helper ("Mac helper connected"), j7-2's toast played into the page's stream, j8-2 picks the pub photo through the file input, j2-5 on phones plays the hamster, j7-1's phone line matched. Remaining limits listed in `e2e/parity/README.md`.
+
+## 2026-10-20 — Android uses Hanken Grotesk
+
+- The Android app's sans is now Hanken Grotesk, like the web and iOS: `res/font/hanken_grotesk.ttf` is the web's `src/app/fonts/HankenGrotesk-latin-variable.woff2` decoded to TrueType (Brotli plus the WOFF2 glyf/loca reconstruction), with nothing downloaded. Chromium renders both files pixel-identically at weights 100–900.
+- `SansFamily` in `ui/Theme.kt` maps each weight to the same variable file at that point on its weight axis (API 26+). Every Material type style and the two text fields use it; licence in `assets/licenses/HankenGrotesk-OFL.txt`.
+
+## 2026-10-20 — iPhone app: the rest of the phone boards
+
+- Why this one: Show less / Show more from a friend (`/api/app/feed/weights`, chosen state in cream, long press for another friend); only the server's reasons are listed. Why, filter and On their way are now the boards' bottom-attached sheets (`BoardSheet.swift`), not inset system sheets.
+- Channels: a friend's channel opens under Home's header with New tiles (`isNew`), Play the N new and the note as a paper card (opens the post); Your people has See all and Invite. Made for you rows say "N saves · from what you keep".
+- Live: first moment big with "3 saves in 10 min" (`recentSaves`/`windowMinutes`), the rest as labelled rows, `forming` groups as dashed rows. Tuned in: byline "· 4 min ago · Reddit"; reactions that land together rise 0.7 s apart and stay solid until late in the rise.
+- Share opens the send sheet (j4-4): download progress, then Messages/Mail/Files/Photos/share sheet. On their way lists movers before needs-you. Settings counts your people without you.
+- Correction to the 2026-10-20 iPhone entry: face colours already match the boards (the web's FNV-1a order); that line was stale.
+- Left as is: the boards disagree on the header (most show a two-row "adhx" bar with a settings button, j2-3/j2-7 the spec's one row); the apps keep the spec's one row. Gaps needing server work: "Or straight to your people" (no send-to-member route), faces and a notify bell on forming groups, the "like" reason's thumbnail. Tests: `apps/ios/Tests/FriendsParityTests.swift`.
+
+## 2026-10-20 — Design-parity gaps closed: getting ready, new marks, note card, phone weights, live span
+
+- **Getting it ready** (j1-4/j1-5): `GET /api/activity/processing/posts` (`processing/keep-status.ts`, `seenBy` only) says whether each post is `waiting | keeping | converting | kept | none` with step and percent; the theater (`useKeepStatus`, `GettingReadyStage`) covers the stage until the copy is kept, then plays (`POST_KEPT` reloads a failed load). Chips: "Shared with your people" (faces) while yours gets ready, "Kept on your ADHX" on a just-kept post. `keep_jobs.progress` (guarded ALTER) keeps the last written percent; `/doing` uses it too.
+- **Channels**: friend/group queues (web + phone) carry `isNew` (`newKeysFor`: not saved or seen); friend queues add `note` (latest visible note). The friend page reads the marks from one request and shows the note as a paper tile.
+- **Phones**: `GET|PUT /api/app/feed/weights` mirrors `/api/feed/weights` (shared `setFeedWeightFor`). `/api/moments` (members) and `/api/app/live` add `recentSaves` + `windowMinutes`; the Right now lead card says "LIVE · 3 saves in 10 min".
+- **Harness**: `parity:serve` re-pins dark chocolate's keep job to running at 62% after Next starts (the worker resets running jobs) and clears `.next-parity` (a stale dev cache looped page reloads after restarts); j1-5 rewrites the status in the browser to see the real switch. Moment names stay a harness limit (the board names aren't in `MOMENT_TOPICS`).
+- Follow-ups: the phone apps can now build Show less/more, New marks, the note card and the live span; the j3-2 score is about tile order (CSS columns), not missing pieces.
+
+## 2026-10-20 — Theater controls kept reachable after the design restyle
+
+- Four e2e specs caught controls the web theater restyle had dropped. Phones (and the dimmed rooms) get a small play/pause glyph at the start of the thin line; a moment's room shows small Previous/Next glyphs after it (the channel room's `xl` stack would sit under a moment's taller rail at 1280).
+- Where the boards show no Previous/Next, the transport carries `sr-only` buttons revealed on keyboard focus; the header Paste pill is the same on wide screens (`PasteButton keyboardOnlyFrom`), next to ⌘V. ⋯ rows with a value are named "Repeat: This post".
+- Specs changed only where a control moved on purpose: `preview-repeat` opens ⋯ for Repeat; desktop `paste-save-failure` focuses the pill and presses Enter. New component test covers the phone buttons.
+
+## 2026-10-20 — Android brought to the phone design boards
+
+- Ran the Android app on an emulator (390dp wide) against the seeded parity server and compared every phone board side by side; reads went to the server, share-card writes to a local mock so the seed stayed untouched.
+- Bundled Instrument Serif with its licence, the boards' palette and line icons, one shared FNV-1a hash into the boards' five face colours, and the boards' switches.
+- New keeps the one-row header with the corner badge; the rail is Save, Share (by media type), Save to phone and More, with Sound, Repeat, the original, the small window and Hide moved into More. Upright videos fill the screen; wide ones still fit.
+- Byline, why chip (Saved together / Close to you), note bubble, progress line, why sheet, feed filter, caught up, channels, a friend's channel (staggered, under the Channels header), search, live, tuned in (React picker lifts the caption), settings and the share card follow their boards. Added the send sheet and a Connected welcome after pairing.
+- Save notes: the share card's Add a note rides with the save, or follows it through `POST /api/app/note` (older servers get the save again); friends' notes show over the byline. Decoded loosely.
+- Debug builds only: `DebugConnectActivity` stores a server and phone key from an intent. Remaining gaps (Show less/more, Play the N new, straight to your people, forming moments) need phone APIs that don't exist yet.
+
+## 2026-10-20 — iPhone app parity with the phone design boards
+
+- Ran the iOS app in the simulator against the seeded parity server as Pete and restyled it board by board: bundled Instrument Serif and Hanken Grotesk, the one-row header with its corner badge, full-bleed player with the boards' scrims, frosted 52 pt rail, thin progress line, why chip, why/filter/on-their-way sheets, caught up, channels, friend channel masonry, search tiles, Live cards and tuned in, settings, share card.
+- The rail is the boards': Save (bookmark: saves someone else's post to your ADHX; on yours it opens "In your saves" with Just for me and your note via `/api/app/note`), Share, Save to phone, More, plus React on Live. Sound, Repeat, the small window, Hide and the original moved into More. Faces use the boards' five colours (FNV-1a of the username, like the web).
+- Save notes: `Saver.note` decodes loosely (trimmed, 140 max) and shows as a speech bubble over the byline; the share card has "Add a note", sent when the card closes through `POST /api/app/note` once the save has landed, else as `note` on a repeat of the same save (same link and request id).
+- New "Connected to …" screen after pairing. Debug-only launch arguments connect, avoid sending seen, and preview the welcome and share card (`apps/ios/README.md`).
+- Deviations: system sheets float inset on iOS 26, the send-file sheet is still the system share sheet, a person's face colour comes from a hash (not the boards' hand-picked ones), no "Play the N new"/"See all"/"Invite" on channels.
+
+## 2026-10-19 — Notes on saves
+
+- `bookmarks.note` / `phone_save_queue.note` (guarded ALTERs, `schema.ts`, test DDL). `cleanNote` (`src/lib/people/note-text.ts`): whitespace collapsed, control/bidi dropped, ≤140 graphemes, empty → null.
+- Every save path takes `note?: string` (`/api/bookmarks/add`, `/api/tweets/add`, `/api/app/save` sync + queue); a repeat save with `note` replaces it. Edit: `PATCH /api/bookmarks/[id]/note`, `POST /api/app/note`. Admins: `POST /api/admin/posts { clearNotes: true | username }` (audited `clear_note`).
+- `Saver.note` via `saversFor`, so feed, blend, search, similar, channel queues, moment items, phone posts and the live poll carry it for members only; moment card faces strip it; a private save's note reaches only its owner; public channel clones no longer copy notes.
+- Web: `SaverNote` (byline bubble in `SaversButton`, quote in Who saved it), `NoteField` in the Save sheet; TheaterV2 only keeps your note after an edit.
+- Parity seed has the boards' notes (Ana on Charlie, Ben on the Rickroll, Mum on the sauce, Pete on dark chocolate).
+- Follow-ups: no admin console button for clearing notes (API only); the j3-2 "Ana's note" tile on a friend's channel isn't built. iOS/Android UI is with the phone agents.
+
+## 2026-10-19 — Design parity harness (`e2e/parity/`)
+
+- `pnpm parity:serve` seeds a fresh DB with the friends-feed boards' world (Pete admin, Ana, Ben, Mum, Jo; the boards' posts, times, private saves, invites, a waiting join request under "Anyone, I approve", group and Made for you channels, moments, /doing states, seen rows so New shows 12) and runs Next on :3600. Kept media is cloned from `PARITY_MEDIA_SRC` (ffmpeg placeholders without it).
+- `credentials.json` holds a session cookie and a phone key (real pairing flow) per member, so iOS/Android can point at the same server.
+- `pnpm parity:capture` screenshots all 17 `j*-web-*` boards at 1280×800 and 390×844 in their states (⋯ menu, Who saved it, caught-up card, searches, invite made, avatar dialog, tuned in with watchers and reactions), never marking anything seen. `pnpm parity:compare` writes side-by-sides and a worst-first score report.
+- Gaps: no notes in the schema; moment names come from shared words without the model; keep percent and "Mac helper connected" need live work. See `e2e/parity/README.md`.
+- No UI changed.
+
+## 2026-10-19 — Exercise release gates across platforms
+
+- Separate the Node runtime from build tools, remove unused package managers and recommended OS extras, and expose retained scanner findings directly in CI logs.
+- Refresh the pinned package manager with explicit dependency-build permissions; keep the three independent lockfiles and frozen installs.
+- Reset only the isolated browser-test development cache to prevent stale Turbopack reload loops on repeat runs.
+- Make load/recovery assertions follow actual video checkpoints while allowing fair interleaved queue work and bounded audio-container padding.
+- Add a guarded macOS rehearsal that observes real disk-full errors inside a disposable 64 MiB image, verifies retry/cleanup and removes the image. No installed service or personal data touched.
+
+## 2026-10-19 — Dependency maintenance and release rehearsals
+
+- Refresh compatible app/extension packages; all three JS lockfiles and resolved Android Maven libraries now have advisory gates, with a dated dev-only exception for the unpatched braces issue.
+- Move FFmpeg to maintained system packages, resolve absolute downloader paths, preflight/capture the Mac binary for launchd, exercise real DASH merging and handle FFmpeg 9 end-seek errors without losing short/final frames.
+- Refresh Android's toolchain/Coil; migrate credentials atomically to direct Keystore AES-GCM, retain legacy reads only for migration, and scope history/defaults across accounts and interrupted cleanup.
+- Scan existing native image builds and actual release digests for fixable high/critical advisories before tag promotion; extend dependency automation without duplicating builds or publishing on PRs.
+- Rehearse actual v2.1.2 schema migration twice, queue recovery and WAL backup/restore using synthetic accounts/media; add an offline CI fixture tied to released source.
+- Add a 10,000-save load/recovery harness, real pinned-model/end-of-video checks and 1080p/audio conversion; publish measured results and limitations in linked guides.
+- Prepare physical phone acceptance steps at the owner's request because no spare phone was available. Validation details are recorded on the PR; no service or installed app deployed.
+
+## 2026-10-19 — Harden friends-feed delivery, live rooms and processing
+
+- Android shares now use durable staged delivery; both phones reuse request IDs and monotonic privacy versions, with cross-process-safe iPhone history and retryable interrupted acknowledgements.
+- Native live rooms renew foreground presence leases, deduplicate accounts across devices, refresh compact saver/privacy metadata and remove only authoritative removals while preserving playback identity.
+- Failed reaction drafts keep their original post and offer Retry; small-screen web rails/pickers remain reachable, with bounded native pickers and Unicode limits.
+- Count the complete visible processing backlog in SQL before limiting details to 60; summary polls skip media hydration, web consumers share foreground polling, and viewed-post updates use an account-scoped acknowledged outbox.
+- Pin all active OCR inputs, distinguish unreadable pictures from model failures, reuse retained originals across passes and reconcile/expire unused cache entries.
+- Alternate conversion and understanding fairly, age old work, and wait for all source conversions before video-consuming learning.
+- Add server/web/native regressions, a native CI workflow and a linked cross-device verification guide; simulator display failure prevented a native visual claim, while unsigned native builds and automated checks are recorded on the PR. No service or installed phone app deployed.
+
+## 2026-10-19 — Close friends-feed review privacy gaps
+
+- Revalidate cached blend savers/reasons/counts and moderation without shifting cursor slots; public caches check a durable SQLite visibility revision across processes.
+- Revoke named streams on ban/deletion/approval changes or phone-key revocation, including idle heartbeats; clean up watchers and subscriptions.
+- Stage queued new saves privately and persist editable queue intent; iPhone acknowledges the latest choice before completing its extension, with interrupted acknowledgements retained for retry.
+- Channel clones respect the recipient's private default; pending approvals remain actionable after inviter deletion.
+- Add regression coverage for all seven findings, stream revocation, in-flight queue updates, owner/key isolation, acknowledgement retries and idempotent legacy schema upgrades.
+- Validation: 3,353 tests, typecheck, formatting, lint (87 existing warnings), and the unsigned iOS simulator build pass; browser/CI results are recorded on the PR. No service or installed app updated.
+
+## 2026-10-19 — Android: Settings, join approvals and "On their way"
+
+- Settings (j8-4) rebuilt: your face in Gob's shape, Waiting for you (admins: Let in / Not now / Decline via `POST /api/app/people/requests/{id}`), Your people (`GET /api/app/people`, new list screen), Invite, What's in your feed, Just for me and Sound on by default, What your ADHX is doing with its count, Shared lately, Connected to … with Remove this phone.
+- On their way (j8-5): pill over the New player while `/api/app/doing` says posts are processing (5 s polls while in front, 15 s when idle, stops on 404), a sheet with thumbnail, step, thin bar and Retry (`POST /api/app/doing/retry`), and a full list screen.
+- Avatars: Coil's OkHttp client adds the phone key for the connected server only (`ServerAuthInterceptor`), since `/api/files/avatar/*` is members only.
+- QA fixes: Why this one lists all `whyReasons`; `nothingYet` shows "Nothing new yet. Save something for your people to find."
+- No phone-key routes for avatar upload, display name, invites, removing a phone or the account's "Just for me by default": the app opens web Settings for picture and invites, and keeps its own private default (sent as `private: true` when on; off switches a new save back, never a repeat share).
+- Branch base: `ff/settings` had no Android friends feed, so `apps/android` and `docs/specs/phone-app.md` were brought over from `feat/friends-feed` first (ff/settings doesn't touch them).
+- Verified: `assembleDebug testDebugUnitTest` (51 tests). Not run on a device or emulator.
+
+## 2026-10-19 — iPhone: Settings, approvals and On their way
+
+- Branch `ff/ios-settings` (from `ff/settings`; `apps/ios` and the phone spec taken from `feat/friends-feed`, which `ff/settings` didn't have yet). Settings from Gob: you (Gob-shaped face, saves), Waiting for you (Let in / Not now / Decline via `/api/app/people/requests/[id]`), Your people list (opens a friend's channel), Invite someone, What's in your feed, Just for me by default, Sound on by default, What your ADHX is doing, Connected to … / Remove this phone, Shared lately.
+- On their way: pill under New's tabs from `/api/app/doing`, polled every 5 s only while the player is on screen; sheet with thumbnail, step and thin bar per post, Retry (`/api/app/doing/retry`) on rows that need you; full list screen. Older servers keep the old `preparing` pill.
+- Faces load through `AuthImage` (phone key as `Authorization: Bearer`, only to the paired server, memory cache), since `/api/files/avatar/<hash>` is members only.
+- QA: Why this one lists every `whyReasons` entry; `nothingYet` shows "Nothing new yet." instead of the caught-up page.
+- No phone routes yet for: changing the picture (`/api/account/avatar` is session only), invites, the `save.privateDefault` preference (kept on the phone; sends `private: true` when on), or a phone removing its own key. Picture and invites open web Settings.
+- Built for the simulator with `xcodebuild`; not tried against a live server.
+
+## 2026-10-19 — adhx.com rebuilt for the friends feed
+
+- `site/` now follows the approved desktop and phone boards: nav (a `<details>` menu below `md`), hero ("Your friends have better taste than the algorithm." with a laptop theater and an overlapping phone), fourteen networks (real marks via `NetworkIcon`), "Three steps. No algorithm.", seven feature rows (New, saver faces + Just for me, the meme vault, search by what's said / on screen, channels, Live, invites), the apps, the "short attention spans and long friendships" band, "Yours. Not ours." with the setup command, footer.
+- Responsive, not fixed boards: `max-w` containers, phone layout below `md`, desktop from `lg`. Phone and laptop mockups scale with their frame (`.nx-scale` + `--u`, `components/frames.tsx`). New: `People.tsx` (Gob-shaped faces), `Meme.tsx` (Impact-style top/bottom captions as real text, Anton/Oswald from Google Fonts as fallback), `icons.tsx`, `mocks.tsx`; `art.tsx` gains elephant, hamster, bird and grass; `CopyCommand` gains a titled, highlighted variant.
+- No third-party media: the boards' real stills are replaced by the site's own illustrations; owner-requested meme captions go over them. Copy only claims what's on `feat/friends-feed`; approvals read "Approve who joins, if you like"; the apps stay build-from-source.
+- README "Where it's going" is now "What's new". Metadata and OG description updated.
+- Checked: `pnpm site:build`, `pnpm typecheck`, `pnpm format:check`; visual pass at 1440, 1024, 800, 390, 375 and 320 (no horizontal scroll). Follow-ups: the hero reel (`/showreel`, MP4) still shows the older feature set and should be re-recorded; the small-screen menu stays open after following a link.
+
+## 2026-10-19 — QA of the merged friends feed (three members)
+
+- Walked Ana (admin), Ben (from an invite, paired phone) and Jo on a scratch DB with kept media: invite → done → pairing, Just for me, New (why, seen, filter, caught up, Show them, Watch it all again), faces and the Who saved it popover, channels (group, friend, new counts), Live with names (watchers, React, reactions both ways, signed-out shapes), search scopes, the phone API, session renewal, `pnpm build` and `pnpm site:build`.
+- Fixed: `/api/app/feed` also sends `waiting` as `hidden` (both apps read `hidden`); New's header said "1 you haven't seen" on the caught-up card; Right now's Just saved strip, covers and moment posts kept a save made private (or by a banned member) until the regroup, and the strip until 12 newer saves; search tiles hid the faces under "Words only"; Tune in's watching count was reset by the moment's older count.
+- Noted for the apps: they read only `why` (not `whyReasons`), so Why this one shows one reason; neither reads `nothingYet`, so a quiet server says caught up instead of "Nothing new yet".
+- Moment `people`/`posts` counts still catch up at the next regroup (≤5 min) after a save goes private.
+
+## 2026-10-19 — Settings for You and Your people, join approvals, What your ADHX is doing
+
+- **You**: Change picture dialog (upload, camera, X picture, a Gob in four colours; circular crop with zoom, live saver-faces preview). `POST /api/account/avatar` sniffs the type, caps 5 MB, and `sharp` re-encodes a clamped crop to a 512px metadata-free JPEG in `MEDIA_DIR/avatars/<userId>-<hash>.jpg`, served to members only at `/api/files/avatar/<hash>`; the old file goes on replace and all of them on account delete. Display name (`PATCH /api/account/profile`) and "Just for me by default" (`save.privateDefault`, honoured by every save path and settled when a phone share is queued).
+- **Your people**: members with save counts, role chip, admin ⋯ ban/unban; pending invites by a 4-character code from the invite id (owner change mid-build), and **Copy link** on an older invite confirms, then mints a fresh token (`POST /api/invites/[id]/link`), since only hashes are stored. Who can invite (`admin | approve | anyone`) lives in a new `server_settings` table; `INVITES=members` is only the first default.
+- **Approvals**: `users.approval` (+ snooze). A member's invite under "Anyone, I approve" makes a `pending` account; `getCurrentUserId()`, phone keys and access keys treat it as signed out; only `/invite/waiting` and `GET /api/auth/approval` see it. Queue: `GET /api/people/requests`, `POST /api/people/requests/[id]`, phone `/api/app/people*`. The waiting page needed `/invite/waiting` excluded from the script-free invite CSP.
+- **Doing**: `GET /api/activity/processing` / `GET /api/app/doing` (7 steps, statuses, plain reasons, retry info, savers; never another member's private save), retry and keep-the-link-only (`keep_jobs.accepted_at`), Mac helper presence from worker polls. `/doing` polls every 3 s; "N on their way" pill in `NxHeader`.
+- Skipped: non-allowlisted email sign-ins landing in the queue as "asked to join" (it would mean emailing links to any address that asks; refusals stay as before). An X relink still overwrites a custom display name (it no longer overwrites a picture stored here).
+- Verified on a scratch DB with headless Chromium: approve moves the waiting browser on to /invite/done, upload + zoom stores and serves the JPEG (401 to strangers), 375px layouts have no sideways scroll.
+- Merged with the friends-feed branch (blend, Android, Gob-shaped faces): the You picture, the dialog's crop and byline previews, Your people's members and the waiting faces use `GobShape` / `gobMask`; the channels' invite link now points at `/settings#people`.
+- Follow-ups: the phone apps don't call the new routes yet; X sync imports don't follow "Just for me by default"; the doing list caps at 60 rows / 400 candidates.
+
+## 2026-10-19 — Faces are Gob shaped
+
+- Owner request: every person's face is Gob's shape (rounded square, 38% corners, tilted −4°) instead of a circle, on web, iPhone and Android. Photos and initials stay upright inside; rings on stacks follow the shape.
+- One primitive per platform: web `GobShape` / `gobMask` / `gobContent` (`src/components/next/GobShape.tsx`, used by `NxAvatar`, `AuthorAvatar`, the Settings picture and its picker, the X picture); iOS `GobShape: InsettableShape` and Android `GobShape` (tilt baked into the path, in `Shared/People.swift` and `ui/GobShape.kt`).
+- The generated web face is now a full square (the frame clips it). Status and live dots, round buttons, badges and the OG share images stay as they were.
+- Follow-up: an avatar picker or crop preview from another branch should use `GobShape` / `gobMask` too.
+
+## 2026-10-19 — New and the blended feed
+
+- `post_views` (guarded, cleared with the account, pruned after 180 days at migrate; guard triggers now 48). `POST /api/views` / `POST /api/app/seen` (≤50, idempotent, first `seen_at` kept).
+- `src/lib/feed/blend.ts` (pure: signals, `BLEND_WEIGHTS`, variety, why words, cursor) + `blend-db.ts` (candidates via `seenBy` over 14 days, minus moderated/gone; closeness from `post_views` + co-saves; taste from `post_embeddings`; per-user 5-min snapshots by seed). `GET /api/feed/blend`, `GET|PUT /api/feed/weights`, `GET /api/app/feed`.
+- Web: `/play?feed=new|everyone|friends|mine` pages through the blend; why chip, why line in Up next, Why this one sheet with Show more / less; Everyone · Friends only · Mine; seen after 2s or skip (batched); `CaughtUpStage` when New runs out; "Nothing new yet" with Paste. **New** is the first tab and signed-in `/` → `/play?feed=new`.
+- Refined in the spec: New and Friends only leave out posts only you saved; `nothingYet` and `total` on the response.
+- What's in your feed (owner request): `types=video,photo,text,article` on both feeds (sound counts as video; default video + photo; stored as `feed.types`, `GET|PUT /api/feed/types` and `/api/app/feed/types`), `FeedTypesControl` beside the switch, and "4 text posts waiting · Show them" on the caught-up card.
+- Validation: 3,149 tests, typecheck and lint pass; walked New → Why this one → Show more → caught up → Watch it all again, and the kind filter ("6 text posts waiting · Show them"), at desktop and 375px on a scratch DB.
+- Merged with the friends-feed branch (Live with names, channels from everyone, speech/screen search, iOS): one seen list — `people/seen.ts` folded into `feed/views.ts` (`notSeenBy`, `newTo`), so a friend channel's "N new" drops what you watched in New.
+- Follow-ups: the phone apps need to adopt `/api/app/feed`; the caught-up "Tonight on your ADHX" row from the design isn't built; closeness counts seen, not watched to the end.
+
+## 2026-10-19 — Android: the friends feed (New · Channels · Live)
+
+- Home is New · Channels · Live under one light row (Gob for Settings, tabs with a 99+-capped New badge, Search). New plays `/api/app/feed`, marks posts seen after 2 s or a swipe past (`SeenBatcher`, batches of up to 50 to `/api/app/seen`), shows the why chip, Why this one, What's in your feed (videos and photos by default, `types=`, `/api/app/feed/types` with a local fallback) and ends on "You're all caught up. Go touch grass."
+- Channels (From everyone, Your people with new counts, Made for you with My saves) and channel grids; Live moments, Tune in polling `/api/app/live/{slug}` every 5 s with watchers, a React picker (6 emoji or 40 characters) and floating reactions with faces (fade in place with animations off).
+- Saver faces and "Ana and Ben saved this" on the byline and search tiles (tap opens that friend); Just for me on the share card (sent with a queued save, or `/api/app/private`) and in More; lock on private posts; search Everyone's saves · Mine. Shared lately moved into Settings.
+- Decoding is lenient (`net/Lenient.kt`); 404s fall back (no feed → My saves home, no Live → nothing live). 36 JVM tests; `assembleDebug` passes.
+- Emulator run against a scratch mock of the contract: New with faces, why chip and badge; the filter sheet (`types=` sent); Channels; Live and Tune in with the watchers chip, React picker, floating reactions and `react` sent; More's Just for me (`/api/app/private` sent); seen batches sent. `adb input swipe` doesn't page the player on that emulator (the baseline build doesn't either), so the caught-up page wasn't reached there.
+- Follow-ups: check against the real server once feed/channels/live/react/types land (field names for `why`, `hidden`, `reactions` are guesses); physical-device pass; "Add a note" and "send to your people" from the designs need endpoints.
+
+## 2026-10-19 — Channels from everyone: group channels and one per friend
+
+- `group_channels` (server-wide, no `user_id`) + `src/lib/channels/group.ts`: everyone's visible saves clustered and named with Made for you's machinery (shared `meanVectors`/`bestClusters`/`nameClusters` from `auto.ts`). Lazy, single-flight, background recompute (>12h, ±10 visible saves, model change, a counted saver gone); reads re-check each post's visible savers.
+- `src/lib/channels/friends.ts` (one channel per other member, `newCount` via `people/seen.ts`, which tolerates a missing `post_views`), `overview.ts` shared by `GET /api/channels` (+`group`, `friends`, `canInvite`) and `GET /api/app/channels`. New queues: `/api/channels/group/[slug]`, `/api/channels/friend/[username]?new=1`, `/api/app/channels/{group|friend|mine}/{slug}` (phone key or session).
+- Web: From everyone and Your people rows (+ Invite someone), `/channels/friend/[username]`, `/play?group=` / `/play?friend=` with back links and empty states, linked saver faces on tiles, theater "Who saved it" popover.
+- Private wins: public tag collection, clone, theater backfill, curator profile, leaderboard tiles, public tweet `publicTags` and the sitemap skip the owner's private saves.
+- Validation: 3,103 tests (new: 11 channels, 3 private-wins, 9 component), typecheck, lint (existing warnings only); walked the rows, friend page, queues, popover and phone width in a browser on a scratch DB.
+- Follow-ups: friend page filters (Videos/Photos/Music) and "New" tile badges from the design aren't built; group naming needs real embeddings (scratch DB used hand-made rows); `auto_channels` still isn't removed on account delete (pre-existing).
+
+## 2026-10-19 — iPhone app: New, Channels, Live, faces and Just for me
+
+- Home is one row over the player: Gob (Settings, which now holds Shared lately), New · Channels · Live with an unseen badge on New ("99+" cap), Search. New pages `/api/app/feed`, marks posts seen (2 s on screen or swiped past, batched to `/api/app/seen`), shows the why chip and a "Why this one" sheet with Everyone · Friends only · Mine, and ends on "You're all caught up. Go touch grass."
+- Media filter: New plays videos and photos by default (`types=` on the feed, filtered by kind on the phone too); tapping New again or Filter in the Why sheet opens "What's in your feed"; the choice is PUT to `/api/app/feed/types` and kept locally on a 404; the end page offers "4 text posts waiting · Show them".
+- Channels (group carousels, your people with new counts → "Ana's saves", made for you) and Live (moment cards; tuned in polls every 5 s with watchers and "up next" arrivals; a React rail button opens six emoji and a 40-character line, `{emoji}`/`{text}` to `/react`; reactions from the poll float up as ringed faces with an emoji sticker or speech bubble, fade-only under Reduce Motion).
+- Saver faces and lines on the player byline and search tiles (tap → friend channel); Search defaults to Everyone's saves; Just for me in the player's More and on the share card (remembered before the post lands, carried by waiting links).
+- Everything new decodes loosely (`Shared/FriendsAPI.swift`); a 404 falls back to My saves or an "update your ADHX" note.
+- Checked: simulator build, and a run against a sample-data stand-in for the phone API (New, header badge, media filter and its fallbacks, why sheet, modes, seen batches, More toggle, Channels, friend channel, Live, React picker, floating reactions, caught-up, search scopes). Not checked: the share extension card on a device, real feed/channels/live servers (other branches), VoiceOver by ear.
+
+## 2026-10-19 — Live with names: watch together
+
+- Names are added per request for members only (`src/lib/moments/people.ts`): `MomentView.savers` (≤5, from the moment's post keys via `saversFor`, window saves only, never a private save), `watchers`, item `savers`, detail `watchers`, `save.saver`. The engine and its broadcasts stay anonymous; signed-out shapes are unchanged (tested key by key).
+- `presence.ts` (globalThis) counts signed-in streams by account; `watching` events get `watchers` per subscriber (no receiver, no banned accounts). Shared stream code in `stream.ts`.
+- Reactions: `POST /api/moments/{slug}/react` `{ emoji | text }` (six allowlisted emoji, or ≤40 cleaned characters shown as text only; 20/min/user, words 6/min; in memory only) → `reaction` events for members watching that moment. Changed mid-build from four fixed words to this, per the owner.
+- Phone: `GET /api/app/live`, `GET /api/app/live/{slug}`, `POST …/react`, `GET …/stream` (that moment's events, `PhonePost` posts).
+- Web: faces and watchers on `RightNow` cards and `MomentScreen`, "Tune in with Ana"; theater watchers bar, named arrival toast, React button + picker, reactions rising with the reactor's face (`LiveTogether.tsx`; fade only under reduced motion).
+- Verified with two signed-in members in the browser on a scratch DB (`MOMENT_MIN_SAVERS=1`): watchers both ways, emoji and words both ways, Jo's save toast, picker at phone width.
+- Validation: 3,103 tests (with `--maxWorkers=4`; the default run timed out unrelated 5 s tests on a host at load ~60), typecheck, lint (81 existing warnings).
+- Follow-ups: the phone apps don't use these routes yet; the Right now header's "3 of your people are on" and forming-card faces from the mockups aren't built; reactions aren't tied to the post on stage.
+
+## 2026-10-19 — Search what's said in videos and the text on screen
+
+- New `speech` / `screen` queue kinds write words (not vectors) to `post_extracted_text` (keyed by post; trigger-deleted with the last save). Whisper base (`onnx-community/whisper-base@1846881b…`, fp32 encoder/q8 decoder, per-window language + no-speech check) transcribes the first 10 min; Florence-2 base (`onnx-community/Florence-2-base-ft@e88a44ea…`, q8, `<OCR_WITH_REGION>`) reads ≤4 photos + 4 frames from the first minute. Junk filter in `extract-clean.ts`, re-applied server-side to Mac results.
+- The words join the text document ("Said in the video:" / "Text on screen:") and `post_text_fts`; only posts with extracted words change text hash (no `SEMANTIC_MODEL_VERSION` bump). Search adds `speech`/`screen` signals ("Said in the video", "On screen" on tiles); Jev never receives them and treats them like visual matches.
+- Models run only in `extract-child.ts` (forked by the jobs child or the Mac runner, one model per process, exits after 60 s idle): Florence-2 alone held 1.6–2 GB and `dispose()` didn't return it. Processing protocol 2 (`kinds` on claim, `extracted`, media by `slot`); v1 workers are still served and never see the new kinds. `SEMANTIC_SPEECH` / `SEMANTIC_SCREEN_TEXT=off` switches.
+- Measured on an M4 (2 threads): 178 s of speech in 10–12 s, 1.6 s per picture/frame, extract process peak ~1.4–1.5 GB (speech) / ~1.8 GB (screen). Real end-to-end smoke (temp DB, real models): "the cat that screams at the cucumber" → the video (strong, speech+screen), a captionless meme by its caption, German speech by a German query.
+- Copy that promised "no audio is processed" now says speech and on-screen text are read on your server and none of it leaves. 3,061 tests, typecheck, lint and production build pass.
+- Follow-ups: transcripts are not shown to people (search only); no status row for speech/screen progress in the learning sheet; window boundaries can garble a word; measure on the NAS CPU before a bulk backfill.
+
+## 2026-10-19 — Friends feed foundation: savers on posts, private saves, search everyone's saves
+
+- `bookmarks.is_private` / `phone_save_queue.is_private` (guarded ALTERs). Every save path takes `private`; private saves write no pulse, and going private deletes the owner's `save` pulse rows. `PATCH /api/bookmarks/[id]/private`, `POST /api/app/private`.
+- `src/lib/people/`: `saversFor`, `visibleSave`/`visibleSaveFilter`, `seenBy`, `withSavers`, `listMembers`. The filter now gates moments, trending counts, Everyone search, `loadSearchItems` copies, similar, sitemap, author hubs, public tweet JSON and the own-play pulse fallback (quoted-only posts drop out of these too).
+- Signed-in outputs carry `savers`/`isPrivate` (feed, search, similar, channel queues, `PhonePost`, `/api/app/search?scope=`); public outputs never do.
+- Web: `SaverFaces` + lock on theater and search tiles, "Just for me" in More and the Save sheet, one-time notice on `/now`, search defaults to Everyone's saves (old scope-less `/play?q=` links now mean everyone).
+- Docs moved to "named to friends, never to strangers" (CLAUDE, PRIVACY, ARCHITECTURE, `/privacy`, README, phone spec).
+- Follow-ups: public tag channels still list privately saved tagged posts; the moments engine keeps a just-privatised save until its next regroup (≤5 min); Live names, blend, invites and group/friend channels are other branches.
+
+## 2026-10-19 — Invite links that pair a phone
+
+- New `invites` table (sha256 token hash, 7-day expiry, single use, revocable, account-guarded, removed on account deletion) and `/api/invites` (make: admins or `INVITES=members`, 30/hour, 20 waiting; list without links; revoke).
+- `GET /invite/<token>` is a script-free "Ana wants you in." page; only a same-origin form POST spends it in one conditional write, creating an email-less account (`'invite'` identity) with a `/welcome`-validated name. Bad/taken names leave it unused. Ignores `ALLOWED_EMAILS`; dies with a banned/deleted maker or when member invites are switched off.
+- `/invite/done` shows "You're in." with the phone pairing QR/code (shared `PairCode.tsx`, also used by Settings → Phone app), configured app links and "Skip, take me to the feed". Invite cards in Settings and on the admin page.
+- Email change already worked for email-less accounts; covered by a test. Docs: README invites-first sign-up, CLAUDE.md auth, spec columns (`id`, `revoked_at`).
+- Validation: 3,044 tests, typecheck, production build and lint (79 existing warnings) pass; walked the flow in a browser on a scratch DB (taken name, join, done page, simulated phone pairing, used link, email add, Settings/admin cards, 375px width).
+- Follow-ups: sessions aren't rolling, so an invite account that never adds an email is locked out after 30 days; `post_views` will also bump the guard-trigger count (46 here).
+
+## 2026-10-19 — Move the app's own strings to the new voice
+
+- Phase 1 ("say it out loud"), app half: the tagline is now "Your friends have better taste than the algorithm." in metadata titles, the OG/Twitter cards, the magic-link email, the signed-out home, `/start`, the crawler list, `manifest.json`, `robots.txt`, AGENTS.md and CLAUDE.md. README, `site/` and `brand/BRAND.md` moved in the docs/new-voice PR.
+- Empty My saves is "Nothing kept yet" ("No algorithm is going to fill this for you"); Tune in's end is "You’re all caught up. Go touch grass." Copy describes only what ships: savers are still counted, not named.
+- `public/og-logo.png` (also the source of `/opengraph-image` and `/twitter-image`) is a picture and still shows "save it. lose it. find it." until it is redrawn. Once both PRs land, drop BRAND.md's "app strings still say…" line.
+
+## 2026-10-19 — Make handed-over sign-in links survive previews
+
+- GET/HEAD now render a small script-free confirmation; only an explicit same-origin, bounded form POST consumes the link and sets the existing protected session cookie.
+- Admin-held links last 60 minutes, emailed/development links retain 15 minutes; creation timestamps preserve the separate one-minute resend cooldown, including legacy SQLite UTC rows.
+- Show invalid/used/expired links with a new-link action instead of silently returning home; resume username selection for unfinished accounts on a later sign-in.
+- Clarify expiry versus resend timing in admin/onboarding/modal and portable setup/architecture guides; keep the callback CSP/referrer rules effective through Next’s global headers.
+- Verify atomic replay/concurrency, origin rejection, body bounds, lifetime/cooldown, production cookie flags and real Chromium/mobile WebKit session persistence after repeated previews and reload.
+- Validation: 3,014 tests, typecheck, production build, formatting and lint (79 existing warnings) pass; Chromium and mobile WebKit confirm previews, real form submission, reload persistence and used-link errors.
+- Source proposed; deployed instances keep their existing behavior until the owner merges, cuts a release and updates the container. No production token was opened or consumed for diagnostics.
+
+## 2026-10-19 — Explain the NAS and Mac processing pipeline
+
+- Add a README-linked technical overview with topology, phone-save, leased-processing and conversion diagrams.
+- Document server/worker responsibilities, full-duration profiles, partial-result search, retry/checkpoint semantics and temporary-file lifetimes.
+- Expand the Mac connection walkthrough with matching release checkout, private environment files and the differently named shared-token settings.
+- Cross-link setup, verification and architecture references; distinguish receipt acceptance, playable media and semantic readiness.
+- Validation: all four Mermaid diagrams parse, local links resolve, shell examples parse and documented sampling examples match the implementation; formatting passes.
+- Documentation only; household settings stay private and no running service changes are required.
+
+## 2026-10-19 — Avoid background throttling in the native Mac worker
+
+- Set launchd `ProcessType=Standard`, retaining `Nice=10` and the two-thread baseline; controlled sequential native inference reproduced avoidable Background throttling and completed under Standard.
+- Add a portable operator checklist for release/image/source alignment, native launchd paths, private machine configuration and proxy upload limits.
+- Require real claim/result acknowledgement, text/image inference, late-video search, H.264 playback and scratch cleanup evidence before increasing load.
+- Explain CPU thread and optional CoreML measurements, shared-host responsiveness, durable queue migration and the difference between clearing saves and deleting accounts.
+- Clarify that account clearing can reuse shared media/indices; cover verified backups, maintenance-task receipts/readback and scoped NAS import ownership repair without changing existing library permissions.
+- Validation: 3,005 tests with two workers, typecheck, formatting, shell syntax and lint (existing warnings) pass; read-only review corrections cover persisted plists and retained channel caches.
+- Source changes are proposed; the checklist records operator checks rather than claiming a deployment passed them. Keep deployment settings and measured household loads private.
+
+## 2026-10-19 — Match grouped root release identities
+
+- Set an explicit empty release-only package name: an empty component alone fell back to the Node name and rejected merged grouped PRs.
+- Preserve the existing release branch/title, unprefixed version tags and actual application package name.
+- Pin the action commit and its Release Please 17.6.0 test library together in an isolated, locked tool package.
+- Add offline upstream config/PR/manifest-merge/release round trips to PR CI, including the original failure and feature/patch/docs policies.
+- Correct legacy release/deployment notes and document exact-commit recovery. Source fix proposed; no service, tag or image publication performed here.
+
+## 2026-10-19 — Reject an invalid processing role
+
+- Validate `PROCESSING_MODE` before spawning either model process; a misspelled remote role must not silently start heavy indexing on the server.
+- Add a no-spawn regression; both supervisor tests, typecheck and targeted lint pass. Source proposed for the native-worker PR; final CI remains required.
+
+## 2026-10-19 — Native Mac processing and elastic video understanding
+
+- Add optional authenticated pull-based Mac indexing; remote mode keeps only the NAS query model, with expiring leases and transactional checkpoints.
+- Light/normal/deep profiles sample the whole duration in bounded sections, resume after interruptions and yield to fresh shares; search matches the best section.
+- Native CoreML/CPU and VideoToolbox/software paths preserve retained NAS media; real FFmpeg regressions cover ordinary, single-frame and low-FPS endings.
+- Delete section frames on success/failure and Mac originals after final acknowledgement; bound managed scratch to 8 GiB by default with startup/periodic expiry, preserving model weights.
+- Add last-saver cleanup, moderation exclusion, strict result validation and account-scoped remote progress; document dedicated secrets, launchd setup and server/worker responsibilities.
+- Verification: 3,004 tests, types, formatting, lint (pre-existing warnings), production/static-site builds and native offline text/image/video + hardware video smoke pass; current-head Linux CI remains required.
+- Extend remote work to full-resolution VideoToolbox/software H.264 conversion with bounded streaming uploads, verified atomic promotion and source-preserving retries. Source proposed, worker not installed; current-head Linux CI remains required.
+
+## 2026-10-19 — Bound mobile share caches and retry newly kept playback
+
+- Give Android exports separate batches, retaining fresh recipient URIs while removing failed transfers and batches older than 24 hours on later exports.
+- Check a 64 MiB free-space reserve before and during Android share downloads without adding a per-file limit; cover cache lifecycle with four file-I/O regressions.
+- Give iOS exports operation-owned temporary folders, removing partial/cancelled downloads and cleaning successful files after Photos or share-sheet completion.
+- Retry iOS playback once on the first kept status even when the old player failure notification arrives later; reset status on post changes and honour cancellation.
+- Android debug compilation and seven JVM tests pass; unsigned iOS simulator builds pass for ARM64 and x86_64. Source only; no phone installed or service changed.
+
+## 2026-10-19 — Reset Android post-link readiness between posts
+
+- Key the post-link screen's remembered post, progress, readiness, errors and retries by network and post ID.
+- Opening a second post in the running app now starts its own readiness polling rather than inheriting a completed post's player state.
+- Android debug Kotlin compilation and queue-receipt JVM regressions pass with one worker and a 1 GiB heap; no phone or service installed.
+
+## 2026-10-19 — Cancel queued shares when clearing an account
+
+- Clear-account now deletes queued URLs together with saved data.
+- Revalidate the queue receipt and live account before work and inside every platform's save transaction after metadata fetching.
+- Keep the optional transactional guard inactive for ordinary saves; cleared/deleted queued work cannot restore bookmarks or media.
+- Add deferred-metadata clear/delete regressions and stale-claim coverage; 108 focused server tests, typecheck, lint (existing warnings) and formatting pass.
+- Android queue-receipt JVM tests (3) and debug APK build pass with one worker and a 1 GiB compiler heap. Source-only changes; no service or phone installed.
+
+## 2026-10-19 — Durable phone queue receipts and feed readiness
+
+- Review fixes for background phone saves: include queued metadata in account-scoped preparing counts and keep disabled/backfill-excluded downloads visible.
+- Remove queued URLs during account deletion and exclude orphaned account jobs from claims.
+- Persist Android queue receipts before polling; resume receipts after process death or follow timeout without submitting another save.
+- Add server feed/account regressions and Android serialization/HTTP resume tests; source is in flight, with no running service changed.
+- Typecheck and lint pass (existing warnings); focused tests hit import timeouts under host load, Android build stopped to prioritise service recovery. Full verification remains required.
+
+## 2026-10-19 — Publish only tagged releases
+
+- Supersede automatic main-image publication: ordinary PR merges never publish; Release Please calls the publisher only after creating a tagged release.
+- Remove both push and release-event publisher triggers, eliminating duplicate automatic entry points; manual recovery requires an existing release version.
+- Keep per-SHA serialization, immutable images, build caches and latest-stable guards. Retire the rolling `main` tag and document migration to releases.
+- Hide docs changelog entries so docs-only commits do not initiate releases; normal PR architecture/build validation remains unchanged.
+- Validation: 2,892 tests, typecheck, formatting and Actionlint pass; lint has zero errors and existing warnings. Source changes are proposed, not deployed.
+
+## 2026-10-19 — Skip documentation images and cancel superseded main builds
+
+- Ignore documentation/deployment-example-only main pushes; mixed runtime changes still publish regardless of PR title.
+- Cancel obsolete automatic main workflows while protecting versioned release calls and manual recovery, retaining the per-SHA build lock.
+- Permit a completed code image to advance main across docs-only descendants, checking actual ancestry/diffs and both sides of renames.
+- Keep immutable source tags/provenance accurate; document that a package-version release commit is a distinct source build.
+- Add executable file-policy and Git-history regression coverage; source changes proposed separately from installed services.
+
+## 2026-10-19 — Shared-NAS operating guidance after a live trial
+
+- Document optional service keys, X OAuth setup and independent automatic/manual sync timings; expose the one-minute manual override in the NAS environment example.
+- Add an illustrative CPU/RAM/swap budget, effective-limit checks and concurrent search/playback validation without treating text indexing as a video-memory benchmark.
+- Distinguish digest pins, numbered versions and moving image channels; separate update detection, image publication and container recreation.
+- Correct shared-NAS concurrency guidance and admin sign-in log recovery; extend the optional UGOS appendix with runtime and deployment-status checks.
+- Keep addresses, credentials, measured household loads and actual installed resource limits private. Documentation only; no running service or default Compose limit changed.
+
+## 2026-10-19 — Publish every main merge and validate release metadata
+
+- Decouple commit-image publication from Release Please and disabled legacy Fly deployment; every main push builds an immutable SHA image and advances `main` only for the current head.
+- Serialize duplicate events per source commit, reuse existing digests for numbered releases, protect immutable release tags and keep stable aliases on the latest release.
+- Run full CI on feature PRs once; native runner builds supply the required build result. Release PRs validate actual version/changelog contents instead of receiving unconditional success.
+- Remove automatic merges, redundant release-branch rebases, ad-hoc stuck-tag creation and the custom title override; use Release Please’s normal versioning and explicit reusable image publication.
+- Add executable tests for metadata attacks, check outcomes, tag planning and stale/prerelease protection; document the pipeline and manual recovery. Legacy hosting and Pages remain opt-in.
+- Source changes are proposed, not deployed; recover the already-tagged release through its existing publisher while the workflow fix is reviewed.
+
+## 2026-10-19 — UGREEN deployment guide and first-save recovery
+
+- Add an optional UGOS Pro walkthrough while retaining the portable Docker contract, including private bind-folder initialization, GUI configuration, proxy hooks and backups.
+- Correct onboarding username-change guidance and distinguish email, admin-held and development sign-in links in the save modal.
+- Recover failed retained-video previews when the matching post is saved; restore account-scoped Saved state and private tags on shared-preview reload.
+- Document Jev search refinement and automatic channel/moment naming, including the public-text payload and local fallback.
+- Private ARM64 trial verifies persistent accounts/saves, retained 1080p video and byte ranges, and real text/image/video indexing; household configuration and credentials remain outside the repository.
+- Validation and final trial follow-ups are recorded in the PR; this source change does not publish a website or update an installed image automatically.
+
+## 2026-10-19 — Reproducible font builds and verified Linux inference
+
+- Bundle unchanged official font files, OFL licences and pinned provenance; root and site use local fonts, avoiding Google's variable response format and an upstream Turbopack parser failure.
+- Keep secure Next 16.3.8 and the existing production bundler; correct remaining site metadata quality claims.
+- Root production and static-site builds and focused layout tests pass locally. Prior fix da361e3 passed every GitHub check, including native AMD64/ARM64 conversion, persistence and real text/image/video inference; require the font revision's checks too.
+- No service installation, image/site publication, DNS change or household configuration committed.
+
+## 2026-10-19 — Pre-installation fixes and native Linux validation gates
+
+- Patch production dependencies (Next 16.3.8 and compatible transitives): local production audit now zero; retain two documented development-tool advisories rather than forcing major overrides.
+- Index shared post text on save and at web startup independently of model inference; cover production disabled flags, startup recovery, privacy/moderation and no model forks.
+- Add native Linux AMD64/ARM64 container checks for media/download tools, ONNX, migrations, ranges, auth and persistent-volume recreation; enable real model inference with the `validate-models` label, replacing obsolete workflow-string assertions.
+- Gate PRs on static website build and production dependency audit; keep Pages publication manual.
+- Persist quick-start configuration, select the checkout's image explicitly, correct phone build/signing guidance and default links, and expose public install destinations as image build arguments.
+- Readiness now distinguishes merge checks from target workload/restore checks after a private trial and later phone/public-site distribution. No service installation, image publication or domain change.
+
+## 2026-10-19 — Guide, website and release-quality audit
+
+- Correct stale self-hosting orientation, backup/dev-secret instructions, extension setup and privacy descriptions; separate website source from live deployment.
+- Website copy now describes offline queuing, native playback/search, conversion and X prerequisites accurately; its Privacy link targets the maintained policy.
+- Record outstanding production dependency advisories (14, including one critical), model-off keyword indexing, Linux/physical-phone testing and domain cutover in `docs/rollout/self-hosted-release.md`.
+- Verify static site build, formatting and UI lint; reproduce the model-off keyword gap with a synthetic production database. Mark legacy architecture sections explicitly.
+- No dependency upgrade, backend behaviour change, website publication or service installation in this audit.
+
+## 2026-10-19 — Retained-media recovery and portable Docker hosting
+
+- Persist the backfill-off boundary across restarts, preserving interrupted jobs and retries.
+- Reconcile downloaded file kinds/counts into every saver's playback metadata; preserve private state and article categories.
+- Reuse existing retained link-network metadata when a new person saves a post whose original is gone; exclude banned savers and hidden posts.
+- iOS search follows further pages in the grid/player, with cancellation, deduplication and retry.
+- Replace the vendor/Funnel-specific NAS example with standard Docker proxy/storage hooks; pass media/search controls, add restart/health checks and document playback privacy and backups.
+- Validation: 2,843 tests, typecheck, formatting, production build and iOS simulator build pass; lint has no errors. Fresh/upgrade migration and production retained-save/range/auth smoke checks pass. Linux container/hardware testing remains outstanding. No service installed or deployed.
+
+## 2026-10-18 — From scratch on a production build: web, iPhone, Android, 14 networks
+
+- **Setup:** `next build` standalone, run like the container (migrate, then `node server.js`) on an empty database with `EMAIL_LINKS_TO_ADMIN=1`, `ALLOWED_EMAILS=@friends.test` and the Jev key.
+- **Passed:**
+  - Owner bootstrap from the server log; the admin card's waiting links for two friends; a stranger refused.
+  - Fresh pairing of three phones.
+  - One post from each of 13 networks kept at best quality and indexed (picture, words, video), including a 4K YouTube video (508 MB) that the phones played as soon as it was kept.
+  - Search by meaning plus the Jev refine, per user, on web and phone keys.
+  - New saves reached the right phone as a pill; a cross-user save shared the kept file.
+- **Fixed:**
+  - Name and channel screens showed adhx.com (inlined at build time); they now use the page's own address.
+  - A DRM Vimeo video was kept as its thumbnail.
+  - Sounds and picture-only posts retried video frames forever.
+  - "This video is unavailable" was retried instead of being treated as final.
+  - A download waiting to retry gave the player no reason.
+  - Returning sign-ins were shown "Save your first post".
+  - `.dockerignore` now leaves out apps, site and build output.
+- **Known:**
+  - Imgur blocks UK addresses (403).
+  - X sync needs the owner's own X developer app.
+  - Web sign-ins end when `SESSION_SECRET` changes (phone keys survive), so keep it fixed in the NAS `.env`.
+
+## 2026-10-18 — Cross-device run: who sees what, everywhere
+
+- **Setup:** e2e server on :3020. Ana on the iPhone 18 Pro, the owner on the iPhone 16, Ben on the Android emulator (fresh install, paired by `adhx://pair` link), and all three on the desktop.
+- **Passed:**
+  - Ana's share from Safari (SoundCloud) reached her saves on the server, desktop and phone, and nobody else's.
+  - Ana's desktop paste (Threads) showed on her phone as a "1 new save" pill that jumps to it.
+  - The owner saved Ana's Reddit video: one download job, kept files shared, a pill on his phone.
+  - Ben's Android share (the Threads post Ana also has) reached his phone with a pill.
+  - Search stayed per person ("baby" found nothing for Ben, "space jellyfish" found the Threads post for both).
+  - Ana's desktop archive removed the post from her phone feed; it still opens by id.
+  - Right now's stream named nobody.
+- **Fixed on the way:** a sound post's filled cover pushed the caption and buttons off-screen (iOS); new saves arriving above the post on screen now show a pill (both apps).
+- **Known:** sounds are found only by their words (no audio processing). Right now forms no group from this small mixed set.
+
+## 2026-10-18 — Phone player: design v22–23 on iPhone and Android
+
+- **Player** (both apps, from the design artifact): swipe up/down between saves, tap to pause; right column Sound, Repeat (off by default: a video that ends plays the next save), Save (Photos / MediaStore, from `?download=1`), Share, Original (the network's logo); bottom row time, scrub line, small window, Hide. Shadows only on words over media.
+- **Text posts** are full bleed: short ones centred in a large serif, long ones fade with **Read all**, which opens a scrolling reader with a reading line.
+- **Small window**: picture-in-picture, also automatic when leaving the app mid-video. Android adds Previous/Next save in the window.
+- **Verified:** iPhone simulator (Repeat, auto-advance, Save to Photos, toast, Hide, reader). Android emulator (column, playback, seek, Repeat, Hide, Save of a 4K video). Not verified: the iPhone small window (the Simulator has none) and the Android reader and small window on screen.
+- **Notes:** each 4K Save is ~0.5 GB on the phone; the emulator crashed once when the Mac was low on disk.
+
+## 2026-10-18 — iPhone app plays and searches your saves
+
+- **Home is My saves** (`apps/ios/App/Library/`): a vertical paging `ScrollView` with one `AVPlayer` that follows the post on screen, loops, starts muted (speaker button), and pauses on tap. Albums swipe sideways; words read as a card; "Open original". Errors show the server's 404/410 `reason`.
+- **Search** (`SearchView`): debounced at 350 ms, TRY DESCRIBING prompts, a poster grid with match strength, "Still learning…" and "Nothing close" notes; a result opens the player there.
+- **Shared lately** (was `HomeView`) is behind the clock button; a row opens the post in the player (`/api/app/saves?platform&id`).
+- **Posters:** Reddit/Bluesky videos had none, so tiles were blank. `src/lib/keep/poster.ts` takes a still on download, and `/api/files/…/poster` makes one once for videos kept before.
+- **Verified** on the iPhone 18 Pro simulator against the e2e server: the Reddit video plays (Range 206s), the X album pages, "baby" finds and plays it.
+- **Not yet:** Android (its own session), preloading the next video, background audio.
+
+## 2026-10-18 — Phone API for playing and searching your saves
+
+- **Owner decision:** the apps play your saves natively and search them by meaning; the server keeps doing the heavy lifting (downloads, understanding, streaming).
+- `GET /api/app/saves` (newest first, no archived, `offset`/`limit`; or `?platform&id` for one) and `GET /api/app/search` (`findPosts` with `scope: 'mine'`, Jev refine on page one, 120/min) take a phone key and only read that key's own saves.
+- Both answer `PhonePost` (`src/lib/app/phone-post.ts`): kind (video, audio, photo, article, text), author, text, relative `/api/files` media and poster addresses, `sourceUrl`, `openPath`, and on search `match` and `learning`.
+- Spec updated (`docs/specs/phone-app.md`: API, the player and search). App READMEs and the "only sends links" copy change with the app work.
+- **Next:** iOS and Android player and search screens; the design artifact gets the new boards.
+
+## 2026-10-18 — Admins see when a sign-in link is waiting
+
+- With `EMAIL_LINKS_TO_ADMIN`, a friend asking for a link waited until the admin happened to open the admin page. `/api/auth/me` now has `waitingSignIns` for admins (only when links are held; never for anyone else).
+- The account menu shows the count on the avatar and a "N sign-in links waiting" item to `/admin#sign-in-links`; an admin's menu looks again every 30s. The card scrolls itself into view once loaded.
+- **Not covered:** phones in the theater and search hide the avatar, so there's no badge there.
+
+## 2026-10-18 — End-to-end run: owner, friends, iPhone and Android
+
+- **Run:** fresh server with no email (links handed over), `ALLOWED_EMAILS=@friends.test`, no X app. Desktop (Playwright) for an owner and two friends; the iOS app on two simulators; the Android app on an emulator; a stranger. Pairing by typed code and by the QR link, shares from Safari and the Android share menu, already saved, not a post, offline then back, removing a phone.
+- **Owner setup:** before there's an admin, held links follow `mayGetHeldLink`, so the owner gets in even off the invite list. Opening a link while nobody is admin makes you the admin (`claimOwnership`); only someone with the server log could have it. The waiting screen says the link is in the log (`setup: true`). Email delivery still needs `ADMIN_USERNAMES`.
+- **No X app:** `/api/auth/me` has `xAvailable`. Start, Settings and the account menu stop offering Connect X (it was a bare 500). Start offers "Save your first post" instead.
+- **Search on small libraries:** z-scores used only the library's own spread, and with n posts nothing can score over √(n−1), so a new friend's search by meaning found nothing. `background()` blends in a measured prior (465 posts, 25 queries) worth 20 posts. Filler words ("a", "the", "at") are left out of the keyword query.
+- **adhx.com in the app:** username, channel links, the OG card, the email logo, privacy and admin copy now use this server's address (`PUBLIC_HOST`).
+- **Unsaved link-network preview:** `/api/files` answers 404 with a reason ("Nobody here has saved this yet") and the player shows it without dropping the post. A download that gave up is 410.
+- **Apps:** Android typed `10.0.2.2:3020` as https (iOS used http for local addresses, now both do). Both re-check "can't be reached" every few seconds. iOS: the share card no longer leaves an empty half-screen when iOS shows it as a card; the Connect screen scrolls instead of pushing the logo under the clock.
+- **Follow-ups:** no notice to the admin that a link is waiting; Android "download" link in Settings needs a published APK; Reddit videos have no poster frame.
+
+## 2026-10-18 — Android app builds; phone API gaps fixed
+
+- **Android:** first real build (JDK 17 + SDK 35, wrapper jar committed) and an emulator run against a local ADHX. Fixed a crash on the first API call (body read on the main thread), new shares landing above the fold in Shared lately, and "Kept · saved" for words-only posts.
+- **Gone tweets:** `fetchTweetResult` (fxembed) tells "gone" (FxTwitter 404/401) from "couldn't ask". `addTweet` now answers 404, so `/api/app/save` says `unavailable` instead of a 500 "try again".
+- **Status `off` with KEEP_BACKFILL=off:** an older save nobody re-saved since the server started is never kept; `/api/app/status` said `waiting` forever (and apps polled forever). It now says `off`. `keepCutoff()` in the keep worker exposes the cut-off.
+- **Re-encoding:** `percent` is null and the new `step` is `converting` while ffmpeg turns a VP9/AV1 download into H.264 (was a stuck 99% for minutes).
+- **Video-only networks** (YouTube, Vimeo, Twitch, SoundCloud): when yt-dlp says the post is gone, the save is `unavailable`; when it fails for now, the post stays a video and the download retries. Before, both became a "photo" of the page's thumbnail.
+- **Follow-up:** apps could show `step: converting` as words; an explicit phone re-share of an old post could queue it despite the backfill cut-off.
+
+## 2026-10-18 — adhx.com moves to GitHub Pages
+
+- **Owner decision:** adhx.com is only the website, served by GitHub Pages. The self-hosted app doesn't serve it.
+- **What moved:** the product site, reel, art and video are now in `site/`, a static Next.js export built with webpack. Turbopack picks up the app's `src/instrumentation.ts` through the shared lockfile. Gob, NetworkIcon and the network list are copied in `site/components/`.
+- **Deploy:** `.github/workflows/site.yml` deploys `site/out`. `CNAME` is `adhx.com`. Pages must be enabled with source "GitHub Actions".
+- **Removed from the app:** `ADHX_PRODUCT_SITE`, `/showreel`, the old iCloud shortcut (it opened adhx.com) and the adhx.com share-target defaults.
+- **Skill:** now requires `ADHX_URL`.
+
+## 2026-10-18 — Gob is back; adhx.com becomes the product site
+
+- **Gob** (`src/components/next/Gob.tsx`, CSS `.gob` in globals.css) replaces the yellow square with dots, per brand/BRAND.md. The serif "adhx" wordmark stays.
+  - Moods: `idle` (blinks, glances), `busy` (bob, look around, "o" mouth), `shut` (eyes closed).
+  - Inside `.gob-host`, hover or focus makes Gob look around.
+  - `AdhxFace` now renders Gob.
+  - The header Gob goes busy through `logo-busy.ts` (`useBusyLogo`) while the player loads, search runs, a paste is grabbed or X syncs.
+- **Product site** (`src/components/site/`), shown at "/" to signed-out visitors when `ADHX_PRODUCT_SITE=1` (set in fly.production.toml).
+  - **Hero:** `HeroReel`, a ~31 s scripted reel as live markup at 1280×720, scaled to fit.
+  - **Sections:** networks, search (EmbeddingGemma 2), kept originals, player, Right now, channels, X sync, phone apps, Claude, self-hosting.
+  - **Illustrations:** illustrated posts (`art.tsx`) instead of anyone's real content.
+  - **Video:** `/showreel` shows the reel alone. `public/site/adhx-reel.mp4` (1.9 MB) and `.jpg` were recorded from it with Playwright and encoded with ffmpeg. Re-record after changing the reel.
+
+## 2026-10-18 — ADHX Share apps (iOS + Android)
+
+- **iOS** (`apps/ios`): hand-written Xcode project (objectVersion 77, synced folders), SwiftUI host app (QR/typed pairing, `adhx://pair` link, Shared lately, Settings) + Share Extension running saving → saved / already / not a post / offline / not connected. Address, history and queue in the App Group; key in the Keychain. Bundle prefix and team in `Config/Base.xcconfig`. Builds with `xcodebuild … CODE_SIGNING_ALLOWED=NO`; paired against a real local server in the simulator. iOS 27 shows share extensions inside the system card, so there is no see-through backdrop.
+- **Android** (`apps/android`): Kotlin + Compose, translucent `ShareActivity` bottom sheet, ZXing scanner (no Google services), WorkManager offline queue, EncryptedSharedPreferences. **Never compiled** (no JDK/SDK on the build Mac), and `gradle-wrapper.jar` is missing: run `gradle wrapper --gradle-version 8.11.1` once and commit it.
+- Both use Gob (from `src/components/next/Gob.tsx`) and `public/icon-512.png` for the icons. README → Phone app covers installing.
+- Follow-ups: compile and test Android, CI builds/releases for the APK, TestFlight, and channels from the sheet.
+
+## 2026-10-18 — Phone app server side (ADHX Share)
+
+- **Phone keys**: `access_keys.scope` (`search` | `phone`, migration adds it, old rows are `search`). Phone keys work only on `/api/app/save|status|me`; search keys only on `/api/agent/search`. Up to 10 phones.
+- **Pairing** (`src/lib/auth/phone-pairing.ts`, table `app_pair_codes`): Settings → Phone app (`PhoneAppCard`) makes an 8-character code, single use, 10 minutes, shown as a QR code holding `adhx://pair?server=<origin>&code=…`. `POST /api/app/pair` spends it for a key; the card polls `/api/app/phones` and lists/removes phones.
+- **Save** (`POST /api/app/save`): the add logic moved out of the routes into `src/lib/bookmarks/add.ts` (`addBookmark`) and `add-tweet.ts` (`addTweet`), so the X branch no longer loops back over HTTP with the cookie. Answers `{ platform, network, id, author, text, posterUrl, openPath, alreadySaved, savedAt }`, 422 `not_a_post`, 404 `unavailable`.
+- **Status** (`GET /api/app/status`): keep job state plus a live percent from yt-dlp's progress lines (`src/lib/keep/progress.ts`, in memory, never goes backwards).
+- Contract for the apps: `docs/specs/phone-app.md`. Apps live in `apps/ios` and `apps/android`.
+- Follow-up: "Add to a channel" from the sheet needs a channel scope for phone keys.
+
+## 2026-10-18 — Sign-in without Resend
+
+- **Three ways to deliver links** (`src/lib/email/magic-link.ts`, `signInDelivery()`): Resend; your own mail server (`SMTP_URL`, nodemailer, `smtpOptions` parses `smtp://`/`smtps://`); or `EMAIL_LINKS_TO_ADMIN=1`.
+- **Admin hand-over**: links wait in `admin_sign_in_links` (raw link, lives as long as the 15-minute token; hidden once used) and show on the admin page's "Sign-in links" card (`/api/admin/sign-in-links`).
+- **Who gets a held link** (`mayGetHeldLink`): invited emails, existing accounts, or anyone while no admin exists. The owner's first link (and admins' own) also prints to the server log.
+- **UI**: the start screen says "Ask whoever runs it for the sign-in link".
+- **Compose**: no longer requires Resend.
+
+## 2026-10-18 — Self-hosted: kept media and fourteen networks
+
+- **Decision (owner)**: ADHX is for self-hosting with friends, never commercial. Save each post's media locally in the best quality and serve it; support linktokeep.com's networks. Reverses the 2026-10-16 "proxy only, no yt-dlp, drop YouTube" call (`docs/specs/any-site-links.md` marked superseded).
+- **Kept media** (`src/lib/keep`, tables `keep_jobs` + `kept_files`):
+  - in-process queue, newest save first, with backoff
+  - downloads from fxtwitter for X, otherwise yt-dlp plus og:image
+  - non-H.264 video is re-encoded to H.264 at the same size
+  - served by `/api/files/...` with Range support, and a relative 307 to the old proxies until kept
+  - hourly orphan clean-up
+  - the understanding worker reads kept files from disk; its hash gains `:kept`
+  - Docker installs Python and a pinned yt-dlp in `/opt/yt-dlp`
+- **Link networks**: YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky.
+  - Code: `networks.ts`, `describeNetworkPost`, `/s/{network}/{id}`, `/api/links/resolve`, plus paste-after-the-address support in `proxy.ts`.
+  - Measured live: all ten saved and downloaded in 1–4 s each.
+  - Facebook and Twitch kept at 1080p, X at 4K.
+  - Vimeo's own videos are DRM (picture only); Threads gives a preview-sized picture only; Imgur is blocked in the UK.
+- **Self-hosting**: `ALLOWED_EMAILS` sign-up allowlist; iOS Settings card explains making your own Shortcut for a non-adhx.com origin; skill takes `ADHX_URL`; README rewritten for self-hosters.
+- **Disk safety** (found when a test backfill filled this Mac's disk): downloads pause below `KEEP_MIN_FREE_GB` (default 2) free, and `KEEP_BACKFILL=off` now also skips older jobs that were already queued.
+- **Not verified**: the Docker image build (no Docker here), any server outside the UK, and a full-library backfill.
+
+## 2026-10-18 — Hourly X bookmark sync; search your saves from the adhx skill
+
+- **Hourly sync**: `src/lib/sync/auto.ts`, started from `instrumentation.ts`. Every 5 minutes it syncs people with X connected, at least one finished sync, `autoSync` not `'false'` in `user_preferences`, not banned, and no sync started in the last `AUTO_SYNC_EVERY_MINUTES` (default 50, so the gap stays under an hour). Mode `'new'`: 100 per page, stops after the first page holding a post already saved (X serves the newest 800 at most). Pauses 6h on X 402 (no credits), 15m on 429. Rows carry `trigger_type='auto'`; only manual rows count toward the Sync button's hour wait. The sync loop moved from the route to `src/lib/sync/run.ts` (`runBookmarkSync`), shared by both.
+- **Access keys**: `access_keys` table (hash only, last four, last used), `src/lib/auth/access-keys.ts`, `/api/access-keys`, Settings → Search from Claude (`AccessKeysCard`), max 5. Only `/api/agent/search` accepts them (`Bearer adhx_…`, ban fails closed); it searches the key owner's own saves via `findPosts` (`src/lib/semantic/find.ts`, now shared with `/api/search`, Jev refine included) and returns a compact shape: kind, original and ADHX URLs, text, links, media, match strength. Deleted with the account.
+- **Skill**: `skills/adhx/SKILL.md` now covers searching saves (setup, turning a request into `q` + `type`, response, errors) as well as reading X posts. Plugin 1.1.0.
+- **Not verified**: a real X account (no X OAuth locally); auto sync tested with mocked X and the claim lock. X bills per post read, so each connected account costs up to ~100 posts an hour.
+
+## 2026-10-18 — Production-readiness audit (production build, real engines, live data)
+
+Ran the Docker layout locally (standalone `server.js`, full node_modules, `src/lib` for the tsx workers, migrate first) behind HTTPS, and a scripted audit of every journey on Chrome desktop, Safari desktop (WebKit), Android Chrome and iPhone (WebKit): 30–31 steps each, all passing at the end; plus a two-engine live test (save → other browser 0.5–2.6s; Tune in plays a new save on the iPhone 1.2s after it lands; watching counts correct) and the e2e suite on Chrome + iPhone WebKit.
+Fixed along the way: `next build` failed (Turbopack resolving the `fork()` path; `turbopackIgnore`); sign-up dead end (16-char suggested names cut onto taken ones; now ≤15, older accounts get a claimable suggestion); moment stopwords were a Set of letters (`'a' + 'b'.split()`), hence names like "For"/"Get"; header search and home paste field lost text typed before hydration (now plain GET forms, uncontrolled); signed-out pages fetched learning status (401); channel tiles showed "Everyone"; `/now` was noindex while in the sitemap; site description still said playlists; `/now` and `/start` lacked an h1; theater load errors now offer Try again (and say when rate-limited); `mobile-webkit.spec` rewritten for the new theater.
+Not covered here: Firefox (headless launch crashes in this sandbox), real email (prod refuses to send without RESEND_API_KEY — set it on Fly), X OAuth/sync with real credentials, load testing. Note: public reads are 120/min per client IP (Fly-Client-IP); carrier-NAT users share one. State: local, not pushed.
+
+## 2026-10-17 — Retired Live, Trending and Leaderboard; profiles, privacy and errors in the new design
+
+Owner: remove `/live`, `/trending`, `/leaderboard`; redesign profiles, privacy and the share error. Old URLs 308 via `next.config.js` (`/live`, `/trending/*`, `/discover` → `/now`; `/leaderboard/*`, `/collections/*` → `/channels`); sitemap now lists home, `/now`, `/privacy` plus content. A reachability script (routes + middleware + semantic workers + scripts as roots) found and removed ~70 dead files: the whole old `TheaterShell` and its chrome, the old `Header`, `PWAInstallPrompt`, trending/leaderboard lists, poster cards, old sync widget; their tests went too (unit count 3601 → 2691; e2e specs for Live removed). AppShell renders pages bare; every page has `NxHeader`. New: `ProfileParts` (hero + post grid) for `/{handle}` and `/t/{username}` (channel cards, "channels" wording), new-look `/privacy` (+ `PRIVACY.md` facts updated: Right now, channels, Top channels — owner to review), `/share` error, `error.tsx`. Paste failure toast offers "Watch it anyway". Fixed: server page calling a client-module function (`channelTitle` → `channels/title.ts`). State: local, not pushed.
+
+## 2026-10-17 — Signed-out home and shared post pages in the new design
+
+Signed-out `/` is `PublicHome`: hero ("Save it. Lose it. Find it."), paste-a-link-to-watch (no account needed), Start saving, Right now live underneath; the sr-only static list stays for crawlers; `?auth_error=x_link_only` shows a hint. Post previews (`/{user}/status/{id}`, `/reels/{id}`, `/reel/{id}`, `/p/{id}`, `/@{user}/video/{id}`) render `PreviewTheater` → `TheaterV2` (`source.shared`, `lead`) instead of `TheaterShell`; server side unchanged (metadata, streamed resolve, JSON-LD, pulse). The post loops until you move on, then everyone's similar posts follow (`/api/search/similar` now answers `scope=everyone` signed out). Auto-save rules kept; signed-out Save anywhere returns to that post's page with `?save=1`. Unavailable posts offer the original. New `theaterItemToFeedItem`; `SearchResultItem.stage` keeps the exact media item. Desktop theater sheets start below the header bar.
+e2e: rewritten for the new pages (previews, signed-out, public-pages, save-clone, preview-repeat, theater-sound, paste-save-failure); removed specs for the old public Live theater and old preview chrome (desktop-filter-layout, launch-ux, live-queue-filter, mobile, queue-count, theater-read, theater-shortcuts, theater-tap-declutter). Not carried over: Read/Watch for a quoted video, the shortcuts help, tap-to-declutter.
+Still old-look: `/live`, `/trending` (+archive), `/leaderboard`, `/{user}`, `/t/{user}`, `/admin`, `/privacy`, `/share`'s error page — owner to decide redesign or remove. State: local, not pushed.
+
+## 2026-10-17 — Full two-browser pass: live data, journeys, edge cases
+
+Second browser driven by a Playwright script signing in other local accounts. Live data verified both ways in ~2-3s: Right now counters, strip, card people +1, watching 1→2, Tune in auto-plays the next save when caught up. Fixed:
+
+- Signed-out `/channels`, `/search`, Tune in went to the old public theater (AppShell redirect): now `/start?returnTo=` and public `/play?moment|channel`. Sign in button, no Paste when signed out.
+- Making a channel private didn't reach the page for up to 30s (per-module caches; JSON-LD listed its posts). Owners can now switch Public/Private; Keep is private by default.
+- New accounts: one-step new-look `/welcome`; no starter-playlist dead end; old header hidden on `/start`; "Maybe later" → Right now.
+- More like this in My saves split into many "More like…" headings (`fromSource`).
+- Tune in note folds into a chip after 8s; caught-up dims only the post; moment page has Paste; clear empty/error screens with the header; new 404.
+- "1 saves today", blank text covers on moment cards, "@x · saved" toast, Top channels crash on a missing `items`.
+  State: local, not pushed.
+
+## 2026-10-17 — Right now is home; one nav everywhere
+
+Owner: Channels and Tune in felt hidden behind the theater and search. Right now moved off `/channels` to its own page, `/now`, which signed-in `/` now opens (live, changes as people save, and every Tune in starts there). `PrimaryNav.tsx` gives every new-design screen the same four places: Right now · Channels · My saves · Search. Desktop gets header tabs (also over the theater at xl+); phones get a bottom tab bar. The moment page uses `NxHeader`. The Right now quiet state links to Channels and My saves. `e2e/right-now.spec.ts` watches `/now` (2/2 pass).
+Also: search result views renamed Best first / By match / Play order; video tiles play muted on hover or focus (not with reduced motion). State: local, not pushed.
+
+## 2026-10-16 — Settings redesigned; /play follows its reading settings
+
+Settings (`src/components/next/settings/`) is in the new design, full-width with `NxHeader`. Your X bookmarks is the first card, with live sync via `useXSync`. `?sync=1` starts a sync; the account menu's Sync X bookmarks now points there. Sign out is on the Account card.
+Theater v2 now honors Watching and reading. Sound comes from `useTheaterSoundPreference`, shared with the old theater, so the latest mute choice wins across tabs. In `next/stages`, Bionic Reading applies to post, quote and article-summary text. The reading font applies only to reading-sized text (>200 chars, quotes, summary), so short posts keep the poster serif. The exception: with Bionic Reading on they switch too, because Instrument Serif has a single weight and its synthesized bold is invisible (owner chose "reading text only").
+Note: the TheaterV2 sound change landed inside 32c269b (another session's commit swept the file); d37cb50 has the stages and tests. State: local, not pushed.
+
+## 2026-10-16 — YouTube removed; saved Shorts deleted; any-site study
+
+Owner decision: ADHX only proxies public media it can understand, and YouTube Shorts play only through YouTube's iframe (no frames to sample), so YouTube is gone: no `youtube` platform, no StageYouTube/oEmbed adapter, no `youtube.com/shorts` detection in paste/share/prefix/extension/bookmarklet, no YouTube CSP frame-src. `/shorts/{id}` redirects home and stays reserved. `YtDebugOverlay` became `AvDebugOverlay` (`?avdebug=1` only).
+Data: `src/lib/db/drop-youtube.ts` (called from migrate.ts) deletes every `platform = 'youtube'` row from bookmarks and its children, activity, moderation, analytics, understanding tables and FTS, plus auto channels that held a Short. Idempotent, one transaction, **irreversible on deploy**. Tested on the full test schema.
+e2e: `theater-sound.spec.ts` now drives a TikTok preview with a local WebM (`e2e/fixtures/sound.webm`) instead of the faked YouTube player; the iOS reject-second-unmute case went with it.
+Also: `docs/specs/any-site-links.md` measures proxy-only support for 12 more sites (yt-dlp rejected). Go: Bluesky, Streamable, LinkedIn, Pinterest, Reddit via vxreddit.
+Follow-ups: the published iCloud shortcut may still offer YouTube (it now lands on "not supported"). State: local, not pushed.
+
+## 2026-10-16 — Right now: Playwright spec across two accounts
+
+`e2e/right-now.spec.ts`: one account watches `/channels` while another saves a frog post through `POST /api/bookmarks/add`; without a reload the watcher sees the strip chip "→ Frog", the card's people count +1 and its "Just saved" overlay. Second test: Tune in skipped to "You’re all caught up", watching 1→2 when the saver opens `/moments/{slug}`, then the next save auto-plays with "Just saved · just now".
+E2E has no model, so `e2e/seed.ts` writes synthetic 768-dim `text` vectors into `post_embeddings` (6 frog posts on one axis saved by two seeded people, 40 background posts, two unsaved frog posts the spec saves) and `MOMENT_MIN_SAVERS=2` is set in `e2e/env.ts`. Naming falls back to the shared word, hence "Frog".
+The engine keeps its state for the server's lifetime, so each attempt saves as a fresh account and asserts the count relative to before (passes with `--repeat-each=4`). Pre-existing, unrelated failures in the full Chromium run: `nav.spec.ts` (j advances Live) and `theater-tap-declutter.spec.ts` (desktop), both failing on the base commit too. State: local, not pushed.
+
+## 2026-10-17 — Post words in the new theater: paragraphs, links, link cards, full articles
+
+The owner's links were /author/status/id addresses copied from the new theater ("Copy link"), so their reports were about `/play`, not the older preview pages (which already rendered these). Fixed in the new theater: paragraphs run together (`postText` collapsed blank lines) → `postBody` + `RichText`; links/@mentions/#hashtags not clickable; no card or picture for linked pages → `LinkCard`; a tweet linking to a blog showed as an empty "Article by @…" → `isRealArticle`; X articles needed "Read it here" → shown in full on the stage; video/photo captions stuck at two lines → tap/More opens them; controls were a centred box for posts but full width for video → one full-width bar.
+
+## 2026-10-16 — Full articles in the theater; second two-browser pass
+
+Owner asked for a full re-test once Settings landed. Articles: the new theater only showed the title and six lines ("Read it here" went to X); added `ArticleReader`, the whole body in the reading font with Bionic Reading. Settings (new design) saves sound, Bionic Reading and font, and the theater and reader follow them (checked, then restored). Right now and Tune in re-tested with five more local accounts: saves land in under 3 s, watching 1→2→1, "1 new save just landed" then Play now with "Just saved".
+Fixed: four frog saves split into forming groups of 3 and 1 (pairs of same-topic posts can sit ~0.3 apart) → `FORM_SIMILARITY` 0.33 and close forming groups merge; the name fallback ignored 3-letter words ("cat"); in dev the engine timer kept running pre-reload code (now rebinds per module copy); Settings had a generic tab title and sent signed-out visitors to `/`.
+The built-in browser pane drops its cookie whenever the local server stops; sessions themselves survive restarts (an hours-old curl session kept working).
+
+## 2026-10-16 — Right now: live moments and Tune in
+
+What people are saving, grouped by meaning, live: `/channels` gets Right now (Just saved strip, moment cards that glow when a save lands, forming groups that pop into new moments), `/moments/{slug}` is a live page, and `/play?moment=slug` is Tune in (new saves play next, caught-up waits for the next one, Stay close / Wander, LIVE · N watching). Engine in `src/lib/moments/`, SSE at `/api/moments/stream`.
+Tested end to end with two browsers as two accounts (the second via Playwright pasting real links): saves appeared on the other screen within ~1 s, people counts rose, a forming "Frogs?" filled 2→3→4 and became a moment, watching went 1→2→1, a brand-new post was understood and sorted in ~2 s, Tune in auto-played a save while caught up.
+Tuning: similarities are centred (raw cosines ~0.72 for any pair). Fixed while testing: quoted posts counted as saves, first start re-streamed the last minute, label widened needlessly, strip thumbnails' shimmer covered the heading.
+Prod: `MOMENT_MIN_SAVERS` (default 3). Follow-ups: a Playwright spec seeding vectors (e2e runs with understanding off), signed-out landing using Right now. State: local, not pushed.
+
+## 2026-10-16 — Previous look removed; theater says when it leaves your results
+
+Owner: "remove everything to do with the old design". The `next_ui` flag, `NEXT_UI_FORCE`, `/api/next-ui` and "Use the previous look" are gone; the library grid (`AuthedHome`, `FeedGrid`, `FilterBar`), Tags page and playlist theater were deleted. `/saved`, `/collection`, `/library`, `/tags` are now redirects; `/t/{user}/{tag}` always renders `ChannelPage` (private → owner only). No runtime rollback any more: runbook rewritten (rollback = redeploy previous release).
+Still on the previous look, awaiting the owner's call: signed-out `/`, `/live`, `/trending`, `/leaderboard`, `/settings`, `/admin`, previews, `/welcome`. Their nav now points at Search/Channels/`/play?recent=1`.
+Same day: posts added after a search's results (stick to this vibe / more like this) are labelled "More like @x’s video · Not from “q”" and don't change the "n of N" count; "couldn't be learned" is never shown; posts deleted upstream are hidden everywhere; X articles whose content never loaded are re-fetched at worker start; account menu (Sync X / Settings / Sign out) in the new headers.
+State: local, not pushed.
+
+## 2026-10-16 — Match strength in search, plus fixes from a full local sweep
+
+Search results now say how close they are: a three-bar meter on every tile (Strong match / Good match / Related), strong first, and the rest under "Related to “frog”" explaining they're close in meaning but not what you described — so the chameleon and the seal under "frog" make sense.
+Strength comes from the fused score; words-only matches take Jev's grade, which may lower them one level at most, and Jev drops words-only items it rates unrelated (< 0.5). Posts with no words of their own no longer get a words vector (they matched everything weakly).
+Sweep fixes: deleted media (404/410) is "nothing to learn", not a failure (local pill went 14 → 2); signed-out sign-in returns to the exact search; channel pages say "channel" in their title and share card.
+Eval unchanged: fused hit@5 0.81 / MRR 0.70, refined 0.90 / 0.83. State: local, not pushed.
+
+## 2026-10-16 — Cutover (phase 7 of the redesign)
+
+`next_ui` is on by default. Signed-in `/` and `/saved` open `/play?recent=1` (keeping `open=`), `/library` → `/search`, `/tags` → `/channels`; with it off the new routes bounce to the old ones. Signed-out `/`, `/live`, trending, leaderboard and settings are unchanged.
+Rollback without a rebuild: runtime `NEXT_UI_FORCE=off` beats every browser choice. `/api/next-ui?value=0|1` persists a per-browser choice server-side ("Use the previous look" links on search and channels).
+The supervisor now starts the query child first and jobs once it's ready (both would race the same model download on an empty volume). Privacy page updated for search by meaning, Everyone search and TypeSafe/Hugging Face (it claimed "no metered AI") — needs owner review.
+Runbook with staged production rollout: `docs/rollout/next-ui-cutover.md`. State: local, not pushed; production unchanged.
+
+## 2026-10-16 — Onboarding (phase 6 of the redesign)
+
+`/start`: email link sign up/in (same box), "Check your inbox" that signs the tab in by itself once the link is opened, then Connect X and import with live counts (existing `/api/sync` stream) plus a "making them searchable" bar.
+Paste a post link anywhere (or the Paste pill) to save it with the grabbing-it toast; it plays in a new recent-saves queue (`/play?recent=1`), or next in the theater. Learning ring + sheet on search, theater and channels; search badges "Words only" results.
+Verified locally end to end, including a real magic-link sign-up with a throwaway test address (link from the dev log). Copy from the design was corrected: no audio is heard, and Jev sees text, so "nothing goes to outside AI companies" became "pictures and videos are understood on ADHX's own servers".
+Fixed while verifying: "Nearest 0 matches" headline, a recent-queue start post older than the newest 100 now plays first, the ring stays reachable when only failures remain.
+Search eval re-run now that every picture and video is understood: fused hit@5 0.81 / MRR 0.70, with Jev 0.90 / 0.83 (unchanged) — phase 2 tuning holds.
+State: local, not pushed. Next: cutover (phase 7).
+
+## 2026-10-16 — Channels (phase 5 of the redesign)
+
+Channels are tags: theater Save opens "add to a channel" (tick, find or create; new channels are public), `/channels` shows Made for you, yours and Top channels, and `/t/{user}/{tag}` renders the new channel page under `next_ui`.
+Made for you: saves grouped by meaning (k-means, big groups split) and named from `CHANNEL_NAMES` via Jev `choice` among the closest names; stored in `auto_channels`, recomputed only when stale; Keep makes it a public tag channel.
+On 448 local saves: 8 groups of 24–51 posts (Memes, Reaction memes, Automation, Dev tools, Prompts and tricks, Coding with AI, Internet lore, AI agents); first compute ~2–8 s. Removed "Cringe" from the names (judgy). Plain k-means gave catch-alls of 78–95 posts, hence the splitting.
+New public `GET /api/channels/by/{user}/{tag}` lets anyone play a public channel; the tag visibility logic moved to `src/lib/tags/visibility.ts`; Jev calls share `src/lib/semantic/jev.ts`.
+State: local, not pushed. Next: onboarding (phase 6). Top channels is empty locally (no public views in this DB).
+
+## 2026-10-16 — Theater v2 (phase 4 of the redesign)
+
+`/play` behind `next_ui` plays a search's results as the queue (Play all, Play this group, any tile). It reuses the current `Stage` for media and adds the approved chrome: rail, seek, transport, volume, repeat, PiP, full screen, Up next and ⋯ sheets, keys and swipes.
+New `GET /api/search/similar` (a post's own vectors per kind, same fusion and scope rules) powers More like this and Stick to this vibe, which carries on past the end of the queue.
+Fixes found while verifying: an extension flag read back from a state updater was always false (ended instead of continuing), cream text posts sat under the rail, the install banner hid the header, long links overflowed the text stage.
+Verified on 448 local saves at 1280px and 375px. State: local, not pushed. Next: channels (phase 5); Save currently saves only (adding to a channel comes with it).
+
+## 2026-10-16 — Search screen (phase 3 of the redesign)
+
+Merged phase 0 (`feat/next-ui-foundations`) into `feat/find-by-context`. Added `/search` behind `next_ui`: search bar with My saves / Everyone, type pills, Words only, Bento / Groups / Queue, Play all.
+Bento autoplays the best match muted (own media proxies; off under reduced motion) beside a masonry; Groups split results by how they matched; Queue explains "Why this one".
+The API now reports `close` (best hit ≥ 2.2) so a far-off query reads "Nearest …" instead of claiming matches. URL sync uses `history.replaceState` (router.replace re-rendered the server page per keystroke and lost the flag).
+Verified on 448 local saves at desktop and 375px. State: local, not pushed. Next: theater v2 (phase 4) takes the result list as its queue; Play opens the first result in today's theater until then.
+
+## 2026-10-16 — Search API by meaning (phase 2 of the redesign)
+
+`GET /api/search`: words/picture/video vectors plus FTS5 keywords, `mine`/`everyone` scope, feed type filters, words only, optional Jev rerank (`refine=1`).
+Fusion standardises each vector list per query (z-scores); RRF scored hit@5 0.35 because every query gets a weak picture list. Fused hit@5 0.84 / MRR 0.68 on 31 labelled local queries; with Jev hit@1 0.77, hit@5 0.90, MRR 0.83 (~250ms). Weights were tuned while only ~60 posts had visuals: re-run `scripts/eval-search.ts` once backfill finishes.
+Everyone results are post keys filtered by bans and moderation; other savers' copies are anonymised in `items.ts`.
+Also fixed: inference blocked the web event loop (see phase 1 entry), Jev 400s from half emoji (`toWellFormed`).
+State: local on `feat/find-by-context`, not pushed. Next: search UI (phase 3), which needs phase 0's `feat/next-ui-foundations` merged in.
+
+## 2026-10-16 — Understanding pipeline for search by meaning (phase 1 of the redesign)
+
+Owner approved a phased rebuild around search by meaning, a content-first theater, and channels (design canvas linked in the PR).
+Added `src/lib/semantic/`: EmbeddingGemma 2 on the server (text q4, vision q8, no audio) understands words, one picture, and video frames.
+Results are keyed by post (no user id, no tags) in `post_embeddings`; a durable `understanding_queue` puts fresh saves and Up next first.
+The model runs only in two child processes forked at startup: a niced jobs worker and a words-only query embedder (in-process inference froze every request for up to 12.5 s). ffmpeg-static samples 16 frames over the first 32 s at 70 vision tokens each (pond's 32 × 140 took ~42s and ~3GB per video on CPU; 16 × 70 takes ~11–15s and ~2GB with cosine ~0.95 to the full vector).
+New `/api/understanding/{status,retry,prioritize}`; saves, sync and clone enqueue. Fly VMs raised to 4GB.
+State: implemented locally on `feat/find-by-context`, not pushed (GitHub account setup pending). Next: search API (phase 2).
+
+## 2026-10-16 — Redesign phase 0: next_ui flag, tokens and visual primitives
+
+Started the find-by-meaning redesign as a strangler rebuild behind `next_ui` (env `NEXT_PUBLIC_NEXT_UI`, `?next_ui=1` persisted per browser).
+Added nx- tokens (warm black, cream, yellow #ffd23f) and Instrument Serif + Hanken Grotesk alongside Matter, not replacing it.
+New `src/components/next`: five tiles, four stages, the AdhxFace loader, shimmer skeleton and paste toast, all from `FeedItem`.
+Text over media always gets the black scrim plus text-shadow; controls get a dark translucent backplate; motion respects reduced-motion.
+`/dev/next-ui` previews everything with real saves; verified at 390px and 1440px. Tests cover the flag, rendering and translation safety.
+State: committed locally on `feat/next-ui-foundations`, not pushed. No schema or backend changes (phase 1 runs in parallel).
+Follow-ups: theater v2 should wire stages to real players via the `media` slot; GIF tiles still show a still cover, not a loop.
+
+## 2026-09-15 — Move mobile PiP into bottom playback controls
+
+Moved picture-in-picture from the right post-action rail to the bottom playback group, beside expand.
+Preserved 44px playback targets; the filter becomes icon-only when its group has little space.
+Kept PiP failure feedback visible above the dock and removed the old rail ordering from its wrapper.
+Verified 360px/430px layouts, 3,686 unit tests, and 12 mobile/playlist browser regressions.
+State: implemented for review; requires merge and deployment.
+
 ## 2026-09-15 — Center playlist identity and add picture-in-picture
 
 Centered the desktop logo, tag, and curator/count line; removed the logo link's inline baseline gap.

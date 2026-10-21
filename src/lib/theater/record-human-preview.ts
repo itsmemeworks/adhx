@@ -6,7 +6,7 @@ import { recordAnalytic } from '@/lib/analytics/record'
 import { readPostModeration } from '@/lib/admin/moderation'
 
 /**
- * Pulse a preview when a human opened it. Shared by Reels / TikTok / Shorts
+ * Pulse a preview when a human opened it. Shared by Reels / TikTok
  * (the tweet page has extra unavailable/tombstone branches).
  */
 export async function recordHumanPreview(

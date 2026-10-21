@@ -1,14 +1,13 @@
 'use client'
 
-import { createContext, Fragment, Suspense, useContext, useEffect, useMemo, useRef } from 'react'
+import { createContext, Fragment, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Header } from './Header'
-import { PWAInstallPrompt } from './PWAInstallPrompt'
 import { FontProvider } from './FontProvider'
 import { isSavedPath } from '@/lib/theater/collection-href'
 import { startClientEventBridge } from '@/lib/client-events'
 import { useAuthMe } from '@/components/auth'
 import { PreferencesProvider } from '@/lib/preferences-context'
+import { MomentAlerts } from '@/components/next/moments/MomentAlerts'
 
 interface AppAccountScope {
   serverAccountId: string | null
@@ -29,16 +28,12 @@ export function useAppAccountScope(): AppAccountScope | null {
   return useContext(AppAccountScopeContext)
 }
 
-// Header loading skeleton
-function HeaderSkeleton() {
-  return (
-    <header className="sticky top-0 z-50 border-b border-hairline bg-surface pt-[env(safe-area-inset-top)]">
-      <div className="px-4 sm:px-6 h-16 flex items-center justify-between">
-        <div className="w-24 h-8 bg-inset rounded-card animate-pulse" />
-        <div className="w-[33px] h-[33px] bg-inset rounded-full animate-pulse" />
-      </div>
-    </header>
-  )
+/** New-design pages that sign you in and bring you back, rather than going home. */
+const SIGN_IN_FIRST = new Set(['/search', '/play', '/channels', '/settings', '/doing'])
+
+function isPublicPlay(search: string): boolean {
+  const params = new URLSearchParams(search)
+  return params.has('moment') || params.has('channel')
 }
 
 export function AppShell({
@@ -101,53 +96,48 @@ export function AppShell({
     }
   }, [clientAccountId, router, serverScopeKey, trusted])
 
-  // Full-width pages without header (public share pages, URL prefix quick-add pages,
-  // the full-screen trending reel)
-  const isPreviewPage =
-    /^\/\w+\/status\/\d+$/.test(pathname) ||
-    /^\/reels?\/[A-Za-z0-9_-]+$/.test(pathname) ||
-    /^\/p\/[A-Za-z0-9_-]+$/.test(pathname) ||
-    /^\/shorts\/[A-Za-z0-9_-]{11}$/.test(pathname) ||
-    /^\/@?[A-Za-z0-9._]+\/video\/\d+$/.test(pathname)
-  // TheaterShell is a full-viewport z-60 overlay and owns the chrome. Hide
-  // the Header; the install banner still mounts (z-70, under the top-left logo).
-  const isTheaterPage =
-    pathname === '/' ||
-    pathname === '/live' ||
-    isSavedPath(pathname) ||
-    pathname.startsWith('/t/') ||
-    isPreviewPage
-  const isFullWidth =
-    isTheaterPage ||
-    pathname === '/trending/play' ||
-    pathname.startsWith('/share/') ||
-    // /welcome is the one-shot username chooser: a full-screen dark card with
-    // no app chrome — a mounted (visually hidden) Header would leave its
-    // search input focusable underneath the overlay.
-    pathname === '/welcome'
-  // One-shot username / starter-playlist screen — the banner covers the card.
-  const hideInstallBanner = pathname === '/welcome'
   const isAccountOwnedPage =
-    pathname === '/live' ||
     isSavedPath(pathname) ||
     pathname === '/library' ||
+    pathname === '/search' ||
+    pathname === '/play' ||
+    pathname === '/channels' ||
+    pathname.startsWith('/channels/') ||
     pathname === '/tags' ||
     pathname === '/settings' ||
+    pathname === '/doing' ||
     pathname === '/welcome' ||
+    pathname === '/invite/done' ||
     pathname === '/admin' ||
     pathname.startsWith('/admin/')
 
+  // Tune in (`/play?moment=`) and a public channel (`/play?channel=`) play
+  // for anyone. The query is read on the client only: the root layout can't
+  // use useSearchParams without breaking static pages.
+  const [publicPlay, setPublicPlay] = useState(false)
   useEffect(() => {
-    // The server page throws redirect('/') for signed-out private routes, but
+    setPublicPlay(pathname === '/play' && isPublicPlay(window.location.search))
+  }, [pathname])
+
+  useEffect(() => {
+    // The server page throws a redirect for signed-out private routes, but
     // fail-closed rendering deliberately never mounts that untrusted RSC child.
     // Complete the same redirect from the independently verified client scope
     // so the redirect instruction cannot be hidden with the private payload.
     if (isAccountOwnedPage && trusted && serverAccountId === null) {
-      router.replace('/')
+      const search = window.location.search
+      if (pathname === '/play' && isPublicPlay(search)) return
+      // The new design signs you in and brings you back; older pages go home.
+      router.replace(
+        SIGN_IN_FIRST.has(pathname) || pathname.startsWith('/channels/')
+          ? `/start?${new URLSearchParams({ returnTo: `${pathname}${search}` })}`
+          : '/',
+      )
     }
-  }, [isAccountOwnedPage, router, serverAccountId, trusted])
+  }, [isAccountOwnedPage, pathname, router, serverAccountId, trusted])
 
-  const accountChildrenVisible = !isAccountOwnedPage || (trusted && serverAccountId !== null)
+  const accountChildrenVisible =
+    !isAccountOwnedPage || publicPlay || (trusted && serverAccountId !== null)
   const scopedChildren = accountChildrenVisible ? children : null
   const scopeBlocked = !trusted
 
@@ -156,39 +146,17 @@ export function AppShell({
       <Fragment key={trustedScopeKeyRef.current}>
         <PreferencesProvider>
           <FontProvider>
-            {isFullWidth ? (
-              <>
-                <div
-                  className="contents"
-                  data-app-account-scope={scopeBlocked ? 'blocked' : 'trusted'}
-                  inert={scopeBlocked ? true : undefined}
-                  aria-busy={scopeBlocked || undefined}
-                >
-                  {scopedChildren}
-                </div>
-                {/* Theater owns the Header slot; the install banner still mounts and
-                    hangs under the top-left logo (see PWAInstallPrompt). */}
-                {!hideInstallBanner && <PWAInstallPrompt />}
-              </>
-            ) : (
-              <div
-                className="min-h-screen bg-paper"
-                data-app-account-scope={scopeBlocked ? 'blocked' : 'trusted'}
-                inert={scopeBlocked ? true : undefined}
-                aria-busy={scopeBlocked || undefined}
-              >
-                {trusted && accountChildrenVisible ? (
-                  <Suspense fallback={<HeaderSkeleton />}>
-                    <Header />
-                  </Suspense>
-                ) : loading || !trusted ? (
-                  <HeaderSkeleton />
-                ) : null}
-                {/* In-flow under the header so the callout doesn't cover Paste / filters. */}
-                <PWAInstallPrompt />
-                <main>{scopedChildren}</main>
-              </div>
-            )}
+            {/* Every page draws its own header (the new design's NxHeader). */}
+            <div
+              className="contents"
+              data-app-account-scope={scopeBlocked ? 'blocked' : 'trusted'}
+              inert={scopeBlocked ? true : undefined}
+              aria-busy={scopeBlocked || undefined}
+            >
+              {scopedChildren}
+            </div>
+            {/* "Kitchen synths is live · Tune in", on any signed-in page. */}
+            {trusted && serverAccountId !== null && <MomentAlerts />}
           </FontProvider>
         </PreferencesProvider>
       </Fragment>

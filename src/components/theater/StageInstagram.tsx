@@ -138,7 +138,7 @@ export function useInstagramStage({
     // Inert for every non-Instagram item. This MUST come first: falling
     // through to the `!id` branch below set status to 'failed', which armed the
     // embed-fallback guard and auto-advanced any item that merely happened to
-    // be on stage — the YouTube stall-watchdog test caught exactly that.
+    // be on stage.
     if (!active) return
     const setStatus = (status: ProbeStatus) => setProbe({ id, status })
     setSlow(false)

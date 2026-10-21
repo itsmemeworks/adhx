@@ -1,3 +1,5 @@
+import { keptSrc } from '@/lib/keep/src'
+
 /**
  * Instagram Reel playback: wait for our MP4 proxy before handing a URL to
  * `<video>`, and fall back to Instagram's official embed when the mirror
@@ -19,7 +21,7 @@ export function instagramEmbedUrl(id: string): string {
 }
 
 export function instagramVideoSrc(id: string): string {
-  return `/api/media/instagram/video?id=${encodeURIComponent(id)}`
+  return keptSrc('instagram', id, 'video-1')
 }
 
 /**

@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
-import { getCurrentUserId } from '@/lib/auth/session'
+import { getCurrentUserId, renewSessionCookie } from '@/lib/auth/session'
 import { getAccount } from '@/lib/auth/account'
 import { isAdminUserId } from '@/lib/admin/guard'
+import { pendingAdminSignInLinks, signInDelivery } from '@/lib/email/magic-link'
+import { memberAvatar } from '@/lib/people/savers'
+import { avatarSourceOf, readPreferences } from '@/lib/preferences/server'
+import { PRIVATE_DEFAULT_KEY } from '@/lib/bookmarks/privacy'
+import { noteOpen, touchLastSeen } from '@/lib/people/last-seen'
 
 const SIGNED_OUT = {
   authenticated: false,
@@ -25,18 +30,36 @@ export async function GET() {
     return NextResponse.json(SIGNED_OUT)
   }
 
-  return NextResponse.json({
+  // Last seen (at most every 5 minutes) and opens, for admins. Counts only.
+  touchLastSeen(userId)
+  noteOpen(userId, 'web')
+
+  const isAdmin = await isAdminUserId(userId)
+  const prefs = readPreferences(userId, ['avatarSource', PRIVATE_DEFAULT_KEY])
+  const response = NextResponse.json({
     authenticated: true,
     user: {
       id: account.user.id,
       username: account.user.username,
       displayName: account.user.displayName,
-      avatarUrl: account.user.avatarUrl,
+      // The picture to show (null: draw the face made from the username).
+      avatarUrl: memberAvatar(account.user.avatarUrl, prefs.avatarSource ?? null),
+      avatarSource: avatarSourceOf(account.user.avatarUrl, prefs.avatarSource ?? null),
       usernameChosen: account.user.usernameChosen,
       usernameChangeCount: account.user.usernameChangeCount,
+      privateDefault: prefs[PRIVATE_DEFAULT_KEY] === 'true',
     },
     identities: account.identities,
     xConnected: account.xConnected,
-    isAdmin: await isAdminUserId(userId),
+    // Whoever runs this ADHX may not have set up an X app.
+    xAvailable: !!process.env.TWITTER_CLIENT_ID,
+    isAdmin,
+    // With no email, sign-in links wait for an admin to pass on: say how many.
+    ...(isAdmin && signInDelivery() === 'admin'
+      ? { waitingSignIns: pendingAdminSignInLinks().length }
+      : {}),
   })
+  // Every page asks this, so an active session never runs out.
+  await renewSessionCookie(response)
+  return response
 }
