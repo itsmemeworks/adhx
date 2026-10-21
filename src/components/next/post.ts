@@ -143,6 +143,14 @@ export function postAuthor(item: FeedItem): PostAuthor {
   }
 }
 
+/** X articles carry their whole body; other links only have a preview. */
+export function hasFullArticle(post: FeedItem): boolean {
+  if ((post.platform ?? 'twitter') !== 'twitter') return false
+  if (post.articleContent?.blocks?.length) return true
+  const url = post.articlePreview?.url ?? ''
+  return /^https:\/\/(x|twitter)\.com\/[^/]+\/article\//.test(url)
+}
+
 /** Headline for an article card/stage. */
 export function articleHeadline(item: FeedItem): string {
   const title = item.articlePreview?.title?.trim()
