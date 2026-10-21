@@ -9,7 +9,7 @@ import { captureException } from '@/lib/sentry'
 const LIMIT = { windowMs: 60_000, max: 60 }
 
 /**
- * GET /api/app/feed?mode=new|everyone|friends|mine&types=video,photo&cursor&limit
+ * GET /api/app/feed?mode=new|everyone|friends|mine|lineup&types=video,photo&cursor&limit
  * — the blended feed for the phone: `{ items: PhonePost[], nextCursor,
  * caughtUp, nothingYet, total, types, waiting, hidden }`. `types` (video, photo, text,
  * article; audio plays with video) defaults to the stored choice
@@ -17,6 +17,10 @@ const LIMIT = { windowMs: 60_000, max: 60 }
  * the usual `savers` / `isPrivate`. Mark what's been on screen with
  * `POST /api/app/seen`. `hidden` is `waiting` again under the name the
  * iPhone and Android apps read ("4 text posts waiting · Show them").
+ *
+ * `mode=lineup` is New on the phones: Just saved (since you last looked),
+ * Not seen yet, then For you, always in that order. Each item says its
+ * `section` (`just`, `unseen`, `foryou`) and `sections` counts each part.
  */
 export const GET = withPhoneKey(async (request, { userId }) => {
   const query = parseBlendQuery(new URL(request.url).searchParams)
@@ -47,6 +51,7 @@ export const GET = withPhoneKey(async (request, { userId }) => {
           ),
           why: post.why,
           whyReasons: post.whyReasons,
+          ...(post.section ? { section: post.section } : {}),
         })),
         nextCursor: page.nextCursor,
         caughtUp: page.caughtUp,
@@ -55,6 +60,7 @@ export const GET = withPhoneKey(async (request, { userId }) => {
         types: page.types,
         waiting: page.waiting,
         hidden: page.waiting,
+        ...(page.sections ? { sections: page.sections } : {}),
       },
       { headers: { 'Cache-Control': 'no-store' } },
     )

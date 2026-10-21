@@ -109,13 +109,17 @@ fun HomeScreen(
             connection = connection,
             reach = reach,
             actions = actions,
-            header = { b, atEnd ->
+            header = { b, atEnd, strip ->
                 if (atEnd) {
                     // A solid page (caught up, loading): the same row, on the surface colour.
                     HomeHeader(tab, onTab, actions.onSettings, actions.onSearch, overMedia = false, newBadge = b)
                 } else {
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                         HomeHeader(tab, onTab, actions.onSettings, actions.onSearch, overMedia = true, newBadge = b)
+                        // The lineup's strip: which part is playing, under the tabs.
+                        if (strip != null) {
+                            Box(Modifier.padding(top = 2.dp, bottom = 22.dp)) { strip() }
+                        }
                         // "3 on their way" over the player, while posts are processing; a short
                         // message from the player ("Link copied") takes its place while it's up.
                         val toast = LocalPlayerToast.current
@@ -166,6 +170,8 @@ internal val GOB_MARK = 38.dp
 /** The New tab's badge for the feed at [page]: only in New mode, and only while there's something to count. */
 internal fun newBadge(ui: FeedUi, page: Int): String? {
     if (ui.mode != FeedMode.NEW || ui.unavailable || ui.items.isEmpty()) return null
+    // The lineup knows how many you haven't seen, For you aside.
+    if (ui.sections != null) return unseenLeft(ui).takeIf { it > 0 }?.let { Copy.newBadge(it, more = false) }
     val left = (ui.items.size - page - 1).coerceAtLeast(0)
     return Copy.newBadge(left, more = !ui.ended)
 }

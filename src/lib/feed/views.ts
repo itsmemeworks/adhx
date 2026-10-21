@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql, type SQL } from 'drizzle-orm'
+import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm'
 import { POST_ID_PATTERN } from '@/lib/platform/networks'
 import { db } from '@/lib/db'
 import { postViews } from '@/lib/db/schema'
@@ -53,6 +53,33 @@ export function markSeen(userId: string, posts: PostRef[], now = new Date()): vo
     .onConflictDoNothing()
     .run()
   markSendsSeen(userId, posts, now)
+}
+
+/** A pause this long between posts seen ends a sitting. */
+export const SITTING_GAP_MS = 30 * 60_000
+
+/**
+ * When the viewer last looked, before this sitting: the newest post they saw
+ * before a gap of `SITTING_GAP_MS` (counting back from now). Null when they've
+ * never seen anything, or every view is one unbroken sitting.
+ */
+export function lastLookedAt(userId: string, now = Date.now()): number | null {
+  if (!userId) return null
+  const rows = db
+    .select({ seenAt: postViews.seenAt })
+    .from(postViews)
+    .where(eq(postViews.userId, userId))
+    .orderBy(desc(postViews.seenAt))
+    .limit(500)
+    .all()
+  let after = now
+  for (const row of rows) {
+    const at = Date.parse(row.seenAt)
+    if (!Number.isFinite(at)) continue
+    if (after - at > SITTING_GAP_MS) return at
+    after = at
+  }
+  return null
 }
 
 /** Which of these posts (`platform:id`) the viewer has seen. */

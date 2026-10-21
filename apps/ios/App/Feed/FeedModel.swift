@@ -24,6 +24,17 @@ final class FeedModel: ObservableObject {
     @Published private(set) var types: Set<FeedType> = FeedModel.savedTypes
     /// Posts the filter is leaving out, for "4 text posts waiting".
     @Published private(set) var hidden: [FeedType: Int] = [:]
+    /// New's lineup: how many posts Just saved, Not seen yet and For you hold.
+    /// Nil outside New, or on a server without the lineup (it plays the blend).
+    @Published private(set) var sections: [LineupSection: Int]?
+    private var lineupSupported = true
+    /// Posts watched in this lineup (2 s on screen, or swiped past): the
+    /// badge and Up next's dots go by these, not by where you are.
+    @Published private(set) var watched: Set<String> = []
+    /// When the app went to the background, so a long time away starts New afresh.
+    private var awayAt: Date?
+    /// Away this long and New starts again from the top of the lineup.
+    static let freshAfter: TimeInterval = 30 * 60
     private var hiddenKeys = Set<String>()
     var currentKey: String? {
         currentIndex < items.count ? items[currentIndex].key : (items.isEmpty ? nil : PlayerView.endKey)
@@ -138,6 +149,7 @@ final class FeedModel: ObservableObject {
         items = []
         currentIndex = 0
         caughtUp = false
+        sections = nil
         loadedOnce = false
         await reload()
     }
@@ -154,8 +166,22 @@ final class FeedModel: ObservableObject {
         defer { if generation == self.generation { loading = false } }
         do {
             let types = types
-            let page = try await client.feed(mode: mode, cursor: cursor, types: types)
+            let lineup = mode == .new && lineupSupported
+            let page: FeedPage
+            do {
+                page = try await client.feed(mode: mode, cursor: cursor, types: types, lineup: lineup)
+            } catch let error as APIError where lineup && error.code == "bad_query" {
+                // An older server: New is the blend there.
+                lineupSupported = false
+                page = try await client.feed(mode: mode, cursor: cursor, types: types)
+            }
             guard generation == self.generation else { return }
+            if replacing {
+                sections = mode == .new && lineupSupported ? page.sections : nil
+                watched = []
+            } else if let counts = page.sections, sections != nil {
+                sections = counts
+            }
             // A server that ignores `types` still gets filtered here. A post
             // someone sent you shows whatever its kind, as the server's New does.
             let inFeed = { (post: PhonePost) in types.contains(FeedType(kind: post.kind)) || post.sentToYou }
@@ -207,6 +233,51 @@ final class FeedModel: ObservableObject {
         }
     }
 
+    // MARK: Lineup
+
+    /// Where a post is in the lineup: "Just saved · 1 of 2".
+    struct LineupSpot: Equatable {
+        let section: LineupSection
+        let position: Int
+        let count: Int
+    }
+
+    func spot(for key: String) -> LineupSpot? {
+        guard let sections, let index = items.firstIndex(where: { $0.key == key }),
+              let section = items[index].section else { return nil }
+        let position = items[..<index].filter { $0.section == section }.count + 1
+        let loaded = items.filter { $0.section == section }.count
+        return LineupSpot(section: section, position: position, count: max(sections[section] ?? 0, loaded))
+    }
+
+    /// The parts with posts in them, in the lineup's order.
+    var lineupParts: [LineupSection] {
+        guard let sections else { return [] }
+        return LineupSection.allCases.filter { (sections[$0] ?? 0) > 0 }
+    }
+
+    /// Posts in Just saved and Not seen yet you haven't watched (the New badge).
+    var unseenLeft: Int {
+        guard let sections else { return 0 }
+        let total = (sections[.just] ?? 0) + (sections[.unseen] ?? 0)
+        let done = items.filter { $0.section?.isUnseen == true && watched.contains($0.key) }.count
+        return max(0, total - done)
+    }
+
+    /// The app went to the background.
+    func wentAway() {
+        awayAt = Date()
+    }
+
+    /// Back in the app: after a while away, New starts again at the top of
+    /// the lineup, so opening the app always plays the newest first.
+    func cameBack() async {
+        defer { awayAt = nil }
+        guard let awayAt, Date().timeIntervalSince(awayAt) >= Self.freshAfter, mode == .new else { return }
+        await flushSeen()
+        await reload()
+    }
+
     // MARK: Seen
 
     /// The player moved to `index` (`items.count` is the end page).
@@ -235,6 +306,7 @@ final class FeedModel: ObservableObject {
 
     private func markSeen(_ post: PhonePost) {
         guard sent.insert(post.key).inserted else { return }
+        watched.insert(post.key)
         pending.append(post.ref)
         if pending.count >= Self.batch {
             Task { await flushSeen() }

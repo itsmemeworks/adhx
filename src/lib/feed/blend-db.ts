@@ -32,9 +32,10 @@ import {
   type BlendSave,
   type FeedKind,
   type FeedWeight,
+  type LineupSection,
   type WhyReason,
 } from './blend'
-import { seenKeys } from './views'
+import { lastLookedAt, seenKeys } from './views'
 import { coverImage } from './cover'
 import { unseenSendsTo, type IncomingSend } from '@/lib/sends/sends'
 import { postKinds, readFeedTypes } from './kinds'
@@ -78,7 +79,12 @@ const MAX_SNAPSHOTS = 500
 const CHUNK = 400
 const DAY = 86_400_000
 
-export type BlendItem = FeedItemResponse & { why: string; whyReasons: WhyReason[] }
+export type BlendItem = FeedItemResponse & {
+  why: string
+  whyReasons: WhyReason[]
+  /** Lineup only: which part of it the post is in. */
+  section?: LineupSection
+}
 
 export interface BlendPage {
   items: BlendItem[]
@@ -93,6 +99,8 @@ export interface BlendPage {
   types: FeedKind[]
   /** New only: unseen posts the filter leaves out, by kind ("4 text posts waiting"). */
   waiting: Partial<Record<FeedKind, number>>
+  /** Lineup only: how many posts each part holds in this snapshot. */
+  sections?: Record<LineupSection, number>
 }
 
 type Candidate = BlendCandidate & { kind: FeedKind }
@@ -156,6 +164,19 @@ function candidateKeys(
   `)
   if (mode === 'new') {
     const keys = recent.map((r) => `${r.platform}:${r.id}`)
+    const have = new Set(keys)
+    return [...[...sent.keys()].filter((k) => !have.has(k)), ...keys]
+  }
+  if (mode === 'lineup') {
+    // The window for Just saved and Not seen yet, older saves for For you,
+    // and anything sent to you you haven't seen.
+    const older = db.all<KeyRow>(sql`
+      SELECT b.platform, b.id FROM bookmarks b
+      WHERE ${seenBy(viewerId, 'b')} AND b.processed_at < ${since}
+      GROUP BY b.platform, b.id
+      ORDER BY MAX(b.processed_at) DESC LIMIT ${FALLBACK_POSTS}
+    `)
+    const keys = [...recent, ...older].map((r) => `${r.platform}:${r.id}`)
     const have = new Set(keys)
     return [...[...sent.keys()].filter((k) => !have.has(k)), ...keys]
   }
@@ -513,17 +534,20 @@ export async function computeBlend(
     closeness: closenessFor(viewerId, now),
     weights: readFeedWeights(viewerId),
     seed: opts.seed,
+    ...(mode === 'lineup' ? { lastLookedAt: lastLookedAt(viewerId, now) } : {}),
   }
   const picks = blend(candidates, ctx, mode)
   const waiting =
-    mode === 'new'
+    mode === 'new' || mode === 'lineup'
       ? waitingKinds(
           all.filter((c) => !inFeed(types, c)),
           ctx,
         )
       : {}
   // New with nothing at all from your people (not just nothing unseen), of any kind.
-  const nothingYet = mode === 'new' && !all.some((c) => c.saves.some((s) => s.userId !== viewerId))
+  const nothingYet =
+    (mode === 'new' || mode === 'lineup') &&
+    !all.some((c) => c.saves.some((s) => s.userId !== viewerId))
   return { picks, nothingYet, waiting, candidates: all, context: ctx }
 }
 
@@ -610,7 +634,7 @@ export async function blendPage(
       at: now,
     }
     remember(cacheKey, snapshot)
-    if (opts.cursor && mode === 'new') offset = 0
+    if (opts.cursor && (mode === 'new' || mode === 'lineup')) offset = 0
   }
 
   // Cache ordering, never authorization or names. Re-read every candidate's
@@ -668,21 +692,41 @@ export async function blendPage(
       sent?.note && post.savers
         ? post.savers.map((s) => (s.username === sent.username ? { ...s, note: sent.note } : s))
         : post.savers
-    return [{ ...post, ...(savers ? { savers } : {}), why: pick.why, whyReasons: reasons }]
+    return [
+      {
+        ...post,
+        ...(savers ? { savers } : {}),
+        why: pick.why,
+        whyReasons: reasons,
+        ...(pick.section ? { section: pick.section } : {}),
+      },
+    ]
   })
+  const sections =
+    mode === 'lineup'
+      ? snapshot.order.reduce<Record<LineupSection, number>>(
+          (counts, key) => {
+            const section = byKey.get(key)?.section
+            if (section) counts[section]++
+            return counts
+          },
+          { just: 0, unseen: 0, foryou: 0 },
+        )
+      : undefined
+  const newish = mode === 'new' || mode === 'lineup'
   return {
     items,
     nextCursor,
-    caughtUp: mode === 'new' && nextCursor === null,
-    nothingYet: mode === 'new' && !current.some((c) => c.saves.some((s) => s.userId !== viewerId)),
+    caughtUp: newish && nextCursor === null,
+    nothingYet: newish && !current.some((c) => c.saves.some((s) => s.userId !== viewerId)),
     total: snapshot.order.filter((key) => byKey.has(key)).length,
     types,
-    waiting:
-      mode === 'new'
-        ? waitingKinds(
-            current.filter((c) => !inFeed(types, c)),
-            snapshot.context,
-          )
-        : {},
+    waiting: newish
+      ? waitingKinds(
+          current.filter((c) => !inFeed(types, c)),
+          snapshot.context,
+        )
+      : {},
+    ...(sections ? { sections } : {}),
   }
 }

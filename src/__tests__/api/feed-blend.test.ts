@@ -514,6 +514,33 @@ describe('phone: /api/app/feed and /api/app/seen', () => {
     ).toHaveLength(1)
   })
 
+  it('plays the lineup: Just saved since you last looked, Not seen yet, then For you', async () => {
+    // Pete last looked an hour and a half ago, at the old post p9.
+    testInstance.db
+      .insert(schema.postViews)
+      .values({
+        userId: PETE,
+        platform: 'twitter',
+        postId: 'p9',
+        seenAt: new Date(Date.now() - 1.5 * H).toISOString(),
+      })
+      .run()
+    const res = await call(`/api/app/feed?mode=lineup&${ALL_KINDS}`, key('phone'))
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      items: { id: string; section: string; why: string }[]
+      sections: Record<string, number>
+      caughtUp: boolean
+    }
+    expect(body.items.map((i) => [i.id, i.section])).toEqual([
+      ['p1', 'just'],
+      ['p3', 'unseen'],
+      ['p9', 'foryou'],
+    ])
+    expect(body.sections).toEqual({ just: 1, unseen: 1, foryou: 1 })
+    expect(body.caughtUp).toBe(true)
+  })
+
   it('refuses no key, a search key and bad input', async () => {
     expect((await call('/api/app/feed?mode=new')).status).toBe(401)
     const search = key('search')
