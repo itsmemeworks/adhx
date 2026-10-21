@@ -64,8 +64,9 @@ private struct BoardSheetHost<Sheet: View>: ViewModifier {
                 .frame(height: min(fitted > 0 ? fitted + 15 : height, height, room))
                 .padding(.bottom, box.safeAreaInsets.bottom)
                 .background(
-                    UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous)
-                        .fill(Theme.surface)
+                    // Frosted: the picture underneath still shows, softly.
+                    FrostedSheetBackground(shape: UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28,
+                                                                         style: .continuous))
                         .shadow(color: .black.opacity(0.4), radius: 30, y: -8)
                 )
                 .offset(y: max(drag, 0))
@@ -133,5 +134,38 @@ struct SheetCloser {
 
     func callAsFunction() {
         if let board { board() } else { system() }
+    }
+}
+
+/// A sheet's background over the player: dark frost, so the picture under
+/// it still shows through (blurred and dimmed) without hurting the words.
+struct FrostedSheetBackground<S: InsettableShape>: View {
+    var shape: S
+
+    var body: some View {
+        shape
+            .fill(.ultraThinMaterial)
+            .overlay(shape.fill(Theme.surface.opacity(0.72)))
+            .overlay(shape.strokeBorder(.white.opacity(0.08), lineWidth: 1))
+            .environment(\.colorScheme, .dark)
+    }
+}
+
+extension FrostedSheetBackground where S == Rectangle {
+    init() { self.init(shape: Rectangle()) }
+}
+
+extension View {
+    /// A system sheet over the player: frosted, and on newer iOS (where a
+    /// partial sheet floats inset) its corners follow the screen's own curve
+    /// rather than a fixed radius.
+    @ViewBuilder
+    func frostedSheet() -> some View {
+        if #available(iOS 26, *) {
+            presentationBackground { FrostedSheetBackground() }
+        } else {
+            presentationBackground { FrostedSheetBackground() }
+                .presentationCornerRadius(28)
+        }
     }
 }

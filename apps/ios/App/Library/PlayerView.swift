@@ -277,15 +277,13 @@ private struct PostPage: View {
                       hide: { clean = true })
                 .presentationDetents([.height(moreHeight)])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(Theme.surface)
-                .presentationCornerRadius(28)
+                .frostedSheet()
         }
         .sheet(isPresented: $savedSheet) {
             SavedSheet(post: post, say: say)
                 .presentationDetents([.height(privacy.canSwitch(post) ? 300 : 220)])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(Theme.surface)
-                .presentationCornerRadius(28)
+                .frostedSheet()
         }
     }
 

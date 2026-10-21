@@ -673,7 +673,7 @@ private struct MatchMeter: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: 2) {
             ForEach(0..<3) { index in
-                RoundedRectangle(cornerRadius: 2)
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
                     .fill(index < level ? (onCream ? PostTile.creamInk : Theme.accent)
                           : (onCream ? PostTile.creamInk.opacity(0.2) : .white.opacity(0.3)))
                     .frame(width: 3, height: CGFloat(6 + index * 3))

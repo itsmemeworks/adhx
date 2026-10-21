@@ -158,7 +158,7 @@ struct PreparingOverlay: View {
                     .foregroundStyle(Theme.cream)
                     .multilineTextAlignment(.center)
                     .padding(16)
-                    .background(RoundedRectangle(cornerRadius: 14).fill(.black.opacity(0.7)))
+                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(.black.opacity(0.7)))
                     .padding(32)
             } else if !playback.ready {
                 RingSpinner().frame(width: 34, height: 34)

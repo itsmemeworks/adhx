@@ -6,6 +6,11 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Frosted sheets on iPhone; which build is installed, in Settings
+
+- Sheets over the player are frosted (`FrostedSheetBackground`: ultra-thin material under the surface colour at 72%), so the picture shows through softly: More and In your saves (system sheets, via `frostedSheet()`) and every board sheet. On iOS 26+ the system sheets no longer force a 28 pt radius, so their floating corners follow the screen's own curve. The two remaining non-continuous rounded rectangles are now continuous.
+- Settings on both apps shows which release the build is, on its own line: "ADHX Share 2.2.0" on a tag, else "2.2.0 +3 · abc1234" (commits after the tag), " · edited" with uncommitted changes, the commit alone without tags. iOS: the "Stamp version" build phase runs `apps/ios/Config/stamp-version.sh` (git describe → `build-info.txt` in the app's resources; user-script sandboxing is off for the app target so it can read git). Android: `gitBuildName()` in `app/build.gradle.kts` sets `versionName` unless `ADHX_VERSION_NAME` is given (the release APK workflow).
+
 ## 2026-10-21 — iPhone player polish from on-device testing
 
 - Hold the stage to hide everything but the media; a tap brings it back; a tap with the chrome showing pauses (`tapOrHold`: the hold never also counts as a tap). Photos move on by themselves after 10 s each (`PhotoTimer`: next photo in an album, then the next post; Repeat loops), with the bottom progress line, paused while a sheet or Live's picker is open or after a tap.
