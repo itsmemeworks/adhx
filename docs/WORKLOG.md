@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-22 — Review new player, channel and downloader features
+
+- Record exactly which tags a group keep inserted, with their generation time; leave never guesses from a matching/generated name, and duplicate keeps are idempotent. Re-saved copies stay. Older unrecorded keeps are preserved.
+- Reject late/cancelled iOS people-row replies across posts and connection sessions; test the production model in native CI. Android combines saved/watched stickers and clears stale reply identities on refresh.
+- Preserve temporary yt-dlp failures for retry; never keep a private/missing post's login-page image. Keep ordinary picture fallback.
+- Index watchers by post for bounded reads; test an existing library's upgrade twice. Clamp narrow Android seek tracks and expose the screen-reader seek action.
+- Regression and native/server/browser checks accompany the PR. No live deployment or physical-phone verification.
+
 ## 2026-10-22 — yt-dlp fallbacks, and X's copyright takedowns say so
 
 - Owner asked for the recommendations after the TikTok fix: yt-dlp wherever a mirror fails, and every network's login wall recognised. Builds on #624 (`YTDLP_COOKIES`).

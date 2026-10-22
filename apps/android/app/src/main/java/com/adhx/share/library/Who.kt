@@ -66,7 +66,10 @@ object Who {
         }
         who.watched.forEach { w ->
             val key = id(w.username)
-            if (key.isNotEmpty() && key !in out) out[key] = WhoFace(w.asSaver(), saved = false, watched = true, emoji = emoji[key], said = said[key])
+            if (key.isNotEmpty()) {
+                out[key] = out[key]?.copy(watched = true)
+                    ?: WhoFace(w.asSaver(), saved = false, watched = true, emoji = emoji[key], said = said[key])
+            }
         }
         who.reactions.forEach { r ->
             val s = r.who ?: return@forEach

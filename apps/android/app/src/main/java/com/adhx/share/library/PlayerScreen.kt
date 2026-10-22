@@ -106,6 +106,7 @@ import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -393,6 +394,7 @@ fun PlayerScreen(
     LaunchedEffect(current?.key, inPip, server, replayReactions) {
         floats.clear()
         val post = current ?: return@LaunchedEffect
+        Replies.replaceAnswer(answers, post.key, null)
         if (inPip) return@LaunchedEffect
         val note = Copy.noteOf(post.savers)
         val settledAt = SystemClock.uptimeMillis()
@@ -404,7 +406,7 @@ fun PlayerScreen(
         if (!ownReact) return@LaunchedEffect noteAlone()
         val connection = ConnectionStore.get(context).current() ?: return@LaunchedEffect noteAlone()
         val key = PostReactionsMemory.key(connection.server, connection.key, post.key)
-        PostReactionsMemory.cachedFor(key, false)?.let { list -> Replies.answer(list)?.let { answers[post.key] = it } }
+        if (!replayReactions) Replies.replaceAnswer(answers, post.key, PostReactionsMemory.cachedFor(key, false))
         if (!PostReactionsMemory.shouldReplay(key, replayReactions)) return@LaunchedEffect
         val kept = PostReactionsMemory.cachedFor(key, replayReactions)
             ?: when (val got = AdhxApi(connection).postReactions(post.platform, post.id)) {
@@ -417,7 +419,7 @@ fun PlayerScreen(
                 else -> return@LaunchedEffect noteAlone()
             }
         if (!connection.sameCredential(ConnectionStore.get(context).current())) return@LaunchedEffect
-        Replies.answer(kept)?.let { answers[post.key] = it }
+        Replies.replaceAnswer(answers, post.key, kept)
         val plan = replayPlan(kept)
         if (plan.isEmpty() && note == null) {
             PostReactionsMemory.markReplayed(key)
@@ -1975,6 +1977,7 @@ private fun ScrubLine(
             .semantics {
                 contentDescription = label
                 progressBarRangeInfo = ProgressBarRangeInfo(fraction.coerceIn(0f, 1f), 0f..1f)
+                if (enabled) setProgress { value -> release(value.coerceIn(0f, 1f)); true }
             }
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
@@ -2006,7 +2009,7 @@ private fun ScrubLine(
         if (x > 0f) drawLine(AdhxColors.Cream, Offset(thickness / 2, y), Offset(x.coerceAtLeast(thickness / 2), y), thickness, StrokeCap.Round)
         if (enabled) {
             val r = (if (dragging) 9.dp else 7.dp).toPx()
-            val at = Offset(x.coerceIn(r, size.width - r), y)
+            val at = Offset(SeekTrack.thumbCenter(fraction, size.width, r), y)
             drawCircle(Color.Black.copy(alpha = 0.35f), r + 1.dp.toPx(), at + Offset(0f, 1.dp.toPx()))
             drawCircle(AdhxColors.Cream, r, at)
         }

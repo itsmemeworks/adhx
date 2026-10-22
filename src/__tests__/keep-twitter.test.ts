@@ -103,12 +103,21 @@ describe('keeping an X post', () => {
     expect(kept.map((k) => k.slot)).toEqual(['video-1'])
   })
 
+  it('does not treat a transient downloader failure as a permanently gone X post', async () => {
+    fetchTweetData.mockResolvedValue({ code: 404, message: 'NOT_FOUND', tweet: null })
+    const { YtdlpError } = await import('@/lib/keep/ytdlp')
+    const retry = new YtdlpError('HTTP Error 429: Too Many Requests')
+    ytdlpDownload.mockRejectedValue(retry)
+    const { keepPost } = await import('@/lib/keep/download')
+    await expect(keepPost(target)).rejects.toBe(retry)
+  })
+
   it('keeps FxTwitter’s reason when yt-dlp can’t help, unless X wants a sign-in', async () => {
     const { YtdlpError } = await import('@/lib/keep/ytdlp')
     const { keepPost, NothingToKeep } = await import('@/lib/keep/download')
 
     fetchTweetData.mockResolvedValue({ code: 404, message: 'NOT_FOUND', tweet: null })
-    ytdlpDownload.mockRejectedValue(new YtdlpError('No video could be found in this tweet'))
+    ytdlpDownload.mockRejectedValue(new YtdlpError('No video could be found in this tweet', true))
     await expect(keepPost(target)).rejects.toBeInstanceOf(NothingToKeep)
 
     ytdlpDownload.mockRejectedValue(

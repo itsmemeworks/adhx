@@ -94,6 +94,28 @@ class PlayerFourTest {
     }
 
     @Test
+    fun seekingFitsNarrowOrZeroWidthTracksWithoutThrowing() {
+        assertEquals(5f, SeekTrack.thumbCenter(0f, 10f, 7f))
+        assertEquals(5f, SeekTrack.thumbCenter(1f, 10f, 7f))
+        assertEquals(0f, SeekTrack.thumbCenter(0.5f, 0f, 7f))
+        assertEquals(7f, SeekTrack.thumbCenter(0f, 100f, 7f))
+        assertEquals(93f, SeekTrack.thumbCenter(1f, 100f, 7f))
+    }
+
+    @Test
+    fun freshReplyLabelsReplaceOldIdentitiesEvenWhenEmptyOrFailed() {
+        val answers = mutableMapOf<String, LiveReaction>()
+        val reaction = LiveReaction(key = "r1", text = "reply", who = Saver(username = "ben"), at = Instant.ofEpochMilli(now - 1000).toString())
+        Replies.replaceAnswer(answers, "twitter:one", listOf(reaction), now)
+        assertEquals("ben", answers["twitter:one"]?.who?.username)
+        Replies.replaceAnswer(answers, "twitter:one", emptyList(), now)
+        assertFalse(answers.containsKey("twitter:one"))
+        Replies.replaceAnswer(answers, "twitter:one", listOf(reaction), now)
+        Replies.replaceAnswer(answers, "twitter:one", null, now)
+        assertFalse(answers.containsKey("twitter:one"))
+    }
+
+    @Test
     fun removeFromMySavesAsksTheServer() = runBlocking {
         MockWebServer().use { server ->
             val api = AdhxApi(server.url("/").toString(), "phone-key")

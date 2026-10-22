@@ -11,6 +11,8 @@ describe('which yt-dlp failures are final', () => {
       '[youtube] x: Video unavailable',
       '[vimeo] 76979871: This format is DRM protected; Try selecting another format',
       '[youtube] x: Private video. Sign in if you have access',
+      '[TikTok] x: This post is private',
+      '[twitter] x: No video could be found in this tweet',
     ]) {
       expect(isPermanent(message), message).toBe(true)
     }

@@ -234,6 +234,7 @@ export const postViews = sqliteTable(
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.platform, table.postId] }),
     seenAtIdx: index('post_views_seen_at_idx').on(table.seenAt),
+    postIdx: index('post_views_post_seen_idx').on(table.platform, table.postId, table.seenAt),
   }),
 )
 

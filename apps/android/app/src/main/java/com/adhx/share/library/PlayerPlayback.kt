@@ -35,3 +35,12 @@ internal class Playback {
         return true
     }
 }
+
+/** A seek handle stays inside even a very narrow track at large text sizes. */
+internal object SeekTrack {
+    fun thumbCenter(fraction: Float, width: Float, radius: Float): Float {
+        val w = width.coerceAtLeast(0f)
+        val r = radius.coerceIn(0f, w / 2f)
+        return (fraction.coerceIn(0f, 1f) * w).coerceIn(r, w - r)
+    }
+}

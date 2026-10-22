@@ -403,7 +403,13 @@ system (`src/lib/channels/`, overview in `overview.ts` for both
 member's visible save (`source = 'channel_keep'`, never copying a note), tags
 them with the channel's name, and leaves the channel private. Keeping a Made
 for you channel (`POST /api/channels/auto/{slug}/keep`) tags your own posts.
-Clones of a public channel apply the recipient's Just for me by default.
+Clones of a public channel apply the recipient's Just for me by default. A group keep records its exact
+new tag rows in a per-user preference, keyed by stable group slug and insertion
+time. Leaving removes only those rows and unadopted copies, even if the group
+was renamed or removed. Same-name personal tags and explicit repeat saves stay;
+older keeps without a record are retained rather than guessed. The people-row
+watcher lookup has a `(platform, post_id, seen_at)` index, so it does not scan
+other posts' viewing history.
 
 An independent, off-by-default `TYPESAFE_CHANNEL_IMAGES=on` refinement pass can
 improve generated channel display names, borderline membership, repetition

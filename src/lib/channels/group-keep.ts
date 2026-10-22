@@ -1,7 +1,13 @@
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { privateByDefault } from '@/lib/bookmarks/privacy'
 import { db, runInTransaction } from '@/lib/db'
-import { bookmarkLinks, bookmarkMedia, bookmarkTags, bookmarks } from '@/lib/db/schema'
+import {
+  bookmarkLinks,
+  bookmarkMedia,
+  bookmarkTags,
+  bookmarks,
+  userPreferences,
+} from '@/lib/db/schema'
 import { visibleSave } from '@/lib/people/savers'
 import { noteSaved, PRIORITY } from '@/lib/semantic'
 import { addedAtForIndex } from '@/lib/sync/added-at'
@@ -35,21 +41,39 @@ function keptUrl(username: string, tag: string): string {
   return `/t/${encodeURIComponent(username)}/${encodeURIComponent(tag)}`
 }
 
-/** Whether you already have a channel named after this group channel; its tag and link. */
+type KeptGroup = { tag: string; keys: string[]; createdAt: string }
+const keepKey = (slug: string) => `channels.keptGroup.${slug}`
+
+/** Record only the tags this keep actually inserted, never a same-name user channel. */
+function readKeep(userId: string, slug: string): KeptGroup | null {
+  const row = db
+    .select({ value: userPreferences.value })
+    .from(userPreferences)
+    .where(and(eq(userPreferences.userId, userId), eq(userPreferences.key, keepKey(slug))))
+    .get()
+  if (!row) return null
+  const value = JSON.parse(row.value ?? 'null') as KeptGroup
+  if (
+    !value ||
+    typeof value.createdAt !== 'string' ||
+    typeof value.tag !== 'string' ||
+    !Array.isArray(value.keys) ||
+    !value.keys.every((k) => typeof k === 'string')
+  ) {
+    throw new Error('Invalid kept channel record')
+  }
+  return value
+}
+
+/** A recorded keep, independent of later generated names or matching personal tags. */
 export async function keptGroupChannel(
   userId: string,
   channel: { name: string; slug: string },
 ): Promise<KeptChannel | null> {
-  const tag = groupKeepTag(channel.name, channel.slug)
-  const [row] = db
-    .select({ tag: bookmarkTags.tag })
-    .from(bookmarkTags)
-    .where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.tag, tag)))
-    .limit(1)
-    .all()
-  if (!row) return null
+  const kept = readKeep(userId, channel.slug)
+  if (!kept) return null
   const username = await getUsernameForUserId(userId)
-  return username ? { tag, url: keptUrl(username, tag) } : null
+  return username ? { tag: kept.tag, url: keptUrl(username, kept.tag) } : null
 }
 
 function split(key: string): { platform: string; id: string } {
@@ -69,6 +93,8 @@ export async function keepGroupChannel(
   if (!channel) return null
   const username = await getUsernameForUserId(userId)
   if (!username) return null
+  const previous = await keptGroupChannel(userId, { ...channel, slug })
+  if (previous) return { ...previous, added: 0 }
   const tag = groupKeepTag(channel.name, slug)
   const keys = channel.keys
   const ids = [...new Set(keys.map((k) => split(k).id))]
@@ -124,6 +150,9 @@ export async function keepGroupChannel(
   let added = 0
   const saved: { platform: string; postId: string }[] = []
   runInTransaction(() => {
+    // Another request may have completed while resolving the channel/user.
+    if (readKeep(userId, slug)) return
+    const inserted: string[] = []
     let i = 0
     for (const [key, src] of sources) {
       db.insert(bookmarks)
@@ -179,12 +208,24 @@ export async function keepGroupChannel(
       const tags = tagsByKey.get(key) ?? new Set<string>()
       if (!owned.has(key) || tags.has(tag) || tags.size >= MAX_TAGS_PER_POST) continue
       const { platform, id } = split(key)
-      db.insert(bookmarkTags)
+      const result = db
+        .insert(bookmarkTags)
         .values({ userId, platform, bookmarkId: id, tag, createdAt })
         .onConflictDoNothing()
         .run()
-      added++
+      if (result.changes) {
+        inserted.push(key)
+        added++
+      }
     }
+    db.insert(userPreferences)
+      .values({
+        userId,
+        key: keepKey(slug),
+        value: JSON.stringify({ tag, keys: inserted, createdAt }),
+        updatedAt: createdAt,
+      })
+      .run()
   })
   if (saved.length) noteSaved(saved, PRIORITY.sync)
   recordAnalytic({ name: 'channel.keep', surface: 'group', bookmarkId: slug, userId })
@@ -202,20 +243,32 @@ export async function leaveGroupChannel(
   userId: string,
   slug: string,
 ): Promise<{ removed: number } | null> {
-  const channel = await groupChannelKeys(slug)
-  if (!channel) return null
-  const tag = groupKeepTag(channel.name, slug)
-  const tagged = db
-    .select({ platform: bookmarkTags.platform, id: bookmarkTags.bookmarkId })
-    .from(bookmarkTags)
-    .where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.tag, tag)))
-    .all()
+  // No provenance on older keeps: preserve that data rather than guessing
+  // from a generated name. Re-keeping adopts none of its pre-existing tags.
+  const kept = readKeep(userId, slug)
+  if (!kept) return null
   let removed = 0
   runInTransaction(() => {
-    db.delete(bookmarkTags)
-      .where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.tag, tag)))
+    db.delete(userPreferences)
+      .where(and(eq(userPreferences.userId, userId), eq(userPreferences.key, keepKey(slug))))
       .run()
-    for (const { platform, id } of tagged) {
+    for (const key of kept.keys) {
+      const { platform, id } = split(key)
+      const changed = db
+        .delete(bookmarkTags)
+        .where(
+          and(
+            eq(bookmarkTags.userId, userId),
+            eq(bookmarkTags.platform, platform),
+            eq(bookmarkTags.bookmarkId, id),
+            eq(bookmarkTags.tag, kept.tag),
+            eq(bookmarkTags.createdAt, kept.createdAt),
+          ),
+        )
+        .run()
+      // A tag removed or moved since keeping is no longer ours to undo.
+      if (!changed.changes) continue
+
       const [save] = db
         .select({ source: bookmarks.source })
         .from(bookmarks)
