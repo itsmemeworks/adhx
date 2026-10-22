@@ -57,14 +57,19 @@ import Foundation
         precondition(fallbackCalls == 2, "legacy/offline REST fallback")
 
         let switched = FakeLive(.healthy)
-        var current = true
+        var current = true, returned = false
         let oldAccount = Task {
             await LiveUpdates.follow(client: switched, active: { current }, refresh: {})
+            returned = true
         }
-        try await Task.sleep(nanoseconds: 100_000_000)
+        // Drain startup signals first, so the consumer is suspended on an empty stream.
+        try await Task.sleep(nanoseconds: 2_500_000_000)
         current = false
-        await oldAccount.value
-        precondition(switched.stops == switched.starts, "quiet streams must end on an account change")
+        try await Task.sleep(nanoseconds: 1_200_000_000)
+        let endedWithoutCancellation = returned
+        oldAccount.cancel(); await oldAccount.value
+        precondition(endedWithoutCancellation && switched.stops == switched.starts,
+                     "quiet streams must end on an account change")
 
         let reconnect = FakeLive(.reconnect)
         var reconciled = 0

@@ -54,6 +54,18 @@ class LiveSubscriptionTest {
         assertEquals(2, calls)
     }
 
+    @Test fun quietStreamStopsAfterPassiveAccountChange() = runBlocking {
+        var current = true; var closed = false
+        val following = launch {
+            followLiveUpdates(stream = { flow { try { emit(Unit); awaitCancellation() } finally { closed = true } } },
+                active = { current }, jitter = { 0 }, refresh = {})
+        }
+        delay(2_500) // Startup work has drained; the consumer is waiting for a new signal.
+        current = false
+        withTimeout(1_500) { following.join() }
+        assertTrue(closed)
+    }
+
     @Test fun reconnectAlwaysReconcilesState() = runBlocking {
         var starts = 0; var refreshes = 0
         val following = launch {
