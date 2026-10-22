@@ -60,9 +60,9 @@ struct SearchView: View {
                 .padding(.leading, 14)
                 .padding(.trailing, 6)
                 .frame(height: 48)
-                .background(Capsule().fill(Theme.surface))
-                .overlay(Capsule().strokeBorder(lit ? Theme.accent : .white.opacity(0.08), lineWidth: 2))
-                .background(Capsule().stroke(Theme.accent.opacity(lit ? 0.16 : 0), lineWidth: 8))
+                .background(Capsule(style: .continuous).fill(Theme.surface))
+                .overlay(Capsule(style: .continuous).strokeBorder(lit ? Theme.accent : .white.opacity(0.08), lineWidth: 2))
+                .background(Capsule(style: .continuous).stroke(Theme.accent.opacity(lit ? 0.16 : 0), lineWidth: 8))
             }
             .padding(.leading, -10)
 
@@ -109,8 +109,8 @@ struct SearchView: View {
                                 .foregroundStyle(Theme.ink)
                                 .padding(.horizontal, 14)
                                 .frame(height: 40)
-                                .background(Capsule().fill(Theme.surface))
-                                .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.4), lineWidth: 1))
+                                .background(Capsule(style: .continuous).fill(Theme.surface))
+                                .overlay(Capsule(style: .continuous).strokeBorder(Theme.accent.opacity(0.4), lineWidth: 1))
                         }
                         .buttonStyle(.plain)
                     }
@@ -277,7 +277,7 @@ struct PlayerScreen: View {
                                 .lineLimit(1)
                                 .padding(.horizontal, 14)
                                 .frame(height: 40)
-                                .frosted(Capsule(), dim: 0.5)
+                                .frosted(Capsule(style: .continuous), dim: 0.5)
                                 .accessibilityAddTraits(.updatesFrequently)
                             Spacer(minLength: 0)
                         } else {
@@ -391,9 +391,9 @@ private struct ChannelToggle: View {
             }
             .padding(.horizontal, 14)
             .frame(height: 40)
-            .frosted(Capsule(), dim: 0.45)
-            .overlay(Capsule().strokeBorder(.white.opacity(0.14), lineWidth: 1))
-            .contentShape(Capsule())
+            .frosted(Capsule(style: .continuous), dim: 0.45)
+            .overlay(Capsule(style: .continuous).strokeBorder(.white.opacity(0.14), lineWidth: 1))
+            .contentShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(model.busy)
@@ -413,7 +413,7 @@ private struct ChannelToggle: View {
                 .foregroundStyle(.black)
                 .padding(.horizontal, 16)
                 .frame(minHeight: 40)
-                .background(Capsule().fill(Theme.cream))
+                .background(Capsule(style: .continuous).fill(Theme.cream))
                 .fixedSize()
                 .offset(y: 50)
                 .onTapGesture { model.problem = nil; message = nil }
@@ -454,7 +454,7 @@ private struct ScopeSwitch: View {
             option(.mine, "Mine")
         }
         .padding(4)
-        .background(Capsule().fill(Theme.surface))
+        .background(Capsule(style: .continuous).fill(Theme.surface))
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Whose saves")
     }
@@ -466,8 +466,8 @@ private struct ScopeSwitch: View {
                 .font(Theme.sans(14, on ? .heavy : .semibold))
                 .foregroundStyle(on ? .black : Theme.ink)
                 .frame(maxWidth: .infinity, minHeight: 44)
-                .background(Capsule().fill(on ? Theme.ink : .clear))
-                .contentShape(Capsule())
+                .background(Capsule(style: .continuous).fill(on ? Theme.ink : .clear))
+                .contentShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(on ? .isSelected : [])
@@ -562,7 +562,7 @@ struct PostTile: View {
                             .foregroundStyle(Theme.cream)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(Capsule().fill(Self.creamInk))
+                            .background(Capsule(style: .continuous).fill(Self.creamInk))
                             .fixedSize()
                         Spacer(minLength: 0)
                         if privacy.isPrivate(post) {
@@ -573,7 +573,7 @@ struct PostTile: View {
                                 .foregroundStyle(.black)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(Capsule().fill(Theme.accent))
+                                .background(Capsule(style: .continuous).fill(Theme.accent))
                         } else if let strength = post.match?.strength {
                             MatchMeter(level: strength == "strong" ? 3 : strength == "good" ? 2 : 1, onCream: true)
                         }
@@ -655,7 +655,7 @@ struct PostTile: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background {
-                        if strong { Capsule().fill(Theme.accent) } else { Color.clear.frosted(Capsule(), dim: 0.55) }
+                        if strong { Capsule(style: .continuous).fill(Theme.accent) } else { Color.clear.frosted(Capsule(style: .continuous), dim: 0.55) }
                     }
                     .padding(8)
             }
@@ -669,7 +669,7 @@ struct PostTile: View {
                         .foregroundStyle(.black)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Capsule().fill(Theme.accent))
+                        .background(Capsule(style: .continuous).fill(Theme.accent))
                         .padding(8)
                 } else if let strength = post.match?.strength {
                     MatchMeter(level: strength == "strong" ? 3 : strength == "good" ? 2 : 1)
@@ -738,7 +738,7 @@ private struct MatchMeter: View {
         .padding(.horizontal, 7)
         .padding(.vertical, 5)
         .background {
-            if onCream { Capsule().fill(PostTile.creamInk.opacity(0.08)) } else { Color.clear.frosted(Capsule(), dim: 0.55) }
+            if onCream { Capsule(style: .continuous).fill(PostTile.creamInk.opacity(0.08)) } else { Color.clear.frosted(Capsule(style: .continuous), dim: 0.55) }
         }
         .accessibilityHidden(true)
     }

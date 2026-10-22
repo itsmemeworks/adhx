@@ -221,7 +221,8 @@ function LeadMoment({
       <Link
         href={`/moments/${moment.slug}`}
         aria-label={`Open ${moment.title}`}
-        className="relative grid h-[180px] shrink-0 grid-cols-3 gap-[3px] overflow-hidden rounded-[20px] lg:h-auto lg:w-[340px] lg:grid-cols-2 lg:grid-rows-2"
+        // 28 px card, 2 px border, 12 px padding: the covers curve at 14 px.
+        className="relative grid h-[180px] shrink-0 grid-cols-3 gap-[3px] overflow-hidden rounded-[14px] lg:h-auto lg:w-[340px] lg:grid-cols-2 lg:grid-rows-2"
       >
         {covers.map((post, i) => (
           <span
@@ -348,7 +349,8 @@ function LeadMoment({
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
           <Link
             href={momentPlayHref(moment.slug)}
-            className="flex h-[52px] w-full max-w-full items-center justify-center gap-2.5 rounded-full bg-nx-accent px-7 text-base font-extrabold text-black lg:w-auto"
+            // 28 − 16 − 2 = 10 px on phones; 12 px more inset from lg leaves the 8 px floor.
+            className="flex h-[52px] w-full max-w-full items-center justify-center gap-2.5 rounded-[10px] bg-nx-accent px-7 text-base font-extrabold text-black lg:w-auto lg:rounded-[8px]"
           >
             <Play aria-hidden className="h-4 w-4 shrink-0" fill="currentColor" strokeWidth={0} />
             <span className="truncate">{tuneInLabel(watchers)}</span>
@@ -399,7 +401,8 @@ function SideCard({
       <Glow flash={flash} hue={hue} radius="rounded-[24px]" />
       <span
         className={cn(
-          'relative block h-[84px] w-[84px] shrink-0 overflow-hidden rounded-2xl bg-[#2a2620] lg:h-auto lg:w-[140px]',
+          // 24 px card, 12 px padding, 1 px border: 11 px.
+          'relative block h-[84px] w-[84px] shrink-0 overflow-hidden rounded-[11px] bg-[#2a2620] lg:h-auto lg:w-[140px]',
           dashed && 'saturate-[0.75]',
         )}
       >
@@ -476,7 +479,8 @@ function OtherMoment({
       <span className="hidden flex-1 lg:block" />
       <Link
         href={href}
-        className="hidden h-11 max-w-full items-center gap-2 self-start whitespace-nowrap rounded-full border border-white/[0.22] px-[18px] text-sm font-extrabold lg:flex"
+        // At the card's bottom, 18 px in: 24 − 18 − 1 leaves the 8 px floor.
+        className="hidden h-11 max-w-full items-center gap-2 self-start whitespace-nowrap rounded-[8px] border border-white/[0.22] px-[18px] text-sm font-extrabold lg:flex"
       >
         <Play aria-hidden className="h-3.5 w-3.5 shrink-0" fill="currentColor" strokeWidth={0} />
         <span className="truncate">{label}</span>
@@ -541,7 +545,8 @@ export function FormingBell({ forming }: { forming: FormingView }) {
       disabled={busy || gone}
       onClick={() => void toggle()}
       className={cn(
-        'flex h-11 max-w-full items-center gap-2 self-start whitespace-nowrap rounded-full px-[18px] text-sm font-extrabold disabled:opacity-60',
+        // In a forming card: 24 − 12 − 1 = 11 px on phones, the 8 px floor from lg.
+        'flex h-11 max-w-full items-center gap-2 self-start whitespace-nowrap rounded-[11px] px-[18px] text-sm font-extrabold disabled:opacity-60 lg:rounded-[8px]',
         lit ? 'bg-nx-accent text-black' : 'border border-white/[0.22] text-nx-cream',
       )}
     >

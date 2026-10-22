@@ -645,7 +645,8 @@ export function LeadResult({
           <Link
             href={href}
             onClick={onOpen ? () => onOpen(item) : undefined}
-            className="flex h-11 items-center gap-2 whitespace-nowrap rounded-full bg-nx-accent px-[18px] text-sm font-extrabold text-black"
+            // In the card's bottom corner: 26 − 20 − 1 leaves the 8 px floor.
+            className="flex h-11 items-center gap-2 whitespace-nowrap rounded-[8px] bg-nx-accent px-[18px] text-sm font-extrabold text-black"
           >
             <Play aria-hidden className="h-3.5 w-3.5" fill="currentColor" strokeWidth={0} />
             <span>Play</span>

@@ -144,6 +144,7 @@ export function TopChannels({
   return (
     <section
       aria-labelledby="nx-top"
+      // 22 px corners, 16 px padding (18 from md): tabs and rows sit at the 8 px floor.
       className={cn('flex flex-col gap-3.5 rounded-[22px] bg-[#121110] p-4 md:p-[18px]', className)}
     >
       <div className="flex items-baseline justify-between">
@@ -155,7 +156,7 @@ export function TopChannels({
       <div
         role="tablist"
         aria-label="Time window"
-        className="flex gap-0.5 rounded-xl bg-[#1c1b19] p-[3px]"
+        className="flex gap-0.5 rounded-[8px] bg-[#1c1b19] p-[3px]"
       >
         {WINDOWS.map((w) => (
           <button
@@ -165,7 +166,7 @@ export function TopChannels({
             aria-selected={window === w.slug}
             onClick={() => setWindow(w.slug)}
             className={cn(
-              'min-h-[38px] flex-1 rounded-[9px] text-[13px]',
+              'min-h-[38px] flex-1 rounded-[8px] text-[13px]',
               window === w.slug ? 'bg-white font-bold text-black' : 'text-[#bbb]',
             )}
           >
@@ -176,7 +177,7 @@ export function TopChannels({
       {rows === null ? (
         <div aria-hidden className="flex flex-col gap-2">
           {[0, 1, 2, 3].map((i) => (
-            <span key={i} className="nx-shimmer animate-nx-shimmer block h-[68px] rounded-[14px]" />
+            <span key={i} className="nx-shimmer animate-nx-shimmer block h-[68px] rounded-[8px]" />
           ))}
         </div>
       ) : rows.length === 0 ? (
@@ -193,7 +194,7 @@ export function TopChannels({
                 <Link
                   href={`/t/${r.username}/${r.tag}`}
                   className={cn(
-                    'flex min-w-0 flex-1 items-center gap-3 rounded-[14px] p-2',
+                    'flex min-w-0 flex-1 items-center gap-3 rounded-[8px] p-2',
                     i === 0 ? 'bg-[#211e14]' : 'hover:bg-white/[0.04]',
                     mine && 'ring-1 ring-nx-accent/60',
                   )}

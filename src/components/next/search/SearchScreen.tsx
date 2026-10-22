@@ -121,7 +121,8 @@ function Segment<T extends string>({
             aria-label={iconOnly ? o.label : undefined}
             onClick={() => onChange(o.id)}
             className={cn(
-              'flex min-h-[38px] min-w-[38px] items-center justify-center gap-1.5 rounded-[9px] px-3 text-[13px] transition-colors',
+              // 12 px corners − 4 px padding.
+              'flex min-h-[38px] min-w-[38px] items-center justify-center gap-1.5 rounded-[8px] px-3 text-[13px] transition-colors',
               on ? 'bg-nx-accent font-bold text-nx-ink' : 'text-nx-soft hover:text-nx-cream',
             )}
           >
@@ -276,7 +277,8 @@ function HowFound({
         return (
           <div
             key={id}
-            className={cn('flex gap-3.5 rounded-[18px] p-3.5', leads && 'bg-[#262320]')}
+            // Edge to edge in the panel: 26 − 24 − 1 leaves the 8 px floor.
+            className={cn('flex gap-3.5 rounded-[8px] p-3.5', leads && 'bg-[#262320]')}
           >
             <span
               className={cn(
@@ -358,7 +360,8 @@ function NotIt({ suggestions, onPick }: { suggestions: string[]; onPick: (q: str
             key={x}
             type="button"
             onClick={() => onPick(x)}
-            className="min-h-11 rounded-full bg-[#262320] px-3.5 text-left text-[13px] font-semibold text-nx-cream"
+            // Along the card's edge: 22 − 20 − 1 leaves the 8 px floor.
+            className="min-h-11 rounded-[8px] bg-[#262320] px-3.5 text-left text-[13px] font-semibold text-nx-cream"
           >
             {x}
           </button>
@@ -592,7 +595,8 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
             )}
             <div className="flex min-h-12 items-center justify-between gap-3 rounded-2xl bg-nx-surface px-4 py-2 md:hidden">
               <span className="text-[15px]">Copied a link? Save it here.</span>
-              <PasteButton onClick={paste.pasteFromClipboard} />
+              {/* Tucked into the row's corner: 16 − 8 = 8 px. */}
+              <PasteButton onClick={paste.pasteFromClipboard} className="rounded-[8px]" />
             </div>
             <Link
               href="/channels"

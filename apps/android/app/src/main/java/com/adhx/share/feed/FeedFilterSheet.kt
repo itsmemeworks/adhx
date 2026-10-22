@@ -46,6 +46,7 @@ import com.adhx.share.ui.Copy
 import com.adhx.share.ui.PrimaryButton
 import com.adhx.share.ui.Segmented
 import com.adhx.share.ui.SerifFamily
+import com.adhx.share.ui.SquircleShape
 import kotlinx.coroutines.launch
 
 /**
@@ -72,7 +73,7 @@ fun FeedFilterSheet(
         onDismissRequest = close,
         sheetState = state,
         containerColor = AdhxColors.Surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = SquircleShape.top(28.dp),
         dragHandle = { SheetHandle(AdhxColors.Hairline) },
     ) {
         Column(
@@ -96,7 +97,7 @@ fun FeedFilterSheet(
             }
             Column(
                 Modifier
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(SquircleShape(20.dp))
                     .background(AdhxColors.Card),
             ) {
                 MediaType.all.forEachIndexed { i, type ->

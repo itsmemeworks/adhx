@@ -59,6 +59,7 @@ import com.adhx.share.net.PhonePost
 import com.adhx.share.net.PostKind
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Glyphs
+import com.adhx.share.ui.SquircleShape
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -164,7 +165,7 @@ fun SendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDis
         onDismissRequest = onDismiss,
         sheetState = state,
         containerColor = AdhxColors.Surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = SquircleShape.top(28.dp),
         dragHandle = { SheetHandle(AdhxColors.Hairline) },
     ) {
         Column(
@@ -223,7 +224,7 @@ private fun WordsSendSheet(post: PhonePost, server: String, onNotice: (String) -
         onDismissRequest = onDismiss,
         sheetState = state,
         containerColor = AdhxColors.Surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = SquircleShape.top(28.dp),
         dragHandle = { SheetHandle(AdhxColors.Hairline) },
     ) {
         Column(
@@ -235,7 +236,7 @@ private fun WordsSendSheet(post: PhonePost, server: String, onNotice: (String) -
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(22.dp))
+                    .clip(SquircleShape(22.dp))
                     .background(AdhxColors.Card)
                     .padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -286,16 +287,17 @@ private fun Sending(post: PhonePost, server: String, progress: Float?, read: Lon
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .clip(SquircleShape(22.dp))
             .background(AdhxColors.Card)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            // Tucked into the card's corner: 22 − 14 padding = 8.
             Box(
                 Modifier
                     .size(width = 54.dp, height = 96.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(SquircleShape(8.dp))
                     .background(AdhxColors.Placeholder),
             ) {
                 if (poster != null) AsyncImage(poster, null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
@@ -361,7 +363,7 @@ private fun Choice(icon: ImageVector, label: String, waiting: Boolean, onClick: 
     Column(
         Modifier
             .width(64.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .clip(SquircleShape(14.dp))
             .clickable(role = Role.Button, onClickLabel = label, onClick = onClick)
             .semantics(mergeDescendants = true) { },
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -370,7 +372,7 @@ private fun Choice(icon: ImageVector, label: String, waiting: Boolean, onClick: 
         Box(
             Modifier
                 .size(60.dp)
-                .clip(RoundedCornerShape(18.dp))
+                .clip(SquircleShape(18.dp))
                 .background(if (waiting) AdhxColors.Accent.copy(alpha = 0.25f) else Tile),
             contentAlignment = Alignment.Center,
         ) {

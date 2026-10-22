@@ -112,6 +112,10 @@ struct ShareSheetScreen: View {
 
 // MARK: - Pieces
 
+/// What sits along the card's edge (posters in its corner, the buttons at its
+/// foot): 28 − 20 inset − 1 border is under 8, so 8. It follows the card's curve.
+private let cardInnerRadius: CGFloat = 8
+
 private struct SheetHeader: View {
     let closeLabel: String
     var mood: Gob.Mood = .idle
@@ -147,9 +151,11 @@ private struct Poster: View {
     let wide: Bool
     var showPlay = false
     var attempt = ""
+    /// In the card's corner: `cardInnerRadius`.
+    var cornerRadius: CGFloat?
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: wide ? 12 : 14, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius ?? (wide ? 12 : 14), style: .continuous)
         ZStack {
             shape.fill(Theme.placeholder)
             PosterImage(url: url, platform: platform, markSize: 22, attempt: attempt)
@@ -176,7 +182,7 @@ private struct SkeletonBar: View {
     let height: CGFloat
     var body: some View {
         GeometryReader { geo in
-            Capsule().fill(Theme.placeholder)
+            Capsule(style: .continuous).fill(Theme.placeholder)
                 .frame(width: geo.size.width * width, height: height)
         }
         .frame(height: height)
@@ -201,8 +207,8 @@ private struct ProgressBar: View {
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                Capsule().fill(.white.opacity(0.12))
-                Capsule().fill(Theme.accent)
+                Capsule(style: .continuous).fill(.white.opacity(0.12))
+                Capsule(style: .continuous).fill(Theme.accent)
                     .frame(width: geo.size.width * min(1, max(0, fraction)))
                     .animation(.easeOut(duration: 0.4), value: fraction)
             }
@@ -217,9 +223,9 @@ private struct ButtonsRow: View {
     var body: some View {
         HStack(spacing: 10) {
             Button("Open in ADHX") { flow.openInADHX() }
-                .buttonStyle(PillButtonStyle(kind: .raised, fontSize: 16))
+                .buttonStyle(PillButtonStyle(kind: .raised, fontSize: 16, cornerRadius: cardInnerRadius))
             Button("Done") { flow.requestClose() }
-                .buttonStyle(PillButtonStyle(kind: .primary))
+                .buttonStyle(PillButtonStyle(kind: .primary, cornerRadius: cardInnerRadius))
         }
     }
 }
@@ -393,7 +399,7 @@ private struct SavedContent: View {
                         TallPoster(url: flow.posterURL, platform: flow.platform, wide: wide,
                                    attempt: flow.keep?.status ?? "")
                     } else {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        RoundedRectangle(cornerRadius: cardInnerRadius, style: .continuous)
                             .fill(Theme.placeholder)
                             .frame(width: 84, height: 84)
                             .overlay(NetworkMark(platform: flow.platform, size: 28))
@@ -453,7 +459,7 @@ private struct TallPoster: View {
         Theme.placeholder
             .overlay { PosterImage(url: url, platform: platform, markSize: 28, attempt: attempt) }
             .frame(width: 84, height: wide ? 84 : 148)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: cardInnerRadius, style: .continuous))
             .accessibilityHidden(true)
     }
 }
@@ -576,9 +582,10 @@ private struct AlreadySavedContent: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .center, spacing: 14) {
                 if flow.posterURL != nil {
-                    Poster(url: flow.posterURL, platform: flow.platform, wide: true, attempt: flow.keep?.status ?? "")
+                    Poster(url: flow.posterURL, platform: flow.platform, wide: true, attempt: flow.keep?.status ?? "",
+                           cornerRadius: cardInnerRadius)
                 } else {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: cardInnerRadius, style: .continuous)
                         .fill(Theme.placeholder)
                         .frame(width: 63, height: 63)
                         .overlay(NetworkMark(platform: flow.platform, size: 24))
@@ -643,7 +650,7 @@ private struct OfflineContent: View {
                 .padding(.vertical, 2)
             }
             Button("Done") { flow.requestClose() }
-                .buttonStyle(PillButtonStyle(kind: .primary))
+                .buttonStyle(PillButtonStyle(kind: .primary, cornerRadius: cardInnerRadius))
         }
     }
 }
@@ -673,7 +680,7 @@ private struct MessageContent: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Button(button) { flow.requestClose() }
-                .buttonStyle(PillButtonStyle(kind: .primary))
+                .buttonStyle(PillButtonStyle(kind: .primary, cornerRadius: cardInnerRadius))
         }
     }
 }

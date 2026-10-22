@@ -216,8 +216,8 @@ struct LiveBadge: View {
         .padding(.leading, bordered ? 11 : 10)
         .padding(.trailing, 12)
         .frame(height: height)
-        .frosted(Capsule(), dim: bordered ? 0.55 : 0.6)
-        .overlay(Capsule().strokeBorder(Theme.live.opacity(bordered ? 0.5 : 0), lineWidth: 1))
+        .frosted(Capsule(style: .continuous), dim: bordered ? 0.55 : 0.6)
+        .overlay(Capsule(style: .continuous).strokeBorder(Theme.live.opacity(bordered ? 0.5 : 0), lineWidth: 1))
         .onAppear {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) { glow = true }
@@ -276,11 +276,12 @@ private struct LiveCard: View {
                         .padding(.leading, moment.watchers.isEmpty ? 12 : 5)
                         .padding(.trailing, 12)
                         .frame(height: 34)
-                        .frosted(Capsule(), dim: 0.6)
+                        .frosted(Capsule(style: .continuous), dim: 0.6)
                         .padding(10)
                     }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                // 26 − 8 inset − 2 border: follows the card's curve.
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             VStack(alignment: .leading, spacing: 6) {
                 Text(moment.name)
                     .font(Theme.serif(32))
@@ -305,7 +306,8 @@ private struct LiveCard: View {
                     Text("Tune in")
                 }
             }
-            .buttonStyle(PillButtonStyle(kind: .primary))
+            // 26 − 8 inset − 2 border: follows the card's curve.
+            .buttonStyle(PillButtonStyle(kind: .primary, cornerRadius: 16))
             .accessibilityLabel("Tune in to \(moment.name)")
         }
         // The board's 2 pt border sits outside its 8 of padding; strokeBorder draws inside this frame.
@@ -353,7 +355,8 @@ private struct QuietMomentRow: View {
             CoverImage(url: ADHXClient.resolve(moment.covers.first, against: server))
                 .frame(width: 76, height: 88)
                 .saturation(forming ? 0.75 : 1)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                // 22 − 8 inset − 1 border: follows the row's curve.
+                .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
             VStack(alignment: .leading, spacing: 5) {
                 if let label {
                     if forming {
@@ -362,7 +365,7 @@ private struct QuietMomentRow: View {
                             .foregroundStyle(Theme.accent)
                             .padding(.horizontal, 9)
                             .frame(height: 22)
-                            .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.6),
+                            .overlay(Capsule(style: .continuous).strokeBorder(Theme.accent.opacity(0.6),
                                                             style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
                     } else {
                         Text(label.uppercased())
@@ -424,14 +427,15 @@ private struct FormingRow: View {
                 CoverImage(url: ADHXClient.resolve(group.covers.first, against: server))
                     .frame(width: 76, height: 88)
                     .saturation(0.75)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    // 22 − 8 inset − 1.5 border: follows the row's curve.
+                    .clipShape(RoundedRectangle(cornerRadius: 12.5, style: .continuous))
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Forming")
                         .font(Theme.sans(11, .heavy))
                         .foregroundStyle(Theme.accent)
                         .padding(.horizontal, 9)
                         .frame(height: 22)
-                        .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.6),
+                        .overlay(Capsule(style: .continuous).strokeBorder(Theme.accent.opacity(0.6),
                                                         style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
                     Text(group.name)
                         .font(Theme.sans(17, .heavy))
@@ -735,7 +739,8 @@ struct TunedInScreen: View {
                 HStack(spacing: 11) {
                     CoverImage(url: ADHXClient.resolve(model.arrivalPoster, against: server))
                         .frame(width: 42, height: 42)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        // 20 − 8 inset − 1 border: follows the card's curve.
+                        .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
                         .overlay(alignment: .bottomTrailing) {
                             Face(saver: saver, server: server, size: 20, ring: .clear)
                                 .padding(2)
@@ -814,8 +819,8 @@ struct TunedInScreen: View {
         .padding(.leading, others.isEmpty ? 14 : 6)
         .padding(.trailing, 14)
         .frame(height: 40)
-        .frosted(Capsule(), dim: 0.55)
-        .overlay(Capsule().strokeBorder(.white.opacity(0.14), lineWidth: 1))
+        .frosted(Capsule(style: .continuous), dim: 0.55)
+        .overlay(Capsule(style: .continuous).strokeBorder(.white.opacity(0.14), lineWidth: 1))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(others.isEmpty ? (unnamed > 0 ? "\(unnamed) watching with you" : "Just you watching so far")
                             : SaverWords.names(others.map(\.displayName), upTo: 2) + (others.count == 1 ? " is" : " are") + " watching with you")

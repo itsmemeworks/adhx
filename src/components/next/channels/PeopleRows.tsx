@@ -309,14 +309,18 @@ export function YourPeopleRow({
                           <span className="text-[13px] text-nx-muted">{savesLabel(f.size)}</span>
                         </span>
                       </span>
+                      {/* Along the card's bottom: 24 − 16 − 1 leaves the 8 px floor. */}
                       <span aria-hidden className="grid grid-cols-3 gap-1.5">
                         {[0, 1, 2].map((i) =>
                           tiles[i] ? (
-                            <span key={i} className="block h-[50px] overflow-hidden rounded-xl">
+                            <span key={i} className="block h-[50px] overflow-hidden rounded-[8px]">
                               <Tile tile={tiles[i]} />
                             </span>
                           ) : (
-                            <span key={i} className="block h-[50px] rounded-xl bg-white/[0.04]" />
+                            <span
+                              key={i}
+                              className="block h-[50px] rounded-[8px] bg-white/[0.04]"
+                            />
                           ),
                         )}
                       </span>

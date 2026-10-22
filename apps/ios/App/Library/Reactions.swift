@@ -54,12 +54,15 @@ struct ReactPicker: View {
                     }
                     .padding(.horizontal, 16)
                     .frame(height: 44)
-                    .background(Capsule().fill(Theme.app))
-                    .overlay(Capsule().strokeBorder(Color(hex: 0x4A453E), lineWidth: 1))
+                    // 26 − 12 inset − 1 border: follows the picker's curve.
+                    .background(RoundedRectangle(cornerRadius: 13, style: .continuous).fill(Theme.app))
+                    .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous)
+                        .strokeBorder(Color(hex: 0x4A453E), lineWidth: 1))
                     .accessibilityLabel("Say something")
                     .accessibilityHint(hint)
                 Button(sending ? "Sending…" : (retrying ? "Retry" : "Send"), action: onWords)
-                    .buttonStyle(PillButtonStyle(kind: .primary, height: 44, fullWidth: false, fontSize: 15))
+                    .buttonStyle(PillButtonStyle(kind: .primary, height: 44, fullWidth: false, fontSize: 15,
+                                                 cornerRadius: 13))
                     .disabled(sending || words.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             if let note {

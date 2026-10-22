@@ -8,7 +8,7 @@ import { usableAvatarUrl } from '@/lib/avatar/generated-avatar'
 import { FaceInitial } from '../FaceInitial'
 import { GobShape } from '../GobShape'
 import { useInvites, type PendingInvite } from './InviteCard'
-import { SECONDARY, SettingsCard } from './parts'
+import { IN_CARD, SECONDARY, SettingsCard } from './parts'
 import { agoLabel, expiresLabel } from './when'
 
 /**
@@ -167,7 +167,10 @@ export function JoinQueue({
         {requests.map((r) => (
           <li
             key={r.id}
-            className="flex min-w-0 flex-col gap-3 rounded-[20px] border border-nx-accent/30 bg-nx-accent/[0.06] p-3.5"
+            className={cn(
+              'flex min-w-0 flex-col gap-3 border border-nx-accent/30 bg-nx-accent/[0.06] p-3.5',
+              IN_CARD,
+            )}
           >
             <div className="flex min-w-0 items-center gap-3">
               <span className="relative shrink-0">
@@ -197,7 +200,7 @@ export function JoinQueue({
                 disabled={busy === r.id}
                 onClick={() => void decide(r, 'approve')}
                 aria-label={`Let ${shownName(r)} in`}
-                className="inline-flex h-11 items-center gap-1.5 rounded-full bg-nx-accent px-[18px] text-sm font-extrabold text-black disabled:opacity-50"
+                className="inline-flex h-11 items-center gap-1.5 rounded-[var(--nx-nest)] bg-nx-accent px-[18px] text-sm font-extrabold text-black disabled:opacity-50"
               >
                 <Check aria-hidden className="h-4 w-4" strokeWidth={3} />
                 <span>Approve</span>
@@ -289,6 +292,7 @@ function MemberMenu({ person, onChanged }: { person: PersonRow; onChanged: () =>
       {open && (
         <div
           role="menu"
+          // Its rows curve at 16 − 6 = 10 px.
           className="absolute right-0 top-12 z-30 flex min-w-[180px] flex-col rounded-2xl bg-[#262320] p-1.5 shadow-xl"
         >
           <button
@@ -296,7 +300,7 @@ function MemberMenu({ person, onChanged }: { person: PersonRow; onChanged: () =>
             role="menuitem"
             onClick={() => void setBanned(!person.banned)}
             className={cn(
-              'flex min-h-[44px] items-center rounded-xl px-3 text-left text-sm font-bold hover:bg-white/10',
+              'flex min-h-[44px] items-center rounded-[10px] px-3 text-left text-sm font-bold hover:bg-white/10',
               !person.banned && 'text-[#ff8a7a]',
             )}
           >
@@ -598,7 +602,9 @@ export function NewInviteCard({ inv, className }: { inv: Invites; className?: st
       ref={root}
       aria-labelledby="new-invite-title"
       className={cn(
-        'relative flex flex-col gap-4 rounded-[28px] border-2 border-nx-accent/70 bg-nx-surface p-5 shadow-[0_0_0_6px_rgba(255,210,63,0.08)] md:px-7 md:py-6',
+        // 28 px corners, a 2 px border and 20 px padding (28 from md): its field and
+        // buttons sit at the 8 px floor.
+        'relative flex flex-col gap-4 rounded-[28px] border-2 border-nx-accent/70 bg-nx-surface p-5 shadow-[0_0_0_6px_rgba(255,210,63,0.08)] [--nx-nest:8px] md:px-7 md:py-6',
         className,
       )}
     >
@@ -619,7 +625,7 @@ export function NewInviteCard({ inv, className }: { inv: Invites; className?: st
       <div className="flex flex-col gap-2">
         <span className="text-[13px] font-semibold text-nx-soft">New invite link</span>
         <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-          <span className="flex h-14 min-w-0 flex-1 items-center gap-2.5 rounded-full border-[1.5px] border-[#4a453e] bg-nx-ink pl-4 pr-2">
+          <span className="flex h-14 min-w-0 flex-1 items-center gap-2.5 rounded-[var(--nx-nest)] border-[1.5px] border-[#4a453e] bg-nx-ink pl-4 pr-2">
             <Link2 aria-hidden className="h-4 w-4 shrink-0 text-nx-muted" />
             <code className="min-w-0 flex-1 select-all truncate rounded-lg bg-nx-accent/10 px-1.5 py-1 font-nx-sans text-[15px] font-bold text-nx-cream">
               {made.url}
@@ -636,7 +642,7 @@ export function NewInviteCard({ inv, className }: { inv: Invites; className?: st
                     : 'Link copied. Send it however you like.',
                 )
               }}
-              className="flex h-14 items-center gap-2 whitespace-nowrap rounded-full bg-nx-accent px-6 text-base font-extrabold text-black"
+              className="flex h-14 items-center gap-2 whitespace-nowrap rounded-[var(--nx-nest)] bg-nx-accent px-6 text-base font-extrabold text-black"
             >
               {inv.copied ? (
                 <Check aria-hidden className="h-[18px] w-[18px]" strokeWidth={3} />
@@ -649,7 +655,7 @@ export function NewInviteCard({ inv, className }: { inv: Invites; className?: st
               <button
                 type="button"
                 onClick={() => void inv.share()}
-                className="flex h-14 items-center gap-2 whitespace-nowrap rounded-full border-[1.5px] border-nx-cream px-5 text-base font-extrabold text-nx-cream"
+                className="flex h-14 items-center gap-2 whitespace-nowrap rounded-[var(--nx-nest)] border-[1.5px] border-nx-cream px-5 text-base font-extrabold text-nx-cream"
               >
                 <Share aria-hidden className="h-[18px] w-[18px]" />
                 <span>Share…</span>

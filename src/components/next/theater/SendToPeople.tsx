@@ -145,7 +145,7 @@ export function SendToPeople({
         placeholder="Add a note (optional)"
         onChange={(e) => setNote(e.currentTarget.value)}
         className={cn(
-          'h-10 w-full rounded-[10px] bg-white/[0.08] px-3 text-base text-white/90 outline-none placeholder:text-white/40 focus:ring-2 focus:ring-nx-accent sm:text-[13px]',
+          'h-10 w-full rounded-[var(--nx-nest,10px)] bg-white/[0.08] px-3 text-base text-white/90 outline-none placeholder:text-white/40 focus:ring-2 focus:ring-nx-accent sm:text-[13px]',
           over && 'ring-2 ring-red-400',
         )}
       />

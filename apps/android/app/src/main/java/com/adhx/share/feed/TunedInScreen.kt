@@ -11,6 +11,7 @@ import com.adhx.share.net.AdhxApi
 import com.adhx.share.ui.Avatar
 import com.adhx.share.ui.GobShape
 import com.adhx.share.ui.Glyphs
+import com.adhx.share.ui.SquircleShape
 import com.adhx.share.ui.faceColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -257,10 +258,10 @@ private fun ArrivalCard(post: PhonePost?, server: String, modifier: Modifier = M
     Row(
         modifier
             .width(228.dp)
-            .shadow(20.dp, RoundedCornerShape(20.dp), ambientColor = Color.Black, spotColor = Color.Black)
-            .clip(RoundedCornerShape(20.dp))
+            .shadow(20.dp, SquircleShape(20.dp), ambientColor = Color.Black, spotColor = Color.Black)
+            .clip(SquircleShape(20.dp))
             .background(AdhxColors.Surface.copy(alpha = 0.85f))
-            .border(1.dp, (saver?.let { faceColor(it.username) } ?: AdhxColors.White).copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+            .border(1.dp, (saver?.let { faceColor(it.username) } ?: AdhxColors.White).copy(alpha = 0.5f), SquircleShape(20.dp))
             .padding(start = 8.dp, end = 14.dp, top = 8.dp, bottom = 8.dp)
             .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
         verticalAlignment = Alignment.CenterVertically,
@@ -269,7 +270,7 @@ private fun ArrivalCard(post: PhonePost?, server: String, modifier: Modifier = M
             Box(
                 Modifier
                     .size(42.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(SquircleShape(12.dp))
                     .background(AdhxColors.Placeholder),
             ) {
                 if (poster != null) AsyncImage(poster, null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())

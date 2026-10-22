@@ -24,7 +24,7 @@ struct ConnectedView: View {
                 .foregroundStyle(Theme.good)
                 .padding(.horizontal, 12)
                 .frame(height: 30)
-                .background(Capsule().fill(Color(hex: 0x7FD1AE, opacity: 0.14)))
+                .background(Capsule(style: .continuous).fill(Color(hex: 0x7FD1AE, opacity: 0.14)))
                 .padding(.top, 12)
 
             // The boards' line-height 0.95: the two lines nearly touch.
@@ -122,7 +122,7 @@ struct ConnectedView: View {
                 let current = posts.firstIndex { $0.key == page } ?? 0
                 ForEach(0..<dots, id: \.self) { dot in
                     let on = min(current / 2, dots - 1) == dot
-                    Capsule()
+                    Capsule(style: .continuous)
                         .fill(on ? Theme.ink : Color(hex: 0x4A453E))
                         .frame(width: on ? 18 : 6, height: 6)
                 }
@@ -169,7 +169,7 @@ private struct WeekCard: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 9)
                     .frame(height: 24)
-                    .frosted(Capsule(), dim: 0.5)
+                    .frosted(Capsule(style: .continuous), dim: 0.5)
                     .padding(8)
             }
             .overlay(alignment: .bottomLeading) {

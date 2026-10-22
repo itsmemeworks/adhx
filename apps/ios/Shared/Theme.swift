@@ -290,6 +290,9 @@ struct PillButtonStyle: ButtonStyle {
     var fullWidth = true
     /// Overrides the kind's own size.
     var fontSize: CGFloat?
+    /// Inside a rounded container: the container's radius minus its inset and
+    /// border, so the button follows its curve. Nil keeps the pill.
+    var cornerRadius: CGFloat?
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -299,11 +302,13 @@ struct PillButtonStyle: ButtonStyle {
             .padding(.horizontal, 20)
             .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: height)
             .foregroundStyle(foreground)
-            .background(Capsule().fill(fill))
-            .overlay(Capsule().strokeBorder(border, lineWidth: 1))
-            .contentShape(Capsule())
+            .background(shape.fill(fill))
+            .overlay(shape.strokeBorder(border, lineWidth: 1))
+            .contentShape(shape)
             .opacity(configuration.isPressed ? 0.7 : 1)
     }
+
+    private var shape: PillShape { PillShape(cornerRadius: cornerRadius) }
 
     private var fill: Color {
         switch kind {
@@ -328,6 +333,24 @@ struct PillButtonStyle: ButtonStyle {
         case .raised: return .white.opacity(0.12)
         case .warn: return Theme.warn
         }
+    }
+}
+
+/// A continuous capsule, or a continuous rounded rectangle when given a radius.
+struct PillShape: InsettableShape {
+    var cornerRadius: CGFloat?
+    var inset: CGFloat = 0
+
+    func path(in rect: CGRect) -> Path {
+        let box = rect.insetBy(dx: inset, dy: inset)
+        guard let cornerRadius else { return Capsule(style: .continuous).path(in: box) }
+        return RoundedRectangle(cornerRadius: max(0, cornerRadius - inset), style: .continuous).path(in: box)
+    }
+
+    func inset(by amount: CGFloat) -> PillShape {
+        var shape = self
+        shape.inset += amount
+        return shape
     }
 }
 
@@ -356,7 +379,7 @@ struct BoardSwitchStyle: ToggleStyle {
         @Environment(\.isEnabled) private var enabled
 
         var body: some View {
-            Capsule()
+            Capsule(style: .continuous)
                 .fill(on ? Theme.accent : Color(hex: 0x4A453E))
                 .frame(width: 48, height: 28)
                 .overlay(alignment: on ? .trailing : .leading) {

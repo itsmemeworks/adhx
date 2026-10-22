@@ -165,6 +165,7 @@ export function ReactionPicker({
           onClose()
         }
       }}
+      // What lines its edges curves at 26 − 12 − 1 = 13 px.
       className={cn(
         'pointer-events-auto flex max-h-[calc(100%-32px)] min-w-0 flex-col gap-2.5 overflow-y-auto overscroll-contain rounded-[26px] border border-white/10 bg-[#1a1814]/90 p-3 text-white shadow-nx-toast backdrop-blur-xl',
         className,
@@ -184,7 +185,7 @@ export function ReactionPicker({
             title={r.label}
             disabled={disabled}
             onClick={() => onEmoji(r.emoji)}
-            className="flex h-12 min-w-0 items-center justify-center rounded-full bg-[#262320] text-[26px] leading-none transition-transform hover:scale-110 disabled:opacity-60 motion-reduce:hover:scale-100"
+            className="flex h-12 min-w-0 items-center justify-center rounded-[13px] bg-[#262320] text-[26px] leading-none transition-transform hover:scale-110 disabled:opacity-60 motion-reduce:hover:scale-100"
           >
             <span aria-hidden>{r.emoji}</span>
           </button>
@@ -211,12 +212,12 @@ export function ReactionPicker({
           autoComplete="off"
           enterKeyHint="send"
           placeholder={live ? 'Say something to everyone watching' : 'Say something'}
-          className="h-11 min-w-0 flex-1 rounded-full border border-[#4a453e] bg-[#0f0e0c] px-4 text-[15px] text-nx-cream placeholder:text-nx-muted"
+          className="h-11 min-w-0 flex-1 rounded-[13px] border border-[#4a453e] bg-[#0f0e0c] px-4 text-[15px] text-nx-cream placeholder:text-nx-muted"
         />
         <button
           type="submit"
           disabled={!clean || disabled}
-          className="h-11 shrink-0 rounded-full bg-nx-accent px-[18px] text-[15px] font-extrabold text-black disabled:opacity-50"
+          className="h-11 shrink-0 rounded-[13px] bg-nx-accent px-[18px] text-[15px] font-extrabold text-black disabled:opacity-50"
         >
           <span>{disabled ? 'Sending…' : error ? 'Retry' : 'Send'}</span>
         </button>
@@ -345,7 +346,8 @@ export function ArrivalToast({
   const body = (
     <>
       <span className="relative shrink-0">
-        <span className="block h-[42px] w-[42px] overflow-hidden rounded-xl bg-[#2a2620]">
+        {/* In the toast's corner: 18 − 10 = 8 px. */}
+        <span className="block h-[42px] w-[42px] overflow-hidden rounded-[8px] bg-[#2a2620]">
           {cover && <NxImage src={cover} alt="" className="h-full w-full object-cover" />}
         </span>
         <span aria-hidden className="absolute -bottom-1.5 -right-1.5 block">

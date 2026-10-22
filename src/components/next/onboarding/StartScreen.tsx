@@ -29,6 +29,10 @@ interface Account {
 
 const RESEND_SECONDS = 60
 
+/**
+ * 24 px corners and 18 px padding (26 and 30 px from md): fields, buttons and
+ * panels in it sit at the 8 px floor, and so does what those panels hold.
+ */
 function Card({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div
@@ -106,7 +110,7 @@ function EmailStep({
           inputMode="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="h-[54px] rounded-[14px] border-[1.5px] border-nx-accent bg-black px-4 text-[17px] text-white outline-none"
+          className="h-[54px] rounded-[8px] border-[1.5px] border-nx-accent bg-black px-4 text-[17px] text-white outline-none"
         />
         {error && (
           <p role="alert" className="m-0 text-sm text-[#ff8a7a]">
@@ -116,7 +120,7 @@ function EmailStep({
         <button
           type="submit"
           disabled={busy}
-          className="h-[54px] rounded-full bg-nx-accent text-[17px] font-extrabold text-black disabled:opacity-70"
+          className="h-[54px] rounded-[8px] bg-nx-accent text-[17px] font-extrabold text-black disabled:opacity-70"
         >
           {busy ? 'Getting your link…' : 'Get a sign-in link'}
         </button>
@@ -186,7 +190,7 @@ function SentStep({
       </div>
       <span
         role="status"
-        className="flex h-[52px] items-center justify-center gap-2 rounded-full border border-[#555] text-[15px] font-bold"
+        className="flex h-[52px] items-center justify-center gap-2 rounded-[8px] border border-[#555] text-[15px] font-bold"
       >
         <span
           aria-hidden
@@ -265,7 +269,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
         <span className="text-[17px] font-extrabold">{`You’re in, @${account.user?.username ?? 'you'}.`}</span>
       </div>
 
-      <div className="flex flex-col gap-3.5 rounded-[18px] bg-black p-4 md:p-5">
+      <div className="flex flex-col gap-3.5 rounded-[8px] bg-black p-4 md:p-5">
         {noX && (
           <>
             <span className="font-nx-serif text-[28px] leading-[1.05]">Save your first post</span>
@@ -287,7 +291,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
               <button
                 type="button"
                 onClick={sync.start}
-                className="flex h-[52px] items-center justify-center gap-2.5 rounded-full bg-white text-base font-extrabold text-black"
+                className="flex h-[52px] items-center justify-center gap-2.5 rounded-[8px] bg-white text-base font-extrabold text-black"
               >
                 <span>Import my bookmarks</span>
                 <XLogo className="h-4 w-4" />
@@ -295,7 +299,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
             ) : (
               <a
                 href={`/api/auth/twitter?returnUrl=${encodeURIComponent('/start?sync=1')}`}
-                className="flex h-[52px] items-center justify-center gap-2.5 rounded-full bg-white text-base font-extrabold text-black"
+                className="flex h-[52px] items-center justify-center gap-2.5 rounded-[8px] bg-white text-base font-extrabold text-black"
               >
                 <span>Connect</span>
                 <XLogo className="h-4 w-4" />
@@ -351,7 +355,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
                 {sync.thumbs.map((t) => (
                   <span
                     key={t.id}
-                    className="relative block h-12 animate-nx-pop overflow-hidden rounded-md bg-[#1c1b19]"
+                    className="relative block h-12 animate-nx-pop overflow-hidden rounded-[8px] bg-[#1c1b19]"
                   >
                     {t.img && (
                       <NxImage
@@ -408,7 +412,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
             {sync.errorCode === 'reauth' ? (
               <a
                 href={`/api/auth/twitter?returnUrl=${encodeURIComponent('/start?sync=1')}`}
-                className="flex h-[52px] items-center justify-center gap-2.5 rounded-full bg-white text-base font-extrabold text-black"
+                className="flex h-[52px] items-center justify-center gap-2.5 rounded-[8px] bg-white text-base font-extrabold text-black"
               >
                 <span>Reconnect</span>
                 <XLogo className="h-4 w-4" />
@@ -417,7 +421,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
               <button
                 type="button"
                 onClick={sync.start}
-                className="h-[52px] rounded-full bg-white text-base font-extrabold text-black"
+                className="h-[52px] rounded-[8px] bg-white text-base font-extrabold text-black"
               >
                 Try again
               </button>
@@ -434,7 +438,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
       <Link
         href={sync.status === 'idle' || sync.status === 'error' ? '/now' : '/play?recent=1'}
         className={cn(
-          'flex h-12 items-center justify-center rounded-full text-[15px]',
+          'flex h-12 items-center justify-center rounded-[8px] text-[15px]',
           sync.status === 'done' || noX
             ? 'bg-nx-accent font-extrabold text-black'
             : 'text-white/80',

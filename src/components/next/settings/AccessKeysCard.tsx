@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, Copy, KeyRound, RefreshCw, Trash2 } from 'lucide-react'
-import { INPUT, PRIMARY, SECONDARY, SettingsCard, timeSince } from './parts'
+import { IN_CARD, INPUT, PRIMARY, SECONDARY, SettingsCard, timeSince } from './parts'
 
 interface AccessKey {
   id: string
@@ -122,9 +122,9 @@ export function AccessKeysCard() {
       sub="Give Claude a key and it can search your saves for you, pictures and videos included. A key can only look; it can’t change anything."
     >
       {fresh && (
-        <div className="flex flex-col gap-3 rounded-[18px] bg-black p-4" role="status">
+        <div className={`flex flex-col gap-3 bg-black p-4 ${IN_CARD}`} role="status">
           <span className="text-[15px] font-bold">Copy your key now. You won’t see it again.</span>
-          <code className="block select-all break-all rounded-xl bg-white/5 px-3 py-2.5 font-mono text-[13px] text-nx-cream">
+          <code className="block select-all break-all rounded-[8px] bg-white/5 px-3 py-2.5 font-mono text-[13px] text-nx-cream">
             {fresh.key}
           </code>
           <button type="button" onClick={() => void copy()} className={PRIMARY}>
@@ -143,14 +143,14 @@ export function AccessKeysCard() {
       )}
 
       {keys === null ? (
-        <span aria-hidden className="nx-shimmer animate-nx-shimmer block h-14 rounded-2xl" />
+        <span aria-hidden className={`nx-shimmer animate-nx-shimmer block h-14 ${IN_CARD}`} />
       ) : (
         keys.length > 0 && (
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
             {keys.map((key) => (
               <li
                 key={key.id}
-                className="flex items-center gap-3 rounded-2xl bg-black/40 px-4 py-3 text-sm"
+                className={`flex items-center gap-3 bg-black/40 px-4 py-3 text-sm ${IN_CARD}`}
               >
                 <KeyRound aria-hidden className="h-4 w-4 shrink-0 text-white/55" />
                 <span className="flex min-w-0 flex-1 flex-col">

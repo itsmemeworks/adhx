@@ -95,6 +95,7 @@ function OwnShortcutCard({ origin }: { origin: string }) {
       // The text is selectable; people can copy it themselves.
     }
   }
+  // 22 px corners and 16 px padding (24 from md): the code and button sit at the 8 px floor.
   return (
     <section className="flex flex-col gap-4 rounded-[22px] bg-nx-surface p-4 font-nx-sans text-white md:p-6">
       <div className="flex flex-col gap-1">
@@ -116,13 +117,13 @@ function OwnShortcutCard({ origin }: { origin: string }) {
           <span>Add the Open URLs action. Paste this, then add Shortcut Input after it:</span>
         </li>
       </ol>
-      <code className="block select-all break-all rounded-xl bg-black px-3 py-2.5 font-mono text-[13px] text-nx-cream">
+      <code className="block select-all break-all rounded-[8px] bg-black px-3 py-2.5 font-mono text-[13px] text-nx-cream">
         {prefix}
       </code>
       <button
         type="button"
         onClick={() => void copy()}
-        className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-nx-accent px-5 text-[15px] font-extrabold text-black"
+        className="inline-flex h-12 items-center justify-center gap-2 rounded-[8px] bg-nx-accent px-5 text-[15px] font-extrabold text-black"
       >
         <span>{copied ? 'Copied' : 'Copy the address'}</span>
       </button>

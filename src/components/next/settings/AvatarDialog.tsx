@@ -262,7 +262,7 @@ export function AvatarDialog({
   const faceUrl = preview ?? current.url
   const card = (on: boolean) =>
     cn(
-      'relative flex min-h-[112px] flex-col items-start gap-2 rounded-[20px] border-2 p-3.5 text-left',
+      'relative flex min-h-[112px] flex-col items-start gap-2 rounded-[8px] border-2 p-3.5 text-left',
       on
         ? 'border-nx-accent bg-nx-accent/[0.08]'
         : 'border-transparent bg-[#262320] hover:bg-[#2e2a26]',
@@ -291,7 +291,9 @@ export function AvatarDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="avatar-dialog-title"
-        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[92dvh] flex-col gap-5 overflow-y-auto rounded-t-[24px] bg-[#1a1814] p-5 pb-[max(20px,env(safe-area-inset-bottom))] font-nx-sans text-white outline-none md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:w-[min(880px,calc(100vw-48px))] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[28px] md:border md:border-white/10 md:p-8"
+        // 24 px corners, 20 px padding (28 px, 1 px border and 32 px from md):
+        // what lines its edges sits at the 8 px floor.
+        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[92dvh] flex-col gap-5 overflow-y-auto rounded-t-[24px] bg-[#1a1814] p-5 [--nx-nest:8px] pb-[max(20px,env(safe-area-inset-bottom))] font-nx-sans text-white outline-none md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:w-[min(880px,calc(100vw-48px))] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[28px] md:border md:border-white/10 md:p-8"
       >
         <div className="flex items-start gap-4">
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -644,7 +646,7 @@ function AvatarPreview({
   return (
     <div
       data-testid="avatar-preview"
-      className="relative flex h-[112px] items-end overflow-hidden rounded-[20px] bg-gradient-to-b from-[#2a2620] to-black p-4"
+      className="relative flex h-[112px] items-end overflow-hidden rounded-[8px] bg-gradient-to-b from-[#2a2620] to-black p-4"
     >
       {cover && (
         <>

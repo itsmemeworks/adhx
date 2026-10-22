@@ -2516,7 +2516,8 @@ export function TheaterV2({
                         <div
                           role="group"
                           aria-label="How close to stay"
-                          className="flex gap-1 rounded-full bg-white/10 p-[3px]"
+                          // Edge to edge in the plate: 16 − 14 leaves the 8 px floor.
+                          className="flex gap-1 rounded-[8px] bg-white/10 p-[3px]"
                         >
                           {[
                             { on: !wander, label: 'Stay close', pick: () => toggleWander(false) },
@@ -2528,7 +2529,7 @@ export function TheaterV2({
                               aria-pressed={b.on}
                               onClick={b.pick}
                               className={cn(
-                                'h-8 flex-1 rounded-full text-[13px] font-bold',
+                                'h-8 flex-1 rounded-[8px] text-[13px] font-bold',
                                 b.on ? 'bg-white text-black' : 'text-white',
                               )}
                             >

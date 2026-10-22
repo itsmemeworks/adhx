@@ -156,14 +156,15 @@ function Row({
           referrerPolicy="no-referrer"
           onError={() => setBroken(true)}
           className={cn(
-            'row-span-2 h-[52px] w-[52px] rounded-xl object-cover lg:row-span-1',
+            // In the row's corner: 18 − 10 leaves the 8 px floor.
+            'row-span-2 h-[52px] w-[52px] rounded-[8px] object-cover lg:row-span-1',
             item.status === 'ready' && 'opacity-85',
           )}
         />
       ) : (
         <span
           aria-hidden
-          className="row-span-2 flex h-[52px] w-[52px] items-center justify-center rounded-xl bg-[#262320] text-[#c9bfab] lg:row-span-1"
+          className="row-span-2 flex h-[52px] w-[52px] items-center justify-center rounded-[8px] bg-[#262320] text-[#c9bfab] lg:row-span-1"
         >
           {problem ? <CloudOff className="h-5 w-5" /> : <ImageOff className="h-5 w-5" />}
         </span>
@@ -188,7 +189,7 @@ function Row({
                 type="button"
                 disabled={busy}
                 onClick={() => onRetry(item)}
-                className="inline-flex h-10 items-center gap-1.5 rounded-full bg-nx-cream px-4 text-sm font-extrabold text-black disabled:opacity-50"
+                className="inline-flex h-10 items-center gap-1.5 rounded-[8px] bg-nx-cream px-4 text-sm font-extrabold text-black disabled:opacity-50"
               >
                 <RotateCw aria-hidden className="h-4 w-4" />
                 <span>Retry</span>
@@ -199,7 +200,7 @@ function Row({
                 type="button"
                 disabled={busy}
                 onClick={() => onLinkOnly(item)}
-                className="inline-flex h-10 items-center whitespace-nowrap rounded-full border border-[#4a453e] px-4 text-sm font-bold text-nx-cream disabled:opacity-50"
+                className="inline-flex h-10 items-center whitespace-nowrap rounded-[8px] border border-[#4a453e] px-4 text-sm font-bold text-nx-cream disabled:opacity-50"
               >
                 Keep the link only
               </button>
@@ -374,7 +375,8 @@ export function DoingScreen() {
             <button
               type="button"
               onClick={refresh}
-              className="min-h-11 rounded-full border border-white/20 px-4 font-bold"
+              // 16 − 12 leaves the 8 px floor.
+              className="min-h-11 rounded-[8px] border border-white/20 px-4 font-bold"
             >
               Try again
             </button>

@@ -52,6 +52,7 @@ import com.adhx.share.ui.Copy
 import com.adhx.share.ui.SansFamily
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.KeepUpright
+import com.adhx.share.ui.SquircleShape
 import kotlinx.coroutines.launch
 import java.time.Instant
 
@@ -160,7 +161,7 @@ fun ReplySheet(
         onDismissRequest = onDismiss,
         sheetState = state,
         containerColor = AdhxColors.Surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = SquircleShape.top(28.dp),
     ) {
         Column(
             Modifier.navigationBarsPadding().padding(start = 20.dp, end = 20.dp, bottom = 24.dp),

@@ -96,8 +96,9 @@ struct NetworkMark: View {
 /// The black tile with a network mark, as in the Shared lately list.
 struct NetworkTile: View {
     let platform: String?
+    var cornerRadius: CGFloat = 12
     var body: some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
             .fill(Color.black)
             .frame(width: 40, height: 40)
             .overlay(NetworkMark(platform: platform, size: 18))
