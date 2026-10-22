@@ -702,12 +702,17 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun loadLive() {
+        viewModelScope.launch { refreshLive() }
+    }
+
+    private suspend fun refreshLive() {
         val now = _live.value
         if (now.loading) return
         val connection = store.current() ?: return
         _live.value = now.copy(loading = true, error = null)
-        viewModelScope.launch {
+        try {
             val result = AdhxApi(connection).live()
+            if (!connection.sameCredential(store.current())) return
             _live.value = when (result) {
                 is ApiResult.Ok -> {
                     // A bell being changed keeps the state shown until the server answers.
@@ -723,6 +728,29 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 ApiResult.Offline -> _live.value.copy(loading = false, loadedOnce = true, error = OFFLINE)
             }
+        } finally {
+            if (connection.sameCredential(store.current()) && _live.value.loading) _live.value = _live.value.copy(loading = false)
+        }
+    }
+
+    suspend fun followLive() {
+        val connection = store.current() ?: return
+        followLiveUpdates(stream = { AdhxApi(connection).liveChanges() },
+            active = { connection.sameCredential(store.current()) }, fallbackMs = 20_000,
+            refresh = { refreshLive() })
+    }
+
+    suspend fun followTuned(session: String) {
+        val connection = store.current() ?: return
+        val slug = _tuned.value.slug
+        try {
+            followLiveUpdates(stream = { AdhxApi(connection).liveChanges(slug) },
+                active = { connection.sameCredential(store.current()) && _tuned.value.slug == slug && _tuned.value.error != Copy.LIVE_ENDED },
+                refresh = { pollTuned(session) })
+        } finally {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                kotlinx.coroutines.withTimeoutOrNull(2_000) { AdhxApi(connection).leaveLive(slug, session) }
+            }
         }
     }
 
@@ -735,47 +763,47 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Ask for the moment again (every ~5 s while tuned in). New posts join the
+     * Refresh on a live invalidation (or the recovery timer). New posts join the
      * end, so the one playing never moves.
      */
     private var tunedPlayingKey: String? = null
 
     fun playingTuned(post: PhonePost?) { tunedPlayingKey = post?.key }
 
+    private var tunedRefreshing = false
     suspend fun pollTuned(session: String? = null) {
+        if (tunedRefreshing) return
         val connection = store.current() ?: return
         val slug = _tuned.value.slug.takeIf { it.isNotBlank() } ?: return
-        val result = AdhxApi(connection).liveMoment(slug, session, _tuned.value.items.map { it.key })
-        val current = _tuned.value
-        if (current.slug != slug) return
-        _tuned.value = when (result) {
-            is ApiResult.Ok -> {
-                val detail = result.value
-                arrive(detail.reactions)
-                val had = current.items.mapTo(HashSet()) { it.key }
-                val fresh = detail.items.filter { it.key !in had }
-                // Keep each post's newest savers (someone else may have saved it meanwhile).
-                current.copy(
-                    moment = detail.moment ?: current.moment,
-                    items = mergeLivePosts(current.items, detail.items, detail.removedKeys.toSet(), tunedPlayingKey, detail.saverUpdates.associate { it.key to it }),
-                    watchers = detail.watchers ?: detail.moment?.watchers?.takeIf { it.isNotEmpty() } ?: current.watchers,
-                    loadedOnce = true,
-                    error = null,
-                    arrived = if (current.loadedOnce && fresh.isNotEmpty()) current.arrived + fresh.size else current.arrived,
-                    arrival = if (current.loadedOnce && fresh.isNotEmpty()) fresh.last() else current.arrival,
-                )
+        tunedRefreshing = true
+        try {
+            val result = AdhxApi(connection).liveMoment(slug, session, _tuned.value.items.map { it.key })
+            val current = _tuned.value
+            if (current.slug != slug || !connection.sameCredential(store.current())) return
+            _tuned.value = when (result) {
+                is ApiResult.Ok -> {
+                    val detail = result.value
+                    arrive(detail.reactions)
+                    val had = current.items.mapTo(HashSet()) { it.key }
+                    val fresh = detail.items.filter { it.key !in had }
+                    // Keep each post's newest savers (someone else may have saved it meanwhile).
+                    current.copy(
+                        moment = detail.moment ?: current.moment,
+                        items = mergeLivePosts(current.items, detail.items, detail.removedKeys.toSet(), tunedPlayingKey, detail.saverUpdates.associate { it.key to it }),
+                        watchers = detail.watchers ?: detail.moment?.watchers?.takeIf { it.isNotEmpty() } ?: current.watchers,
+                        loadedOnce = true,
+                        error = null,
+                        arrived = if (current.loadedOnce && fresh.isNotEmpty()) current.arrived + fresh.size else current.arrived,
+                        arrival = if (current.loadedOnce && fresh.isNotEmpty()) fresh.last() else current.arrival,
+                    )
+                }
+                is ApiResult.Failed -> {
+                    signedOut(result, connection)
+                    current.copy(items = if (result.status == 404 || result.status == 401) emptyList() else current.items, watchers = emptyList(), loadedOnce = true, error = if (result.status == 404) Copy.LIVE_ENDED else result.message ?: Copy.LIVE_CANT_LOAD)
+                }
+                ApiResult.Offline -> current.copy(loadedOnce = true, error = if (current.items.isEmpty()) OFFLINE else null)
             }
-            is ApiResult.Failed -> {
-                signedOut(result, connection)
-                current.copy(items = if (result.status == 404 || result.status == 401) emptyList() else current.items, watchers = emptyList(), loadedOnce = true, error = if (result.status == 404) Copy.LIVE_ENDED else result.message ?: Copy.LIVE_CANT_LOAD)
-            }
-            ApiResult.Offline -> current.copy(loadedOnce = true, error = if (current.items.isEmpty()) OFFLINE else null)
-        }
-    }
-
-    suspend fun leaveTuned(slug: String, session: String) {
-        val connection = store.current() ?: return
-        AdhxApi(connection).leaveLive(slug, session)
+        } finally { tunedRefreshing = false }
     }
 
     fun seenArrivals() {

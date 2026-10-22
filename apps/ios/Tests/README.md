@@ -23,13 +23,14 @@ the output says which one.
 
 ## The suites
 
-CI (`.github/workflows/native.yml`) runs **Live reliability** and **Queued
+CI (`.github/workflows/native.yml`) runs **Live reliability**, **Live updates** and **Queued
 privacy**, plus **Reaction connections**, **Playback recovery**, **Feed seen sessions** and **Watch tally**, on every PR that touches the apps, then builds the app for the
 simulator. Run the rest by hand when you change what they cover.
 
 | Suite                | What it checks                                                                                                                           | Files to compile (all under `apps/ios/`), plus `Tests/<Suite>.swift`                                                                                                              |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Live reliability     | Compact saver and privacy updates, explicit removals, keeping the playing post, the 200-post cache bound, 40-code-point message clipping | `Shared/API.swift Shared/FriendsAPI.swift Shared/LiveQueue.swift`                                                                                                                 |
+| Live updates         | Bounded SSE framing, burst coalescing, serial refreshes, reconnect recovery, fallback, cancellation and quiet account changes            | `Shared/API.swift Shared/FriendsAPI.swift Shared/LiveUpdates.swift`                                                                                                               |
 | Queued privacy       | Restoring a queued privacy choice, intent versions, history written by app and extension at once, keeping unfinished entries             | `-D ADHX_HISTORY_TEST Shared/API.swift Shared/FriendsAPI.swift Shared/Network.swift Shared/NetworkPaths.swift Shared/SVGPath.swift Shared/ResumeStore.swift Shared/Storage.swift` |
 | Friends parity       | Feed weights, a channel's new marks and notes, Live's busy line, forming groups                                                          | `Shared/API.swift Shared/FriendsAPI.swift`                                                                                                                                        |
 | Board features       | Sending straight to your people, the sent reason, forming faces and alerts, the like thumbnail, keeping a group channel                  | `Shared/API.swift Shared/FriendsAPI.swift`                                                                                                                                        |

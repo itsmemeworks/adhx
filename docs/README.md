@@ -33,6 +33,7 @@ Every doc in the repository, sorted by what you're trying to do. New here? Start
 | ------------------------------------------------------- | -------------------------------------------------------------------------- |
 | [CONTRIBUTING.md](../CONTRIBUTING.md)                   | Setup, tests, commit and pull request conventions                          |
 | [ARCHITECTURE.md](../ARCHITECTURE.md)                   | How the pieces fit together, with diagrams                                 |
+| [Live updates and presence](realtime.md)                | SSE transports, native packages, recovery and intentional polling          |
 | [AGENTS.md](../AGENTS.md) and [CLAUDE.md](../CLAUDE.md) | The rules and the map for coding agents (humans welcome too)               |
 | [WORKLOG.md](WORKLOG.md)                                | What changed recently and why, newest first                                |
 | [Releasing](releasing.md)                               | Release Please, container images, the Android APK and TestFlight           |

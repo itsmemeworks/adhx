@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-22 — Stream foreground Live across web and phones
+
+- Replace native 5-second room polling with Foundation/official OkHttp SSE invalidations, coalesced serial snapshots, reconnect resync and legacy REST fallback.
+- Web reconnects recover missed snapshots/posts; hidden tabs close streams, startup buffers are bounded and expired animation timers are removed.
+- Bound server output and stream lifetimes, fail closed on mapping/visibility failures, and bridge planned reconnects with short credential-scoped presence grace.
+- One shared durable-revision check catches worker-side changes for all phone subscriptions; retain existing progress, pairing, alert and worker polling.
+- Added transport/lifecycle/privacy/backpressure regressions and native CI coverage. Simulator/JVM builds are not physical-phone network verification.
+- In flight for review only; no deployment. Protocol, package choices and real-device follow-ups: `docs/realtime.md`.
+
 ## 2026-10-22 — Watch counts: who sees what
 
 - Owner decided: members see only their own exact counts ("watched 14×", their Wrapped); totals across everyone, without names, are fine. Written into CLAUDE.md, ARCHITECTURE, the phone spec and `src/lib/people/watch-counts.ts`. No UI yet.

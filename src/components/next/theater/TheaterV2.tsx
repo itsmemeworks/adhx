@@ -885,8 +885,10 @@ export function TheaterV2({
   }, [replaceItems])
 
   // ——— Tune in: new saves in this moment play next ———
+  const liveRevision = useRef(0)
   useMomentStream(
     (event) => {
+      liveRevision.current++
       if (event.type === 'watching' && event.slug === source.moment) {
         watchingLive.current = true
         setWatching(event.watching)
@@ -933,6 +935,38 @@ export function TheaterV2({
     },
     source.moment,
     !!source.moment,
+    () => {
+      // Transport reconnection alone does not replay missed events. Reconcile
+      // the latest slice without replacing the player or forgetting older queue entries.
+      const epoch = pageEpoch.current
+      const revision = liveRevision.current
+      if (!source.moment) return
+      void fetchQueue(queueUrl(source, () => ''))
+        .then((response) => {
+          if (epoch !== pageEpoch.current) return
+          const fresh: SearchResultItem[] = (
+            response.items as unknown as { post: FeedItem; savedAt: string; savers?: Saver[] }[]
+          ).map(({ post, savedAt, savers }) => ({
+            post: savers ? { ...post, savers } : post,
+            savedAt,
+            saved: false,
+            matched: [],
+          }))
+          const have = new Set(itemsRef.current.map(resultKey))
+          const extra = fresh.filter((item) => !have.has(resultKey(item)))
+          const updated = new Map(fresh.map((item) => [resultKey(item), item]))
+          const current = itemsRef.current.map((item) =>
+            revision === liveRevision.current ? (updated.get(resultKey(item)) ?? item) : item,
+          )
+          if (!current.length) return // Initial source loading owns the first queue.
+          replaceItems(insertAfter(current, indexRef.current, extra))
+          if (extra.length) {
+            setArrivals((n) => n + extra.length)
+            if (waitingRef.current) goTo(indexRef.current + 1)
+          }
+        })
+        .catch(() => {})
+    },
   )
 
   /** "Wander": add posts near the moment that aren't in it. True if any were added. */

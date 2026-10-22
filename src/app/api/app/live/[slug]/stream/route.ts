@@ -24,6 +24,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
       keyId,
       only: slug,
       map: phoneEvent,
+      notify: new URL(req.url).searchParams.get('notify') === '1',
     })
   })(request)
 }

@@ -286,11 +286,14 @@ server sends it, which it does for members only.
 - **Reactions** on a post are kept (`/api/app/reactions`); the Reactions row
   in Channels plays every post with reactions (`/api/app/reacted`), replaying
   each one's reactions.
-- **Live** refreshes every 5 seconds while you're tuned in and in the
-  foreground. A screen-specific presence lease expires after 15 seconds if the
-  phone disconnects; leaving or backgrounding sends an explicit leave. Existing
+- **Live** follows foreground SSE through Foundation `URLSession.AsyncBytes`,
+  with coalesced snapshots on change/reconnect, periodic reconciliation and a
+  5-second room / 20-second list REST fallback. Streams stop in the background;
+  leaving sends an explicit leave. Presence is account-deduplicated and bounded
+  by stream lifetime and short credential-scoped leases. Existing
   saver metadata refreshes without jumping playback, and explicit removals are
-  distinguished from posts falling outside the latest page.
+  distinguished from posts falling outside the latest page. See
+  [Live updates and presence](../../docs/realtime.md) for timing and recovery.
 - **Live reactions** (an emoji, or up to 40 Unicode code points) go to
   `/api/app/live/{slug}/react` and float up after acknowledgement. Failed words
   stay available for Retry against the original post. They're room chatter,

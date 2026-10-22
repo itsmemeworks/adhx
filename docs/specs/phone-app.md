@@ -488,8 +488,8 @@ mine: [{ slug, name, size, covers }] }`. `covers` are addresses (or posts to
 watching, watchers?, covers, live, hue?, label? }] }`; the field set is still
   settling, so only `slug` is required.
 - `GET /api/app/live/{slug}` → `{ moment, items: PhonePost[], watchers: Saver[],
-reactions?: [{ id, saver, emoji?, text?, at }] }`, polled every 5 s while
-  tuned in. New reactions (not yours, not ones already there when you tuned
+reactions?: [{ id, saver, emoji?, text?, at }] }`, reconciled after SSE changes
+  while tuned in (5-second polling fallback). New reactions (not yours, not ones already there when you tuned
   in) float up the screen.
 - `POST /api/app/live/{slug}/react` `{ emoji }` (😂 🔥 😭 👀 💀 ❤️) or
   `{ text }` (at most 40 characters), plus `platform` and `id` of the post on
@@ -713,13 +713,17 @@ watching, watchers?, covers, live, recentSaves, windowMinutes }] }`; a 404
   first: `[{ id, at, saver: Saver, emoji? | text?, post: { platform, id } }]`.
   The app floats each `id` once and skips `isYou` (yours showed when sent).
   Current apps POST `{ known: [platform:id, ...] }` (at most 200) to the same
-  route every 5 s in the foreground, with `X-ADHX-Watch: <screen UUID>`.
+  route on foreground SSE invalidations/reconnects and periodic reconciliation,
+  with `X-ADHX-Watch: <screen UUID>` (5-second fallback if SSE is unavailable).
   The response refreshes known post metadata and includes authoritative
   `removedKeys` and compact `saverUpdates: [{ key, savers, isPrivate }]` for
   older known posts; absence from the newest 60 alone is not a removal. POST falls
   back to GET on older servers. `DELETE` with the same screen UUID leaves;
-  disconnected/background phones expire after 15 s. Accounts count once across
-  web tabs and phones. `GET /api/app/live/{slug}/stream` remains available.
+  fallback leases expire after 15 s. Accounts count once across web tabs and
+  phones. Current apps use `GET /api/app/live/{slug}/stream?notify=1` and
+  `GET /api/app/live/stream`; these send payload-free refresh signals. The room
+  stream without `notify=1` retains its full-event protocol. Streams close in
+  the background and have bounded lifetimes; see [Live updates and presence](../realtime.md).
 - `POST /api/app/live/{slug}/react { emoji } | { text }, platform, id` (text at
   most 40 characters). It goes to the room and is also kept on the post under
   the same `id`, so `GET /api/app/reactions` replays it later; skip ids you
@@ -836,7 +840,7 @@ at, saver }], "watched": [{ username, name, avatarUrl, at, isYou }] }`.
   for you (My saves first, then your own channels). A channel is a header
   (a friend's face, "96 saves · 4 you haven't seen"), Play, and a poster grid.
 - **Live**: the moments, the first one big with its covers, LIVE, faces and
-  "3 of you watching". Tune in plays it, asks again every 5 s, shows "Ana and
+  "3 of you watching". Tune in plays it, follows live updates, shows "Ana and
   Ben are watching with you" (the chip shows "watching with you"; the names
   go to screen readers), and adds **React** (a smiley) to the button
   column: six emoji (😂 🔥 😭 👀 💀 ❤️) or "Say something to everyone

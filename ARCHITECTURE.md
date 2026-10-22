@@ -349,15 +349,17 @@ flowchart TD
   Bell["Bell: Tell me when it's live"] -->|"moment_alert_subs"| F
   M -->|"one per bell owner"| A[("moment_alerts")]
   Engine -->|"SSE /api/moments/stream"| WebLive["Right now and Tune in on the web"]
-  Engine -->|"poll /api/app/live"| AppLive["Live on the phones"]
+  Engine -->|"SSE refresh signals"| AppLive["Foreground Live on the phones"]
+  AppLive -->|"snapshot on change/reconnect; REST fallback"| AppAPI["/api/app/live and room detail"]
   A -->|"poll every 60 s"| Toast["Web toast and browser notification"]
   A -->|"poll /api/app/alerts, background refresh"| Notif["Phone notification"]
 ```
 
 In words: an engine inside the web process watches new visible saves, joins
 each one to a live moment or a forming group, and regroups everything every
-five minutes. Browsers follow it over a server-sent event stream and phones
-poll. When a forming group that someone rang the bell on goes live, the
+five minutes. Browsers and foreground phone screens follow it over server-sent
+event streams. Phones reconcile authenticated snapshots on change/reconnect,
+with REST fallback on older or offline servers. When a forming group that someone rang the bell on goes live, the
 server writes an alert that the web and the phones pick up as a notification.
 
 - **Engine** (`engine.ts`, global state in the web process, running only
@@ -1225,7 +1227,9 @@ Who sees what).
 
 ## Friends-feed reliability
 
-Live phones renew a 15-second presence lease while in the foreground and leave
+Foreground Live uses SSE on web and phones, with snapshot recovery on reconnect.
+Streams are bounded in output and lifetime and stop when hidden/backgrounded.
+Phones also renew a 15-second presence lease through snapshot requests and leave
 explicitly on dismissal/background. Presence is counted by account across web
 streams and phones, checked against active credentials, and named only for
 members. A bounded known-post list refreshes saver metadata and removes posts
@@ -1233,6 +1237,8 @@ the server no longer considers visible without losing older playable entries.
 Reaction drafts remain attached to their original post until acknowledged;
 failed sends keep the words and offer Retry. Live reactions are also kept on
 their post (`post_reactions`) and replay later for members who can see it.
+See [Live updates and presence](docs/realtime.md) for transports, packages,
+reconnection grace, polling boundaries and the single-process scaling limit.
 
 The Doing summary counts the complete visible queue in SQLite; filters and
 status priority apply before the 60-row display limit. Summary-only requests

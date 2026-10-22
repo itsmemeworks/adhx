@@ -64,6 +64,16 @@ All rows below currently require device execution.
 | P21 | Rotate while a video plays, while a sheet or the React picker is open, and on Settings and search.                                                                            | Only full-screen media turns sideways; everything else stays upright and turns back when a sheet opens.                                                                                                                |
 | P22 | Open Settings on a release build and on a development build.                                                                                                                  | The version line reads the release (`2.4.0`) on a release build and `version +N · sha` otherwise.                                                                                                                      |
 
+For the [Live streaming transport](../realtime.md), also record request traces
+on an isolated server: idle foreground rooms must not fetch detail every five
+seconds while SSE is healthy; a burst must produce serial, coalesced snapshots.
+Switch Wi-Fi/cellular, enable airplane mode and restore connectivity, then
+background/foreground and switch accounts. Missed saves and watcher names must
+recover without jumping playback; old-account responses must be ignored.
+Hidden screens must release streams, and a silently disconnected watcher must
+expire after the bounded stream lifetime and reconnect grace. Repeat against
+an older server without notification streams to check REST fallback.
+
 A failed row needs a reproducible issue and a rerun after the fix. Record
 physical-device results separately from automated checks in
 [friends-feed verification](friends-feed-verification.md).

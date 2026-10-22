@@ -16,6 +16,7 @@ type Entry = {
   count: number
   since: number
   phones: Map<string, { keyId: string; expires: number }>
+  webGraceUntil?: number
 }
 
 /** A reaction as sent (ids only); each receiver gets its own named copy. */
@@ -80,13 +81,25 @@ export function joinWatch(slug: string, userId: string): () => void {
     const e = r?.get(userId)
     if (!r || !e) return
     e.count--
-    if (e.count <= 0 && !e.phones.size) r.delete(userId)
+    if (e.count <= 0 && !e.phones.size && (e.webGraceUntil ?? 0) <= Date.now()) r.delete(userId)
     if (r.size === 0) state().rooms.delete(slug)
   }
 }
 
+/** A planned browser reconnect gets a brief bridge, not an indefinite watcher. */
+export function holdWebWatch(slug: string, userId: string): void {
+  const entry = state().rooms.get(slug)?.get(userId)
+  if (entry) entry.webGraceUntil = Date.now() + 5_000
+}
+
 /** A foreground phone renews a short lease, scoped to its exact credential and screen. */
-export function renewWatch(slug: string, userId: string, keyId: string, session: string): boolean {
+export function renewWatch(
+  slug: string,
+  userId: string,
+  keyId: string,
+  session: string,
+  ttlMs = WATCH_LEASE_MS,
+): boolean {
   const before = new Set(state().rooms.get(slug)?.keys())
   // Reap idle rooms as new foreground work arrives; abandoned leases cannot
   // accumulate indefinitely even when nobody reopens their old moment.
@@ -95,7 +108,10 @@ export function renewWatch(slug: string, userId: string, keyId: string, session:
   state().rooms.set(slug, room)
   const entry = room.get(userId) ?? { count: 0, since: Date.now(), phones: new Map() }
   entry.phones ??= new Map()
-  entry.phones.set(`${keyId}:${session}`, { keyId, expires: Date.now() + WATCH_LEASE_MS })
+  entry.phones.set(`${keyId}:${session}`, {
+    keyId,
+    expires: Date.now() + Math.min(WATCH_LEASE_MS, Math.max(0, ttlMs)),
+  })
   room.set(userId, entry)
   if (!before.has(userId)) noteTuneIn(slug, userId, room.size)
   return before.size !== room.size || [...room.keys()].some((id) => !before.has(id))
@@ -121,7 +137,8 @@ export function watcherIds(
       if (phone.expires <= now || (validKey && !validKey(phone.keyId, userId)))
         entry.phones.delete(session)
     }
-    if (entry.count <= 0 && entry.phones.size === 0) room.delete(userId)
+    if (entry.count <= 0 && entry.phones.size === 0 && (entry.webGraceUntil ?? 0) <= now)
+      room.delete(userId)
   }
   if (!room.size) state().rooms.delete(slug)
   return [...room.entries()]

@@ -253,14 +253,15 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm format:check
 
 ## Documentation map
 
-| Doc                                               | For                                                    |
-| ------------------------------------------------- | ------------------------------------------------------ |
-| [docs/README.md](docs/README.md)                  | Every other doc, sorted by what you're trying to do    |
-| [ARCHITECTURE.md](ARCHITECTURE.md)                | How the pieces fit together, with diagrams             |
-| [CONTRIBUTING.md](CONTRIBUTING.md)                | Setting up, testing, and getting a pull request merged |
-| [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md) | Coding agents: read these first                        |
-| [PRIVACY.md](PRIVACY.md)                          | What your server stores and who can see it             |
-| [SECURITY.md](SECURITY.md)                        | How to report a vulnerability privately                |
+| Doc                                               | For                                                            |
+| ------------------------------------------------- | -------------------------------------------------------------- |
+| [docs/README.md](docs/README.md)                  | Every other doc, sorted by what you're trying to do            |
+| [ARCHITECTURE.md](ARCHITECTURE.md)                | How the pieces fit together, with diagrams                     |
+| [Live updates and presence](docs/realtime.md)     | Streaming, reconnect recovery, packages and polling boundaries |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                | Setting up, testing, and getting a pull request merged         |
+| [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md) | Coding agents: read these first                                |
+| [PRIVACY.md](PRIVACY.md)                          | What your server stores and who can see it                     |
+| [SECURITY.md](SECURITY.md)                        | How to report a vulnerability privately                        |
 
 ## Use it kindly
 

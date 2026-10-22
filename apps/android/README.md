@@ -337,8 +337,11 @@ behaviour and endpoints are in
   (`PUT|DELETE /api/app/live/forming/{id}/alert`). The first bell asks to show
   notifications (Android 13+); after that the app checks `GET /api/app/alerts`
   every minute while open and every 15 minutes with WorkManager, on the "Live"
-  notification channel. Tune in asks `/api/app/live/{slug}` every 5 s for new
-  posts, who's watching and reactions (`POST /api/app/live/{slug}/react`).
+  notification channel. Foreground Live and Tune in use official OkHttp SSE,
+  with serial coalesced snapshots, reconnect recovery and periodic reconciliation.
+  REST fallback uses 5 s for a room and 20 s for the list. Backgrounding closes
+  the stream and leaves the room. See [Live updates and presence](../../docs/realtime.md)
+  for package versions, bounded presence and retained polling.
 - **Faces** on search tiles and in the player's who row open that friend's channel.
 
 A server without the feed (404) keeps the old home: My saves. A feed with

@@ -53,6 +53,10 @@ jobs:
         run: |
           swiftc apps/ios/Shared/API.swift apps/ios/Shared/FriendsAPI.swift apps/ios/Shared/LiveQueue.swift apps/ios/Tests/LiveReliabilityTests.swift -o "$RUNNER_TEMP/adhx-live-tests"
           "$RUNNER_TEMP/adhx-live-tests"
+      - name: Regress live streaming and foreground recovery
+        run: |
+          swiftc apps/ios/Shared/API.swift apps/ios/Shared/FriendsAPI.swift apps/ios/Shared/LiveUpdates.swift apps/ios/Tests/LiveUpdatesTests.swift -o "$RUNNER_TEMP/adhx-live-updates"
+          "$RUNNER_TEMP/adhx-live-updates"
       - name: Test queued privacy restoration and concurrent app-extension history
         run: |
           swiftc -D ADHX_HISTORY_TEST apps/ios/Shared/API.swift apps/ios/Shared/FriendsAPI.swift apps/ios/Shared/Network.swift apps/ios/Shared/NetworkPaths.swift apps/ios/Shared/SVGPath.swift apps/ios/Shared/ResumeStore.swift apps/ios/Shared/Storage.swift apps/ios/Tests/QueuedPrivacyTests.swift -o "$RUNNER_TEMP/adhx-privacy-tests"
