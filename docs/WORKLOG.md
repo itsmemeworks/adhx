@@ -11,7 +11,7 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Audit web/phone server helpers with synthetic growth fixtures and production SQL plans.
 - Batch exact owner/platform/post keys; hydrate 40 posts in 8 statements instead of 86, preserving privacy and order.
 - Align recent-save, watched, sends, tags, queue and cleanup indexes; remove shorter/duplicate aliases and maintain bounded planner statistics.
-- Give FTS metadata a transactional rowid lookup with guarded legacy backfill and last-saver cleanup; index recent inference failures separately.
+- Give FTS metadata a transactional rowid lookup with guarded backfill/cleanup; bound vector refresh pages and index recent inference failures.
 - Build affinity from sets, page narrow reaction identities, and make Right now ties deterministic with platform/visibility-safe naming.
 - Add plan/isolation/rollback/upgrade regressions and a linked database-performance guide with measured limits.
 - PR work only. No release, live database change, deployment or worker-setting change.

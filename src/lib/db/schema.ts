@@ -821,6 +821,7 @@ export const postEmbeddings = sqliteTable(
   (table) => ({
     pk: primaryKey({ columns: [table.platform, table.postId, table.kind] }),
     statusIdx: index('post_embeddings_status_idx').on(table.kind, table.status),
+    modelCreatedIdx: index('post_embeddings_model_created_idx').on(table.model, table.createdAt),
     failedRecentIdx: index('post_embeddings_failed_recent_idx')
       .on(table.createdAt, table.platform, table.postId, table.kind)
       .where(sql`${table.status}='failed'`),

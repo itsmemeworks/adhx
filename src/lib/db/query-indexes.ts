@@ -23,6 +23,7 @@ export const QUERY_INDEX_DDL = `
   CREATE INDEX IF NOT EXISTS media_conversions_source_idx ON media_conversions(source_path, status);
   CREATE INDEX IF NOT EXISTS post_embeddings_failed_recent_idx
     ON post_embeddings(created_at, platform, post_id, kind) WHERE status='failed';
+  CREATE INDEX IF NOT EXISTS post_embeddings_model_created_idx ON post_embeddings(model, created_at);
   CREATE INDEX IF NOT EXISTS post_extracted_failed_recent_idx
     ON post_extracted_text(created_at, platform, post_id, kind) WHERE status='failed';
 

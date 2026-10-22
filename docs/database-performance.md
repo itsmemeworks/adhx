@@ -21,6 +21,7 @@ NAS, network, disk, production content or production traffic.
 | Watched state, Who and last sitting                                                     | Existing owner/post primary key; new post/time and owner/time indexes for the reverse and latest-history reads.                                                                                                                                                      |
 | Unread sends and per-post sends                                                         | Recipient/unread/time, sender/post/recipient and recipient/post/unread indexes.                                                                                                                                                                                      |
 | Share queue, downloads and remote work                                                  | Existing due-work, status and lease keys; owner/status for phone-queue counts, file-path and conversion-source indexes for cleanup. Failed inference has small partial recent-time indexes, avoiding scans of successful vector/text history on the processing page. |
+| Search vector refresh                                                                   | Model/time index with two individually limited timestamp/rowid ranges. Each merge sorts at most two pages, rather than sorting all remaining vectors repeatedly during cold loading.                                                                                 |
 | Keyword search                                                                          | FTS5 `MATCH` and `bm25` remain the search path. `post_text_keys(platform, post_id)` locates FTS rowids for existence checks, replacements, result labels and last-save deletion.                                                                                     |
 | Feed candidates and affinity                                                            | Recent shared saves have a partial time index excluding private/quoted copies. Affinity matches a deduplicated set of the viewer's saves/views rather than two correlated lookups per other save. Grouping and ranking still depend on history size.                 |
 | Reactions                                                                               | Existing post/time and owner indexes. Rank narrow identity/time rows, page them, then read note/avatar payloads for the selected rows. Exact totals still inspect matching history.                                                                                  |
@@ -99,13 +100,15 @@ fixtures:
 | Fresh first feed page             | 95 statements; 200.62 ms median | 67 statements; 138.12 ms median |
 
 The expanded full-width run (768 dimensions, the same 100,000 saves/100 users,
-plus reaction and yearly-watch history) passed all 23 cases. Medians included
-6.21 ms for hydration, 4.70 ms for processing status, 0.12 ms for own play
-counts and 228.20 ms for a fresh feed page. The global reactions page still
-took 252.18 ms: its exact ranking/count work remains a growth limit. Keyword
-existence was 0.03 ms with the lookup versus 6.08 ms for the old unindexed
+plus reaction and yearly-watch history) passed all 25 cases. Medians included
+3.96 ms for hydration, 3.60 ms for processing status and 184.70 ms for a
+fresh feed page. The global reactions page still
+took 200.20 ms: its exact ranking/count work remains a growth limit. Keyword
+existence was 0.02 ms with the lookup versus 3.89 ms for the old unindexed
 metadata query in that same fixture. These full-width numbers are not
-directly comparable to the simpler before/after table above.
+directly comparable to the simpler before/after table above. Loading 50,000
+full-width vectors into the reduced in-memory index took 307.62 ms; an idle
+incremental refresh took 0.06 ms.
 
 These are warm local helper timings, not HTTP latencies or NAS targets.
 Individual sub-millisecond lookups varied in either direction; the reliable

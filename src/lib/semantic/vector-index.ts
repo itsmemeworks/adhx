@@ -102,6 +102,9 @@ function put(index: KindIndex, key: string, vector: Float32Array | null): void {
 
 async function load(s: IndexState): Promise<void> {
   for (;;) {
+    // Bound each side of the watermark before merging. One OR predicate can
+    // sort the entire remaining history on every page; a row-value comparison
+    // can instead rescan an entire tied timestamp because rowid is implicit.
     const rows = db.all<{
       rowid: number
       platform: string
@@ -111,10 +114,21 @@ async function load(s: IndexState): Promise<void> {
       vector: Buffer | null
       created_at: string
     }>(sql`
-      SELECT rowid, platform, post_id, kind, status, vector, created_at
-      FROM post_embeddings
-      WHERE model = ${s.model}
-        AND (created_at > ${s.watermark.at} OR (created_at = ${s.watermark.at} AND rowid > ${s.watermark.rowid}))
+      SELECT * FROM (
+        SELECT * FROM (
+          SELECT rowid, platform, post_id, kind, status, vector, created_at
+          FROM post_embeddings
+          WHERE model = ${s.model} AND created_at = ${s.watermark.at} AND rowid > ${s.watermark.rowid}
+          ORDER BY rowid LIMIT ${PAGE}
+        )
+        UNION ALL
+        SELECT * FROM (
+          SELECT rowid, platform, post_id, kind, status, vector, created_at
+          FROM post_embeddings
+          WHERE model = ${s.model} AND created_at > ${s.watermark.at}
+          ORDER BY created_at, rowid LIMIT ${PAGE}
+        )
+      )
       ORDER BY created_at, rowid
       LIMIT ${PAGE}
     `)

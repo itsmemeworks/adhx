@@ -33,6 +33,7 @@ import { processingActivity } from '@/lib/processing/doing'
 import { keepStatusFor } from '@/lib/processing/keep-status'
 import { listMembers } from '@/lib/people/members'
 import { postPlays, watchCountFor, watchYear } from '@/lib/people/watch-counts'
+import { __resetVectorIndex, refreshIndex } from '@/lib/semantic/vector-index'
 import { reactedPosts } from '@/lib/reactions/reacted'
 import { unseenSendsTo } from '@/lib/sends/sends'
 
@@ -217,6 +218,15 @@ const cases: [string, () => unknown | Promise<unknown>, boolean][] = [
   ['post play totals', () => postPlays('u0', keys[0].platform, keys[0].id), true],
   ['yearly watch totals', () => watchYear('u0', 2026), false],
   [
+    'cold vector index',
+    () => {
+      __resetVectorIndex()
+      return refreshIndex(true)
+    },
+    false,
+  ],
+  ['incremental vector index', () => refreshIndex(true), false],
+  [
     'playback preparation status',
     () => keepStatusFor('u0', keys.slice(0, 20), { now: Date.parse(at) + 3600000 }),
     true,
@@ -289,6 +299,13 @@ describe('web and phone production query plans', () => {
           expect(plans).toContain('post_embeddings_failed_recent_idx')
           expect(plans).toContain('post_extracted_failed_recent_idx')
           expect(plans).not.toMatch(/SCAN post_(embeddings|extracted_text)( |\n)/)
+        }
+        if (name === 'cold vector index' || name === 'incremental vector index') {
+          for (const query of queries) {
+            expect(query.plan.join('\n')).toContain('post_embeddings_model_created_idx')
+            expect(query.plan.join('\n')).not.toMatch(/SCAN post_embeddings( |\n)/)
+          }
+          if (name === 'incremental vector index') expect(queries).toHaveLength(1)
         }
         if (name === 'last sitting') {
           expect(
