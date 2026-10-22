@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0](https://github.com/itsmemeworks/adhx/compare/v2.5.0...v2.6.0) (2026-10-22)
+
+
+### Features
+
+* pick up where you left off, up next everywhere, replies and can't play ([#619](https://github.com/itsmemeworks/adhx/issues/619)) ([14c0e1c](https://github.com/itsmemeworks/adhx/commit/14c0e1c549df64ffafd8208428ac6d288fb53c76))
+
 ## [2.5.0](https://github.com/itsmemeworks/adhx/compare/v2.4.0...v2.5.0) (2026-10-21)
 
 
