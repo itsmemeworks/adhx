@@ -29,12 +29,16 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            apps/android/**/*.gradle*
+            apps/android/**/gradle-wrapper.properties
       - uses: android-actions/setup-android@v4
         with:
           packages: 'platform-tools platforms;android-37.0 build-tools;36.0.0'
       - name: Build debug app and run regression tests
         working-directory: apps/android
-        run: ./gradlew --no-daemon --max-workers=2 assembleDebug testDebugUnitTest exportRuntimeDependencies
+        run: ./gradlew --no-daemon --max-workers=2 --build-cache assembleDebug testDebugUnitTest --rerun exportRuntimeDependencies
       - name: Audit resolved Android runtime libraries
         run: node scripts/security/check-android.mjs apps/android/app/build/reports/runtime-dependencies.json
 

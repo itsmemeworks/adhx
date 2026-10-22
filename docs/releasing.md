@@ -45,6 +45,37 @@ are not published to GHCR. Protected main requires build, format and test checks
 with an up-to-date base. BuildKit caches are reused during release publication.
 There is no automatic image build on individual feature/fix/docs PR merges.
 
+## Keeping CI fast without skipping checks
+
+PR image builds use BuildKit's GitHub Actions cache, with separate AMD64 and
+ARM64 scopes. Subsequent runs on the same PR reuse layers, and new PRs can
+read the default branch's release cache (`adhx-main`). GitHub isolates caches
+by branch, so unrelated PRs cannot use one another's private cache entries.
+A changed application still compiles; dependency and runtime installation layers
+can be reused. Cache export is best effort and limited to two minutes. Both
+assembled images are still scanned and smoke-tested on native runners, and
+nothing is published from a PR.
+
+The website caches only `site/.next/cache`, keyed by platform, Node version,
+lockfile and compiler configuration. Android caches Gradle dependencies and
+build outputs; `testDebugUnitTest --rerun` ensures its tests execute even when
+compilation is cached. Test results and security reports are never treated as
+cached validation. An updated PR cancels its superseded CI run.
+
+For media tests, the Ubuntu installer uses HTTPS Ubuntu repositories instead of
+the slow Azure HTTP mirror. Signed `.deb` downloads are cached per Ubuntu
+version, architecture and installer revision, with a weekly refresh. Each
+install still refreshes package metadata and verifies packages through APT.
+Download retries and timeouts, an eight-minute install limit and a 25-minute
+test-job limit keep a stalled mirror from occupying a runner indefinitely.
+An already working runner-provided FFmpeg/FFprobe installation is reused.
+
+Cold builds still need dependencies and compilation. A warm cache accelerates
+that work; it does not remove the required build, test or vulnerability checks.
+For cache behaviour and permissions, see [Docker's GitHub Actions cache
+backend](https://docs.docker.com/build/cache/backends/gha/) and [GitHub's cache
+access rules](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#restrictions-for-accessing-a-cache).
+
 ## Why releases use an explicit publisher
 
 Release Please uses `GITHUB_TOKEN`. GitHub suppresses most downstream workflow

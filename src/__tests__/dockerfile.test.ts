@@ -68,7 +68,9 @@ describe('production container CI smoke test', () => {
   it('builds the real runner under the normal CI guards', () => {
     expect(ciWorkflow).toContain('container-smoke:')
     expect(containerSmokeJob).toContain("github.event_name != 'workflow_run'")
-    expect(containerSmokeJob).toContain('--target runner')
+    expect(containerSmokeJob).toContain('target: runner')
+    expect(containerSmokeJob).toContain('load: true')
+    expect(containerSmokeJob).toContain('push: false')
     expect(containerSmokeJob).toContain('IMAGE_TAG: adhx-ci:${{ github.sha }}')
   })
 
