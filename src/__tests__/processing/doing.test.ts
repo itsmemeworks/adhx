@@ -386,3 +386,19 @@ it('answers summary polls without hydrating post media or faces', async () => {
     hydrate.mockRestore()
   }
 })
+
+describe('why a download failed, in plain words', () => {
+  it('says a sign-in-only post needs a signed-in account, not that it’s private', async () => {
+    const { keepReason } = await import('@/lib/processing/doing')
+    expect(
+      keepReason(
+        '[TikTok] 7699168500253854998: This post may not be comfortable for some audiences. Log in for access. Use --cookies-from-browser or --cookies for the authentication.',
+        'tiktok',
+      ),
+    ).toBe('TikTok only shows this one to signed-in accounts.')
+    expect(keepReason('[youtube] x: Sign in to confirm your age', 'youtube')).toBe(
+      'YouTube only shows this one to signed-in accounts.',
+    )
+    expect(keepReason('[TikTok] x: This post is private', 'tiktok')).toBe('It’s private on TikTok.')
+  })
+})

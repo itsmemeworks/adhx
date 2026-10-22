@@ -239,6 +239,25 @@ either can be rotated independently. SMTP/Resend remain optional when you use
 admin-held sign-in links; admins can retrieve their own links from the server
 log after bootstrap too.
 
+### Posts only signed-in accounts see
+
+Some posts are hidden from anonymous viewers: TikTok's "This post may not be
+comfortable for some audiences", age-gated YouTube videos. ADHX still saves
+them, and **What your ADHX is doing** says "TikTok only shows this one to
+signed-in accounts" until the server can see them. To let it:
+
+1. In a desktop browser, sign in to the network with a spare account (it can
+   watch everything you want kept, nothing more).
+2. Export that site's cookies as `cookies.txt` (Netscape format) with a
+   cookies-export extension you trust.
+3. Put the file in the data folder, readable only by the ADHX user (UID 1001),
+   and set `YTDLP_COOKIES=/data/yt-dlp-cookies.txt` in `.env`.
+4. Recreate the container, then tap **Retry** on the post.
+
+The file is a sign-in: anyone who reads it can act as that account. ADHX hands
+yt-dlp a private copy for each run and never logs or serves it. Cookies
+expire; when these posts start failing again, export a fresh file.
+
 ## Resource and storage controls
 
 Start with a small library. For a shared NAS, explicitly set
@@ -408,16 +427,17 @@ container is recreated.
 
 ## Troubleshooting
 
-| Symptom                                                   | Likely cause and fix                                                                                                                                                          |
-| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `docker compose up` stops with "Set SESSION_SECRET…"      | A required value is missing from `.env`. The message names it.                                                                                                                |
-| The container restarts with `EACCES` or `SQLITE_CANTOPEN` | The data folder isn't writable by UID 1001. Fix its ownership with your host's tools, or use the [one-shot initializer](ugreen.md#choose-storage-and-initialize-permissions). |
-| The proxy shows 502 Bad Gateway                           | The proxy can't reach the container. A proxy in Docker must share `ADHX_PROXY_NETWORK` and use `http://adhx:3000`; `127.0.0.1` inside a proxy container is the proxy itself.  |
-| Sign-in links point at `localhost`                        | `NEXT_PUBLIC_APP_URL` isn't the final HTTPS address. Fix it and recreate the container.                                                                                       |
-| Everyone got signed out after an update                   | `SESSION_SECRET` changed. Keep it stable across recreations.                                                                                                                  |
-| Videos play but won't seek                                | The proxy drops `Range` requests. Pass them through unchanged.                                                                                                                |
-| Right now never updates live                              | The proxy buffers event streams. Turn buffering off for `/api/moments/stream` and allow long reads.                                                                           |
-| A network stopped downloading                             | Its extractor changed. Update yt-dlp ([how](../../docs/self-hosting.md#keeping-downloads-working)) or wait for the next release.                                              |
-| Search only matches exact words                           | The model is still downloading (about 400 MB, once), `SEMANTIC_SEARCH=off` is set, or the worker keeps getting killed. Check the logs and the memory limit.                   |
-| Mac helper uploads fail with 413 or time out              | The proxy rejects large bodies. See [proxy upload hooks](../mac/README.md#proxy-upload-hooks).                                                                                |
-| `/api/health` is healthy but nothing gets processed       | Health checks the web app and database only. Look at **What your ADHX is doing** (`/doing`), `/api/understanding/status` and the container logs.                              |
+| Symptom                                                   | Likely cause and fix                                                                                                                                                                                        |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docker compose up` stops with "Set SESSION_SECRET…"      | A required value is missing from `.env`. The message names it.                                                                                                                                              |
+| The container restarts with `EACCES` or `SQLITE_CANTOPEN` | The data folder isn't writable by UID 1001. Fix its ownership with your host's tools, or use the [one-shot initializer](ugreen.md#choose-storage-and-initialize-permissions).                               |
+| The proxy shows 502 Bad Gateway                           | The proxy can't reach the container. A proxy in Docker must share `ADHX_PROXY_NETWORK` and use `http://adhx:3000`; `127.0.0.1` inside a proxy container is the proxy itself.                                |
+| Sign-in links point at `localhost`                        | `NEXT_PUBLIC_APP_URL` isn't the final HTTPS address. Fix it and recreate the container.                                                                                                                     |
+| Everyone got signed out after an update                   | `SESSION_SECRET` changed. Keep it stable across recreations.                                                                                                                                                |
+| Videos play but won't seek                                | The proxy drops `Range` requests. Pass them through unchanged.                                                                                                                                              |
+| Right now never updates live                              | The proxy buffers event streams. Turn buffering off for `/api/moments/stream` and allow long reads.                                                                                                         |
+| A network stopped downloading                             | Its extractor changed. Update yt-dlp ([how](../../docs/self-hosting.md#keeping-downloads-working)) or wait for the next release.                                                                            |
+| A post says it's only shown to signed-in accounts         | The network hides it from anonymous viewers (TikTok's "may not be comfortable for some audiences", age-gated YouTube). Set `YTDLP_COOKIES` ([how](#posts-only-signed-in-accounts-see)), then tap **Retry**. |
+| Search only matches exact words                           | The model is still downloading (about 400 MB, once), `SEMANTIC_SEARCH=off` is set, or the worker keeps getting killed. Check the logs and the memory limit.                                                 |
+| Mac helper uploads fail with 413 or time out              | The proxy rejects large bodies. See [proxy upload hooks](../mac/README.md#proxy-upload-hooks).                                                                                                              |
+| `/api/health` is healthy but nothing gets processed       | Health checks the web app and database only. Look at **What your ADHX is doing** (`/doing`), `/api/understanding/status` and the container logs.                                                            |

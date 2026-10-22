@@ -1,8 +1,9 @@
 import { execFile } from 'child_process'
 import fs from 'fs/promises'
+import os from 'os'
 import path from 'path'
 import { ffmpegPath } from '@/lib/media/ffmpeg'
-import { maxFileSize, mediaDir, ytdlpPath } from './config'
+import { maxFileSize, mediaDir, ytdlpCookies, ytdlpPath } from './config'
 import { parseProgressLine, PROGRESS_TEMPLATE } from './progress'
 
 /**
@@ -70,6 +71,17 @@ const PERMANENT = [
   /drm protected/i,
 ]
 
+/**
+ * The network only shows this post to signed-in viewers: TikTok's "may not be
+ * comfortable for some audiences", age-gated YouTube. It exists; a cookies
+ * file (`YTDLP_COOKIES`) lets the server see it.
+ */
+export function isSignInOnly(message: string): boolean {
+  return /comfortable for some audiences|confirm your age|age.?restricted|log in for access/i.test(
+    message,
+  )
+}
+
 /** yt-dlp's error says there's nothing to download here (gone, private, no video, DRM). */
 export function isPermanent(message: string): boolean {
   return PERMANENT.some((re) => re.test(message))
@@ -85,7 +97,41 @@ function eachLine(onLine: (line: string) => void): (chunk: Buffer | string) => v
   }
 }
 
-function run(args: string[], timeoutMs: number, onLine?: (line: string) => void): Promise<string> {
+/**
+ * A private copy of the owner's cookies file for one run: yt-dlp writes the
+ * cookies it ends with back to the file it's given, and runs overlap. No
+ * file (or none readable): run without, as if it were unset.
+ */
+async function cookiesCopy(): Promise<{ file: string; remove: () => Promise<void> } | null> {
+  const source = ytdlpCookies()
+  if (!source) return null
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'adhx-cookies-'))
+  const remove = () => fs.rm(dir, { recursive: true, force: true })
+  try {
+    const file = path.join(dir, 'cookies.txt')
+    await fs.copyFile(source, file)
+    await fs.chmod(file, 0o600)
+    return { file, remove }
+  } catch {
+    await remove()
+    return null
+  }
+}
+
+async function run(
+  args: string[],
+  timeoutMs: number,
+  onLine?: (line: string) => void,
+): Promise<string> {
+  const cookies = await cookiesCopy()
+  try {
+    return await exec(cookies ? ['--cookies', cookies.file, ...args] : args, timeoutMs, onLine)
+  } finally {
+    await cookies?.remove()
+  }
+}
+
+function exec(args: string[], timeoutMs: number, onLine?: (line: string) => void): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = execFile(
       ytdlpPath(),
@@ -138,10 +184,13 @@ async function commonArgs(): Promise<string[]> {
 }
 
 /** What's at a link, without downloading. */
-export async function ytdlpInfo(target: string): Promise<YtdlpInfo> {
+export async function ytdlpInfo(
+  target: string,
+  { timeoutMs = INFO_TIMEOUT_MS }: { timeoutMs?: number } = {},
+): Promise<YtdlpInfo> {
   const out = await run(
     [...(await commonArgs()), '--dump-single-json', '--flat-playlist', '--', target],
-    INFO_TIMEOUT_MS,
+    timeoutMs,
   )
   return JSON.parse(out) as YtdlpInfo
 }
