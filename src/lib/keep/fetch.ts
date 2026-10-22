@@ -1,7 +1,7 @@
 import fs from 'fs'
 import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
-import { fetchWithAllowlistedRedirects, limitResponseBody } from '@/lib/media/proxy'
+import { fetchWithAllowlistedRedirects, isTakenDown, limitResponseBody } from '@/lib/media/proxy'
 
 /**
  * Media hosts each network serves files from. Direct downloads (and every
@@ -33,6 +33,13 @@ export const MEDIA_HOSTS: Record<string, string[]> = {
 const BROWSER_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15'
 
+/** The network took the file down after a copyright claim: it won't come back. */
+export class TakenDown extends Error {
+  constructor() {
+    super('Taken down after a copyright claim')
+  }
+}
+
 /** Download one file from an allowlisted host to `file`, capped at `maxBytes`. */
 export async function downloadTo(
   url: string,
@@ -46,6 +53,7 @@ export async function downloadTo(
     init: { headers: { 'User-Agent': BROWSER_UA } },
   })
   if (!response.ok) {
+    if (await isTakenDown(response)) throw new TakenDown()
     await response.body?.cancel()
     throw Object.assign(new Error(`Download failed (${response.status})`), {
       status: response.status,

@@ -4,7 +4,7 @@ import { bookmarks, bookmarkMedia } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { metrics } from '@/lib/sentry'
 import { handleRouteError } from '@/lib/api/response'
-import { fetchInstagramMetadata } from '@/lib/media/instafix'
+import { fetchInstagramMetadata, type InstagramMetadata } from '@/lib/media/instafix'
 import {
   fetchTikTokMetadata,
   resolveTikTokUrl,
@@ -124,6 +124,33 @@ export async function addBookmark(
   }
 }
 
+/** How long a save waits for yt-dlp to describe a post Instagram's mirrors couldn't. */
+const INSTAGRAM_YTDLP_WAIT_MS = 8_000
+
+/**
+ * An Instagram post the crawler payload and the mirrors couldn't describe
+ * (Instagram often wants a login from servers), as yt-dlp does, with the
+ * owner's cookies when set. yt-dlp only knows videos; their files come when
+ * the post is kept.
+ */
+async function instagramFromYtdlp(postId: string): Promise<InstagramMetadata | null> {
+  const info = await ytdlpInfo(`https://www.instagram.com/p/${postId}/`, {
+    timeoutMs: INSTAGRAM_YTDLP_WAIT_MS,
+  }).catch(() => null)
+  if (!info) return null
+  // `channel` is the @handle; `uploader_id` is sometimes the numeric account id.
+  const handle = info.channel || (/^\d+$/.test(info.uploader_id ?? '') ? null : info.uploader_id)
+  return {
+    caption: info.description || undefined,
+    author: handle ? `@${handle}` : undefined,
+    authorName: info.uploader || undefined,
+    takenAt: info.timestamp ? new Date(info.timestamp * 1000).toISOString() : undefined,
+    contentType: 'video',
+    media: [],
+    mediaComplete: false,
+  }
+}
+
 async function addInstagramPost(
   userId: string,
   postId: string,
@@ -144,7 +171,9 @@ async function addInstagramPost(
     )
     .limit(1)
 
-  const meta = await fetchInstagramMetadata(postId, pathHint)
+  const meta =
+    (await fetchInstagramMetadata(postId, pathHint)) ??
+    (existing ? null : await instagramFromYtdlp(postId))
   if (!meta) {
     if (existing) {
       const current = runInTransaction(

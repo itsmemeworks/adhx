@@ -146,6 +146,7 @@ export function keepReason(lastError: string | null, platform: string): string {
   const e = lastError ?? ''
   if (/yt-dlp is not installed/i.test(e))
     return 'This server can’t download yet: yt-dlp is missing.'
+  if (/copyright|dmca/i.test(e)) return `${network} took this down after a copyright claim.`
   if (isSignInOnly(e)) return `${network} only shows this one to signed-in accounts.`
   if (/private|login|log in|sign in|cookies/i.test(e)) return `It’s private on ${network}.`
   if (/drm/i.test(e)) return `${network} locks this one.`

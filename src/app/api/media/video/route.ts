@@ -7,6 +7,7 @@ import {
   isAllowedTwitterMediaUrl,
   isFxTwitterGoneStatus,
   isMediaResponseTooLargeError,
+  isTakenDown,
   isTweetGoneCached,
   isUntrustedMediaRedirectError,
   isValidTweetAuthor,
@@ -15,6 +16,7 @@ import {
   parseTweetMediaIndex,
   readResponseBodyWithLimit,
   streamingResponse,
+  TAKEN_DOWN_REASON,
   TWITTER_MEDIA_HOSTS,
 } from '@/lib/media/proxy'
 import { mediaRateLimit } from '@/lib/rate-limit'
@@ -183,6 +185,11 @@ export async function GET(request: NextRequest) {
     })
 
     if (!videoResponse.ok && videoResponse.status !== 206) {
+      if (await isTakenDown(videoResponse)) {
+        // Gone for good: say why, so the player moves on instead of retrying.
+        metrics.mediaUnavailable('video', 403)
+        return goneResponse(TAKEN_DOWN_REASON)
+      }
       await videoResponse.body?.cancel()
       throw new Error(`Video fetch failed with status ${videoResponse.status}`)
     }

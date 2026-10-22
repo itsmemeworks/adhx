@@ -126,6 +126,43 @@ describe('POST /api/bookmarks/add — Instagram', () => {
   })
   afterEach(() => testInstance.close())
 
+  const instagramRow = () =>
+    testInstance.db
+      .select()
+      .from(schema.bookmarks)
+      .where(and(eq(schema.bookmarks.platform, 'instagram'), eq(schema.bookmarks.id, REEL_ID)))
+      .all()[0]
+
+  it('saves a Reel the mirrors can’t see when yt-dlp can describe it', async () => {
+    mockFetchReelMetadata.mockResolvedValue(null)
+    mockYtdlpInfo.mockResolvedValueOnce({
+      description: 'behind the login wall',
+      uploader: 'Reel Maker',
+      channel: 'reel_maker',
+      uploader_id: '123456789',
+    })
+    const res = await POST(createRequest({ url: REEL_URL }))
+    expect(res.status).toBe(200)
+    expect(mockYtdlpInfo).toHaveBeenCalledWith(
+      `https://www.instagram.com/p/${REEL_ID}/`,
+      expect.objectContaining({ timeoutMs: expect.any(Number) }),
+    )
+    expect(instagramRow()).toMatchObject({
+      author: 'reel_maker',
+      authorName: 'Reel Maker',
+      text: 'behind the login wall',
+      category: 'video',
+    })
+  })
+
+  it('still refuses a post neither the mirrors nor yt-dlp can find', async () => {
+    mockFetchReelMetadata.mockResolvedValue(null)
+    mockYtdlpInfo.mockRejectedValueOnce(new Error('login required'))
+    const res = await POST(createRequest({ url: REEL_URL }))
+    expect(res.status).toBe(404)
+    expect(instagramRow()).toBeUndefined()
+  })
+
   it('writes the bookmark and expected media together', async () => {
     const res = await POST(createRequest({ url: REEL_URL, source: 'url_prefix' }))
     expect(res.status).toBe(200)
