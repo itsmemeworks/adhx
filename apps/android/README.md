@@ -313,6 +313,10 @@ behaviour and endpoints are in
   them (`/api/app/feed/types`, also kept on the phone). Posts count as seen
   after 2 s on stage or when you swipe past (`POST /api/app/seen`, batched).
   It ends on "You're all caught up. Go touch grass."
+- **Watch counts**: every player counts plays, finishes and seconds watched
+  (`library/WatchTally.kt`) and sends them to `POST /api/app/watched`
+  (`library/WatchCounts.kt`, kept in `adhx.watched` across restarts, cleared
+  with a new connection). Nothing shows them yet.
 - **Reactions** tops Channels when there are any (`GET /api/app/reacted`,
   paged): the newest posts your people reacted to, each with the last
   reaction's face and emoji (or words), "12 posts with reactions" and **Play

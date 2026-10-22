@@ -276,6 +276,10 @@ server sends it, which it does for members only.
   (`/api/app/feed/types`) and on the phone, for servers that don't keep it.
 - **Home** marks a post seen after 2 seconds on screen, or as soon as you swipe
   past it, and sends them to `/api/app/seen` in batches.
+- Every player counts plays, finishes and seconds watched
+  (`App/Library/WatchTally.swift`) and sends them to `/api/app/watched`
+  (`WatchCounts.swift`, kept in the App Group across restarts, tied to the
+  server and key). Nothing shows them yet.
 - The share card names your people from the last Channels or feed the app
   loaded (kept on the phone in the App Group, cleared on Remove this phone),
   or says "Your people will see it".

@@ -255,6 +255,19 @@ A post counts as seen after 2 seconds on stage or a skip. Seen marks are
 batched through an account-scoped local outbox to `POST /api/views` (phones:
 `POST /api/app/seen`) and stored in `post_views`.
 
+Watch counts are separate from seen: every player (the web theater's
+`useWatchCounts`, iOS `Playback`, Android `PlayerScreen`) counts plays,
+finishes and seconds watched by one set of rules (`src/lib/watch/tally.ts`),
+keeps unsent tallies in an account-scoped outbox that survives restarts, and
+sends them to `POST /api/watched` (phones: `POST /api/app/watched`).
+`src/lib/watch/record.ts` adds them to `post_watch_counts`, one row per
+member, post and UTC year, only for posts the member can see. They are never
+pruned (Wrapped reads a whole year). `src/lib/people/watch-counts.ts` reads a
+member's own count on a post, a post's total across members who aren't banned
+(no names, only for members who can see it) and a member's year (posts,
+hours, most rewatched). Nothing shows them yet. A member's exact counts are
+shown only to that member; others get totals without names.
+
 ## New: the blended feed
 
 ```mermaid
@@ -708,7 +721,7 @@ guards. Tables are easier to understand by plane than as one long list.
 | X connection               | `oauth_state`, `oauth_tokens`                                                                                                                | Bound PKCE state and encrypted rotating credentials with a refresh lease.                                                                          |
 | People and server          | `invites`, `server_settings`, `user_preferences`                                                                                             | Hashed invite tokens; Who can invite and other server-wide keys; per-person settings, including `feed.weights` and `feed.types`.                   |
 | Saves                      | `bookmarks`, `bookmark_media`, `bookmark_links`, `bookmark_tags`, `archived_posts`                                                           | One save per saver, with `is_private` (Just for me) and `note`; media rows, rich links, tags, private archive state.                               |
-| Feed                       | `post_views`                                                                                                                                 | Each member's watched list (pruned after 180 days).                                                                                                |
+| Feed                       | `post_views`, `post_watch_counts`                                                                                                            | Each member's watched list (pruned after 180 days); plays, finishes and seconds per member, post and year (never pruned).                          |
 | Sends                      | `post_sends`                                                                                                                                 | Member-to-member sends with an optional note and `seen_at`.                                                                                        |
 | Reactions                  | `post_reactions`                                                                                                                             | An emoji or a few words a member left on a post (Live ones too), shown to members who can see the post.                                            |
 | Moments and alerts         | `moment_alert_subs`, `moment_alerts`                                                                                                         | Bells on forming groups and the alerts they fire. Moments themselves live in memory.                                                               |

@@ -50,6 +50,8 @@ final class Playback: ObservableObject {
     /// The post on screen (`platform:id`), for picking up where you left off.
     private let resumes = ResumeStore()
     private var postKey: String?
+    /// Plays, finishes and seconds watched, on their way to your ADHX.
+    private let watch = WatchCounts.shared
     /// A long post you left part-way: it waits, paused, for Resume or Start over.
     @Published private(set) var resumeOffer: ResumeStore.Spot?
     private var timeWatch: Any?
@@ -92,6 +94,9 @@ final class Playback: ObservableObject {
                 self.time = now.seconds.isFinite ? now.seconds : 0
                 if let length = self.player.currentItem?.duration.seconds, length.isFinite {
                     self.duration = length
+                }
+                if self.postKey != nil, self.currentURL != nil {
+                    self.watch.sample(self.time, duration: self.duration)
                 }
             }
         }
@@ -152,6 +157,7 @@ final class Playback: ObservableObject {
         leaveCurrent()
         loadAttempt = UUID()
         postKey = url == nil ? nil : key
+        watch.begin(postKey)
         resumeOffer = postKey.flatMap(resumes.spot(for:))
         currentURL = url
         atEnd = false
@@ -178,6 +184,7 @@ final class Playback: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
+                self.watch.ended()
                 // Watched to the end: nothing to pick up next time.
                 if let key = self.postKey { self.resumes.forget(key) }
                 if self.repeatOne {
@@ -202,6 +209,8 @@ final class Playback: ObservableObject {
     func acceptResume() {
         guard let spot = resumeOffer else { return }
         resumeOffer = nil
+        // Picking up part-way isn't a new play.
+        watch.begin(postKey, at: spot.seconds)
         seek(to: spot.seconds)
         paused = false
         player.play()
@@ -212,6 +221,7 @@ final class Playback: ObservableObject {
         guard resumeOffer != nil else { return }
         resumeOffer = nil
         if let key = postKey { resumes.forget(key) }
+        watch.begin(postKey)
         seek(to: 0)
         paused = false
         player.play()
@@ -235,6 +245,8 @@ final class Playback: ObservableObject {
         resumeOffer = nil
         show(url)
         postKey = key
+        // The same post again, carrying on: a new play only if it never got going.
+        watch.begin(url == nil ? nil : key, at: offer == nil && at > 1 ? at : nil)
         if let offer {
             // Still asking "Pick up where you left off?": keep asking.
             resumeOffer = offer

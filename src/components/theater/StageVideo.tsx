@@ -627,6 +627,9 @@ export function StageVideo({
     setPlaying(false)
     recordFinished()
     window.dispatchEvent(new CustomEvent('theater-video-progress', { detail: { progress: 1 } }))
+    // Watch counts (`useWatchCounts`): a finish. A native loop never ends;
+    // the counter sees it wrap instead.
+    window.dispatchEvent(new CustomEvent('theater-video-ended'))
     const finishEnded = () => {
       if (!repeat && albumCount > 1 && albumIndex < albumCount - 1 && onAlbumIndexChange) {
         onAlbumIndexChange(albumIndex + 1)

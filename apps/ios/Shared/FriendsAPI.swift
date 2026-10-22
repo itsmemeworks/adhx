@@ -792,6 +792,17 @@ extension ADHXClient {
         let _: Nothing = try await send("POST", "/api/app/seen", body: body)
     }
 
+    /// Adds plays, finishes and seconds watched to your counts (at most 50 posts at a time).
+    func watched(_ posts: [WatchedPost]) async throws {
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "adhxDryRun") { return }
+        #endif
+        let body: [String: Any] = ["posts": posts.prefix(50).map {
+            ["platform": $0.platform, "id": $0.id, "plays": $0.plays, "finishes": $0.finishes, "seconds": $0.seconds]
+        }]
+        let _: Nothing = try await send("POST", "/api/app/watched", body: body)
+    }
+
     func channels() async throws -> ChannelsIndex {
         try await send("GET", "/api/app/channels")
     }
@@ -1124,4 +1135,14 @@ extension ADHXClient {
     func keepGroupChannel(_ slug: String) async throws -> KeepAnswer {
         try await send("POST", "/api/app/channels/group/\(Self.pathPart(slug))/keep")
     }
+}
+
+/// One post's plays, finishes and whole seconds watched since the last batch
+/// (`POST /api/app/watched`).
+struct WatchedPost: Equatable {
+    let platform: String
+    let id: String
+    let plays: Int
+    let finishes: Int
+    let seconds: Int
 }

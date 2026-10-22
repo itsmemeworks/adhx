@@ -370,6 +370,15 @@ Short notes on what is easy to get wrong. Each links to the full description.
 - Seen marks live in `post_views` (`src/lib/feed/views.ts`): 2 seconds on
   stage or a skip, batched through an account-scoped outbox to
   `POST /api/views` (phones: `/api/app/seen`).
+- Watch counts live in `post_watch_counts` (plays, finishes, seconds per
+  member, post and UTC year; never pruned): `src/lib/watch/` writes them from
+  `POST /api/watched` and `/api/app/watched`, `src/lib/people/watch-counts.ts`
+  reads them. Web, iOS and Android count by the same rules
+  (`src/lib/watch/tally.ts`); change all three together. **A member's exact
+  counts are shown only to that member** (owner's decision): never another
+  member's plays, finishes or seconds, by name or on a face. Totals across
+  everyone, with no names, are fine for members who can see the post
+  (`postPlays`).
 
 ### Kept media
 

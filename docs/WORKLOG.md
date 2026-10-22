@@ -6,6 +6,19 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-22 — Watch counts: who sees what
+
+- Owner decided: members see only their own exact counts ("watched 14×", their Wrapped); totals across everyone, without names, are fine. Written into CLAUDE.md, ARCHITECTURE, the phone spec and `src/lib/people/watch-counts.ts`. No UI yet.
+
+## 2026-10-22 — Watch counts: the data for "watched 14×" and Wrapped
+
+- Owner wants playful counters and a year-end ADHX Wrapped; counting only starts the day this ships, so the data layer goes first, with no UI.
+- New `post_watch_counts` (plays, finishes, seconds, first/last time) per member, post and **UTC year** (the year is in the key so Wrapped reads one year; one member's count sums the years). Never pruned; account guard; cleared with the account and by Clear.
+- `POST /api/app/watched` (phone key) and `POST /api/watched` (web) add batches, capped, only for posts the member can see. Read helpers in `src/lib/people/watch-counts.ts`: `watchCountFor`, `postPlays` (total without names, members who can see it, banned left out, hidden posts none), `watchYear` (posts, hours, most rewatched still visible).
+- One counting rule set on web (`src/lib/watch/tally.ts`), iOS (`WatchTally.swift`) and Android (`WatchTally.kt`): a play is a pass from the top that plays 1 s; resume, seeks and scrubbing back aren't plays; native loops count by wrapping round. Unsent tallies persist per server+key across restarts.
+- Open question for the owner before any UI: may members see each other's exact counts, or only their own? Totals are fine either way.
+- Checked: API/helper/hook tests, Swift tally suite, Android unit test + debug build, iOS simulator build. Not run on a device: counts from real playback.
+
 ## 2026-10-22 — Bound media installs and reuse CI build caches
 
 - A reported slow test job spent over 20 minutes fetching Ubuntu FFmpeg dependencies before tests started. Use a bounded HTTPS Ubuntu install with reusable signed package downloads and fresh APT metadata.

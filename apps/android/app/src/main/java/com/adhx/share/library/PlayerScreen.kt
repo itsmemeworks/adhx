@@ -272,6 +272,8 @@ fun PlayerScreen(
     // Picking up where you left off (board 14.2): the post the player has, and a spot it offers.
     val credential = ConnectionStore.get(context).current()
     val resume = remember(credential?.server, credential?.key) { ResumeStore.get(context) }
+    // Plays, finishes and seconds watched, on their way to your ADHX.
+    val watch = remember { WatchCounts.get(context) }
     var playingKey by remember { mutableStateOf<String?>(null) }
     var resumeOffer by remember { mutableStateOf<ResumeSpot?>(null) }
     // Try again: load the same file afresh, from where it was.
@@ -346,9 +348,14 @@ fun PlayerScreen(
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_START -> if (player == null) player = buildPlayer(context)
+                Lifecycle.Event.ON_START -> {
+                    if (player == null) player = buildPlayer(context)
+                    // Counts left from last time (or from before a restart).
+                    watch.flush()
+                }
                 Lifecycle.Event.ON_STOP -> {
                     rememberSpot()
+                    watch.flush()
                     player?.release()
                     player = null
                 }
@@ -533,6 +540,7 @@ fun PlayerScreen(
         val p = player ?: return@LaunchedEffect
         playingKey = key
         if (mediaUrl == null) {
+            watch.begin(null)
             resumeOffer = null
             p.stop()
             p.clearMediaItems()
@@ -552,6 +560,8 @@ fun PlayerScreen(
         p.prepare()
         val carryOn = from ?: wasAt.takeIf { samePost && resumeOffer == null }
         if (carryOn != null && carryOn > 1000) p.seekTo(carryOn)
+        // Carrying on part-way (Try again, back in the app) isn't a new play.
+        watch.begin(key, atMs = carryOn?.takeIf { it > 1000 })
         if (resumeOffer != null) {
             playback.paused = true
             p.playWhenReady = false
@@ -561,6 +571,7 @@ fun PlayerScreen(
         while (isActive) {
             playback.positionMs = p.currentPosition.coerceAtLeast(0L)
             playback.durationMs = p.duration.takeIf { it != C.TIME_UNSET }?.coerceAtLeast(0L) ?: 0L
+            watch.sample(playback.positionMs, playback.durationMs)
             delay(250)
         }
     }
@@ -625,6 +636,7 @@ fun PlayerScreen(
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) playback.ready = true
                 if (playbackState == Player.STATE_ENDED) {
+                    watch.ended()
                     // Watched to the end: nothing to pick up next time.
                     playingKey?.let { resume.forget(it) }
                     ended++
@@ -822,6 +834,8 @@ fun PlayerScreen(
                     spot = offer,
                     onResume = {
                         resumeOffer = null
+                        // Picking up part-way isn't a new play.
+                        watch.begin(playingKey, atMs = offer.positionMs)
                         player?.seekTo(offer.positionMs)
                         player?.playWhenReady = true
                         playback.paused = false
@@ -829,6 +843,7 @@ fun PlayerScreen(
                     onStartOver = {
                         resumeOffer = null
                         playingKey?.let { resume.forget(it) }
+                        watch.begin(playingKey)
                         player?.seekTo(0)
                         player?.playWhenReady = true
                         playback.paused = false

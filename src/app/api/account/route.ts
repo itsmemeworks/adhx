@@ -10,6 +10,7 @@ import {
   syncLogs,
   userPreferences,
   postViews,
+  postWatchCounts,
   postSends,
   momentAlertSubs,
   momentAlerts,
@@ -91,6 +92,8 @@ export const DELETE = withAuth(async (_req, userId) => {
 
       // 10. Delete the feed's seen list
       db.delete(postViews).where(eq(postViews.userId, userId)).run()
+      // 10a. How many times it watched each post
+      db.delete(postWatchCounts).where(eq(postWatchCounts.userId, userId)).run()
 
       // 10b. Posts sent to or by this account, and its live bells and alerts.
       db.delete(postSends)

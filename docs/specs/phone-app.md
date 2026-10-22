@@ -653,6 +653,27 @@ it; on a server without these endpoints (404) the app falls back as noted.
 - `POST /api/app/seen { posts: [{ platform, id }] }` → 204. The app sends at
   most 50 at a time, as soon as 10 are waiting, else within 5 s, and when it
   goes to the background. A batch that fails is sent again.
+- `POST /api/app/watched { posts: [{ platform, id, plays, finishes, seconds }] }`
+  → 204: watch counts, for "watched 14×", most rewatched and a year-end
+  Wrapped (nothing shows them yet). Every player counts its video or sound
+  by the same rules as the web (`src/lib/watch/tally.ts`, iOS
+  `WatchTally.swift`, Android `WatchTally.kt`): a **play** is a pass that
+  starts at the top (or loops round) and then plays for a second (half a
+  shorter clip), so picking up where you left off, seeking or scrubbing back
+  isn't one; a **finish** is reaching the end, once per pass; **seconds** are
+  the position's forward steps while it plays (a jump of more than 2 s isn't
+  watching). Counts are whole numbers ≥ 0, capped per post per batch (500
+  plays, 500 finishes, a day of seconds); a post twice in a batch is added
+  together; a bad body is 400 `bad_posts`; 120 calls a minute. The server
+  adds them to the member's row for this UTC year and leaves out posts they
+  can't see (`canSeePost`). The apps keep unsent tallies on the phone, tied
+  to the server and key they were counted for (a new connection drops them),
+  so a restart doesn't lose them, and send at most 50 posts at a time: 30 s
+  after a play or finish, at once when 50 wait, and when the app goes to the
+  background or comes back. A failed batch goes back (a 404 from an older
+  server, or a 400, is dropped). The web theater does the same through
+  `POST /api/watched`. A member's exact counts are only ever shown to that
+  member; other members may see a post's total, with no names.
 - `GET /api/app/channels` → `{ group: [{ slug, name, size, covers, savers? }],
 friends: [{ username, name, avatarUrl, size, newCount, covers }],
 mine: [{ slug, name, size, covers }] }`; covers are addresses (posts are
