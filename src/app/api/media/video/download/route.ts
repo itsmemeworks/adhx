@@ -6,12 +6,14 @@ import {
   goneResponse,
   isAllowedTwitterMediaUrl,
   isFxTwitterGoneStatus,
+  isTakenDown,
   isTweetGoneCached,
   isUntrustedMediaRedirectError,
   isValidTweetAuthor,
   isValidTweetId,
   markTweetGone,
   parseTweetMediaIndex,
+  TAKEN_DOWN_REASON,
   TWITTER_MEDIA_HOSTS,
 } from '@/lib/media/proxy'
 import { downloadRateLimit } from '@/lib/rate-limit'
@@ -122,6 +124,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (!videoResponse.ok || !videoResponse.body) {
+      if (await isTakenDown(videoResponse)) return goneResponse(TAKEN_DOWN_REASON)
       await videoResponse.body?.cancel()
       return NextResponse.json({ error: 'Failed to fetch video' }, { status: 502 })
     }

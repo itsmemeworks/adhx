@@ -305,6 +305,22 @@ describe('API: /api/media/video/download', () => {
       expect(data.error).toContain('Failed to fetch video')
     })
 
+    it('says why when X took the video down after a copyright claim', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockVideoResponse),
+      })
+      mockFetch.mockResolvedValueOnce(
+        new Response('{"error_code":2,"error_response":"Dmcaed"}', { status: 403 }),
+      )
+
+      const { GET } = await import('@/app/api/media/video/download/route')
+      const response = await GET(createRequest({ author: 'user', tweetId: '123' }))
+
+      expect(response.status).toBe(410)
+      expect((await response.json()).reason).toBe('X took this video down after a copyright claim.')
+    })
+
     it('refuses an off-allowlist redirect from the Twitter video CDN', async () => {
       mockFetch
         .mockResolvedValueOnce({

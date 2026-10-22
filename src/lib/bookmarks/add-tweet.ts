@@ -5,7 +5,13 @@ import { upsertBookmarkLinks } from '@/lib/db/bookmark-link-merge'
 import { eq, and } from 'drizzle-orm'
 import { metrics, captureException } from '@/lib/sentry'
 import { parseTweetUrl, determineCategory } from '@/lib/tweets/processor'
-import { extractUrlsFromFacets, fetchTweetResult } from '@/lib/media/fxembed'
+import {
+  extractUrlsFromFacets,
+  fetchTweetResult,
+  type FxTwitterResponse,
+} from '@/lib/media/fxembed'
+import { ytdlpCookies } from '@/lib/keep/config'
+import { ytdlpInfo } from '@/lib/keep/ytdlp'
 import { fetchOgMetadata } from '@/lib/utils/og-fetch'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { recordActivity, previewPath } from '@/lib/activity/record'
@@ -108,19 +114,25 @@ export async function addTweet(
       )
     }
 
-    // Fetch tweet data from fxtwitter
+    // Fetch tweet data from fxtwitter, or yt-dlp when fxtwitter can't read it:
+    // it was down, or the server has cookies that may see a protected account.
     const fx = await fetchTweetResult(parsed.author, parsed.tweetId)
-    if (!fx.ok && fx.gone) {
+    const tweet =
+      fx.ok && fx.data.tweet
+        ? fx.data.tweet
+        : !fx.ok && (!fx.gone || ytdlpCookies())
+          ? await tweetFromYtdlp(parsed.author, parsed.tweetId)
+          : null
+    if (!tweet && !fx.ok && fx.gone) {
       // Deleted, private or suspended: saying so beats a "try again" that never works.
       return NextResponse.json(
         { error: 'This tweet is no longer available. It may be private or deleted.' },
         { status: 404 },
       )
     }
-    if (!fx.ok || !fx.data.tweet) {
+    if (!tweet) {
       return NextResponse.json({ error: 'Failed to fetch tweet data' }, { status: 500 })
     }
-    const tweet = fx.data.tweet
 
     // Determine category based on content
     const category = determineCategory(tweet)
@@ -472,5 +484,33 @@ export async function addTweet(
     captureException(error, { endpoint: '/api/tweets/add' })
     const message = error instanceof Error ? error.message : 'Failed to add tweet'
     return NextResponse.json({ error: message }, { status: 500 })
+  }
+}
+
+type FxTweet = NonNullable<FxTwitterResponse['tweet']>
+
+/** How long a save waits for yt-dlp to describe a post fxtwitter couldn't. */
+const TWEET_YTDLP_WAIT_MS = 8_000
+
+/**
+ * A post fxtwitter couldn't read, as yt-dlp describes it: its words, who
+ * posted it and when. yt-dlp only knows posts with a video; the video itself
+ * is added when it's kept (the keep worker falls back to yt-dlp too).
+ */
+async function tweetFromYtdlp(author: string, id: string): Promise<FxTweet | null> {
+  const info = await ytdlpInfo(`https://x.com/${author}/status/${id}`, {
+    timeoutMs: TWEET_YTDLP_WAIT_MS,
+  }).catch(() => null)
+  if (!info) return null
+  const handle = info.uploader_id || author
+  return {
+    id,
+    url: `https://x.com/${handle}/status/${id}`,
+    text: info.description || '',
+    author: { id: '', name: info.uploader || handle, screen_name: handle, avatar_url: '' },
+    created_at: info.timestamp ? new Date(info.timestamp * 1000).toISOString() : '',
+    replies: 0,
+    retweets: 0,
+    likes: 0,
   }
 }

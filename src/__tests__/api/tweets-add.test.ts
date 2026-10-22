@@ -41,6 +41,13 @@ vi.mock('@/lib/sentry', () => ({
 const mockFetch = vi.fn()
 global.fetch = mockFetch
 
+// yt-dlp describes a post FxTwitter can't read; by default it can't either.
+const mockYtdlpInfo = vi.fn()
+vi.mock('@/lib/keep/ytdlp', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/keep/ytdlp')>('@/lib/keep/ytdlp')
+  return { ...actual, ytdlpInfo: (...args: unknown[]) => mockYtdlpInfo(...args) }
+})
+
 function createRequest(body: object): NextRequest {
   return new NextRequest('http://localhost:3000/api/tweets/add', {
     method: 'POST',
@@ -205,10 +212,13 @@ describe('API: /api/tweets/add', () => {
     mockUserId = 'user-123'
     beforeTransaction = null
     vi.clearAllMocks()
+    mockYtdlpInfo.mockReset()
+    mockYtdlpInfo.mockRejectedValue(new Error('No video could be found in this tweet'))
   })
 
   afterEach(() => {
     testInstance.close()
+    vi.unstubAllEnvs()
   })
 
   describe('Authentication', () => {
@@ -999,6 +1009,52 @@ describe('API: /api/tweets/add', () => {
       expect(response.status).toBe(500)
       const data = await response.json()
       expect(data.error).toContain('Failed to fetch tweet')
+    })
+
+    it('saves what yt-dlp describes when FxTwitter is down', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 503 })
+      mockYtdlpInfo.mockResolvedValueOnce({
+        description: 'A billionaire trader has spent 40 years trying to delete a documentary',
+        uploader: 'Veles',
+        uploader_id: 'velesxbt',
+        timestamp: 1784378373,
+      })
+
+      const { POST } = await import('@/app/api/tweets/add/route')
+      const response = await POST(createRequest({ url: 'https://x.com/velesxbt/status/123456789' }))
+
+      expect(response.status).toBe(200)
+      expect(mockYtdlpInfo).toHaveBeenCalledWith(
+        'https://x.com/velesxbt/status/123456789',
+        expect.objectContaining({ timeoutMs: expect.any(Number) }),
+      )
+      const [row] = await testInstance.db
+        .select()
+        .from(schema.bookmarks)
+        .where(eq(schema.bookmarks.userId, 'user-123'))
+      expect(row).toMatchObject({
+        author: 'velesxbt',
+        authorName: 'Veles',
+        text: 'A billionaire trader has spent 40 years trying to delete a documentary',
+        createdAt: new Date(1784378373 * 1000).toISOString(),
+      })
+    })
+
+    it('only asks yt-dlp about a gone post when the server has cookies', async () => {
+      const { POST } = await import('@/app/api/tweets/add/route')
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 401 })
+      const without = await POST(createRequest({ url: 'https://x.com/someone/status/123456789' }))
+      expect(without.status).toBe(404)
+      expect(mockYtdlpInfo).not.toHaveBeenCalled()
+
+      // A protected account the cookies' account follows.
+      vi.stubEnv('YTDLP_COOKIES', '/data/yt-dlp-cookies.txt')
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 401 })
+      mockYtdlpInfo.mockResolvedValueOnce({ description: 'for followers', uploader_id: 'someone' })
+      const withCookies = await POST(
+        createRequest({ url: 'https://x.com/someone/status/123456789' }),
+      )
+      expect(withCookies.status).toBe(200)
     })
 
     it('handles network errors', async () => {

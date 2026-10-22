@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-22 — yt-dlp fallbacks, and X's copyright takedowns say so
+
+- Owner asked for the recommendations after the TikTok fix: yt-dlp wherever a mirror fails, and every network's login wall recognised. Builds on #624 (`YTDLP_COOKIES`).
+- `isSignInOnly` now also matches Instagram "login required", Facebook "registered users", "you must log in" and yt-dlp's generic `--cookies… for the authentication` suffix; messages saying "private" are excluded (they stay "It's private on …").
+- X takedowns: owner report https://adhx.weedauwl.me/velesxbt/status/2078459662014263551 (54-min video, posted 2026-07-18) played as a 500 and retried forever. Every variant and the m3u8 answer 403 `{"error_code":2,"error_response":"Dmcaed"}`: X took it down after a copyright claim before the backfill kept it. `isTakenDown()` reads ≤2 KB; the video and download proxies answer 410 "X took this video down after a copyright claim.", the keep worker skips such videos, keeps photos, and stops (NothingToKeep) when nothing's left.
+- X fallback: collectTwitter asks yt-dlp when fxtwitter can't read the post (sign-in errors surface; otherwise the old reason stands). Saves: X (fxtwitter down, or gone with cookies set) and Instagram (no metadata) take yt-dlp's description, 8 s budget, video posts only; media comes when kept.
+- Not verified with real cookies or a live protected account.
+
 ## 2026-10-22 — Nested corners everywhere, squircles on the phones
 
 - Owner: a button inside a card should follow the card's curve (comment on canvas board 7.3), then "all buttons" and "all curves should be squircles".
