@@ -1,4 +1,5 @@
-import { inArray, sql } from 'drizzle-orm'
+import { postKeyWhere } from '@/lib/db/post-keys'
+import { sql } from 'drizzle-orm'
 import { POST_ID_PATTERN } from '@/lib/platform/networks'
 import { db } from '@/lib/db'
 import { keepJobs } from '@/lib/db/schema'
@@ -91,16 +92,12 @@ export function keepStatusFor(
 ): PostKeepStatus[] {
   if (!viewerId || posts.length === 0) return []
   const wanted = new Set(posts.map((p) => `${p.platform}:${p.id}`))
-  const ids = [...new Set(posts.map((p) => p.id))]
 
   // The newest save of each post the viewer may see.
   const newest = new Map<string, string>()
   for (const r of db.all<{ platform: string; id: string; saved_at: string | null }>(
     sql`SELECT platform, id, MAX(processed_at) AS saved_at FROM bookmarks
-        WHERE id IN (${sql.join(
-          ids.map((id) => sql`${id}`),
-          sql`, `,
-        )}) AND ${seenBy(viewerId)}
+        WHERE ${postKeyWhere(sql`platform`, sql`id`, posts)} AND ${seenBy(viewerId)}
         GROUP BY platform, id`,
   )) {
     const k = `${r.platform}:${r.id}`
@@ -118,16 +115,13 @@ export function keepStatusFor(
       progress: keepJobs.progress,
     })
     .from(keepJobs)
-    .where(inArray(keepJobs.postId, ids))
+    .where(postKeyWhere(keepJobs.platform, keepJobs.postId, posts))
     .all()) {
     jobs.set(`${r.platform}:${r.id}`, r)
   }
   const conversions = new Map<string, ConvRow[]>()
   for (const r of db.all<ConvRow>(
-    sql`SELECT platform, post_id, status FROM media_conversions WHERE post_id IN (${sql.join(
-      ids.map((id) => sql`${id}`),
-      sql`, `,
-    )})`,
+    sql`SELECT platform, post_id, status FROM media_conversions WHERE ${postKeyWhere(sql`platform`, sql`post_id`, posts)}`,
   )) {
     const k = `${r.platform}:${r.post_id}`
     conversions.set(k, [...(conversions.get(k) ?? []), r])

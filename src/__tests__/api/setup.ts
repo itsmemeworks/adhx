@@ -1,3 +1,4 @@
+import { QUERY_INDEX_DDL } from '@/lib/db/query-indexes'
 import { SAVE_VISIBILITY_DDL } from '@/lib/bookmarks/visibility-sql'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
@@ -437,6 +438,7 @@ export function createTestDb(): TestDbInstance {
   sqlite.pragma('foreign_keys = ON')
   sqlite.exec(FULL_SCHEMA_SQL)
   sqlite.exec(UNDERSTANDING_DDL)
+  sqlite.exec(QUERY_INDEX_DDL)
 
   const db = drizzle(sqlite, { schema })
 

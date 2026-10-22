@@ -1,4 +1,5 @@
-import { and, eq, inArray, isNotNull } from 'drizzle-orm'
+import { postKeyBatches, postKeyWhere } from '@/lib/db/post-keys'
+import { and, eq, isNotNull } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { postEmbeddings } from '@/lib/db/schema'
 
@@ -10,14 +11,13 @@ import { postEmbeddings } from '@/lib/db/schema'
  */
 export async function goneKeys(keys: string[]): Promise<Set<string>> {
   const gone = new Set<string>()
-  const ids = [...new Set(keys.map((k) => k.slice(k.indexOf(':') + 1)))]
-  for (let i = 0; i < ids.length; i += 500) {
+  for (const part of postKeyBatches(keys)) {
     const rows = await db
       .selectDistinct({ platform: postEmbeddings.platform, postId: postEmbeddings.postId })
       .from(postEmbeddings)
       .where(
         and(
-          inArray(postEmbeddings.postId, ids.slice(i, i + 500)),
+          postKeyWhere(postEmbeddings.platform, postEmbeddings.postId, part),
           eq(postEmbeddings.status, 'none'),
           isNotNull(postEmbeddings.error),
         ),

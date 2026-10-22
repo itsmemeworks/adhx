@@ -59,11 +59,9 @@ export async function reactedPosts(
   if (!moderation.ok) throw moderation.error
   const rows = db.all<Row>(sql`
     WITH visible AS (
-      SELECT r.rowid AS rid, r.platform, r.post_id, r.user_id, r.emoji, r.text, r.created_at,
-        u.username, u.display_name, u.avatar_url, p.value AS avatar_source
+      SELECT r.rowid AS rid, r.platform, r.post_id, r.created_at
       FROM post_reactions r
       JOIN users u ON u.id = r.user_id
-      LEFT JOIN user_preferences p ON p.user_id = r.user_id AND p.key = 'avatarSource'
       WHERE NOT EXISTS (SELECT 1 FROM user_bans x WHERE x.user_id = r.user_id)
         AND NOT EXISTS (
           SELECT 1 FROM moderated_posts m
@@ -84,12 +82,20 @@ export async function reactedPosts(
         ROW_NUMBER() OVER (PARTITION BY platform, post_id ORDER BY created_at DESC, rid DESC) AS rn,
         COUNT(*) OVER (PARTITION BY platform, post_id) AS n
       FROM visible v
+    ), page AS (
+      SELECT ranked.*, COUNT(*) OVER () AS total
+      FROM ranked
+      WHERE rn = 1
+      ORDER BY created_at DESC, rid DESC
+      LIMIT ${limit} OFFSET ${offset}
     )
-    SELECT ranked.*, COUNT(*) OVER () AS total
-    FROM ranked
-    WHERE rn = 1
-    ORDER BY created_at DESC, rid DESC
-    LIMIT ${limit} OFFSET ${offset}
+    SELECT page.*, r.user_id, r.emoji, r.text,
+      u.username, u.display_name, u.avatar_url, p.value AS avatar_source
+    FROM page
+    JOIN post_reactions r ON r.rowid = page.rid
+    JOIN users u ON u.id = r.user_id
+    LEFT JOIN user_preferences p ON p.user_id = r.user_id AND p.key = 'avatarSource'
+    ORDER BY page.created_at DESC, page.rid DESC
   `)
   if (rows.length === 0) {
     // Past the end: still say how many there are.

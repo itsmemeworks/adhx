@@ -1,4 +1,5 @@
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { postKeyBatches, postKeyWhere } from '@/lib/db/post-keys'
+import { and, eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { postEmbeddings } from '@/lib/db/schema'
 import { segmentScores, type SegmentScore } from '@/lib/processing/segment-search'
@@ -272,15 +273,8 @@ async function rescore(
   segments?: ReadonlyMap<string, SegmentScore>,
 ): Promise<VectorHit[]> {
   if (hits.length === 0) return hits
-  const byId = new Map<string, string[]>()
-  for (const h of hits) {
-    const [platform, ...rest] = h.key.split(':')
-    const id = rest.join(':')
-    byId.set(id, [...(byId.get(id) ?? []), platform])
-  }
   const full = new Map<string, Float32Array>()
-  const ids = [...byId.keys()]
-  for (let i = 0; i < ids.length; i += 400) {
+  for (const part of postKeyBatches(hits.map((h) => h.key))) {
     const rows = await db
       .select({
         platform: postEmbeddings.platform,
@@ -293,7 +287,7 @@ async function rescore(
           eq(postEmbeddings.kind, kind),
           eq(postEmbeddings.model, SEMANTIC_MODEL_VERSION),
           eq(postEmbeddings.status, 'ok'),
-          inArray(postEmbeddings.postId, ids.slice(i, i + 400)),
+          postKeyWhere(postEmbeddings.platform, postEmbeddings.postId, part),
         ),
       )
     for (const r of rows) {

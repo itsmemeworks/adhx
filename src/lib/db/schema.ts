@@ -67,12 +67,21 @@ export const bookmarks = sqliteTable(
     userIdIdx: index('bookmarks_user_id_idx').on(table.userId),
     processedAtIdx: index('bookmarks_processed_at_idx').on(table.processedAt),
     // Composite indexes for common query patterns
-    userIdProcessedAtIdx: index('bookmarks_user_processed_at_idx').on(
+    userIdProcessedAtIdx: index('bookmarks_user_feed_idx').on(
       table.userId,
-      table.processedAt,
+      sql`${table.processedAt} DESC`,
+      sql`${table.id} DESC`,
     ),
     userIdCategoryIdx: index('bookmarks_user_category_idx').on(table.userId, table.category),
-    userIdPlatformIdx: index('bookmarks_user_platform_idx').on(table.userId, table.platform),
+    userIdPlatformIdx: index('bookmarks_user_platform_feed_idx').on(
+      table.userId,
+      table.platform,
+      sql`${table.processedAt} DESC`,
+      sql`${table.id} DESC`,
+    ),
+    sharedRecentIdx: index('bookmarks_shared_recent_idx')
+      .on(table.processedAt, table.userId, table.platform, table.id)
+      .where(sql`${table.isPrivate} = 0 AND COALESCE(${table.source}, '') != 'quoted'`),
     platformIdIdx: index('bookmarks_platform_id_idx').on(table.platform, table.id),
     userIdQuotedTweetIdx: index('bookmarks_user_quoted_tweet_idx').on(
       table.userId,
@@ -99,6 +108,7 @@ export const bookmarkLinks = sqliteTable(
     previewImageUrl: text('preview_image_url'),
   },
   (table) => ({
+    postIdx: index('bookmark_links_post_idx').on(table.platform, table.bookmarkId),
     userBookmarkIdx: index('bookmark_links_user_bookmark_idx').on(
       table.userId,
       table.platform,
@@ -139,6 +149,12 @@ export const bookmarkTags = sqliteTable(
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.platform, table.bookmarkId, table.tag] }),
     userIdIdx: index('bookmark_tags_user_id_idx').on(table.userId),
+    userTagIdx: index('bookmark_tags_user_tag_idx').on(
+      table.userId,
+      table.tag,
+      table.platform,
+      table.bookmarkId,
+    ),
   }),
 )
 
@@ -165,6 +181,7 @@ export const bookmarkMedia = sqliteTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.platform, table.id] }),
+    postIdx: index('bookmark_media_post_idx').on(table.platform, table.bookmarkId),
     userBookmarkIdx: index('bookmark_media_user_bookmark_idx').on(
       table.userId,
       table.platform,
@@ -234,6 +251,8 @@ export const postViews = sqliteTable(
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.platform, table.postId] }),
     seenAtIdx: index('post_views_seen_at_idx').on(table.seenAt),
+    postIdx: index('post_views_post_seen_idx').on(table.platform, table.postId, table.seenAt),
+    userSeenIdx: index('post_views_user_seen_idx').on(table.userId, sql`${table.seenAt} DESC`),
   }),
 )
 
@@ -281,7 +300,23 @@ export const postSends = sqliteTable(
     pk: primaryKey({
       columns: [table.fromUserId, table.toUserId, table.platform, table.postId],
     }),
-    toIdx: index('post_sends_to_idx').on(table.toUserId, table.seenAt),
+    senderPostIdx: index('post_sends_sender_post_idx').on(
+      table.fromUserId,
+      table.platform,
+      table.postId,
+      table.toUserId,
+    ),
+    recipientPostIdx: index('post_sends_recipient_post_idx').on(
+      table.toUserId,
+      table.platform,
+      table.postId,
+      table.seenAt,
+    ),
+    toIdx: index('post_sends_inbox_idx').on(
+      table.toUserId,
+      table.seenAt,
+      sql`${table.createdAt} DESC`,
+    ),
   }),
 )
 
@@ -473,6 +508,7 @@ export const phoneSaveQueue = sqliteTable(
   (table) => ({
     statusIdx: index('phone_save_queue_status_idx').on(table.status, table.nextAttemptAt),
     userIdx: index('phone_save_queue_user_id_idx').on(table.userId),
+    userStatusIdx: index('phone_save_queue_user_status_idx').on(table.userId, table.status),
     requestIdx: uniqueIndex('phone_save_queue_request_idx').on(table.userId, table.requestId),
   }),
 )
@@ -522,6 +558,7 @@ export const keptFiles = sqliteTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.platform, table.postId, table.slot] }),
+    pathIdx: index('kept_files_path_idx').on(table.path),
   }),
 )
 
@@ -784,6 +821,9 @@ export const postEmbeddings = sqliteTable(
   (table) => ({
     pk: primaryKey({ columns: [table.platform, table.postId, table.kind] }),
     statusIdx: index('post_embeddings_status_idx').on(table.kind, table.status),
+    failedRecentIdx: index('post_embeddings_failed_recent_idx')
+      .on(table.createdAt, table.platform, table.postId, table.kind)
+      .where(sql`${table.status}='failed'`),
   }),
 )
 
@@ -823,6 +863,9 @@ export const postExtractedText = sqliteTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.platform, table.postId, table.kind] }),
+    failedRecentIdx: index('post_extracted_failed_recent_idx')
+      .on(table.createdAt, table.platform, table.postId, table.kind)
+      .where(sql`${table.status}='failed'`),
   }),
 )
 

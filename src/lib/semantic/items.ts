@@ -1,4 +1,10 @@
-import { and, desc, eq, inArray } from 'drizzle-orm'
+import {
+  ownedPostKeyBatches,
+  ownedPostKeyWhere,
+  postKeyBatches,
+  postKeyWhere,
+} from '@/lib/db/post-keys'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import { withoutGone } from './gone'
 import { db } from '@/lib/db'
 import {
@@ -64,33 +70,33 @@ export async function loadSearchItems(
 ): Promise<SearchItem[]> {
   hits = await withoutGone(hits) // channels pass keys straight here
   if (hits.length === 0) return []
-  const ids = [...new Set(hits.map((h) => h.postId))]
+  const refs = hits.map((h) => ({ platform: h.platform, id: h.postId }))
   const wanted = new Set(hits.map((h) => h.key))
   const owners = new Map<string, Owned>()
-
-  const own = await db
-    .select()
-    .from(bookmarks)
-    .where(and(eq(bookmarks.userId, viewerUserId), inArray(bookmarks.id, ids)))
+  const own: Bookmark[] = []
+  for (const part of postKeyBatches(refs)) {
+    own.push(
+      ...(await db
+        .select()
+        .from(bookmarks)
+        .where(
+          and(
+            eq(bookmarks.userId, viewerUserId),
+            postKeyWhere(bookmarks.platform, bookmarks.id, part),
+          ),
+        )),
+    )
+  }
   for (const row of own) {
     const key = `${row.platform}:${row.id}`
     if (wanted.has(key)) owners.set(key, { row, viewer: true })
   }
 
-  const missing = hits.filter((h) => !owners.has(h.key))
-  if (missing.length > 0) {
+  for (const part of postKeyBatches(refs.filter((r) => !owners.has(`${r.platform}:${r.id}`)))) {
     const others = await db
       .select({ bookmark: bookmarks })
       .from(bookmarks)
-      .where(
-        and(
-          visibleSaveFilter,
-          inArray(
-            bookmarks.id,
-            missing.map((h) => h.postId),
-          ),
-        ),
-      )
+      .where(and(visibleSaveFilter, postKeyWhere(bookmarks.platform, bookmarks.id, part)))
       .orderBy(desc(bookmarks.processedAt))
     for (const { bookmark } of others) {
       const key = `${bookmark.platform}:${bookmark.id}`
@@ -98,54 +104,78 @@ export async function loadSearchItems(
     }
   }
 
-  // Related rows, fetched per saver (each copy's media and links live under it).
-  const byUser = new Map<string, string[]>()
-  for (const { row } of owners.values()) {
-    byUser.set(row.userId, [...(byUser.get(row.userId) ?? []), row.id])
-  }
+  // Bound queries by requested keys, not the number of different savers.
+  // Each disjunct retains owner AND platform AND post identity.
+  const related = [...owners.values()].map(({ row }) => ({
+    userId: row.userId,
+    platform: row.platform,
+    id: row.id,
+  }))
   const media = new Map<string, (typeof bookmarkMedia.$inferSelect)[]>()
   const links = new Map<string, BookmarkLink[]>()
-  for (const [userId, userIds] of byUser) {
+  for (const part of ownedPostKeyBatches(related)) {
     const [m, l] = await Promise.all([
       db
         .select()
         .from(bookmarkMedia)
-        .where(and(eq(bookmarkMedia.userId, userId), inArray(bookmarkMedia.bookmarkId, userIds))),
+        .where(
+          ownedPostKeyWhere(
+            bookmarkMedia.userId,
+            bookmarkMedia.platform,
+            bookmarkMedia.bookmarkId,
+            part,
+          ),
+        )
+        .orderBy(sql`${bookmarkMedia}.rowid`),
       db
         .select()
         .from(bookmarkLinks)
-        .where(and(eq(bookmarkLinks.userId, userId), inArray(bookmarkLinks.bookmarkId, userIds))),
+        .where(
+          ownedPostKeyWhere(
+            bookmarkLinks.userId,
+            bookmarkLinks.platform,
+            bookmarkLinks.bookmarkId,
+            part,
+          ),
+        )
+        .orderBy(sql`${bookmarkLinks}.rowid`),
     ])
     for (const r of m) {
-      const key = `${userId}|${r.platform}:${r.bookmarkId}`
+      const key = `${r.userId}|${r.platform}:${r.bookmarkId}`
       media.set(key, [...(media.get(key) ?? []), r])
     }
     for (const r of l) {
-      const key = `${userId}|${r.platform}:${r.bookmarkId}`
+      const key = `${r.userId}|${r.platform}:${r.bookmarkId}`
       links.set(key, [...(links.get(key) ?? []), r])
     }
   }
 
-  const viewerIds = own.map((r) => r.id)
-  const [tags, archived] = viewerIds.length
-    ? await Promise.all([
-        db
-          .select()
-          .from(bookmarkTags)
-          .where(
-            and(eq(bookmarkTags.userId, viewerUserId), inArray(bookmarkTags.bookmarkId, viewerIds)),
+  const tags: (typeof bookmarkTags.$inferSelect)[] = []
+  const archived: (typeof archivedPosts.$inferSelect)[] = []
+  for (const part of postKeyBatches(own)) {
+    const [t, a] = await Promise.all([
+      db
+        .select()
+        .from(bookmarkTags)
+        .where(
+          and(
+            eq(bookmarkTags.userId, viewerUserId),
+            postKeyWhere(bookmarkTags.platform, bookmarkTags.bookmarkId, part),
           ),
-        db
-          .select()
-          .from(archivedPosts)
-          .where(
-            and(
-              eq(archivedPosts.userId, viewerUserId),
-              inArray(archivedPosts.bookmarkId, viewerIds),
-            ),
+        ),
+      db
+        .select()
+        .from(archivedPosts)
+        .where(
+          and(
+            eq(archivedPosts.userId, viewerUserId),
+            postKeyWhere(archivedPosts.platform, archivedPosts.bookmarkId, part),
           ),
-      ])
-    : [[], []]
+        ),
+    ])
+    tags.push(...t)
+    archived.push(...a)
+  }
   const tagsByKey = new Map<string, string[]>()
   for (const t of tags) {
     const key = `${t.platform}:${t.bookmarkId}`

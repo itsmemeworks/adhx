@@ -122,6 +122,8 @@ async function seedLibrary() {
 }
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-22T10:00:00.000Z'))
   testInstance = createTestDb()
   __resetVectorIndex()
   __resetMoments()
@@ -130,6 +132,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllEnvs()
   __resetMoments()
 })
@@ -273,6 +276,34 @@ describe('naming a moment', () => {
 // ——— The engine against a real (test) database ———
 
 describe('Right now, live', () => {
+  it('keeps grouping and stream order stable across index changes when saves share a timestamp', async () => {
+    await seedLibrary()
+    await __moments.recompute()
+    const before = await getMomentsSnapshot()
+    testInstance.sqlite.exec('DROP INDEX bookmarks_shared_recent_idx')
+    __resetMoments()
+    await __moments.recompute()
+    const after = await getMomentsSnapshot()
+    expect(after.label).toBe(before.label)
+    expect(after.moments.map((m) => [m.title, m.posts])).toEqual(
+      before.moments.map((m) => [m.title, m.posts]),
+    )
+    expect(after.stream.map((s) => s.key)).toEqual(before.stream.map((s) => s.key))
+  })
+
+  it.each([false, true])(
+    'names only the selected platform, excluding private=%s copies',
+    async (isPrivate) => {
+      await seedLibrary()
+      for (let i = 0; i < 6; i++)
+        save(USER_A, `frog${i}`, 'hushsecret', { platform: 'instagram', isPrivate })
+      await __moments.recompute()
+      const snapshot = await getMomentsSnapshot()
+      expect(snapshot.moments.map((m) => m.title)).toEqual(['Frog'])
+      expect(JSON.stringify(snapshot)).not.toContain('hushsecret')
+    },
+  )
+
   it('shows moments that several people are saving, anonymously', async () => {
     await seedLibrary()
     await __moments.recompute()

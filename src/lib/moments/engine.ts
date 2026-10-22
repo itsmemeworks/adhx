@@ -2,6 +2,7 @@ import { EventEmitter } from 'events'
 import { randomBytes } from 'crypto'
 import { sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
+import { postKeyBatches, postKeyWhere } from '@/lib/db/post-keys'
 import type { FeedItemResponse as FeedItem } from '@/lib/feed/build-item'
 import { captureException } from '@/lib/sentry'
 import { keysToHits } from '@/lib/channels/channels'
@@ -268,7 +269,7 @@ function recentSaves(sinceIso: string, limit: number): SaveRow[] {
     SELECT b.user_id, b.platform, b.id, b.processed_at
     FROM bookmarks b
     WHERE ${visibleSave('b')} AND b.processed_at >= ${sinceIso}
-    ORDER BY b.processed_at DESC
+    ORDER BY b.processed_at DESC, b.rowid DESC
     LIMIT ${limit}
   `)
 }
@@ -278,7 +279,7 @@ function newSaves(afterIso: string): SaveRow[] {
     SELECT b.user_id, b.platform, b.id, b.processed_at
     FROM bookmarks b
     WHERE ${visibleSave('b')} AND b.processed_at >= ${afterIso}
-    ORDER BY b.processed_at ASC
+    ORDER BY b.processed_at ASC, b.rowid ASC
     LIMIT 400
   `)
 }
@@ -299,13 +300,11 @@ function readStats(now: number): { today: number; lastHour: number } {
 }
 
 function postTexts(keys: string[]): string[] {
-  const ids = [...new Set(keys.map((k) => k.slice(k.indexOf(':') + 1)))].slice(0, 12)
-  if (ids.length === 0) return []
+  const refs = postKeyBatches(keys.slice(0, 12))[0]
+  if (!refs) return []
   const rows = db.all<{ text: string }>(sql`
-    SELECT text FROM bookmarks WHERE id IN (${sql.join(
-      ids.map((id) => sql`${id}`),
-      sql`, `,
-    )}) GROUP BY platform, id
+    SELECT b.text FROM bookmarks b WHERE ${visibleSave('b')}
+      AND ${postKeyWhere(sql`b.platform`, sql`b.id`, refs)} GROUP BY b.platform, b.id
   `)
   return rows.map((r) => r.text ?? '')
 }
@@ -349,15 +348,10 @@ function centred(raw: Float32Array, mean: Float32Array | null): Float32Array {
  */
 function stillVisible(keys: string[]): Set<string> {
   const out = new Set<string>()
-  const ids = [...new Set(keys.map((k) => k.slice(k.indexOf(':') + 1)))]
-  for (let i = 0; i < ids.length; i += 400) {
-    const part = ids.slice(i, i + 400)
+  for (const part of postKeyBatches(keys)) {
     const rows = db.all<{ platform: string; id: string }>(sql`
       SELECT DISTINCT b.platform, b.id FROM bookmarks b
-      WHERE ${visibleSave('b')} AND b.id IN (${sql.join(
-        part.map((id) => sql`${id}`),
-        sql`, `,
-      )})
+      WHERE ${visibleSave('b')} AND ${postKeyWhere(sql`b.platform`, sql`b.id`, part)}
     `)
     for (const r of rows) out.add(`${r.platform}:${r.id}`)
   }

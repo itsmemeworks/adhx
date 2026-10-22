@@ -1,3 +1,4 @@
+import { postKeyWhere } from '@/lib/db/post-keys'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
 import {
@@ -230,12 +231,7 @@ export async function processingActivity(
   const summary: DoingSummary = { ...empty.summary, ...state.summary }
   const cands = state.candidates
   if (cands.length === 0) return { items: [], summary }
-  const ids = [...new Set(cands.map((c) => c.id))]
   const wanted = new Set(cands.map((c) => key(c.platform, c.id)))
-  const idList = sql.join(
-    ids.map((id) => sql`${id}`),
-    sql`, `,
-  )
 
   const keep = new Map<string, KeepRow>()
   for (const r of db
@@ -251,7 +247,7 @@ export async function processingActivity(
       progress: keepJobs.progress,
     })
     .from(keepJobs)
-    .where(inArray(keepJobs.postId, ids))
+    .where(postKeyWhere(keepJobs.platform, keepJobs.postId, cands))
     .all()) {
     if (wanted.has(key(r.platform, r.id))) keep.set(key(r.platform, r.id), r)
   }
@@ -267,7 +263,7 @@ export async function processingActivity(
       lastError: understandingQueue.lastError,
     })
     .from(understandingQueue)
-    .where(inArray(understandingQueue.postId, ids))
+    .where(postKeyWhere(understandingQueue.platform, understandingQueue.postId, cands))
     .all()) {
     const k = key(r.platform, r.id)
     if (!wanted.has(k)) continue
@@ -277,7 +273,7 @@ export async function processingActivity(
   const conversions = new Map<string, ConversionRow[]>()
   const convRows = db.all<ConversionRow & { platform: string; post_id: string }>(sql`
     SELECT platform, post_id, status, attempts, next_attempt_at, expires_at, updated_at
-    FROM media_conversions WHERE post_id IN (${idList})`)
+    FROM media_conversions WHERE ${postKeyWhere(sql`platform`, sql`post_id`, cands)}`)
   for (const r of convRows) {
     const k = key(r.platform, r.post_id)
     if (!wanted.has(k)) continue
@@ -301,7 +297,7 @@ export async function processingActivity(
       at: postEmbeddings.createdAt,
     })
     .from(postEmbeddings)
-    .where(inArray(postEmbeddings.postId, ids))
+    .where(postKeyWhere(postEmbeddings.platform, postEmbeddings.postId, cands))
     .all())
     addLearned(r.platform, r.id, r.kind, r.status, r.at)
   for (const r of db
@@ -313,7 +309,7 @@ export async function processingActivity(
       at: postExtractedText.createdAt,
     })
     .from(postExtractedText)
-    .where(inArray(postExtractedText.postId, ids))
+    .where(postKeyWhere(postExtractedText.platform, postExtractedText.postId, cands))
     .all())
     addLearned(r.platform, r.id, r.kind, r.status, r.at)
 
@@ -326,7 +322,9 @@ export async function processingActivity(
       height: keptFiles.height,
     })
     .from(keptFiles)
-    .where(and(inArray(keptFiles.postId, ids), eq(keptFiles.slot, 'video-1')))
+    .where(
+      and(postKeyWhere(keptFiles.platform, keptFiles.postId, cands), eq(keptFiles.slot, 'video-1')),
+    )
     .all()) {
     if (wanted.has(key(r.platform, r.id))) videoFiles.set(key(r.platform, r.id), r)
   }
@@ -335,7 +333,7 @@ export async function processingActivity(
   const rows = db
     .select()
     .from(bookmarks)
-    .where(and(inArray(bookmarks.id, ids), seenBy(viewerId)))
+    .where(and(postKeyWhere(bookmarks.platform, bookmarks.id, cands), seenBy(viewerId)))
     .all()
   const copy = new Map<string, Bookmark>()
   const mine = new Set<string>()
@@ -362,7 +360,7 @@ export async function processingActivity(
     next_segment: number
   }>(
     sql`SELECT platform, post_id, segments, next_segment FROM video_index_state
-      WHERE post_id IN (${idList})`,
+      WHERE ${postKeyWhere(sql`platform`, sql`post_id`, cands)}`,
   )) {
     if (wanted.has(key(v.platform, v.post_id)))
       segments.set(key(v.platform, v.post_id), { segments: v.segments, next: v.next_segment })

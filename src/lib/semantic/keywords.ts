@@ -14,18 +14,23 @@ const MAX_TOKENS = 12
 /** Replace this post's keyword text. */
 export function indexPostText(platform: string, postId: string, body: string): void {
   runInTransaction(() => {
-    db.run(sql`DELETE FROM post_text_fts WHERE platform = ${platform} AND post_id = ${postId}`)
+    db.run(sql`DELETE FROM post_text_fts WHERE rowid IN (
+      SELECT row_id FROM post_text_keys WHERE platform = ${platform} AND post_id = ${postId}
+    )`)
+    db.run(sql`DELETE FROM post_text_keys WHERE platform = ${platform} AND post_id = ${postId}`)
     if (body.trim()) {
-      db.run(
+      const inserted = db.run(
         sql`INSERT INTO post_text_fts (platform, post_id, body) VALUES (${platform}, ${postId}, ${body})`,
       )
+      db.run(sql`INSERT INTO post_text_keys(row_id, platform, post_id)
+        VALUES(${inserted.lastInsertRowid}, ${platform}, ${postId})`)
     }
   })
 }
 
 export function hasPostText(platform: string, postId: string): boolean {
   const rows = db.all<{ one: number }>(
-    sql`SELECT 1 AS one FROM post_text_fts WHERE platform = ${platform} AND post_id = ${postId} LIMIT 1`,
+    sql`SELECT 1 AS one FROM post_text_keys WHERE platform = ${platform} AND post_id = ${postId} LIMIT 1`,
   )
   return rows.length > 0
 }
@@ -54,7 +59,7 @@ export async function backfillKeywordIndex(): Promise<number> {
   const rows = db.all<{ platform: string; postId: string }>(sql`
     SELECT platform, id AS postId FROM bookmarks
     EXCEPT
-    SELECT platform, post_id AS postId FROM post_text_fts
+    SELECT platform, post_id AS postId FROM post_text_keys
   `)
   return indexSavedPosts(rows)
 }

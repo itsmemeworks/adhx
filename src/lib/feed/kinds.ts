@@ -1,4 +1,5 @@
-import { and, eq, inArray, like, or } from 'drizzle-orm'
+import { postKeyBatches, postKeyWhere } from '@/lib/db/post-keys'
+import { and, eq, like, or } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { bookmarkLinks, bookmarkMedia, bookmarks, userPreferences } from '@/lib/db/schema'
 import { DEFAULT_FEED_KINDS, FEED_TYPES_KEY, parseFeedTypes, type FeedKind } from './blend'
@@ -14,9 +15,7 @@ export async function postKinds(keys: string[]): Promise<Map<string, FeedKind>> 
   const video = new Set<string>()
   const photo = new Set<string>()
   const article = new Set<string>()
-  const ids = [...new Set(keys.map((k) => k.slice(k.indexOf(':') + 1)))]
-  for (let i = 0; i < ids.length; i += 400) {
-    const part = ids.slice(i, i + 400)
+  for (const part of postKeyBatches(keys)) {
     const [media, cats, links] = await Promise.all([
       db
         .selectDistinct({
@@ -25,17 +24,22 @@ export async function postKinds(keys: string[]): Promise<Map<string, FeedKind>> 
           type: bookmarkMedia.mediaType,
         })
         .from(bookmarkMedia)
-        .where(inArray(bookmarkMedia.bookmarkId, part)),
+        .where(postKeyWhere(bookmarkMedia.platform, bookmarkMedia.bookmarkId, part)),
       db
         .selectDistinct({ platform: bookmarks.platform, id: bookmarks.id })
         .from(bookmarks)
-        .where(and(eq(bookmarks.category, 'article'), inArray(bookmarks.id, part))),
+        .where(
+          and(
+            eq(bookmarks.category, 'article'),
+            postKeyWhere(bookmarks.platform, bookmarks.id, part),
+          ),
+        ),
       db
         .selectDistinct({ platform: bookmarkLinks.platform, id: bookmarkLinks.bookmarkId })
         .from(bookmarkLinks)
         .where(
           and(
-            inArray(bookmarkLinks.bookmarkId, part),
+            postKeyWhere(bookmarkLinks.platform, bookmarkLinks.bookmarkId, part),
             or(
               like(bookmarkLinks.expandedUrl, '%/article/%'),
               like(bookmarkLinks.expandedUrl, '%/i/article/%'),
