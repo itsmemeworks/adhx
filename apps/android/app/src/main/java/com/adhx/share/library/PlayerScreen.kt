@@ -167,34 +167,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-/** How the post on screen is playing. */
-private class Playback {
-    var ready by mutableStateOf(false)
-    // The shared player's surface keeps the last picture it drew, so the
-    // video is only shown once this post's own first frame is in.
-    var drawn by mutableStateOf(false)
-    var paused by mutableStateOf(false)
-    var problem by mutableStateOf<String?>(null)
-    /** What kind of can't-play [problem] is, once known (boards 14.8, 14.9). */
-    var trouble by mutableStateOf<Trouble?>(null)
-    var positionMs by mutableLongStateOf(0L)
-    var durationMs by mutableLongStateOf(0L)
-
-    /** How far through it is, 0–1 (0 until the length is known). */
-    val fraction: Float
-        get() = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
-
-    fun reset() {
-        ready = false
-        drawn = false
-        paused = false
-        problem = null
-        trouble = null
-        positionMs = 0L
-        durationMs = 0L
-    }
-}
-
 /**
  * A channel's or a search's name and order, for its Up next (boards 14.3,
  * 14.4) behind the count pill; [chip] says how a search matched.
@@ -297,7 +269,8 @@ fun PlayerScreen(
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     val playback = remember { Playback() }
     // Picking up where you left off (board 14.2): the post the player has, and a spot it offers.
-    val resume = remember { ResumeStore.get(context) }
+    val credential = ConnectionStore.get(context).current()
+    val resume = remember(credential?.server, credential?.key) { ResumeStore.get(context) }
     var playingKey by remember { mutableStateOf<String?>(null) }
     var resumeOffer by remember { mutableStateOf<ResumeSpot?>(null) }
     // Try again: load the same file afresh, from where it was.
@@ -555,7 +528,7 @@ fun PlayerScreen(
             resume.leave(before, playback.positionMs, playback.durationMs)
         }
         val wasAt = playback.positionMs
-        playback.reset()
+        if (!playback.resetForPlayer(player != null)) return@LaunchedEffect
         val p = player ?: return@LaunchedEffect
         playingKey = key
         if (mediaUrl == null) {

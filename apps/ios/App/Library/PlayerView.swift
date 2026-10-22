@@ -383,6 +383,7 @@ private struct PostPage: View {
     @State private var original = false
     /// "Reply to Ana" is up.
     @State private var replying = false
+    @State private var replyHold = PlaybackHold()
     /// The face was tapped: the bottom row shows who's on this one.
     @State private var whoOpen = false
 
@@ -444,8 +445,13 @@ private struct PostPage: View {
         }
         .onChange(of: replying) { _, open in
             // The video waits while you answer, so the reply lands on this post.
-            guard post.plays, onScreen else { return }
-            if open { playback.stop() } else { playback.resume() }
+            if open {
+                guard post.plays, onScreen else { return }
+                replyHold.open(post: post.key, playing: !playback.paused)
+                playback.stop()
+            } else if replyHold.close(post: onScreen ? post.key : nil) {
+                playback.resume()
+            }
         }
         .sheet(isPresented: $replying) {
             if let sender = WhyChip.face(post), let reply {

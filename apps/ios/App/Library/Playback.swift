@@ -19,6 +19,8 @@ final class Playback: ObservableObject {
     private var choicesWatch: NSObjectProtocol?
     @Published private(set) var paused = false
     @Published private(set) var ready = false
+    /// Retry keeps the post's identity but starts a new loading deadline.
+    @Published private(set) var loadAttempt = UUID()
     /// Why it can't play, in the server's words when it gave any.
     @Published private(set) var problem: String?
     /// What kind of can't-play it is (board 14.8 / 14.9).
@@ -46,6 +48,7 @@ final class Playback: ObservableObject {
     /// A video finished with Repeat off.
     var onEnded: () -> Void = {}
     /// The post on screen (`platform:id`), for picking up where you left off.
+    private let resumes = ResumeStore()
     private var postKey: String?
     /// A long post you left part-way: it waits, paused, for Resume or Start over.
     @Published private(set) var resumeOffer: ResumeStore.Spot?
@@ -147,8 +150,9 @@ final class Playback: ObservableObject {
             return
         }
         leaveCurrent()
+        loadAttempt = UUID()
         postKey = url == nil ? nil : key
-        resumeOffer = postKey.flatMap(ResumeStore.spot(for:))
+        resumeOffer = postKey.flatMap(resumes.spot(for:))
         currentURL = url
         atEnd = false
         problem = nil
@@ -175,7 +179,7 @@ final class Playback: ObservableObject {
             Task { @MainActor in
                 guard let self else { return }
                 // Watched to the end: nothing to pick up next time.
-                if let key = self.postKey { ResumeStore.forget(key) }
+                if let key = self.postKey { self.resumes.forget(key) }
                 if self.repeatOne {
                     self.replay()
                 } else {
@@ -207,7 +211,7 @@ final class Playback: ObservableObject {
     func startOver() {
         guard resumeOffer != nil else { return }
         resumeOffer = nil
-        if let key = postKey { ResumeStore.forget(key) }
+        if let key = postKey { resumes.forget(key) }
         seek(to: 0)
         paused = false
         player.play()
@@ -216,7 +220,7 @@ final class Playback: ObservableObject {
     /// Remember where you are in the post on screen (leaving it, or the app).
     private func leaveCurrent() {
         guard let key = postKey, resumeOffer == nil, currentURL != nil, duration > 0 else { return }
-        ResumeStore.leave(key, at: time, of: duration)
+        resumes.leave(key, at: time, of: duration)
     }
 
     /// Load the same file again (its copy has just been kept, or Try again),

@@ -1,6 +1,8 @@
 package com.adhx.share.library
 
 import android.content.Context
+import com.adhx.share.data.ConnectionStore
+import java.security.MessageDigest
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -26,8 +28,6 @@ import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.PrimaryButton
 import com.adhx.share.ui.SerifFamily
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.MapSerializer
-import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import java.time.Instant
 import java.time.ZoneId
@@ -93,47 +93,59 @@ object Resume {
         "You were ${clock(spot.positionMs)} into this, ${whenWords(spot.atMs, nowMs, zone)}."
 }
 
-/** The spots, on this phone only (nothing goes to the server). */
+/** One bounded, credential-scoped history. Legacy unscoped records are never adopted. */
+@Serializable
+internal data class ResumeRecord(val scope: String, val spots: Map<String, ResumeSpot>)
+
+/** Shared by the preference adapter and JVM regressions, including late old-player writes. */
+internal class ResumeHistory(
+    private val scope: String?,
+    private val currentScope: () -> String?,
+    private val read: () -> ResumeRecord?,
+    private val write: (ResumeRecord) -> Unit,
+) {
+    private fun spots(): Map<String, ResumeSpot> =
+        if (scope != null && scope == currentScope()) read()?.takeIf { it.scope == scope }?.spots.orEmpty() else emptyMap()
+
+    fun leave(post: String, positionMs: Long, durationMs: Long, nowMs: Long) {
+        if (scope == null || scope != currentScope() || !Resume.counts(durationMs)) return
+        val next = spots().toMutableMap()
+        val spot = Resume.spotFor(positionMs, durationMs, nowMs)
+        if (spot == null) next.remove(post) else next[post] = spot
+        write(ResumeRecord(scope, Resume.tidy(next, nowMs)))
+    }
+
+    fun spot(post: String, nowMs: Long): ResumeSpot? = spots()[post]?.takeIf { nowMs - it.atMs < Resume.KEEP_MS }
+
+    fun forget(post: String) {
+        if (scope == null || scope != currentScope()) return
+        write(ResumeRecord(scope, spots() - post))
+    }
+}
+
+/** The spots, on this phone only. The credential itself is never persisted here. */
 class ResumeStore private constructor(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("adhx.resume", Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
-    private val serializer = MapSerializer(String.serializer(), ResumeSpot.serializer())
-
-    private fun read(): Map<String, ResumeSpot> = try {
-        prefs.getString(KEY, null)?.let { json.decodeFromString(serializer, it) } ?: emptyMap()
-    } catch (e: Exception) {
-        emptyMap()
+    private val connections = ConnectionStore.get(context)
+    private fun scope(): String? = connections.current()?.let {
+        MessageDigest.getInstance("SHA-256").digest((it.server + "|" + it.key).toByteArray())
+            .joinToString("") { byte -> "%02x".format(byte) }
     }
+    private val history = ResumeHistory(
+        scope(), ::scope,
+        read = { runCatching { prefs.getString(KEY, null)?.let { json.decodeFromString(ResumeRecord.serializer(), it) } }.getOrNull() },
+        write = { prefs.edit().putString(KEY, json.encodeToString(ResumeRecord.serializer(), it)).apply() },
+    )
 
-    private fun write(spots: Map<String, ResumeSpot>) {
-        prefs.edit().putString(KEY, json.encodeToString(serializer, Resume.tidy(spots, System.currentTimeMillis()))).apply()
-    }
-
-    /** Remember where you are in [post], or forget it near the start or the end. */
-    fun leave(post: String, positionMs: Long, durationMs: Long) {
-        if (!Resume.counts(durationMs)) return
-        val spots = read().toMutableMap()
-        val spot = Resume.spotFor(positionMs, durationMs, System.currentTimeMillis())
-        if (spot == null) spots.remove(post) else spots[post] = spot
-        write(spots)
-    }
-
-    fun spot(post: String): ResumeSpot? =
-        read()[post]?.takeIf { System.currentTimeMillis() - it.atMs < Resume.KEEP_MS }
-
-    fun forget(post: String) {
-        val spots = read()
-        if (post in spots) write(spots - post)
-    }
+    fun leave(post: String, positionMs: Long, durationMs: Long) =
+        history.leave(post, positionMs, durationMs, System.currentTimeMillis())
+    fun spot(post: String): ResumeSpot? = history.spot(post, System.currentTimeMillis())
+    fun forget(post: String) = history.forget(post)
 
     companion object {
         private const val KEY = "spots"
-
-        @Volatile
-        private var instance: ResumeStore? = null
-
-        fun get(context: Context): ResumeStore =
-            instance ?: synchronized(this) { instance ?: ResumeStore(context).also { instance = it } }
+        fun get(context: Context): ResumeStore = ResumeStore(context.applicationContext)
     }
 }
 

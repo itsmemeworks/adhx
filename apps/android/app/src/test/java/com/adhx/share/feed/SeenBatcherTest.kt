@@ -94,4 +94,27 @@ class SeenBatcherTest {
         seen.onStage(ref(9), 0, now = 2_200) // index 0 of the new feed is not "past" 4
         assertEquals(listOf(ref(1)), seen.drain())
     }
+    @Test
+    fun freshSendOfPreviouslyWatchedPostCanBeAcknowledgedAgain() {
+        val seen = SeenBatcher()
+        seen.mark(ref(1))
+        assertEquals(listOf(ref(1)), seen.drain())
+        seen.newSession(10_000)
+        seen.onStage(ref(1), 0, 10_000)
+        seen.tick(12_100)
+        assertEquals(listOf(ref(1)), seen.drain())
+        assertTrue("x:1" in seen.counted)
+    }
+
+    @Test
+    fun replacementSessionKeepsPendingRetriesButCredentialChangeDropsThem() {
+        val seen = SeenBatcher()
+        seen.mark(ref(1))
+        seen.newSession(0)
+        assertEquals(listOf(ref(1)), seen.drain())
+        seen.mark(ref(2))
+        seen.clear()
+        assertEquals(0, seen.waiting)
+        assertTrue(seen.counted.isEmpty())
+    }
 }

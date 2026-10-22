@@ -499,10 +499,10 @@ reactions?: [{ id, saver, emoji?, text?, at }] }`, polled every 5 s while
 
 - **Pick up where you left off** (board 14.2): a video or sound of a minute or
   more that you leave part-way (not in its first or last 15 s) is remembered
-  on the phone (never sent anywhere; 300 posts, 30 days). When it comes round
+  on the phone for this server and phone credential (never sent anywhere; 300 posts, 30 days). Signing out clears the positions; a new account never adopts old or unscoped history. When it comes round
   again in any player it waits, paused, under "Pick up where you left off? /
   You were 12:40 into this, yesterday." with **Resume from 12:40** and
-  **Start over**. Watching to the end forgets it.
+  **Start over**. Watching to the end forgets it. Releasing the Android decoder in the background keeps the current position for its replacement.
 - **Up next everywhere** (14.3, 14.4): channels and search show where you
   are on the bottom row ("3 of 24") and it opens Up next
   as one list: the channel newest first, the search best match first with
@@ -515,7 +515,7 @@ reactions?: [{ id, saver, emoji?, text?, at }] }`, polled every 5 s while
   (`POST /api/app/reactions`), so Ana sees it float up when she next watches
   it and in Reactions. A post whose newest reaction from someone else is less
   than a week old says so above the bottom row: "Pete replied · 2m", "Pete
-  reacted 😂 · 2m".
+  reacted 😂 · 2m". Fresh refreshes remove obsolete reply labels. Reply pauses a playing video and restores that state on close; an already paused video stays paused.
 - **Can't play** (14.8, 14.9): never a spinner that just sits there. A file
   that answers 404/410 (asked with the phone key, so members get the server's
   reason) shows "Can’t play this one here" with the reason, then plays the
@@ -621,7 +621,7 @@ it; on a server without these endpoints (404) the app falls back as noted.
 - `GET /api/app/feed?mode=lineup&cursor&types=…` is Home on both phones: the
   lineup, always in the same order. **Just saved** (your people's posts you
   haven't seen, saved or sent to you since you last looked: the newest view
-  before a 30-minute gap, at most two days back; the last day if you've never
+  before a 30-minute gap (including replay-only visits), at most two days back; the last day if you've never
   looked), then **Not seen yet** (the rest of the last 14 days), both newest
   first, then **For you**: posts others saved and you didn't (older unseen
   ones first, then ones you've watched), closest to what you keep, each with

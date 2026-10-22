@@ -6,7 +6,7 @@ import com.adhx.share.net.PostRef
  * Which feed posts you've seen, sent to `POST /api/app/seen` in batches.
  *
  * A post counts as seen once it has been on stage for [dwellMs], or as soon
- * as you swipe past it to a later one. Each post is sent once; a batch that
+ * as you swipe past it to a later one. Each post is sent once per feed session; a batch that
  * didn't get through goes back in the queue. No clock or threads of its own:
  * the caller passes the time and decides when to [drain], which keeps it
  * testable.
@@ -80,6 +80,20 @@ class SeenBatcher(
         tick(now)
         stage = null
         stageIndex = -1
+    }
+
+    /** A replacement lineup may contain a newly sent copy of an already-watched post. */
+    fun newSession(now: Long) {
+        leaveStage(now)
+        done.clear()
+    }
+
+    /** Credentials changed: never hand an old account's pending batch to a new one. */
+    fun clear() {
+        stage = null
+        stageIndex = -1
+        done.clear()
+        pending.clear()
     }
 
     private fun key(post: PostRef) = "${post.platform}:${post.id}"

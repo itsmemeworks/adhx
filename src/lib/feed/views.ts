@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm'
 import { POST_ID_PATTERN } from '@/lib/platform/networks'
-import { db } from '@/lib/db'
-import { postViews } from '@/lib/db/schema'
+import { db, runInTransaction } from '@/lib/db'
+import { postViews, userPreferences } from '@/lib/db/schema'
 import { markSendsSeen } from '@/lib/sends/sends'
 
 /**
@@ -48,15 +48,55 @@ export function parseViewBody(body: unknown): { posts: PostRef[] } | { error: st
 export function markSeen(userId: string, posts: PostRef[], now = new Date()): void {
   if (!userId || posts.length === 0) return
   const seenAt = now.toISOString()
-  db.insert(postViews)
-    .values(posts.map((p) => ({ userId, platform: p.platform, postId: p.id, seenAt })))
-    .onConflictDoNothing()
-    .run()
-  markSendsSeen(userId, posts, now)
+  runInTransaction(() => {
+    db.insert(postViews)
+      .values(posts.map((p) => ({ userId, platform: p.platform, postId: p.id, seenAt })))
+      .onConflictDoNothing()
+      .run()
+    markSendsSeen(userId, posts, now)
+    const before = readSitting(userId)
+    const at = now.getTime()
+    const sitting = {
+      at: Math.max(at, before?.at ?? at),
+      previous: before
+        ? at - before.at >= SITTING_GAP_MS
+          ? before.at
+          : before.previous
+        : lastLookedAt(userId, at),
+    }
+    db.insert(userPreferences)
+      .values({ userId, key: SITTING_KEY, value: JSON.stringify(sitting), updatedAt: seenAt })
+      .onConflictDoUpdate({
+        target: [userPreferences.userId, userPreferences.key],
+        set: { value: JSON.stringify(sitting), updatedAt: seenAt },
+      })
+      .run()
+  })
 }
 
 /** A pause this long between posts seen ends a sitting. */
 export const SITTING_GAP_MS = 30 * 60_000
+const SITTING_KEY = 'feed.sitting'
+
+/** Two timestamps per member, including replay-only visits; no unbounded view log. */
+function readSitting(userId: string): { at: number; previous: number | null } | null {
+  const row = db
+    .select({ value: userPreferences.value })
+    .from(userPreferences)
+    .where(and(eq(userPreferences.userId, userId), eq(userPreferences.key, SITTING_KEY)))
+    .get()
+  try {
+    const s = JSON.parse(row?.value ?? 'null')
+    return s &&
+      typeof s.at === 'number' &&
+      Number.isFinite(s.at) &&
+      (s.previous === null || (typeof s.previous === 'number' && Number.isFinite(s.previous)))
+      ? s
+      : null
+  } catch {
+    return null
+  }
+}
 
 /**
  * When the viewer last looked, before this sitting: the newest post they saw
@@ -65,6 +105,9 @@ export const SITTING_GAP_MS = 30 * 60_000
  */
 export function lastLookedAt(userId: string, now = Date.now()): number | null {
   if (!userId) return null
+  const sitting = readSitting(userId)
+  if (sitting) return now - sitting.at >= SITTING_GAP_MS ? sitting.at : sitting.previous
+  // Existing libraries have no sitting record until their next view.
   const rows = db
     .select({ seenAt: postViews.seenAt })
     .from(postViews)
