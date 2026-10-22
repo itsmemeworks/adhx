@@ -27,7 +27,7 @@ vi.mock('@/lib/keep/fetch', async (importOriginal) => {
   return {
     ...actual,
     downloadTo: vi.fn(async (url: string, _hosts: string[], file: string) => {
-      if (url.includes('video.twimg.com')) throw new actual.TakenDown()
+      if (new URL(url).hostname === 'video.twimg.com') throw new actual.TakenDown()
       fs.writeFileSync(file, 'jpg')
     }),
   }
