@@ -145,9 +145,6 @@ struct PreparingOverlay: View {
     var removed: () -> Void = {}
     @State private var status: StatusResult?
     @State private var retriedKept = false
-    /// Waiting this long for a first frame, while nothing is being kept, is "can't load".
-    static let patience: UInt64 = 15_000_000_000
-
     private var preparing: Bool {
         guard let s = status?.status else { return false }
         return ["waiting", "keeping", "retrying"].contains(s)
@@ -174,11 +171,11 @@ struct PreparingOverlay: View {
             retriedKept = false
             await follow()
         }
-        .task(id: post.key) {
-            // Never a spinner that just sits there (board 14.9).
-            try? await Task.sleep(nanoseconds: Self.patience)
-            guard !Task.isCancelled, !preparing else { return }
-            playback.gaveUpWaiting()
+        .task(id: PlaybackWait(post: post.key, attempt: playback.loadAttempt, preparing: preparing)) {
+            // Preparation suspends the deadline; retry or finishing preparation
+            // starts a full new wait, even though the post's key is unchanged.
+            await PlaybackWait(post: post.key, attempt: playback.loadAttempt, preparing: preparing)
+                .run { playback.gaveUpWaiting() }
         }
     }
 

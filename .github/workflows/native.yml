@@ -49,12 +49,18 @@ jobs:
           "$RUNNER_TEMP/adhx-live-tests"
       - name: Test queued privacy restoration and concurrent app-extension history
         run: |
-          swiftc -D ADHX_HISTORY_TEST apps/ios/Shared/API.swift apps/ios/Shared/FriendsAPI.swift apps/ios/Shared/Network.swift apps/ios/Shared/NetworkPaths.swift apps/ios/Shared/SVGPath.swift apps/ios/Shared/Storage.swift apps/ios/Tests/QueuedPrivacyTests.swift -o "$RUNNER_TEMP/adhx-privacy-tests"
+          swiftc -D ADHX_HISTORY_TEST apps/ios/Shared/API.swift apps/ios/Shared/FriendsAPI.swift apps/ios/Shared/Network.swift apps/ios/Shared/NetworkPaths.swift apps/ios/Shared/SVGPath.swift apps/ios/Shared/ResumeStore.swift apps/ios/Shared/Storage.swift apps/ios/Tests/QueuedPrivacyTests.swift -o "$RUNNER_TEMP/adhx-privacy-tests"
           "$RUNNER_TEMP/adhx-privacy-tests"
       - name: Test reaction cache isolation and late connection responses
         run: |
           swiftc apps/ios/App/Library/PostReactionsModel.swift apps/ios/Tests/ReactionConnectionTests.swift -o "$RUNNER_TEMP/adhx-reaction-connections"
           "$RUNNER_TEMP/adhx-reaction-connections"
+      - name: Test resume isolation, playback deadlines, Reply pause and fresh-send acknowledgements
+        run: |
+          swiftc apps/ios/Shared/ResumeStore.swift apps/ios/App/Library/PlaybackRecovery.swift apps/ios/Tests/PlaybackRecoveryTests.swift -o "$RUNNER_TEMP/adhx-playback-recovery"
+          "$RUNNER_TEMP/adhx-playback-recovery"
+          swiftc apps/ios/App/Feed/FeedModel.swift apps/ios/Tests/FeedSeenSessionTests.swift -o "$RUNNER_TEMP/adhx-feed-seen"
+          "$RUNNER_TEMP/adhx-feed-seen"
       - name: Build unsigned app and share extension for the simulator
         run: >-
           xcodebuild -project apps/ios/ADHXShare.xcodeproj -scheme "ADHX Share"

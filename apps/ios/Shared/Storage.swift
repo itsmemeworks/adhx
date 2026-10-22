@@ -143,6 +143,7 @@ enum Store {
     static var isConnected: Bool { server != nil && key != nil }
 
     static func connect(server: URL, result: PairResult) {
+        ResumeStore.clear()
         Keychain.save(result.key)
         self.server = server
         lastServer = Links.displayHost(server)
@@ -154,6 +155,7 @@ enum Store {
 
     /// Forgets the key, the list and anything waiting.
     static func disconnect() {
+        ResumeStore.clear()
         Keychain.delete()
         server = nil
         username = nil

@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-22 — Fix nine lineup and phone playback review findings
+
+- Deduplicate recent/older lineup candidates; re-read sender eligibility, names and notes on every cached page.
+- Keep first-seen times intact; record a bounded per-member sitting separately so replay-only visits count.
+- Acknowledge newly sent posts again in each replacement phone feed session; keep pending retries within their account.
+- Scope resume history to the server/credential, discard legacy unscoped positions and clear on disconnect; ignore late old-player writes.
+- Preserve Android position while its decoder is released; renew iOS loading deadlines after retry/preparation and restore the prior pause state after Reply.
+- Clear the iOS reply label on fresh empty/failed refreshes. Add server, production Swift helper/model and Android regressions, including native CI coverage.
+- PR work only: no release, deployment, production data or processing-setting change. Physical-device checks remain separate.
+
 ## 2026-10-22 — Phones: pick up where you left off, Up next everywhere, reply, can't play
 
 - Owner picked boards 14.2, 14.3/14.4, 14.5–14.7 and 14.8/14.9 from page 14 of the design canvas.

@@ -47,7 +47,7 @@ enum TestError: Error { case offline }
     @MainActor static func main() async {
         let post = PostRef(key: "twitter:1")
         func event(_ id: String) -> LiveReactionEvent {
-            LiveReactionEvent(id: id, saver: Saver(username: id), emoji: "😂", text: nil)
+            LiveReactionEvent(id: id, saver: Saver(username: id), emoji: "😂", text: nil, at: ISO8601DateFormatter().string(from: Date()))
         }
         func connect(_ host: String, _ key: String, _ client: FakeClient) {
             Store.server = URL(string: "https://\(host).example")
@@ -68,6 +68,7 @@ enum TestError: Error { case offline }
         first.arrive(post, again: true)
         await settle()
         precondition(first.floating.isEmpty, "failed fresh fetch must not fall back across servers")
+        precondition(first.answer == nil, "cached identity cannot cross connections")
         precondition(b.calls == 1)
         b.result = [event("account-b")]
         first.arrive(post)
@@ -80,10 +81,16 @@ enum TestError: Error { case offline }
         first.arrive(post)
         await settle()
         precondition(first.floating.map(\.event.id) == ["account-c"])
+        precondition(first.answer?.reaction.id == "account-c")
+        c.result = [] // e.g. moderation removed the only visible reaction.
+        first.arrive(post, again: true)
+        await settle()
+        precondition(first.answer == nil, "a fresh empty answer removes the cached reply label")
         c.result = nil
         first.arrive(post, again: true)
         await settle()
         precondition(first.floating.isEmpty, "failed refresh never replays a stale cached answer")
+        precondition(first.answer == nil, "failed refresh never restores a cached reply label")
 
         // In-flight old transport results cannot repopulate memory after disconnect.
         PostReactionsModel.forget()

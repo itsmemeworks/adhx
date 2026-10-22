@@ -105,7 +105,7 @@ export interface BlendPage {
 
 type Candidate = BlendCandidate & { kind: FeedKind }
 type Snapshot = {
-  candidates: Omit<Candidate, 'saves'>[]
+  candidates: Omit<Candidate, 'saves' | 'sent'>[]
   context: BlendContext
   order: string[]
   at: number
@@ -176,7 +176,7 @@ function candidateKeys(
       GROUP BY b.platform, b.id
       ORDER BY MAX(b.processed_at) DESC LIMIT ${FALLBACK_POSTS}
     `)
-    const keys = [...recent, ...older].map((r) => `${r.platform}:${r.id}`)
+    const keys = [...new Set([...recent, ...older].map((r) => `${r.platform}:${r.id}`))]
     const have = new Set(keys)
     return [...[...sent.keys()].filter((k) => !have.has(k)), ...keys]
   }
@@ -629,7 +629,7 @@ export async function blendPage(
     })
     snapshot = {
       order: picks.map((p) => p.key),
-      candidates: candidates.map(({ saves: _saves, ...c }) => c),
+      candidates: candidates.map(({ saves: _saves, sent: _sent, ...c }) => c),
       context,
       at: now,
     }
@@ -646,10 +646,11 @@ export async function blendPage(
   const keys = snapshot.candidates.map((c) => c.key)
   const gone = await goneKeys(keys)
   const saves = savesFor(keys, viewerId)
+  const sends = mode === 'mine' ? new Map<string, IncomingSend[]>() : unseenSendsTo(viewerId)
   const current = snapshot.candidates.flatMap((c) => {
     const list = saves.get(c.key)
     return list?.length && !moderated.value.has(c.key) && !gone.has(c.key)
-      ? [{ ...c, saves: list }]
+      ? [{ ...c, saves: list, sent: sends.get(c.key) }]
       : []
   })
   const refreshed = blend(

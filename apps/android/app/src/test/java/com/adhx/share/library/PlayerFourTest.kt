@@ -108,4 +108,36 @@ class PlayerFourTest {
             assertEquals(404, (api.removeSave("tiktok", "1") as ApiResult.Failed).status)
         }
     }
+    @Test
+    fun resumeHistoryIsScopedAndOldPlayersCannotWriteIntoTheNextAccount() {
+        var scope: String? = "a"
+        var stored: ResumeRecord? = null
+        fun history(captured: String?) = ResumeHistory(captured, { scope }, { stored }, { stored = it })
+        val a = history(scope)
+        a.leave("twitter:one", 120_000, 600_000, now)
+        assertEquals(120_000L, a.spot("twitter:one", now)?.positionMs)
+        scope = "b"
+        val b = history(scope)
+        assertNull(b.spot("twitter:one", now))
+        b.leave("twitter:one", 180_000, 600_000, now)
+        a.leave("twitter:one", 300_000, 600_000, now)
+        a.forget("twitter:one")
+        assertEquals(180_000L, b.spot("twitter:one", now)?.positionMs)
+        scope = null
+        assertNull(b.spot("twitter:one", now))
+    }
+
+    @Test
+    fun releasingTheDecoderDoesNotEraseThePositionNeededOnReturn() {
+        val playback = Playback()
+        playback.positionMs = 300_000
+        playback.durationMs = 600_000
+        assertFalse(playback.resetForPlayer(false)) // ON_STOP: no decoder
+        val carryOn = playback.positionMs
+        assertEquals(300_000L, carryOn)
+        assertTrue(playback.resetForPlayer(true)) // ON_START: prepare new decoder
+        assertEquals(0L, playback.positionMs)
+        assertEquals(300_000L, carryOn) // seek to the captured point, never zero
+    }
+
 }
