@@ -588,7 +588,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
      * "Keep this channel" on a group channel: its posts become one of your
      * channels (saving the ones you hadn't). [onDone] gets what to say.
      */
-    fun keepChannel(onDone: (String) -> Unit) {
+    fun keepChannel(said: (Int) -> String = Copy::keptCount, onDone: (String) -> Unit) {
         val connection = store.current() ?: return
         val now = _channel.value
         if (now.kind != com.adhx.share.net.ChannelKind.GROUP || now.keeping || now.kept != null) return
@@ -603,7 +603,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
                     if (same) _channel.value = current.copy(keeping = false, kept = kept)
                     // It's one of yours now: Channels lists it next time.
                     loadChannels(force = true)
-                    onDone(Copy.keptCount(result.value.added))
+                    onDone(said(result.value.added))
                 }
                 is ApiResult.Failed -> {
                     signedOut(result, connection)
@@ -616,6 +616,43 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
         }
+    }
+
+    /**
+     * Leaving a group channel you kept (its name in the player, tapped again):
+     * your copy of it goes. Says "Left", or why not.
+     */
+    fun leaveChannel(onDone: (String) -> Unit) {
+        val connection = store.current() ?: return
+        val now = _channel.value
+        if (now.kind != com.adhx.share.net.ChannelKind.GROUP || now.keeping || now.kept == null) return
+        _channel.value = now.copy(keeping = true)
+        viewModelScope.launch {
+            val result = AdhxApi(connection).leaveGroupChannel(now.slug)
+            val current = _channel.value
+            val same = current.slug == now.slug && current.kind == now.kind
+            when (result) {
+                is ApiResult.Ok -> {
+                    if (same) _channel.value = current.copy(keeping = false, kept = null)
+                    loadChannels(force = true)
+                    onDone(Copy.LEFT_CHANNEL)
+                }
+                is ApiResult.Failed -> {
+                    signedOut(result, connection)
+                    if (same) _channel.value = current.copy(keeping = false)
+                    onDone(result.message?.takeIf { it.isNotBlank() } ?: Copy.LEAVE_FAILED)
+                }
+                ApiResult.Offline -> {
+                    if (same) _channel.value = current.copy(keeping = false)
+                    onDone(OFFLINE)
+                }
+            }
+        }
+    }
+
+    /** The group channel's name in the player is the toggle: keep it, or leave it once kept. */
+    fun toggleChannel(onDone: (String) -> Unit) {
+        if (_channel.value.kept == null) keepChannel(said = { Copy.KEPT_IN_CHANNELS }, onDone = onDone) else leaveChannel(onDone)
     }
 
     // Live

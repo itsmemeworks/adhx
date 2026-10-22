@@ -2,8 +2,9 @@ import type { CSSProperties, ReactNode } from 'react'
 import { cn } from './cn'
 import { Gob } from './Gob'
 import { Face, Faces, type PersonId } from './People'
-import { Credit, PostMedia, type PostId } from './Post'
-import { Bookmark, Check, Close, Dots, Download, Lock, Search, Video } from './icons'
+import { NetworkIcon } from './NetworkIcon'
+import { Credit, PostMedia, post as postEntry, type PostId } from './Post'
+import { Bookmark, Check, Close, Dots, List, Lock, Search, Smile, Video } from './icons'
 
 /**
  * Device mockups that scale with their frame. Each frame is a size container
@@ -45,7 +46,7 @@ export function PhoneFrame({
   )
 }
 
-/** The phone app's top bar: Gob, New · Channels · Live, search. */
+/** The phone app's top bar: Gob, Home · Channels · Live, search. */
 function PhoneTopBar({ newCount }: { newCount: number }) {
   return (
     <div
@@ -64,7 +65,7 @@ function PhoneTopBar({ newCount }: { newCount: number }) {
           className="relative flex items-center whitespace-nowrap rounded-full bg-nx-cream font-extrabold text-black"
           style={{ height: u(40), padding: `0 ${u(16)}` }}
         >
-          <span>New</span>
+          <span>Home</span>
           <span
             className="absolute flex items-center justify-center rounded-full bg-nx-accent font-extrabold text-black"
             style={{
@@ -105,13 +106,13 @@ function PhoneTopBar({ newCount }: { newCount: number }) {
   )
 }
 
-/** The rail on the right of the phone player: Save, Share, Save to phone, More. */
-function PhoneRail({ saved }: { saved: boolean }) {
+/** The rail on the right of the phone player: React, Save, Share, the network, More. */
+function PhoneRail({ saved, network }: { saved: boolean; network: string }) {
   const button = (icon: ReactNode, on = false) => (
     <span
       className={cn(
-        'flex items-center justify-center rounded-full',
-        on ? 'bg-nx-accent text-black' : 'bg-black/45 text-nx-cream',
+        'flex items-center justify-center rounded-full bg-black/45',
+        on ? 'text-nx-accent' : 'text-nx-cream',
       )}
       style={{ width: u(52), height: u(52) }}
     >
@@ -119,43 +120,43 @@ function PhoneRail({ saved }: { saved: boolean }) {
     </span>
   )
   return (
-    <div className="absolute flex flex-col" style={{ right: u(12), bottom: u(40), gap: u(14) }}>
+    <div className="absolute flex flex-col" style={{ right: u(12), bottom: u(92), gap: u(10) }}>
+      {button(<Smile size={u(24)} />)}
       {button(<Bookmark size={u(22)} />, saved)}
       {button(<Video size={u(22)} />)}
-      {button(<Download size={u(22)} />)}
+      {button(<NetworkIcon platform={network} className="h-[1.4em] w-[1.4em]" />)}
       {button(<Dots size={u(22)} />)}
     </div>
   )
 }
 
 /**
- * The phone app's player: a post with faces, why and the rail. A wide video
- * sits letterboxed over a blurred copy of itself, as in the app.
+ * The phone app's player (layout C): the post, the rail, and one row along
+ * the bottom with the first saver's face, the line and where you are. A wide
+ * video sits letterboxed over a blurred copy of itself, as in the app.
  */
 export function PlayerScreen({
   post,
   savers,
-  savedLine,
-  ago,
-  kind,
-  caption,
   newCount,
+  count,
   saved = false,
   progress = 0.4,
-  why,
+  reason,
 }: {
   post: PostId
+  /** Who saved it, first saver first. */
   savers: PersonId[]
-  savedLine: string
-  ago?: string
-  /** What it is, after the credit: "Video", "4 photos". */
-  kind: string
-  caption?: string
   newCount: number
+  /** Where you are: "2 of 6". */
+  count: string
   saved?: boolean
   progress?: number
-  why?: ReactNode
+  /** The one reason faces can't say: "Ana sent you this". */
+  reason?: ReactNode
 }) {
+  const [first] = savers
+  const more = savers.length - 1
   return (
     <div className="absolute inset-0 text-white" style={{ fontSize: u(15) }}>
       <PostMedia id={post} fit="contain" className="absolute inset-0 h-full w-full" />
@@ -166,61 +167,77 @@ export function PlayerScreen({
       <div
         className="absolute inset-x-0 bottom-0"
         style={{
-          height: u(420),
+          height: u(320),
           background: 'linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.92))',
         }}
       />
       <PhoneTopBar newCount={newCount} />
-      {why && (
+      {reason && (
         <span
           className="absolute flex items-center whitespace-nowrap rounded-full border border-white/15 bg-black/55 font-bold text-nx-cream"
           style={{
             left: u(16),
-            bottom: u(caption ? 196 : 150),
+            bottom: u(92),
             height: u(40),
             padding: `0 ${u(14)} 0 ${u(10)}`,
             gap: u(8),
             fontSize: u(14),
           }}
         >
-          {why}
+          {reason}
         </span>
       )}
+      <PhoneRail saved={saved} network={postEntry(post).network} />
       <div
-        className="absolute flex flex-col"
-        style={{ left: u(16), right: u(84), bottom: u(caption ? 34 : 50), gap: u(8) }}
+        className="absolute flex items-center"
+        style={{ left: u(16), right: u(16), bottom: u(30), height: u(44), gap: u(12) }}
       >
-        <div className="flex items-center" style={{ gap: u(10) }}>
-          <Faces who={savers} size={u(30)} />
-          <span className="whitespace-nowrap font-extrabold">{savedLine}</span>
-          {ago && (
-            <span className="whitespace-nowrap text-nx-soft" style={{ fontSize: u(14) }}>
-              {`· ${ago}`}
-            </span>
-          )}
-        </div>
-        <span
-          className="flex min-w-0 items-center whitespace-nowrap text-nx-soft"
-          style={{ fontSize: u(14), gap: u(5) }}
-        >
-          <Credit id={post} className="font-bold text-nx-cream" />
-          <span>{`· ${kind}`}</span>
-        </span>
-        {caption && (
-          <p className="m-0" style={{ fontSize: u(16), lineHeight: 1.4 }}>
-            {caption}
-          </p>
+        {first && (
+          <span
+            className="relative flex shrink-0 items-center justify-center"
+            style={{ width: u(44), height: u(44) }}
+          >
+            <Face who={first} size={u(34)} ring="#000" />
+            {more > 0 && (
+              <span
+                className="absolute flex items-center justify-center rounded-full bg-nx-cream font-extrabold text-black"
+                style={{
+                  right: u(-2),
+                  bottom: u(0),
+                  minWidth: u(18),
+                  height: u(18),
+                  padding: `0 ${u(4)}`,
+                  fontSize: u(10),
+                  boxShadow: '0 0 0 2px #000',
+                }}
+              >
+                {`+${more}`}
+              </span>
+            )}
+          </span>
         )}
-      </div>
-      <PhoneRail saved={saved} />
-      <div
-        className="absolute rounded-full bg-white/20"
-        style={{ left: u(16), right: u(16), bottom: u(16), height: u(3) }}
-      >
-        <div
-          className="h-full rounded-full bg-nx-cream"
-          style={{ width: `${Math.round(progress * 100)}%` }}
-        />
+        <span className="relative flex-1 rounded-full bg-white/25" style={{ height: u(4) }}>
+          <span
+            className="absolute inset-y-0 left-0 rounded-full bg-nx-cream"
+            style={{ width: `${Math.round(progress * 100)}%` }}
+          />
+          <span
+            className="absolute rounded-full bg-nx-cream shadow-[0_1px_4px_rgba(0,0,0,0.5)]"
+            style={{
+              left: `calc(${Math.round(progress * 100)}% - ${u(7)})`,
+              top: u(-5),
+              width: u(14),
+              height: u(14),
+            }}
+          />
+        </span>
+        <span
+          className="flex shrink-0 items-center whitespace-nowrap rounded-full border border-white/15 bg-black/55 font-extrabold text-nx-cream"
+          style={{ height: u(36), padding: `0 ${u(10)}`, gap: u(6), fontSize: u(13) }}
+        >
+          <List size={u(14)} className="text-nx-accent" />
+          <span>{count}</span>
+        </span>
       </div>
     </div>
   )
@@ -424,7 +441,7 @@ export function WebFrame({ className }: { className?: string }) {
                 </span>
               </span>
               <span className="flex" style={{ gap: u(2) }}>
-                {pill('New', true)}
+                {pill('Home', true)}
                 {pill(
                   <>
                     <span

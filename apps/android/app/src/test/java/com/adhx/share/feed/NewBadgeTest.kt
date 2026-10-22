@@ -34,8 +34,8 @@ class NewBadgeTest {
 
     @Test
     fun describesTheBadge() {
-        assertEquals("New, 7 left", Copy.newTabDescription("7"))
-        assertEquals("New, 99 or more left", Copy.newTabDescription("99+"))
-        assertEquals("New", Copy.newTabDescription(null))
+        assertEquals("Home, 7 not seen yet", Copy.newTabDescription("7"))
+        assertEquals("Home, 99 or more not seen yet", Copy.newTabDescription("99+"))
+        assertEquals("Home", Copy.newTabDescription(null))
     }
 }

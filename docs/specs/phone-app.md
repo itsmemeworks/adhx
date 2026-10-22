@@ -453,13 +453,14 @@ width, height, durationMs }], article, savers, isPrivate }`
   Shared lately `posterUrl`) carry a `k=` file token, because a video player
   can't send the phone key: keep the query string when resolving them.
 - `sourceUrl` is the post on its own network ("Open original").
-- `why` (feed items only): the feed's reason, shown as the why chip.
+- `why` (feed items only): the feed's reason, shown over the bottom row when
+  the faces can't say it (`sent`, `like`) and always in Why this one.
 
 ### The friends feed (`docs/specs/friends-feed.md` → Phone API additions)
 
 Apps decode these loosely: unknown fields are ignored, one unreadable item is
 skipped rather than failing the page, and a 404 means "this ADHX doesn't have
-it yet" (New falls back to My saves, Channels and Live say the server needs
+it yet" (Home falls back to My saves, Channels and Live say the server needs
 an update).
 
 - `GET /api/app/feed?mode=new|everyone|friends|mine&types=video,photo,text,article&cursor` →
@@ -476,7 +477,7 @@ nothingYet, total, types, waiting, hidden }`. `types` defaults to
   filter. On a 404 the phone keeps it on its own.
 - `POST /api/app/seen` `{ posts: [{ platform, id }] }` (at most 50) → 204. A
   post counts as seen after 2 s on screen or when you swipe past it; apps send
-  them in batches (10, or 5 s after the last, or on leaving New or the app).
+  them in batches (10, or 5 s after the last, or on leaving Home or the app).
 - `GET /api/app/channels` → `{ group: [{ slug, name, size, covers, savers? }],
 friends: [{ username, name, avatarUrl, size, newCount, covers }],
 mine: [{ slug, name, size, covers }] }`. `covers` are addresses (or posts to
@@ -502,8 +503,8 @@ reactions?: [{ id, saver, emoji?, text?, at }] }`, polled every 5 s while
   again in any player it waits, paused, under "Pick up where you left off? /
   You were 12:40 into this, yesterday." with **Resume from 12:40** and
   **Start over**. Watching to the end forgets it. Releasing the Android decoder in the background keeps the current position for its replacement.
-- **Up next everywhere** (14.3, 14.4): channels and search show a pill above
-  the byline ("Ana’s saves · 3 of 24", "“synth” · 1 of 16") that opens Up next
+- **Up next everywhere** (14.3, 14.4): channels and search show where you
+  are on the bottom row ("3 of 24") and it opens Up next
   as one list: the channel newest first, the search best match first with
   how each matched ("On screen", "Said in the video", …). Dots mark posts you
   haven't seen (`isNew`), ones left behind in this player are dimmed, Now
@@ -513,7 +514,7 @@ reactions?: [{ id, saver, emoji?, text?, at }] }`, polled every 5 s while
   words (40 characters); it goes as a reaction on that post
   (`POST /api/app/reactions`), so Ana sees it float up when she next watches
   it and in Reactions. A post whose newest reaction from someone else is less
-  than a week old says so above the byline: "Pete replied · 2m", "Pete
+  than a week old says so above the bottom row: "Pete replied · 2m", "Pete
   reacted 😂 · 2m". Fresh refreshes remove obsolete reply labels. Reply pauses a playing video and restores that state on close; an already paused video stays paused.
 - **Can't play** (14.8, 14.9): never a spinner that just sits there. A file
   that answers 404/410 (asked with the phone key, so members get the server's
@@ -526,15 +527,16 @@ reactions?: [{ id, saver, emoji?, text?, at }] }`, polled every 5 s while
   the same point) and **Skip it**.
 
 - **Home** has one row on top: Gob (opens Settings, where Shared lately now
-  lives), the **New · Channels · Live** tabs, and Search everyone's saves.
-  New carries a small yellow badge over its top-right corner with the unseen
+  lives), the **Home · Channels · Live** tabs, and Search everyone's saves.
+  Home carries a small yellow badge over its top-right corner with the unseen
   posts left ("7", "20+" while more pages are coming, "99+" at most); the tab
   stays sized for its label.
-  - **New** (the default) plays `/api/app/feed?mode=new` in the player below.
-    A why chip sits above the byline; it (and **Why this one** in More) opens
+  - **Home** (the default) plays the lineup in the player below. "Ana sent
+    you this" and For you's "Like … you kept" sit above the bottom row; they
+    (and **Why this one** in More) open
     a sheet with the reasons and **Whose saves: Everyone · Friends only ·
     Mine** (modes `new`/`everyone`, `friends`, `mine`), and **Filter**.
-    Tapping New again opens **What's in your feed**: switches for Videos,
+    Tapping Home again opens **What's in your feed**: switches for Videos,
     Photos, Text posts and Articles (videos and photos by default; one always
     stays on), Whose saves, "12 text posts and 3 articles are waiting.
     They'll still be in search and channels." and **Show videos and photos**.
@@ -616,7 +618,7 @@ it; on a server without these endpoints (404) the app falls back as noted.
 
 ### API
 
-- `GET /api/app/feed?mode=lineup&cursor&types=…` is New on both phones: the
+- `GET /api/app/feed?mode=lineup&cursor&types=…` is Home on both phones: the
   lineup, always in the same order. **Just saved** (your people's posts you
   haven't seen, saved or sent to you since you last looked: the newest view
   before a 30-minute gap (including replay-only visits), at most two days back; the last day if you've never
@@ -645,7 +647,7 @@ it; on a server without these endpoints (404) the app falls back as noted.
   Show more from Ana" (board j2-2), the same stored choice as the web's
   `/api/feed/weights` (1 more, -1 less, 0 back to normal, which drops the
   name). Only other members: yourself or no such member is 404
-  `no_member`; a bad body is 400 `bad_weight`. New's `whyReasons` then say
+  `no_member`; a bad body is 400 `bad_weight`. Home's `whyReasons` then say
   "You asked for more from Ana".
 - `POST /api/app/seen { posts: [{ platform, id }] }` → 204. The app sends at
   most 50 at a time, as soon as 10 are waiting, else within 5 s, and when it
@@ -735,11 +737,11 @@ freeBytes, processing, remoteConnected } }`. `thumbnail` (like Shared lately's
   → `{ "sent": ["ana"], "skipped": [ { "username": "ben", "reason": "has" | "sent" | "unknown" } ] }`.
   60 a minute per user, then 429 `busy` with `Retry-After`; 403 `private`
   for a post only you keep privately; 400 `bad_request` for a bad body.
-- New's sent posts: an unseen send leads New with the reason
+- Home's sent posts: an unseen send leads Home with the reason
   `{ "kind": "sent", "text": "Pete sent you this", "username": "pete" }`
   (plus `note` when the sender wrote one) until it's seen (`/api/app/seen`).
   With a note, the item's saver for Pete carries it as `note`. Treat an
-  unknown `kind` as a plain reason. The server sends it whatever kinds New
+  unknown `kind` as a plain reason. The server sends it whatever kinds Home
   asks for; an app that also filters by kind on the phone must let an item
   with a `sent` reason through (both apps do: `sentToYou`).
 - The `like` reason gains `"post": { "platform", "id", "posterUrl" }`: your
@@ -761,36 +763,46 @@ freeBytes, processing, remoteConnected } }`. `thumbnail` (like Shared lately's
   the foreground poll and a 15-minute WorkManager check (POST_NOTIFICATIONS
   on the first bell tap).
 - `POST /api/app/channels/group/{slug}/keep` → `{ "tag": "food-youll-cook",
-"url": "/t/pete/food-youll-cook", "added": 37 }` ("Keep this channel",
-  board j6-2; not made public; posts you haven't saved are saved for you).
-  `GET /api/app/channels/group/{slug}` adds `"kept": { "tag", "url" } | null`;
-  once kept the button reads "Kept · Open".
+"url": "/t/pete/food-youll-cook", "added": 37 }` (keeping it, board 15.10;
+  not made public; posts you haven't saved are saved for you).
+  `GET /api/app/channels/group/{slug}` adds `"kept": { "tag", "url" } | null`.
+  `DELETE` on the same address leaves it → `{ "removed": 12 }`: the tag comes
+  off your saves, and the saves keeping it added (and nothing else tagged)
+  go; 404 `not_found` for a channel you never kept.
+- `GET /api/app/who?platform&id` → who's on a post, for the bottom row's
+  faces (board 15.9): `{ "savers": [Saver], "reactions": [{ id, emoji, text,
+at, saver }], "watched": [{ username, name, avatarUrl, at, isYou }] }`.
+  Only members who can see the post are listed (banned ones never), newest
+  first, at most 50 watchers; 404 `not_found` when you can't see it, 400
+  `bad_post` for a bad address. Watching counts the way Home's seen does, so
+  people on your ADHX who can see a post can see that you watched it.
 - Faces: `avatarUrl` is `/api/files/avatar/<hash>`, members only, so the app
   loads it with `Authorization: Bearer <phone key>` (only to its own server)
   and keeps it in memory; the address changes with each new picture.
 
-### Home: New · Channels · Live
+### Home: Home · Channels · Live
 
 - **One light row on top**: Gob (opens Settings) on the left, the tabs in the
-  middle, Search on the right. New carries a small yellow badge over its
+  middle, Search on the right. Home carries a small yellow badge over its
   top-right corner with how many unseen posts are left ("7", "19+" while
   more pages may come, capped at "99+"). Shared lately moved into Settings.
-- **New** (the default) plays the lineup in the player, so opening the app
+- **Home** (the default) plays the lineup in the player, so opening the app
   always plays the newest first. A strip under the tabs shows its parts
   ("Just saved 2 · Not seen yet 6 · For you"; empty parts are left out), the
-  one playing lit and filling as you go. A pill above the byline says where
-  you are ("Just saved · 1 of 2") and opens **Up next**: the lineup in its
+  one playing lit and filling as you go. The count on the bottom row says
+  where you are ("1 of 2") and opens **Up next**: the lineup in its
   three parts, a yellow dot on each post you haven't watched, Now playing
   highlighted, who saved each one (or "Ana sent you this", which is why it's
   that high), For you with its reason; tap a post to play from there. The
-  New badge counts the Just saved and Not seen yet posts you haven't watched
-  (skipping ahead doesn't count them). Back after 30 minutes away, New starts
+  Home badge counts the Just saved and Not seen yet posts you haven't watched
+  (skipping ahead doesn't count them). Back after 30 minutes away, Home starts
   again at the top of the lineup. A post counts as seen
   after 2 s on stage, or as soon as you swipe past it (not when you go back).
-  The why chip sits over the byline; tapping it opens **Why this one**: the
+  "Ana sent you this" (with **Reply**) and For you's "Like … you kept" sit
+  over the bottom row; tapping one opens **Why this one**: the
   post, every reason, and Whose saves (Everyone · Friends only · Mine:
   Everyone is `new`, the others switch the mode) and Filter.
-- **What's in your feed**: tap New again (or Filter in Why this one) for
+- **What's in your feed**: tap Home again (or Filter in Why this one) for
   switches for Videos, Photos, Text posts and Articles (videos and photos by
   default; at least one stays on) and Whose saves. The feed starts over once,
   when the sheet closes. The feed ends on "You're
@@ -814,8 +826,27 @@ freeBytes, processing, remoteConnected } }`. `thumbnail` (like Shared lately's
   post (see Reactions on any post) and replay when someone watches it later. Ones that arrive together rise 0.7 s apart.
 - **Faces**: up to 3 overlapping avatars (their photo, or their initial on
   their colour) and "Ana and Ben saved this" / "Ana and 3 others saved this"
-  on the player byline and search tiles. Tapping a face opens that friend's
-  channel (yours opens My saves).
+  on search tiles. Tapping a face opens that friend's channel (yours opens
+  My saves).
+- **The player** (layout C, boards 15.7–15.10), the same everywhere:
+  - The rail on the right: React, Save, Share, the network's mark (the
+    original post) and More. Save to phone is in More.
+  - One bottom row, 44 tall and clear of the home bar: the first saver's
+    face ("+2" when others saved it too), the line (drag it through a video,
+    or watch a photo's time go), and where you are in the queue ("5 of 51"),
+    which opens Up next.
+  - Tapping the face swaps the row for ✕ and everyone on the post
+    (`/api/app/who`), scrolling sideways, one face each, with a sticker in a
+    fixed corner: saved bottom-right, their reaction top-right, watched
+    bottom-left. Tapping someone opens their channel; ✕ or the next post
+    puts the line back.
+  - Notes float up first, like any words said on the post: the serif, in a
+    rounded bubble of their colour beside their face. No byline, note bubble
+    or why chip; the only reasons shown are the ones faces can't say ("Ana
+    sent you this" with Reply, For you's "Like … you kept").
+  - A From everyone channel's name, beside Close, is the keep toggle: "+
+    Coding with AI" keeps it ("Kept · in your channels"), "✓ Coding with
+    AI" leaves it ("Left").
 - **Just for me**: a switch on the share card (with "Only you will see this
   save. It's still kept and searchable." when on) and in More. Flipped
   while the save is on its way, its intent is persisted before publication; a link
@@ -845,7 +876,7 @@ Gob opens Settings, in this order:
   `POST /api/app/invites` and opens the system share sheet, and lists your
   links still waiting with Revoke; Channels' Invite opens the same sheet),
   **What's in your feed**
-  (the New filter sheet), **Just for me by default**, **Sound on by
+  (the Home filter sheet), **Just for me by default**, **Sound on by
   default** (videos start with sound), **What your ADHX is doing** ("3 on
   their way · 1 needs you", opening the full list).
 - **This phone**: "Connected to Ana's ADHX" (the owner; "your ADHX" when it's
@@ -864,7 +895,7 @@ out so the server's own choice still applies.
 
 ### On their way
 
-- While New's player is on screen (and the app is in front), the app asks
+- While Home's player is on screen (and the app is in front), the app asks
   `/api/app/doing` every 5 s, and stops when it's hidden. When posts are on
   their way, a pill sits under the tabs: a spinning ring and "3 on their way"
   (or "1 needs you" when nothing else is moving). An older server (404) gets
@@ -917,13 +948,14 @@ out so the server's own choice still applies.
   text post or article gets the same sheet with "Sending the words" (or "the
   article"): WhatsApp and More send its words, Copy its ADHX link, and the row
   sends the post.
-- New: a `sent` headline is the why chip "Pete sent you this" with Pete's
+- Home: a `sent` headline is the reason "Pete sent you this" with Pete's
   face; Why this one gives it a send icon and his face. Unknown kinds show
   their words. A `like` reason shows its `post.posterUrl` as a 38dp Gob-shaped
   thumbnail on the right, which opens that post.
-- A group channel has **Keep this channel** (`POST
+- A group channel's page has **Keep this channel** (`POST
 /api/app/channels/group/{slug}/keep`) beside Play all; with `kept` it reads
-  **Kept · Open** and opens your channel.
+  **Kept · Open** and opens your channel. In its player the name is the
+  keep/leave toggle.
 
 ### iPhone notes
 
@@ -963,16 +995,15 @@ out so the server's own choice still applies.
   them when there are more than four). Not `sendable` (your own private save):
   "Just for you. Share it first to send it." The row is left out on an ADHX
   without the route.
-- In New, a post someone sent you leads with the `sent` reason: the why chip
-  says "Pete sent you this" with Pete's face; the why sheet has a paper plane
+- In Home, a post someone sent you leads with the `sent` reason: the line
+  over the bottom row says "Pete sent you this" with Pete's face; the why sheet has a paper plane
   and their face. Reasons of a kind the app doesn't know show as their words.
 - Why this one: the `like` reason shows the post of yours it's like
   (`post.posterUrl`) as a 38 pt Gob-shaped thumbnail on the right; tapping it
   closes the sheet and opens that post.
-- A From everyone channel plays with its name and **Keep this channel** over
-  the player (`POST /api/app/channels/group/{slug}/keep`); after keeping (or
-  when the queue says `kept`) it reads **Kept · Open**, which plays your
-  channel (`/api/app/channels/mine/{tag}`).
+- A From everyone channel plays with its name beside Close as the keep
+  toggle: "+ name" keeps it (`POST /api/app/channels/group/{slug}/keep`),
+  "✓ name" (kept, or the queue says `kept`) leaves it (`DELETE`).
 
 ## The share sheet (both platforms)
 

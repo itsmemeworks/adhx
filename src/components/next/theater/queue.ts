@@ -111,14 +111,21 @@ export function feedPlayHref(mode: BlendMode = 'new', types?: readonly FeedKind[
   return `/play?${params}`
 }
 
-/** One page of the blended feed; without `types` the server uses the stored choice. */
+/**
+ * One page of the blended feed; without `types` the server uses the stored
+ * choice. Home (`new`) plays the lineup, as on the phones: just saved, not
+ * seen yet, then For you.
+ */
 export function feedUrl(
   mode: BlendMode,
   cursor?: string | null,
   limit = 20,
   types?: readonly FeedKind[] | null,
 ): string {
-  const params = new URLSearchParams({ mode, limit: String(limit) })
+  const params = new URLSearchParams({
+    mode: mode === 'new' ? 'lineup' : mode,
+    limit: String(limit),
+  })
   if (types?.length) params.set('types', types.join(','))
   if (cursor) params.set('cursor', cursor)
   return `/api/feed/blend?${params}`

@@ -118,7 +118,8 @@ struct FloatingReactions: View {
             ZStack(alignment: .bottomLeading) {
                 ForEach(reactions) { reaction in
                     Bubble(reaction: reaction, server: server, rise: box.size.height * 0.8)
-                        .offset(x: reaction.lane * max(box.size.width - 120, 0))
+                        // Words are wider than a face: they keep to the left, on screen.
+                        .offset(x: reaction.lane * max(box.size.width - (reaction.event.text == nil ? 120 : 300), 0))
                 }
             }
             .frame(width: box.size.width, height: box.size.height, alignment: .bottomLeading)
@@ -174,24 +175,23 @@ struct FloatingReactions: View {
         private var content: some View {
             let saver = reaction.event.saver
             if let text = reaction.event.text {
-                // The face, and a speech bubble in their colour with its tail at the face.
-                HStack(alignment: .bottom, spacing: 6) {
+                // The face, and their words in the serif on a rounded bubble in their colour.
+                HStack(alignment: .bottom, spacing: 8) {
                     ringedFace(44)
                     Text(text)
-                        .font(Theme.sans(14, .bold))
+                        .font(Theme.serif(20))
                         .foregroundStyle(.black)
-                        .lineLimit(1)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(
-                            UnevenRoundedRectangle(topLeadingRadius: 16, bottomLeadingRadius: 4,
-                                                   bottomTrailingRadius: 16, topTrailingRadius: 16,
-                                                   style: .continuous)
-                                .fill(Face.colour(for: saver.username))
-                        )
+                        .lineLimit(3)
+                        .lineSpacing(-2)
+                        .padding(.horizontal, 13)
+                        .padding(.top, 6)
+                        .padding(.bottom, 7)
+                        .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(Face.colour(for: saver.username)))
+                        .frame(maxWidth: 230, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.bottom, 18)
                 }
-                .fixedSize()
             } else if let emoji = reaction.event.emoji {
                 // The face first; the emoji is a sticker on its corner.
                 ringedFace(reaction.size)

@@ -62,6 +62,7 @@ import com.adhx.share.net.PhonePost
 import com.adhx.share.net.PostKind
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
+import com.adhx.share.ui.Glyphs
 import com.adhx.share.ui.NetworkMark
 import com.adhx.share.ui.openUrl
 import kotlinx.coroutines.launch
@@ -96,6 +97,8 @@ fun MoreSheet(
     onNotice: (String) -> Unit,
     onDismiss: () -> Unit,
     controls: PlayerControls? = null,
+    /** Save to phone, moved here from the rail: the video, sound or photos. */
+    onSaveToPhone: (() -> Unit)? = null,
 ) {
     KeepUpright()
     val context = LocalContext.current
@@ -131,6 +134,21 @@ fun MoreSheet(
         ) {
             Header(post, server, network, onClose = { close() })
             Spacer(Modifier.height(12.dp))
+            if (onSaveToPhone != null) {
+                MoreRow(
+                    icon = rememberVectorPainter(Glyphs.Download),
+                    title = "Save to your phone",
+                    subtitle = when (post.kind) {
+                        PostKind.PHOTO -> "Keeps the photos in your gallery"
+                        PostKind.AUDIO -> "Keeps the sound on your phone"
+                        else -> "Keeps the video in your gallery"
+                    },
+                    onClick = {
+                        onSaveToPhone()
+                        close()
+                    },
+                )
+            }
             if (controls != null) {
                 controls.muted?.let { muted ->
                     MoreRow(

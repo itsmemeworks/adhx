@@ -9,6 +9,7 @@ import { getUsernameForUserId } from '@/lib/users/lookup'
 import { MAX_TAGS_PER_POST, sanitizeTag } from '@/lib/utils/tag'
 import { groupChannelKeys } from './group'
 import { recordAnalytic } from '@/lib/analytics/record'
+import { removeSave } from '@/lib/bookmarks/remove'
 
 /**
  * "Keep this channel" on a From everyone channel (board j6-2): every visible
@@ -188,4 +189,59 @@ export async function keepGroupChannel(
   if (saved.length) noteSaved(saved, PRIORITY.sync)
   recordAnalytic({ name: 'channel.keep', surface: 'group', bookmarkId: slug, userId })
   return { tag, url: keptUrl(username, tag), added }
+}
+
+/**
+ * "Leave" a kept group channel (the player's keep toggle): the channel of
+ * yours named after it goes, and so do the saves keeping it added for you
+ * (`source = 'channel_keep'`) that aren't in another channel of yours.
+ * Posts you saved yourself stay saved. `{ removed }` (saves taken away), or
+ * null when there's no such channel.
+ */
+export async function leaveGroupChannel(
+  userId: string,
+  slug: string,
+): Promise<{ removed: number } | null> {
+  const channel = await groupChannelKeys(slug)
+  if (!channel) return null
+  const tag = groupKeepTag(channel.name, slug)
+  const tagged = db
+    .select({ platform: bookmarkTags.platform, id: bookmarkTags.bookmarkId })
+    .from(bookmarkTags)
+    .where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.tag, tag)))
+    .all()
+  let removed = 0
+  runInTransaction(() => {
+    db.delete(bookmarkTags)
+      .where(and(eq(bookmarkTags.userId, userId), eq(bookmarkTags.tag, tag)))
+      .run()
+    for (const { platform, id } of tagged) {
+      const [save] = db
+        .select({ source: bookmarks.source })
+        .from(bookmarks)
+        .where(
+          and(eq(bookmarks.userId, userId), eq(bookmarks.platform, platform), eq(bookmarks.id, id)),
+        )
+        .limit(1)
+        .all()
+      if (save?.source !== 'channel_keep') continue
+      const [other] = db
+        .select({ tag: bookmarkTags.tag })
+        .from(bookmarkTags)
+        .where(
+          and(
+            eq(bookmarkTags.userId, userId),
+            eq(bookmarkTags.platform, platform),
+            eq(bookmarkTags.bookmarkId, id),
+          ),
+        )
+        .limit(1)
+        .all()
+      if (other) continue
+      removeSave(userId, platform, id)
+      removed++
+    }
+  })
+  recordAnalytic({ name: 'channel.leave', surface: 'group', bookmarkId: slug, userId })
+  return { removed }
 }

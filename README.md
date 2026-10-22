@@ -33,23 +33,23 @@ No ads. No strangers. No engagement metrics. Nobody in a growth meeting deciding
 
 <table>
   <tr>
-    <td width="33%"><img src="docs/images/phone-new.jpg" alt="The iPhone app playing a Rickroll. Ben's note says 'you're welcome'. Ben and Ana saved it." /></td>
+    <td width="33%"><img src="docs/images/phone-home.jpg" alt="The iPhone app playing a Rickroll on Home. Ben's note, 'you're welcome', floats up in his colour; Ana's face, with +1, sits at the bottom beside the line and '6 of 6'." /></td>
     <td width="33%"><img src="docs/images/phone-react.jpg" alt="The same post with the reaction picker open: six emoji, a 'Say something' box and the line 'Kept on the post. Your people see it when they watch.'" /></td>
-    <td width="33%"><img src="docs/images/phone-why.jpg" alt="The 'Why this one' sheet: Ben and Ana saved this, you watch most of Ben's saves, and buttons to show less from Ana or more from Ben." /></td>
+    <td width="33%"><img src="docs/images/phone-why.jpg" alt="The 'Why this one' sheet for a photo: Ana sent you this, you watch most of Ana's saves, Ana saved this 2h ago, and buttons to show less or more from Ana." /></td>
   </tr>
   <tr>
-    <td>A friend's note rides along with the save.</td>
+    <td>A friend's note floats up as it plays.</td>
     <td>React to any post. Everyone who watches it later sees it float up.</td>
     <td>Every post says why it's in your feed, and you can turn friends up or down.</td>
   </tr>
 </table>
 
-- **New.** What your people saved that you haven't seen yet, full screen, one after another. Every post says why it's there (saved together, sent to you, a friend you watch a lot). Then it stops: "You're all caught up. Go touch grass."
+- **Home.** What your people saved that you haven't seen yet, full screen, one after another. Every post says why it's there (saved together, sent to you, a friend you watch a lot). Then it stops: "You're all caught up. Go touch grass."
 - **A real copy of everything.** Every save is downloaded once, at the best quality available (up to 4K), and served by your ADHX. Nothing streams from the networks at watch time, and nothing vanishes when they delete it.
 - **Search by what you remember.** Words, what's in the picture, sampled video frames, what's said in a video, and text on screen (that meme's caption, burned-in subtitles). It runs on your own server.
-- **Faces and notes.** See which of your people saved what, with their note in a speech bubble. Saves are shared with your people by default; **Just for me** keeps one to yourself.
+- **Faces and notes.** See which of your people saved what: their notes float up as the post plays, and a tap on the face shows everyone who saved it, reacted or watched. Saves are shared with your people by default; **Just for me** keeps one to yourself.
 - **Reactions everywhere.** 😂 or "who sent this 💀" on any post. Reactions stay on the post, and **Channels → Reactions** plays everything your people reacted to.
-- **Send the file, not the link.** Straight to a friend's New with a note, or out to WhatsApp, Messages or anywhere else as the actual video.
+- **Send the file, not the link.** Straight to a friend's Home with a note, or out to WhatsApp, Messages or anywhere else as the actual video.
 - **Channels.** ADHX groups everyone's saves into rabbit holes and names them, and gives every friend a channel of everything they kept.
 - **Right now.** When a few of you save the same kind of thing at once, it goes live. **Tune in** to watch together and see who's watching with you.
 - **The original, when you want it.** The network's logo on every post opens who posted it, when, and everything they wrote, with a link back.
@@ -63,9 +63,9 @@ No ads. No strangers. No engagement metrics. Nobody in a growth meeting deciding
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | ![Right now on the web: a live moment called 'Dark' with four posts, the faces of who's saving them, and a forming moment with a 'Tell me when it's live' button](docs/images/web-now.jpg) | ![Channels on the web: channels from everyone, one channel per friend with new counts, and channels made from your own saves](docs/images/web-channels.jpg) | ![Search for 'baby' on the web: the best match is a baby and a talking hamster, with a panel explaining how ADHX found it](docs/images/web-search.jpg) |
 
-| The original post                                                                                                                                             | Send the real file                                                                                                                                                                          | Landscape                                                                                                 |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| ![The original-post sheet on the web: Pinterest, posted 18 October 2026, the post's full text, Open on Pinterest and Copy link](docs/images/web-original.jpg) | ![The phone's send sheet: sending the video itself (2160p, 508 MB), Send via WhatsApp, Copy, Files, Save to Photos or More, or straight to Jo, Ben, Ana or Mum](docs/images/phone-send.jpg) | ![The phone turned sideways: just the video, whole, with nothing on top](docs/images/phone-landscape.jpg) |
+| The original post                                                                                                                                             | Send the real file                                                                                                                                                                                                     | Landscape                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| ![The original-post sheet on the web: Pinterest, posted 18 October 2026, the post's full text, Open on Pinterest and Copy link](docs/images/web-original.jpg) | ![The phone's send sheet: sending the video itself (720p, 911 KB), Send via WhatsApp, Copy, Files, Save to Photos or More, or straight to Jo, Ben, Ana or Mum; Jo and Ana already have it](docs/images/phone-send.jpg) | ![The phone turned sideways: just the video, whole, with nothing on top](docs/images/phone-landscape.jpg) |
 
 </details>
 
@@ -187,7 +187,7 @@ Short share links (`pin.it`, Reddit's `/s/` links, `on.soundcloud.com`, `youtu.b
 
 ## Phone apps
 
-ADHX Share for iPhone and Android puts ADHX in your phone's share menu and plays New, Channels and Live full screen. It reacts, searches, sends the real file, explains why each post is there, invites people, changes your picture (photo or selfie, cropped on the phone) and turns sideways for watching. The phone only ever talks to your own ADHX; it never opens the website.
+ADHX Share for iPhone and Android puts ADHX in your phone's share menu and plays Home, Channels and Live full screen. It reacts, searches, sends the real file, explains why each post is there, invites people, changes your picture (photo or selfie, cropped on the phone) and turns sideways for watching. The phone only ever talks to your own ADHX; it never opens the website.
 
 **Connect it** in one of two ways:
 

@@ -71,7 +71,7 @@ function Tile({
 
 const card = 'border border-white/10 bg-nx-surface'
 
-/* ——— New ——— */
+/* ——— Home: the lineup ——— */
 
 function WhyRow({
   post,
@@ -149,7 +149,7 @@ function KindChips({ className }: { className?: string }) {
 
 export function NewMock() {
   return (
-    <Mock label="The New list, showing videos and photos, with why each post is next: the pixel-art music game Offbeat by @nexindie, saved together; stills from the film Sorcerer by @CinemaTweets1, close to you, from Mum; the RC808 drum synth by @XWAVEart, like the synths you kept. It ends on Gob: You're all caught up. Go touch grass.">
+    <Mock label="Home's Up next, in its three parts, with why each post is there: just saved, the pixel-art music game Offbeat by @nexindie, saved together; not seen yet, stills from the film Sorcerer by @CinemaTweets1, from Mum; for you, the RC808 drum synth by @XWAVEart, like the synths you kept. Beside it Gob: always in this order, then For you.">
       <div
         className={cn(
           card,
@@ -160,9 +160,9 @@ export function NewMock() {
         <div className="flex gap-2.5 md:contents">
           <div className="flex min-w-0 flex-1 flex-col gap-2.5 md:gap-3">
             <div className="hidden items-baseline justify-between gap-3 md:flex">
-              <span className="font-nx-serif text-[34px] leading-none">New</span>
+              <span className="font-nx-serif text-[34px] leading-none">Up next</span>
               <span className="whitespace-nowrap text-[13px] font-semibold text-nx-soft">
-                3 you haven’t seen
+                2 not seen yet
               </span>
             </div>
             <KindChips className="hidden md:flex" />
@@ -170,20 +170,20 @@ export function NewMock() {
               <WhyRow
                 post="offbeat"
                 title="Pixel-art music tycoon game ‘Offbeat’"
-                why="Saved together"
+                why="Just saved · saved together"
                 icon={<Together size={12} />}
                 active
               />
               <WhyRow
                 post="sorcerer"
                 title="Sorcerer might be one of the best films I’ve ever seen"
-                why="Close to you · Mum"
+                why="Not seen yet · Mum"
                 icon={<Heart size={12} />}
               />
               <WhyRow
                 post="rc808"
                 title="The lost RC808 drum synthesis software"
-                why="Like the synths you kept"
+                why="For you · like the synths you kept"
                 icon={<Bookmark size={12} />}
                 className="hidden md:flex"
               />
@@ -198,16 +198,16 @@ export function NewMock() {
             </span>
             <span className="relative font-nx-serif text-[16px] leading-[0.95] min-[360px]:text-[18px] md:mt-3.5 md:text-[32px]">
               <span className="block whitespace-nowrap md:whitespace-normal">
-                You’re all <br className="md:hidden" />
-                caught up.
+                Always in <br className="md:hidden" />
+                this order.
               </span>
-              <span className="block whitespace-nowrap text-nx-accent">Go touch grass.</span>
+              <span className="block whitespace-nowrap text-nx-accent">Then For you.</span>
             </span>
             <span className="relative mt-2.5 hidden text-[13px] leading-[1.4] text-nx-soft md:block">
-              That’s everything since you last looked.
+              Just saved, not seen yet, then more like what you keep.
             </span>
             <span className="relative mt-4 hidden h-10 w-full items-center justify-center whitespace-nowrap rounded-full bg-nx-accent text-[14px] font-extrabold text-black md:flex">
-              Browse channels
+              Tap any post to play it
             </span>
           </div>
         </div>

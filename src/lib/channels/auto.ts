@@ -19,6 +19,7 @@ import { fromBlob } from '@/lib/semantic/vectors'
 import { groupSaves, seedFrom, type Cluster } from './cluster'
 import { CHANNEL_NAMES } from './names'
 import { visualChannels } from './visual'
+import { FIRST_BUILD_WAIT_MS, within } from './wait'
 
 /**
  * "Made for you" channels: one user's saves grouped by what they're about
@@ -53,6 +54,8 @@ export interface AutoChannelDeps {
   embedNames?: (prompts: string[]) => Promise<Float32Array[]>
   chooseName?: (candidates: string[], samples: string[]) => Promise<string | null>
   now?: () => Date
+  /** How long a first build may take before the page goes on without it. */
+  firstWaitMs?: number
 }
 
 type State = {
@@ -277,9 +280,11 @@ function isStale(rows: AutoChannel[], saves: number, now: number): boolean {
 }
 
 /**
- * This user's channels, recomputed first when missing or stale. A user with
- * too few understood saves gets [] (retried every few minutes, not on every
- * request). One computation per user at a time.
+ * This user's channels. Stale ones are served while they're rebuilt in the
+ * background; missing ones are built first, waiting up to
+ * `FIRST_BUILD_WAIT_MS`. A user with too few understood saves gets []
+ * (retried every few minutes, not on every request). One computation per
+ * user at a time.
  */
 export async function getAutoChannels(
   userId: string,
@@ -292,18 +297,27 @@ export async function getAutoChannels(
     .where(eq(autoChannels.userId, userId))
     .orderBy(autoChannels.position)
   if (rows.length === 0 && now - (state.lastEmpty.get(userId) ?? 0) < RETRY_EMPTY_MS) return []
-  if (!isStale(rows, await saveCount(userId), now)) return visualChannels(rows.map(toView), userId)
+  const stored = visualChannels(rows.map(toView), userId)
+  if (!isStale(rows, await saveCount(userId), now)) return stored
   let pending = state.inFlight.get(userId)
   if (!pending) {
     pending = computeAutoChannels(userId, deps)
       .catch((error) => {
         captureException(error, { endpoint: 'channels.auto' })
-        return visualChannels(rows.map(toView), userId)
+        return stored
       })
       .finally(() => state.inFlight.delete(userId))
     state.inFlight.set(userId, pending)
   }
-  return pending
+  // Serve what's stored while it's rebuilt (naming can take a while); the
+  // next request gets the new set. With none, wait, but not for ever.
+  if (rows.length > 0) return stored
+  return within(pending, deps.firstWaitMs ?? FIRST_BUILD_WAIT_MS, [])
+}
+
+/** The rebuild under way for this user, if any (tests wait on it). */
+export function autoChannelsBuilding(userId: string): Promise<AutoChannelView[]> | undefined {
+  return state.inFlight.get(userId)
 }
 
 export async function getAutoChannel(

@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-22 — Phones: Home, and the player's layout C
+
+- Owner: "New" became **Home** everywhere (phones, web nav, site, docs); the web theater's feed asks for `mode=lineup`.
+- Layout C (canvas page 15, boards 15.7–15.10) on iPhone and Android: rail React · Save · Share · network · More (Save to phone moved into More); one bottom row clear of the home bar with the first saver's face (+N), a tall scrub line with a handle and the queue count that opens Up next. Gone: queue pills, why chip, note bubble, saver byline. Kept: "Ana sent you this" + Reply and For you's "Like … you kept".
+- Tap the face → ✕ and everyone on the post with corner stickers (saved, reaction, watched) from new `GET /api/app/who` (`src/lib/people/on-a-post.ts`). Watched is new and visible to members who can see the post. Notes float up first, in the serif, like reactions.
+- A From everyone channel's name is the keep/leave toggle; leaving is new `DELETE /api/app/channels/group/{slug}/keep` (`leaveGroupChannel`, drops saves only that keep added).
+- Channels "taking too long": Made for you made the request wait for a rebuild (Jev naming) whenever stale. Now stale sets are served while rebuilding, and a first build (either kind) waits at most 6 s (`src/lib/channels/wait.ts`).
+- Re-took the phone screenshots (phone-new.jpg → phone-home.jpg, new phone-who.jpg); site phone mock redrawn as C.
+- Follow-up: the live server needs this release for who/leave; until then the face row shows savers only and leaving says the server needs an update.
+
 ## 2026-10-22 — Fix nine lineup and phone playback review findings
 
 - Deduplicate recent/older lineup candidates; re-read sender eligibility, names and notes on every cached page.

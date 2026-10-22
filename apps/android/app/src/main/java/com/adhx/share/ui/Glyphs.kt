@@ -58,6 +58,7 @@ object Glyphs {
     val PhotoFeed = stroke(rect(3f, 4f, 18f, 16f, 2f) + circle(9f, 10f, 2f) + "M21 16l-5-5-9 9")
     val VideoFeed = stroke(rect(2f, 6f, 14f, 12f, 2f) + "M16 10l6-3v10l-6-3z")
     val Lines = stroke("M4 6h16M4 11h16M4 16h10")
+    val Eye = stroke("M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" + circle(12f, 12f, 3f), width = 2.4f)
     val Article = stroke("M6 3h9l4 4v14H6zM9 12h7M9 16h5")
 
     private fun circle(cx: Float, cy: Float, r: Float) =

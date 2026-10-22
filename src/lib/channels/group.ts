@@ -11,6 +11,7 @@ import type { Saver } from '@/lib/people/types'
 import { bestClusters, meanVectors, nameClusters, type AutoChannelDeps } from './auto'
 import { groupSaves, seedFrom } from './cluster'
 import { visualChannel, visualChannels } from './visual'
+import { FIRST_BUILD_WAIT_MS, within } from './wait'
 
 /**
  * "From everyone" channels: the server's visible saves from every member
@@ -221,7 +222,8 @@ function startCompute(deps: AutoChannelDeps, fallback: GroupChannelView[]) {
  * Recomputed when missing, when the model changed, after 12 hours, after 10
  * visible saves gained or lost, or when a counted saver has left or been banned. With
  * channels already stored, a recompute runs in the background and this
- * returns the stored set; with none, it waits. One compute at a time.
+ * returns the stored set; with none, it waits up to `FIRST_BUILD_WAIT_MS`.
+ * One compute at a time.
  */
 export async function getGroupChannels(deps: AutoChannelDeps = {}): Promise<GroupChannelView[]> {
   const now = (deps.now ?? (() => new Date()))().getTime()
@@ -236,7 +238,7 @@ export async function getGroupChannels(deps: AutoChannelDeps = {}): Promise<Grou
     pending.catch(() => {})
     return views
   }
-  return pending
+  return within(pending, deps.firstWaitMs ?? FIRST_BUILD_WAIT_MS, [])
 }
 
 /** Keep only posts that still have a visible save, newest save first. */

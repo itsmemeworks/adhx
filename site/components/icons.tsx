@@ -49,6 +49,15 @@ export const Together = (p: IconProps) => (
 export const Heart = (p: IconProps) => (
   <Stroke {...p} width={2.2} d="M12 20s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.5-7 10-7 10z" />
 )
+export const Smile = (p: IconProps) => (
+  <Stroke {...p} width={2}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M8.5 14.5c1 1.3 2.2 2 3.5 2s2.5-.7 3.5-2M9 9.5h.01M15 9.5h.01" />
+  </Stroke>
+)
+export const List = (p: IconProps) => (
+  <Stroke {...p} width={2.4} d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />
+)
 export const Bookmark = (p: IconProps) => <Stroke {...p} width={2.2} d="M6 3h12v18l-6-4-6 4z" />
 export const Lock = (p: IconProps) => (
   <Stroke {...p}>

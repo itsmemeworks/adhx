@@ -464,6 +464,23 @@ class AdhxApi(private val server: String, private val key: String?) {
         return send(authed(url).post("{}".toRequestBody(JSON)).build(), KeepChannelResponse.serializer())
     }
 
+    /** Leave a group channel you kept (its name, tapped again): your copy of it goes. 404 `not_found` for an unknown channel. */
+    suspend fun leaveGroupChannel(slug: String): ApiResult<LeaveChannelResponse> {
+        val base = url("api/app/channels/group") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(slug).addPathSegment("keep").build()
+        return send(authed(url).delete().build(), LeaveChannelResponse.serializer())
+    }
+
+    /**
+     * Who's on a post (`GET /api/app/who`): who saved it, what they said and
+     * who watched it. 404 `not_found` when you can't see it.
+     */
+    suspend fun who(platform: String, id: String): ApiResult<WhoResponse> {
+        val base = url("api/app/who") ?: return badAddress
+        val url = base.newBuilder().addQueryParameter("platform", platform).addQueryParameter("id", id).build()
+        return send(authed(url).get().build(), WhoResponse.serializer())
+    }
+
     /** Your people and, for an admin, who's waiting to be let in. */
     suspend fun people(): ApiResult<PeopleResponse> {
         val url = url("api/app/people") ?: return badAddress

@@ -693,4 +693,30 @@ describe('keep a From everyone channel', () => {
       url: '/t/pete/food-youll-cook',
     })
   })
+
+  it('leaves from the phone: the channel goes, with only the saves the keep added', async () => {
+    const key = createAccessKey(PETE, 'Phone', 'phone')!.key
+    const auth = { authorization: `Bearer ${key}` }
+    const route = await import('@/app/api/app/channels/[kind]/[slug]/keep/route')
+    await route.POST(json('/api/app/channels/group/food-x1/keep', 'POST', undefined, auth))
+    const left = await route.DELETE(
+      json('/api/app/channels/group/food-x1/keep', 'DELETE', undefined, auth),
+    )
+    expect(left.status).toBe(200)
+    expect(await left.json()).toEqual({ removed: 1 })
+    // Pete's own pasta stays; the steak the keep copied for him goes.
+    const mine = testInstance.db.all<{ id: string }>(
+      sql`SELECT id FROM bookmarks WHERE user_id = ${PETE} ORDER BY id`,
+    )
+    expect(mine).toEqual([{ id: 'pasta' }])
+    expect(
+      testInstance.db.all(
+        sql`SELECT tag FROM bookmark_tags WHERE user_id = ${PETE} AND tag = 'food-youll-cook'`,
+      ),
+    ).toEqual([])
+    const missing = await route.DELETE(
+      json('/api/app/channels/group/nope/keep', 'DELETE', undefined, auth),
+    )
+    expect(missing.status).toBe(404)
+  })
 })

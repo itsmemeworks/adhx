@@ -51,7 +51,7 @@ object Copy {
 
     // Home: New · Channels · Live
 
-    const val TAB_NEW = "New"
+    const val TAB_NEW = "Home"
     const val TAB_CHANNELS = "Channels"
     const val TAB_LIVE = "Live"
     val TABS = listOf(TAB_NEW, TAB_CHANNELS, TAB_LIVE)
@@ -87,11 +87,11 @@ object Copy {
         else -> left.toString()
     }
 
-    /** "New, 7 left" for a screen reader. */
+    /** "Home, 7 not seen yet" for a screen reader. */
     fun newTabDescription(badge: String?): String = when {
         badge == null -> TAB_NEW
-        badge.endsWith("+") -> "$TAB_NEW, ${badge.dropLast(1)} or more left"
-        else -> "$TAB_NEW, $badge left"
+        badge.endsWith("+") -> "$TAB_NEW, ${badge.dropLast(1)} or more not seen yet"
+        else -> "$TAB_NEW, $badge not seen yet"
     }
 
     const val OPEN_SETTINGS = "Settings"
@@ -354,6 +354,12 @@ object Copy {
     const val KEEP_CHANNEL = "Keep this channel"
     const val KEPT_OPEN = "Kept · Open"
     const val KEEP_FAILED = "Couldn’t keep it just now. Try again."
+    const val LEAVE_FAILED = "Couldn’t leave it just now. Try again."
+
+    // The group channel's name in the player is the toggle (board 15.10).
+    const val KEPT_IN_CHANNELS = "Kept · in your channels"
+    const val LEFT_CHANNEL = "Left"
+    const val LEAVE_THIS_CHANNEL = "Leave this channel"
 
     /** "Kept. 37 posts are in your channel now." */
     fun keptCount(added: Int) = if (added == 1) "Kept. 1 post is in your channel now." else "Kept. $added posts are in your channel now."

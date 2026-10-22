@@ -6,7 +6,7 @@ import { NetworkIcon } from './NetworkIcon'
 import { ALL_PLATFORMS, networkLabel } from './networks'
 import { Face, type PersonId } from './People'
 import { PhoneFrame, PlayerScreen, ShareCardScreen, WebFrame, u } from './frames'
-import { Arrow, Check, Chat, GitHubMark, Heart, Menu } from './icons'
+import { Arrow, Check, Chat, GitHubMark, Menu } from './icons'
 import { NavMenu } from './NavMenu'
 import { Credit, PostMedia, creditedPosts } from './Post'
 import {
@@ -180,23 +180,14 @@ function Header() {
 function HeroComposition() {
   return (
     <Mock
-      label="ADHX on a laptop, playing a video you, Ana and two others saved: a pixel-art cat whose belly is a toy piano, from the game Offbeat, posted on X by @nexindie. Next to it, ADHX on a phone playing a video Ana and Ben saved, a copper ribbon of sound twisting in 3D from Aurora, posted on X by @joecroskey, with reactions floating up from Jo, Ben and Ana, and a note that Mum just saved the RC808 drum synth photos by @XWAVEart."
+      label="ADHX on a laptop, playing a video you, Ana and two others saved: a pixel-art cat whose belly is a toy piano, from the game Offbeat, posted on X by @nexindie. Next to it, ADHX on a phone playing a video Ana and Ben saved (Ana's face, +1, on the bottom row), a copper ribbon of sound twisting in 3D from Aurora, posted on X by @joecroskey, with reactions floating up from Jo, Ben and Ana, and a note that Mum just saved the RC808 drum synth photos by @XWAVEart."
       className="mx-auto w-full max-w-[740px]"
     >
       <div className="relative aspect-[358/300] md:aspect-[740/488]">
         <div className="pointer-events-none absolute -left-[10%] top-[40%] h-[120%] w-[130%] rounded-full bg-[radial-gradient(rgba(255,210,63,0.13),rgba(255,210,63,0)_62%)] md:left-[20%] md:top-[30%] md:w-[110%]" />
         <WebFrame className="absolute left-0 top-[6.7%] w-[67%] md:top-[7.4%] md:w-[83.8%]" />
         <PhoneFrame className="absolute left-[64%] top-0 w-[36%] md:left-[68.6%] md:w-[31.4%]">
-          <PlayerScreen
-            post="aurora"
-            savers={['ana', 'ben']}
-            savedLine="Ana and Ben saved this"
-            ago="2h"
-            kind="Video"
-            caption="I built Aurora, a free, open-source audio plugin that lets you design how you see sound."
-            newCount={12}
-            saved
-          />
+          <PlayerScreen post="aurora" savers={['ana', 'ben']} newCount={12} count="2 of 6" saved />
         </PhoneFrame>
         <div className="absolute left-[40%] top-[47%] flex flex-col items-start gap-2 md:left-[70.6%] md:top-[36%] md:gap-2.5">
           <Reaction who="jo" text="who sent this" className="hidden opacity-40 md:inline-flex" />
@@ -513,21 +504,23 @@ function Features() {
     <div id="features" className="scroll-mt-16 border-t border-white/10">
       <Feature
         id="f-new"
-        kicker="New"
-        title="Only what you haven’t seen. Then it stops."
-        shortTitle="Only what you haven’t seen."
+        kicker="Home"
+        title="Opens on something to play. Always in the same order."
+        shortTitle="Always in the same order."
         short={
           <p className="m-0">
-            Only what your people saved that you haven’t seen, with why each one’s next. Videos and
-            photos first. Then it stops.
+            Just saved, then what you haven’t seen, then more like what you keep. Every post says
+            why it’s next.
           </p>
         }
         mock={<NewMock />}
       >
         <p className="m-0">
-          New plays what your people saved that you haven’t seen yet, and every post says why it’s
-          next: saved together, close to you, like what you keep. Videos and photos by default; text
-          posts and articles when you want them. No infinite scroll, no autoplay hole.
+          Home starts playing the moment you open the app, in an order you can predict: what your
+          people saved since you last looked, then everything else you haven’t seen, newest first,
+          then For you, more like what you keep. Every post says why it’s next, and Up next shows
+          the whole lineup. Videos and photos by default; text posts and articles when you want
+          them. No algorithm guessing, no endless scroll.
         </p>
       </Feature>
 
@@ -719,7 +712,7 @@ function Apps() {
             {[
               'Save from any app’s share button',
               'The full-screen player, one after another',
-              'New · Channels · Live, a tap apart',
+              'Home · Channels · Live, a tap apart',
             ].map((t) => (
               <li key={t} className="flex items-center gap-2.5 text-[16px] font-semibold">
                 <Check size={18} className="shrink-0 text-nx-accent" />
@@ -751,7 +744,7 @@ function Apps() {
           </p>
         </div>
         <Mock
-          label="Two phones: the ADHX share card keeping a copy of four X photos from the film Sorcerer, posted by @CinemaTweets1, 40 percent done, shared with your people with Just for me off; and New playing a video Mum saved, close to you: a colourful piano roll transcribed by MuScriptor, posted on X by @kyutai_labs."
+          label="Two phones: the ADHX share card keeping a copy of four X photos from the film Sorcerer, posted by @CinemaTweets1, 40 percent done, shared with your people with Just for me off; and Home playing a video Mum sent you: a colourful piano roll transcribed by MuScriptor, posted on X by @kyutai_labs."
           className="mx-auto w-full max-w-[620px]"
         >
           <div className="flex items-center justify-center gap-3.5 py-2 md:gap-10 md:py-6">
@@ -762,15 +755,13 @@ function Apps() {
               <PlayerScreen
                 post="muscriptor"
                 savers={['mum']}
-                savedLine="Mum saved this"
-                ago="1h"
-                kind="Video"
                 newCount={8}
+                count="1 of 8"
                 progress={0.28}
-                why={
+                reason={
                   <>
-                    <Heart size={u(18)} className="text-nx-accent" />
-                    <span>Close to you</span>
+                    <Face who="mum" size={u(24)} />
+                    <span>Mum sent you this</span>
                   </>
                 }
               />

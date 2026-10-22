@@ -37,15 +37,16 @@ export const ANALYTIC_EVENTS = [
   // hour away (source = web | ios | android | phone). `search.found` /
   // `search.none`: a finished search, with its mode as the source (meaning |
   // words), never its words. `post.finish`: a video played to its end.
-  // `channel.play` / `channel.keep`: a shared channel's queue was played or
-  // kept (surface = group | channel; the channel's key, `slug` or
-  // `username/tag`, goes in bookmark_id).
+  // `channel.play` / `channel.keep` / `channel.leave`: a shared channel's
+  // queue was played, kept or left again (surface = group | channel; the
+  // channel's key, `slug` or `username/tag`, goes in bookmark_id).
   'app.open',
   'search.found',
   'search.none',
   'post.finish',
   'channel.play',
   'channel.keep',
+  'channel.leave',
 ] as const
 
 export type AnalyticEventName = (typeof ANALYTIC_EVENTS)[number]
