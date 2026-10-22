@@ -445,6 +445,26 @@ export function markTweetGone(key: string): void {
  * suspended — distinct from the generic 500 thrown for an actual proxy
  * error, so clients (and Sentry) can tell "will never load" from "broken".
  */
+/** What the phones and the web say about a video X took down. */
+export const TAKEN_DOWN_REASON = 'X took this video down after a copyright claim.'
+
+/**
+ * X's video servers answer a file removed after a copyright claim with 403 and
+ * `{"error_code":2,"error_response":"Dmcaed"}`, for every size and the HLS
+ * playlist: it won't come back. Reads at most 2 KB of the answer, and always
+ * finishes with its body.
+ */
+export async function isTakenDown(response: Response): Promise<boolean> {
+  if (response.status !== 403) return false
+  try {
+    const text = new TextDecoder().decode(await readResponseBodyWithLimit(response, 2048))
+    return /"error_response"\s*:\s*"Dmcaed"/i.test(text)
+  } catch {
+    await response.body?.cancel().catch(() => {})
+    return false
+  }
+}
+
 export function goneResponse(reason: string = 'This post is no longer available on X'): Response {
   return new Response(JSON.stringify({ error: 'unavailable', reason }), {
     status: 410,

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { isPermanent } from '@/lib/keep/ytdlp'
+import { isPermanent, isSignInOnly } from '@/lib/keep/ytdlp'
 
 describe('which yt-dlp failures are final', () => {
   it('gives up on videos that are gone, private or locked', () => {
@@ -22,6 +22,31 @@ describe('which yt-dlp failures are final', () => {
       'HTTP Error 429: Too Many Requests',
     ]) {
       expect(isPermanent(message), message).toBe(false)
+    }
+  })
+})
+
+describe('which yt-dlp failures need a signed-in account', () => {
+  it('recognises each network’s login wall', () => {
+    for (const message of [
+      '[TikTok] 7699168500253854998: This post may not be comfortable for some audiences. Log in for access. Use --cookies-from-browser or --cookies for the authentication.',
+      '[youtube] x: Sign in to confirm your age. This video may be inappropriate for some users.',
+      '[Instagram] DbaFQ90SWzo: Requested content is not available, rate-limit reached or login required. Use --cookies-from-browser or --cookies for the authentication.',
+      '[facebook] 1: This video is only available for registered users. Use --cookies-from-browser or --cookies for the authentication.',
+      '[LinkedIn] 1: You must log in to view this post',
+    ]) {
+      expect(isSignInOnly(message), message).toBe(true)
+    }
+  })
+
+  it('leaves private posts and other failures alone', () => {
+    for (const message of [
+      '[youtube] x: Private video. Sign in if you have access to this video. Use --cookies-from-browser or --cookies for the authentication.',
+      '[TikTok] x: This post is private',
+      'HTTP Error 429: Too Many Requests',
+      '[youtube] x: Video unavailable',
+    ]) {
+      expect(isSignInOnly(message), message).toBe(false)
     }
   })
 })

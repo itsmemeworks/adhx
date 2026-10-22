@@ -9,7 +9,7 @@ import { fetchFreshInstagramMetadata } from '@/lib/media/instafix'
 import { resolveInstagramVideo } from '@/lib/media/instagram-video'
 import { sourceUrl } from '@/lib/activity/preview-path'
 import { keepH264, mediaDir } from './config'
-import { downloadTo, imageExt, MEDIA_HOSTS, openGraph } from './fetch'
+import { downloadTo, imageExt, MEDIA_HOSTS, openGraph, TakenDown } from './fetch'
 import { posterFrame } from './poster'
 import { probeMedia, type Probed } from './probe'
 import { execFile } from 'child_process'
@@ -45,7 +45,8 @@ interface Collected {
 /**
  * Download a post's media into a scratch folder. Each network gets the most
  * direct route to its originals: X's own files through fxtwitter (the 4K
- * variant when there is one), Instagram and TikTok video through yt-dlp, and
+ * variant when there is one; yt-dlp when fxtwitter can't read the post),
+ * Instagram and TikTok video through yt-dlp, and
  * yt-dlp for everything else, with the page's preview images for picture-only
  * posts.
  */
@@ -60,14 +61,21 @@ async function collect(target: KeepTarget, dir: string): Promise<Collected[]> {
   }
 }
 
-async function collectTwitter({ author, postId }: KeepTarget, dir: string): Promise<Collected[]> {
+async function collectTwitter(target: KeepTarget, dir: string): Promise<Collected[]> {
+  const { author, postId } = target
   const data = await fetchTweetData(author, postId, { timeoutMs: 20_000 })
-  if (!data) throw new Error('X post could not be loaded')
-  if (!data.tweet) throw new NothingToKeep('X post is gone')
+  if (!data?.tweet) {
+    return twitterViaYtdlp(
+      target,
+      dir,
+      data ? new NothingToKeep('X post is gone') : new Error('X post could not be loaded'),
+    )
+  }
   const all = data.tweet.media?.all ?? []
   const out: Collected[] = []
   let photos = 0
   let videos = 0
+  let takenDown = 0
   for (const m of all) {
     if (m.type === 'photo') {
       photos++
@@ -79,7 +87,16 @@ async function collectTwitter({ author, postId }: KeepTarget, dir: string): Prom
     } else {
       videos++
       const file = path.join(dir, `v${videos}.mp4`)
-      await downloadTo(m.url, MEDIA_HOSTS.twitter, file, MAX_DIRECT_VIDEO_BYTES)
+      try {
+        await downloadTo(m.url, MEDIA_HOSTS.twitter, file, MAX_DIRECT_VIDEO_BYTES)
+      } catch (error) {
+        // X took this one down after a copyright claim; keep the rest of the post.
+        if (error instanceof TakenDown) {
+          takenDown++
+          continue
+        }
+        throw error
+      }
       let poster: string | null = null
       if (m.thumbnail_url) {
         poster = path.join(dir, `t${videos}.jpg`)
@@ -90,7 +107,32 @@ async function collectTwitter({ author, postId }: KeepTarget, dir: string): Prom
       out.push({ kind: 'video', file, poster })
     }
   }
+  if (!out.length && takenDown) {
+    throw new NothingToKeep('X took this video down after a copyright claim')
+  }
   return out
+}
+
+/**
+ * FxTwitter couldn't read the post (a protected account, X refusing it):
+ * yt-dlp may, with the owner's cookies (`YTDLP_COOKIES`). It only finds
+ * videos; when it can't help, the original reason stands, unless X said the
+ * post needs a sign-in.
+ */
+async function twitterViaYtdlp(
+  target: KeepTarget,
+  dir: string,
+  original: Error,
+): Promise<Collected[]> {
+  try {
+    const got = await ytdlpDownload(`https://x.com/${target.author}/status/${target.postId}`, dir, {
+      onProgress: target.onProgress,
+    })
+    if (got.length) return got.map((d) => ({ kind: 'video', file: d.file, poster: d.poster }))
+  } catch (error) {
+    if (error instanceof YtdlpError && isSignInOnly(error.message)) throw error
+  }
+  throw original
 }
 
 async function collectInstagram(target: KeepTarget, dir: string): Promise<Collected[]> {

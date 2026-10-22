@@ -518,7 +518,8 @@ reactions?: [{ id, saver, emoji?, text?, at }] }`, polled every 5 s while
   reacted 😂 · 2m". Fresh refreshes remove obsolete reply labels. Reply pauses a playing video and restores that state on close; an already paused video stays paused.
 - **Can't play** (14.8, 14.9): never a spinner that just sits there. A file
   that answers 404/410 (asked with the phone key, so members get the server's
-  reason) shows "Can’t play this one here" with the reason, then plays the
+  reason, e.g. "X took this video down after a copyright claim.") shows
+  "Can’t play this one here" with the reason, then plays the
   next one after 3 seconds ("Playing the next one in 3"; **Next now**), with
   **Open on LinkedIn** and **Remove from my saves** (yours only). Any other
   failure, or no first frame after 15 s while nothing is being kept, shows

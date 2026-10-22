@@ -349,6 +349,22 @@ describe('API: /api/media/video', () => {
       expect(response.status).toBe(500)
     })
 
+    it('says when X took the video down after a copyright claim (410, not a retry)', async () => {
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockVideoResponse))
+      mockFetch.mockResolvedValueOnce(
+        new Response('{"error_code":2,"error_response":"Dmcaed"}', { status: 403 }),
+      )
+
+      const { GET } = await import('@/app/api/media/video/route')
+      const response = await GET(createRequest({ author: 'user', tweetId: '123' }))
+
+      expect(response.status).toBe(410)
+      expect(await response.json()).toEqual({
+        error: 'unavailable',
+        reason: 'X took this video down after a copyright claim.',
+      })
+    })
+
     it('handles network errors', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'))
 

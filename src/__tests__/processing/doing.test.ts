@@ -400,5 +400,18 @@ describe('why a download failed, in plain words', () => {
       'YouTube only shows this one to signed-in accounts.',
     )
     expect(keepReason('[TikTok] x: This post is private', 'tiktok')).toBe('It’s private on TikTok.')
+    expect(
+      keepReason(
+        '[Instagram] x: Requested content is not available, rate-limit reached or login required.',
+        'instagram',
+      ),
+    ).toBe('Instagram only shows this one to signed-in accounts.')
+  })
+
+  it('says a video taken down for copyright won’t come back', async () => {
+    const { keepReason } = await import('@/lib/processing/doing')
+    expect(keepReason('X took this video down after a copyright claim', 'twitter')).toBe(
+      'X took this down after a copyright claim.',
+    )
   })
 })

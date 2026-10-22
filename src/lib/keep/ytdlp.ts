@@ -71,15 +71,25 @@ const PERMANENT = [
   /drm protected/i,
 ]
 
+const SIGN_IN_ONLY = [
+  // TikTok: "This post may not be comfortable for some audiences. Log in for access."
+  /comfortable for some audiences|log ?in for access/i,
+  // YouTube's age gate.
+  /confirm your age|age.?restricted/i,
+  // Instagram, Facebook and the rest.
+  /login required|only available (?:for|to) registered users|you must log ?in|log ?in to (?:continue|view|see)/i,
+  // What yt-dlp adds to any extractor's "needs an account" error.
+  /--cookies-from-browser or --cookies for the authentication/i,
+]
+
 /**
  * The network only shows this post to signed-in viewers: TikTok's "may not be
- * comfortable for some audiences", age-gated YouTube. It exists; a cookies
- * file (`YTDLP_COOKIES`) lets the server see it.
+ * comfortable for some audiences", age-gated YouTube, Instagram's and
+ * Facebook's login walls. It exists; a cookies file (`YTDLP_COOKIES`) lets the
+ * server see it. A private post is something else (only its followers see it).
  */
 export function isSignInOnly(message: string): boolean {
-  return /comfortable for some audiences|confirm your age|age.?restricted|log in for access/i.test(
-    message,
-  )
+  return !/\bprivate\b/i.test(message) && SIGN_IN_ONLY.some((re) => re.test(message))
 }
 
 /** yt-dlp's error says there's nothing to download here (gone, private, no video, DRM). */
