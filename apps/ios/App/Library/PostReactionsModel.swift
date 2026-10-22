@@ -49,7 +49,7 @@ final class PostReactionsModel: ObservableObject {
 
     /// A post settled on screen (nil: nothing to replay). `again` (the
     /// reactions feed) replays it every time, asking the server afresh.
-    func arrive(_ post: PostRef?, again: Bool = false) {
+    func arrive(_ post: PostRef?, notes: [LiveReactionEvent] = [], again: Bool = false) {
         replay?.cancel()
         floating.removeAll()
         answer = nil
@@ -65,8 +65,14 @@ final class PostReactionsModel: ObservableObject {
                 list = cached
             } else {
                 // A failed refresh must never replay an older connection's answer.
-                guard let fetched = try? await client.reactions(to: post),
-                      !Task.isCancelled, Self.generation == generation,
+                guard let fetched = try? await client.reactions(to: post) else {
+                    // The savers' notes came with the post: they still float.
+                    guard !Task.isCancelled, Self.generation == generation,
+                          Self.connectionScope() == scope else { return }
+                    await self?.floatAll(notes, generation: generation, scope: scope)
+                    return
+                }
+                guard !Task.isCancelled, Self.generation == generation,
                       Self.connectionScope() == scope else { return }
                 Self.remember(fetched, for: post.key)
                 list = fetched
@@ -75,12 +81,17 @@ final class PostReactionsModel: ObservableObject {
                   Self.connectionScope() == scope else { return }
             self?.noteAnswer(list, for: post.key)
             Self.replayed.insert(post.key)
-            for reaction in list.suffix(Self.shown) {
-                guard !Task.isCancelled, Self.generation == generation,
-                      Self.connectionScope() == scope, let self else { return }
-                self.float(reaction)
-                try? await Task.sleep(nanoseconds: Self.gap)
-            }
+            // Notes first: a friend's note is just the first thing said.
+            await self?.floatAll(notes + list.suffix(Self.shown), generation: generation, scope: scope)
+        }
+    }
+
+    private func floatAll(_ list: [LiveReactionEvent], generation: UUID, scope: String) async {
+        for reaction in list {
+            guard !Task.isCancelled, Self.generation == generation,
+                  Self.connectionScope() == scope else { return }
+            float(reaction)
+            try? await Task.sleep(nanoseconds: Self.gap)
         }
     }
 

@@ -1,16 +1,13 @@
 package com.adhx.share.feed
 
-import com.adhx.share.ui.KeepUpright
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,11 +26,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,16 +57,19 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.adhx.share.net.Reaction
 import com.adhx.share.net.Saver
 import com.adhx.share.ui.AdhxColors
-import com.adhx.share.ui.SansFamily
 import com.adhx.share.ui.Avatar
 import com.adhx.share.ui.Copy
 import com.adhx.share.ui.GobShape
+import com.adhx.share.ui.KeepUpright
+import com.adhx.share.ui.SansFamily
+import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.faceColor
 import com.adhx.share.ui.rememberReducedMotion
 
@@ -297,25 +299,29 @@ private fun EmojiReaction(who: Saver?, emoji: String, server: String, face: Dp) 
     }
 }
 
-/** The face, with a speech bubble in their colour whose tail points back to it. */
+/**
+ * The face, with their words beside it in a round bubble in their colour, in
+ * the serif (a friend's note on their save floats the same way).
+ */
 @Composable
 private fun TextReaction(who: Saver?, text: String, server: String, face: Dp) {
     val color = faceColor(who?.username.orEmpty())
     Row(verticalAlignment = Alignment.Bottom) {
         RingedFace(who, server, face)
-        Spacer(Modifier.width(6.dp))
-        // The small bottom-left corner is the tail, towards the face.
+        Spacer(Modifier.width(8.dp))
         Text(
             text,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
+            fontFamily = SerifFamily,
+            fontSize = 20.sp,
+            lineHeight = 22.sp,
             color = Color.Black,
-            maxLines = 2,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier
-                .padding(bottom = 18.dp)
-                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 4.dp))
+                .padding(bottom = (face / 2 - 4.dp).coerceAtLeast(0.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(color)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(start = 13.dp, end = 13.dp, top = 6.dp, bottom = 7.dp),
         )
     }
 }

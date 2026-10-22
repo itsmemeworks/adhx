@@ -7,7 +7,7 @@ enum HomeTab: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .new: return "New"
+        case .new: return "Home"
         case .channels: return "Channels"
         case .live: return "Live"
         }
@@ -207,7 +207,7 @@ struct LibraryHome: View {
                 HStack { Spacer(); RingSpinner(size: 34, lineWidth: 3); Spacer() }
                     .frame(maxHeight: .infinity)
             } else if let error = feed.loadError, feed.items.isEmpty {
-                EmptyNote(title: "Can’t load New", message: error) { Task { await feed.reload() } }
+                EmptyNote(title: "Can’t load Home", message: error) { Task { await feed.reload() } }
                     .padding(.top, headerHeight)
                     .frame(maxHeight: .infinity, alignment: .top)
             } else if feed.items.isEmpty && feed.mode != .new && feed.mode != .everyone {
@@ -215,7 +215,7 @@ struct LibraryHome: View {
                     EmptyNote(title: "Nothing here yet",
                               message: feed.mode == .mine ? "Share something from another app and it lands here."
                                   : "Your people haven’t saved anything yet. Give them a nudge.")
-                    Button("Back to New") { Task { await feed.setMode(.new) } }
+                    Button("Back to Home") { Task { await feed.setMode(.new) } }
                         .buttonStyle(PillButtonStyle(kind: .outline, height: 44, fullWidth: false))
                         .padding(.horizontal, 20)
                         .padding(.top, 14)
@@ -234,9 +234,14 @@ struct LibraryHome: View {
                            jumpTo: $jumpTo, start: feed.currentKey,
                            extras: PlayerExtras(onWhy: { why = $0 }, toastTop: headerHeight + 6,
                                                 endPage: feed.atEnd ? AnyView(caughtUp(server, topInset: endPageTop)) : nil,
-                                                queuePill: feed.sections == nil ? nil : { post in
-                                                    guard let spot = feed.spot(for: post.key) else { return nil }
-                                                    return AnyView(LineupPill(spot: spot) { showingUpNext = true })
+                                                count: feed.sections == nil ? nil : { post in
+                                                    // The strip under the tabs already names the part.
+                                                    feed.spot(for: post.key).map { spot in
+                                                        QueueCount(text: "\(spot.position) of \(spot.count)",
+                                                                   label: "\(spot.section.title), \(spot.position) of \(spot.count)") {
+                                                            showingUpNext = true
+                                                        }
+                                                    }
                                                 })) { index in
                     feed.shown(index)
                 }
@@ -531,7 +536,7 @@ private struct TabPills: View {
 
     private func label(for item: HomeTab) -> String {
         switch item {
-        case .new: return newBadge.map { "New, \($0) left" } ?? "New"
+        case .new: return newBadge.map { "Home, \($0) not seen yet" } ?? "Home"
         case .live: return liveDot ? "Live, something’s on now" : "Live"
         case .channels: return "Channels"
         }

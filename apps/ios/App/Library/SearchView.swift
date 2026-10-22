@@ -235,7 +235,7 @@ struct PlayerScreen: View {
     var onClose: (() -> Void)? = nil
     /// Repeat on from the start ("Open in ADHX" on the share card).
     var startRepeating = false
-    /// A channel or a search: "Ana’s saves · 3 of 24" above the byline opens Up next.
+    /// A channel or a search: "3 of 24" on the bottom row opens Up next.
     var queue: QueueInfo? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var clean = false
@@ -249,7 +249,7 @@ struct PlayerScreen: View {
     var body: some View {
         PlayerView(posts: posts, server: server, clean: $clean, scrubbing: $scrubbing, jumpTo: $jumpTo, start: start,
                    extras: PlayerExtras(replayReactions: replayReactions, startRepeating: startRepeating,
-                                        queuePill: queuePill), onShow: { shown in
+                                        count: queueCount), onShow: { shown in
                        if index != shown, index < posts.count { watched.insert(posts[index].key) }
                        index = shown
                        onShow(shown)
@@ -268,7 +268,8 @@ struct PlayerScreen: View {
                         }
                         .accessibilityLabel("Close")
                         if let group {
-                            KeepChannelBar(group: group, server: server)
+                            ChannelToggle(group: group)
+                            Spacer(minLength: 0)
                         } else if let position, index < posts.count {
                             Text(position(index))
                                 .font(Theme.sans(14, .bold))
@@ -295,18 +296,19 @@ struct PlayerScreen: View {
             }
     }
 
-    /// The pill for a queue with more than one post.
-    private var queuePill: ((PhonePost) -> AnyView?)? {
+    /// "5 of 51" on the bottom row, for a queue with more than one post.
+    private var queueCount: ((PhonePost) -> QueueCount?)? {
         guard let queue, posts.count > 1 else { return nil }
         return { post in
             guard let at = posts.firstIndex(where: { $0.key == post.key }) else { return nil }
-            return AnyView(QueuePill(name: queue.name, position: at + 1, count: posts.count) { upNext = true })
+            return QueueCount(text: "\(at + 1) of \(posts.count)",
+                              label: "\(queue.name), \(at + 1) of \(posts.count)") { upNext = true }
         }
     }
 }
 
 /// Keeping a From everyone channel as one of yours
-/// (`POST /api/app/channels/group/{slug}/keep`).
+/// (`POST /api/app/channels/group/{slug}/keep`), and leaving it (`DELETE`).
 @MainActor
 final class KeepChannelModel: ObservableObject {
     let slug: String
@@ -335,114 +337,109 @@ final class KeepChannelModel: ObservableObject {
         }
     }
 
-    /// Your kept channel's posts, to play.
-    func open() async -> [PhonePost]? {
-        guard let kept, let client = Store.client() else { return nil }
+    /// Leaves it: its tag comes off your saves, and saves it added go.
+    func leave() async {
+        guard kept != nil, !busy, let client = Store.client() else { return }
         busy = true
+        problem = nil
         defer { busy = false }
         do {
-            let posts = try await client.channel(.mine, slug: kept.tag)
-            if posts.isEmpty { problem = "Nothing in it just now." }
-            return posts.isEmpty ? nil : posts
+            try await client.leaveGroupChannel(slug)
+            kept = nil
+        } catch let error as APIError where error.isMissing {
+            problem = "Your ADHX needs an update before it can leave channels."
         } catch let error as APIError {
             problem = error.message
         } catch {
             problem = APIError.offline.message
         }
-        return nil
     }
 }
 
-/// "Channel · Food you'll cook one day" and Keep this channel, which turns
-/// into "Kept · Open" (j6-2).
-private struct KeepChannelBar: View {
+/// The channel's name is the toggle (board 15.10): "+ Coding with AI" keeps
+/// it as one of yours, "✓ Coding with AI" leaves it.
+private struct ChannelToggle: View {
     let group: GroupChannelRef
-    let server: URL
     @StateObject private var model: KeepChannelModel
-    @State private var playing: PlayQueue?
+    @State private var message: String?
+    @State private var messageTask: Task<Void, Never>?
 
-    init(group: GroupChannelRef, server: URL) {
+    init(group: GroupChannelRef) {
         self.group = group
-        self.server = server
         _model = StateObject(wrappedValue: KeepChannelModel(group: group))
     }
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 6) {
-            HStack(spacing: 8) {
+        let kept = model.kept != nil
+        Button {
+            Task { await toggle() }
+        } label: {
+            HStack(spacing: 6) {
+                if model.busy {
+                    ProgressView().controlSize(.mini).tint(Theme.accent)
+                        .frame(width: 16, height: 16)
+                } else {
+                    Image(systemName: kept ? "checkmark" : "plus")
+                        .font(.system(size: 14, weight: .heavy))
+                        .foregroundStyle(Theme.accent)
+                        .frame(width: 16, height: 16)
+                }
                 Text(group.name)
-                    .font(Theme.sans(13, .heavy))
+                    .font(Theme.sans(14, .heavy))
                     .foregroundStyle(Theme.ink)
                     .lineLimit(1)
-                    .padding(.horizontal, 12)
-                    .frame(height: 34)
-                    .frosted(Capsule(), dim: 0.45)
-                    .layoutPriority(-1)
-                    .accessibilityLabel("Channel: \(group.name)")
-                Spacer(minLength: 0)
-                button
             }
-            if let problem = model.problem {
-                Text(problem)
-                    .font(Theme.sans(12, .semibold))
-                    .foregroundStyle(.black)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Capsule().fill(Theme.cream))
-                    .onTapGesture { model.problem = nil }
-            }
+            .padding(.horizontal, 14)
+            .frame(height: 40)
+            .frosted(Capsule(), dim: 0.45)
+            .overlay(Capsule().strokeBorder(.white.opacity(0.14), lineWidth: 1))
+            .contentShape(Capsule())
         }
-        .fullScreenCover(item: $playing) { queue in
-            PlayerScreen(posts: queue.posts, server: server, start: queue.posts.first?.key ?? "")
-        }
-    }
-
-    @ViewBuilder
-    private var button: some View {
-        if model.kept != nil {
-            Button {
-                Task { if let posts = await model.open() { playing = PlayQueue(posts: posts) } }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark").font(.system(size: 13, weight: .heavy))
-                    Text("Kept · Open")
-                }
-                .lineLimit(1)
-                .fixedSize()
-                .font(Theme.sans(14, .heavy))
-                .foregroundStyle(Theme.ink)
-                .padding(.horizontal, 14)
-                .frame(height: 40)
-                .frosted(Capsule(), dim: 0.45)
-                .overlay(Capsule().strokeBorder(.white.opacity(0.14)))
-                .opacity(model.busy ? 0.6 : 1)
-            }
-            .buttonStyle(.plain)
-            .disabled(model.busy)
-            .accessibilityLabel("Kept. Open your channel")
-        } else {
-            Button {
-                Task { await model.keep() }
-            } label: {
-                HStack(spacing: 6) {
-                    if model.busy {
-                        ProgressView().controlSize(.mini).tint(.black)
-                    } else {
-                        Image(systemName: "plus").font(.system(size: 13, weight: .heavy))
+        .buttonStyle(.plain)
+        .disabled(model.busy)
+        .accessibilityLabel(group.name)
+        .accessibilityValue(kept ? "Kept" : "Not kept")
+        .accessibilityHint(kept ? "Leave this channel" : "Keep this channel")
+        // Under the name, without moving the bar.
+        .overlay(alignment: .topLeading) {
+            if let text = model.problem ?? message {
+                HStack(spacing: 8) {
+                    if model.problem == nil {
+                        Image(systemName: "checkmark").font(.system(size: 13, weight: .heavy))
                     }
-                    Text("Keep this channel")
+                    Text(text)
                 }
-                .lineLimit(1)
-                .fixedSize()
                 .font(Theme.sans(14, .heavy))
                 .foregroundStyle(.black)
-                .padding(.horizontal, 14)
-                .frame(height: 40)
-                .background(Capsule().fill(Theme.accent))
+                .padding(.horizontal, 16)
+                .frame(minHeight: 40)
+                .background(Capsule().fill(Theme.cream))
+                .fixedSize()
+                .offset(y: 50)
+                .onTapGesture { model.problem = nil; message = nil }
+                .transition(.opacity)
             }
-            .buttonStyle(.plain)
-            .disabled(model.busy)
-            .accessibilityHint("Adds its posts to a channel of your own")
+        }
+        .animation(.easeInOut(duration: 0.2), value: message)
+        .animation(.easeInOut(duration: 0.2), value: model.problem)
+    }
+
+    private func toggle() async {
+        let wasKept = model.kept != nil
+        if wasKept { await model.leave() } else { await model.keep() }
+        guard model.problem == nil, (model.kept != nil) != wasKept else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        show(wasKept ? "Left" : "Kept · in your channels")
+    }
+
+    private func show(_ text: String) {
+        messageTask?.cancel()
+        message = text
+        UIAccessibility.post(notification: .announcement, argument: text)
+        messageTask = Task {
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            guard !Task.isCancelled else { return }
+            message = nil
         }
     }
 }

@@ -119,6 +119,7 @@ fun SavesHome(
             onTop = vm::seenTop,
             onSaver = onSaver,
             toastInTopBar = true,
+            queue = QueueInfo(name = "My saves", note = "Newest first. Tap any post to start there."),
         )
         return
     }

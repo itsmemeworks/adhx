@@ -59,40 +59,6 @@ struct LineupStrip: View {
     }
 }
 
-/// "Just saved · 1 of 2" above the byline: opens Up next.
-struct LineupPill: View {
-    let spot: FeedModel.LineupSpot
-    let open: () -> Void
-
-    var body: some View {
-        Button(action: open) {
-            HStack(spacing: 8) {
-                Image(systemName: "list.bullet")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Theme.accent)
-                Text(spot.section.title)
-                    .font(Theme.sans(14, .heavy))
-                    .foregroundStyle(Theme.ink)
-                Text("· \(spot.position) of \(spot.count)")
-                    .font(Theme.sans(14))
-                    .foregroundStyle(Theme.muted)
-                Image(systemName: "chevron.up")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Theme.muted)
-            }
-            .lineLimit(1)
-            .padding(.leading, 10)
-            .padding(.trailing, 12)
-            .frame(height: 40)
-            .frosted(Capsule(), dim: 0.55)
-            .overlay(Capsule().strokeBorder(.white.opacity(0.14), lineWidth: 1))
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(spot.section.title), \(spot.position) of \(spot.count). Open Up next")
-    }
-}
-
 /// Up next: the lineup in its three parts. Always in this order; tap any
 /// post to start there.
 struct UpNextSheet: View {
@@ -232,43 +198,6 @@ struct QueueSheet: View {
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
-    }
-}
-
-/// "Ana’s saves · 3 of 24" above the byline in a channel or a search: opens Up next.
-struct QueuePill: View {
-    let name: String
-    let position: Int
-    let count: Int
-    let open: () -> Void
-
-    var body: some View {
-        Button(action: open) {
-            HStack(spacing: 8) {
-                Image(systemName: "list.bullet")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Theme.accent)
-                Text(name)
-                    .font(Theme.sans(14, .heavy))
-                    .foregroundStyle(Theme.ink)
-                    .lineLimit(1)
-                Text("· \(position) of \(count)")
-                    .font(Theme.sans(14))
-                    .foregroundStyle(Theme.muted)
-                    .fixedSize()
-                Image(systemName: "chevron.up")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Theme.muted)
-            }
-            .padding(.leading, 10)
-            .padding(.trailing, 12)
-            .frame(height: 40)
-            .frosted(Capsule(), dim: 0.55)
-            .overlay(Capsule().strokeBorder(.white.opacity(0.14), lineWidth: 1))
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(name), \(position) of \(count). Open Up next")
     }
 }
 

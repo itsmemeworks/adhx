@@ -1,6 +1,5 @@
 package com.adhx.share.feed
 
-import com.adhx.share.ui.KeepUpright
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -17,8 +16,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -55,16 +54,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -76,32 +76,34 @@ import com.adhx.share.R
 import com.adhx.share.data.Connection
 import com.adhx.share.library.LibraryViewModel
 import com.adhx.share.library.PlayerScreen
+import com.adhx.share.library.Route
 import com.adhx.share.library.SavesHome
+import com.adhx.share.library.UpNextSpot
 import com.adhx.share.links.Networks
 import com.adhx.share.main.Reach
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.FeedMode
+import com.adhx.share.net.Lineup
 import com.adhx.share.net.PhonePost
 import com.adhx.share.net.ReasonPost
 import com.adhx.share.net.Saver
 import com.adhx.share.net.WhyKind
 import com.adhx.share.net.WhyReason
-import com.adhx.share.library.Route
-import com.adhx.share.ui.Avatar
-import com.adhx.share.ui.GobShape
-import com.adhx.share.ui.NetworkMark
-import androidx.compose.ui.semantics.Role
 import com.adhx.share.ui.AdhxColors
+import com.adhx.share.ui.Avatar
 import com.adhx.share.ui.Copy
-import com.adhx.share.ui.Glyphs
 import com.adhx.share.ui.Faces
+import com.adhx.share.ui.Glyphs
+import com.adhx.share.ui.GobShape
+import com.adhx.share.ui.KeepUpright
+import com.adhx.share.ui.NetworkMark
 import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.PrimaryButton
 import com.adhx.share.ui.Segmented
 import com.adhx.share.ui.SerifFamily
-import com.adhx.share.ui.serifLineBox
 import com.adhx.share.ui.Spinner
 import com.adhx.share.ui.rememberReducedMotion
+import com.adhx.share.ui.serifLineBox
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -220,12 +222,14 @@ fun NewTab(
             hideTopBarWhileSending = true,
             toastInTopBar = true,
             onSaver = actions.openPerson,
-            aboveCaption = { post ->
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    lineupSpot(ui, post.key)?.let { spot -> LineupPill(spot) { upNext = true } }
-                    WhyChip(post, server) { why = post }
+            // The count pill says where you are in the lineup and opens its Up next.
+            upNextSpot = { post ->
+                lineupSpot(ui, post.key)?.let { spot ->
+                    UpNextSpot(spot.position, spot.count, "${Lineup.title(spot.part)}, ${spot.position} of ${spot.count}. Open Up next")
                 }
             },
+            onUpNext = { upNext = true },
+            onReason = { why = it },
             end = if (ui.ended) end else null,
             jumpTo = jumpTo,
             onJumped = { jumpTo = null },
@@ -276,42 +280,6 @@ fun NewTab(
             newCount = badge,
             hidden = ui.hidden,
         )
-    }
-}
-
-/** The first reason the feed gives, as a chip over the caption ("Saved together ›"); tapping it explains. */
-@Composable
-private fun WhyChip(post: PhonePost, server: String, onClick: () -> Unit) {
-    val reason = whyChipLabel(post) ?: return
-    Row(
-        Modifier
-            .height(40.dp)
-            .clip(RoundedCornerShape(50))
-            .background(Color.Black.copy(alpha = 0.55f))
-            .border(1.dp, AdhxColors.White.copy(alpha = 0.14f), RoundedCornerShape(50))
-            .clickable(onClickLabel = Copy.WHY_TITLE, onClick = onClick)
-            .padding(start = 10.dp, end = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        val sender = sender(post)
-        if (sender != null) {
-            // "Pete sent you this", with Pete's face.
-            Avatar(sender, server, size = 24.dp)
-        } else {
-            Icon(whyIcon(post.whyKind, chip = true), contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(18.dp))
-        }
-        Spacer(Modifier.width(8.dp))
-        Text(
-            reason,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            color = AdhxColors.White,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false),
-        )
-        Spacer(Modifier.width(8.dp))
-        Icon(Glyphs.Chevron, contentDescription = null, tint = AdhxColors.Muted, modifier = Modifier.size(14.dp))
     }
 }
 

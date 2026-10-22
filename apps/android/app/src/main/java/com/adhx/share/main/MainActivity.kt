@@ -40,6 +40,7 @@ import com.adhx.share.feed.HomeScreen
 import com.adhx.share.feed.HomeTab
 import com.adhx.share.feed.HomeHeader
 import com.adhx.share.feed.newBadge
+import com.adhx.share.feed.GroupChannelBar
 import com.adhx.share.feed.TunedInScreen
 import com.adhx.share.library.BackTitleRow
 import com.adhx.share.net.ChannelKind
@@ -287,6 +288,14 @@ private fun ConnectedApp(
                 val channel by feed.channel.collectAsStateWithLifecycle()
                 // "Play the 4 new" keeps the ones it started with, even as they turn seen.
                 val posts = remember(channel.slug, channel.items.isEmpty()) { if (route.onlyNew) channel.fresh else channel.items }
+                // A group channel's name is the toggle that keeps or leaves it; it says so under the bar.
+                var said by remember { mutableStateOf<String?>(null) }
+                LaunchedEffect(said) {
+                    if (said != null) {
+                        delay(2_500)
+                        said = null
+                    }
+                }
                 if (posts.isEmpty()) {
                     LaunchedEffect(Unit) { library.back() }
                 } else {
@@ -295,7 +304,20 @@ private fun ConnectedApp(
                         server = current.server,
                         startIndex = route.start,
                         onPage = {},
-                        topBar = { BackBar(back) },
+                        topBar = {
+                            if (channel.kind == ChannelKind.GROUP) {
+                                GroupChannelBar(
+                                    title = channel.title.ifBlank { "This channel" },
+                                    kept = channel.kept != null,
+                                    busy = channel.keeping,
+                                    toast = said,
+                                    onClose = back,
+                                    onToggle = { feed.toggleChannel { said = it } },
+                                )
+                            } else {
+                                BackBar(back)
+                            }
+                        },
                         onSaver = openPerson,
                         queue = QueueInfo(
                             // A friend's channel reads "Ana’s saves", as on its page.
@@ -319,6 +341,7 @@ private fun ConnectedApp(
                         onPage = feed::onReactedPage,
                         topBar = { BackBar(back) },
                         onSaver = openPerson,
+                        queue = QueueInfo(name = "Reactions", note = "Newest reaction first. Tap any post to start there."),
                     )
                 }
             }

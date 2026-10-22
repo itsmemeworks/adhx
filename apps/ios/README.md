@@ -11,7 +11,8 @@ media and streams it back. The phone sends links and plays what comes back.
 It only ever talks to your own ADHX, and it never opens the ADHX website.
 
 <p>
-  <img src="../../docs/images/phone-new.jpg" width="240" alt="New playing a friend's video full screen: a speech bubble with Ben's note, Ben and Ana saved this, and round buttons down the right">
+  <img src="../../docs/images/phone-home.jpg" width="240" alt="Home playing a friend's video full screen: Ben's note floating up, round buttons down the right, and along the bottom Ana's face with +1, the line and 6 of 6">
+  <img src="../../docs/images/phone-who.jpg" width="240" alt="The bottom row after tapping the face: a close button, then Ana, Ben, Jo and Mum, with stickers for saved, their reaction and watched">
   <img src="../../docs/images/phone-react.jpg" width="240" alt="The React picker over a post: six emoji, a Say something field and a Send button">
   <img src="../../docs/images/phone-send.jpg" width="240" alt="The send sheet: Sending the video itself, Send via WhatsApp, Copy, Files, Save to Photos or More, and faces to send it straight to your people">
 </p>
@@ -39,7 +40,7 @@ and a phone on iOS 17 or newer. No packages, CocoaPods or other tools.
 
 The app has two parts that work as one.
 
-- **The app** (`App/`) opens on **New**: what your people saved that you
+- **The app** (`App/`) opens on **Home**: what your people saved that you
   haven't seen, full screen, swipe up for the next. Beside it sit
   **Channels** (rabbit holes from everyone, one per friend, ones made from
   what you keep, and **Reactions**, every post your people reacted to) and
@@ -60,11 +61,19 @@ API and every screen's copy are specified in
 
 ### The player
 
-Every list (New, a channel, Reactions, Live, My saves, search results) plays
-in the same full-screen player.
+Every list (Home, a channel, Reactions, Live, My saves, search results) plays
+in the same full-screen player (layout C, boards 15.7–15.10).
 
-- **Down the right**: React, Save, Share, Save to Photos, the post's network
-  mark and More. Live adds its own React for the room.
+- **Down the right**: React, Save, Share, the post's network mark and More.
+  Live adds its own React for the room.
+- **Along the bottom**, one row clear of the home bar: the first saver's face
+  ("+2" when others saved it too), the line you drag through a video, and
+  where you are ("5 of 51", which opens Up next). Tap the face and the row
+  shows everyone on the post (`/api/app/who`) with a sticker each for saved,
+  their reaction and watched; tap someone for their channel, ✕ (or the next
+  post) for the line. Friends' notes float up like reactions, in the serif.
+  The only reasons shown are the ones faces can't say: "Ana sent you this"
+  (with Reply) and For you's "Like … you kept".
 - **React** works on every post, not only in Live: six emoji or a few words.
   Yours floats up at once with your face. When you land on a post, the
   reactions people already left float up again (the newest 12).
@@ -73,8 +82,8 @@ in the same full-screen player.
 - **Share** sends the kept file itself (Send via WhatsApp, Copy, Files, Save
   to Photos or More for the system share sheet), or the post straight to one
   of your people.
-- **More** has Why this one, Just for me and your note, Sound, Fit video,
-  Repeat, Dock (picture in picture) and Hide.
+- **More** has Why this one, Just for me and your note, Save to phone,
+  Sound, Fit video, Repeat, Dock (picture in picture) and Hide.
 - **Hold** the stage to hide the buttons; tap to bring them back, tap again to
   pause or play. Photos show for 10 seconds each, then the next photo or save.
 - **Landscape is for watching.** The app turns sideways only while the player
@@ -84,8 +93,8 @@ in the same full-screen player.
   pill's place for a few seconds instead of stacking up.
 
 <p>
-  <img src="../../docs/images/phone-more.jpg" width="240" alt="The More sheet: Sound, Fit video, Repeat and Hide, then Why this one, Share an ADHX link, Open the original, Copy link and Copy the words">
-  <img src="../../docs/images/phone-channels.jpg" width="240" alt="The Channels tab: From everyone rabbit holes, a face for each of your people with unseen counts and Invite, and Made for you">
+  <img src="../../docs/images/phone-more.jpg" width="240" alt="The More sheet: Sound, Fit video, Repeat and Hide, then Why this one, Share an ADHX link, Open the original, Copy link, Save to phone and Copy the words">
+  <img src="../../docs/images/phone-channels.jpg" width="240" alt="The Channels tab: Reactions, From everyone rabbit holes and a face for each of your people with unseen counts and Invite">
 </p>
 
 ### Settings
@@ -262,10 +271,10 @@ Your people see what you save, named, unless you switch **Just for me** (on
 the share card, or in the player's More). The app only shows names the
 server sends it, which it does for members only.
 
-- **New** plays videos and photos unless you switch on text posts or
-  articles (tap New again). The choice is saved on your ADHX
+- **Home** plays videos and photos unless you switch on text posts or
+  articles (tap Home again). The choice is saved on your ADHX
   (`/api/app/feed/types`) and on the phone, for servers that don't keep it.
-- **New** marks a post seen after 2 seconds on screen, or as soon as you swipe
+- **Home** marks a post seen after 2 seconds on screen, or as soon as you swipe
   past it, and sends them to `/api/app/seen` in batches.
 - The share card names your people from the last Channels or feed the app
   loaded (kept on the phone in the App Group, cleared on Remove this phone),
@@ -290,16 +299,17 @@ server sends it, which it does for members only.
 - The why, filter and On their way sheets are the boards' own bottom sheets
   (`App/BoardSheet.swift`); Share opens the send sheet
   (`App/Library/SendSheet.swift`), which downloads the kept file and hands it
-  on, or sends the post straight to one of your people (it shows in their New
+  on, or sends the post straight to one of your people (it shows in their Home
   as "Pete sent you this").
 - Forming groups on Live have a bell, "Tell me when it's live". When one goes
   live you get a local notification (`App/Feed/LiveAlerts.swift`), from a
   poll while the app is open and a background refresh task
   (`<prefix>.alerts`, beside `<prefix>.flush` in `Config/App-Info.plist`);
   tapping it tunes in. The app asks to show notifications on the first bell.
-- A From everyone channel can be kept as one of yours (Keep this channel,
-  then Kept · Open).
-- On an ADHX without these endpoints yet (404), New plays your saves as
+- A From everyone channel can be kept as one of yours: in its player the
+  name beside Close is the toggle ("+ Coding with AI" keeps it, "✓ Coding
+  with AI" leaves it).
+- On an ADHX without these endpoints yet (404), Home plays your saves as
   before, and Channels and Live say the server needs an update.
 
 Search follows the server's `nextOffset` as you reach the end of the result
@@ -425,7 +435,7 @@ apps/ios/
   ADHXShare.xcodeproj    the project (folders are synced; new files join automatically)
   Config/                Base.xcconfig, Info.plists, entitlements, stamp-version.sh
   App/                   the app: Connect, email sign-in, the camera, orientation, Shared lately
-    Feed/                New, Channels, Live, the Reactions feed, live alerts, Why this one
+    Feed/                Home, Channels, Live, the Reactions feed, live alerts, Why this one
     Library/             the player, reactions, the send sheet, search, My saves
     Settings/            Settings, your people, change picture and its crop, invites
     Doing/               On their way

@@ -666,6 +666,41 @@ enum LiveSay: Equatable {
 }
 
 /// `GET /api/app/reactions`: `{ reactions: [...] }`; one that won't read is skipped.
+/// Who's on a post (`GET /api/app/who`): who saved it, reacted and watched it,
+/// for the player's face row (board 15.9). Members only.
+struct PostPeople: Decodable {
+    let savers: [Saver]
+    let reactions: [LiveReactionEvent]
+    /// Who watched it, newest first (`savedAt` is when they watched).
+    let watched: [Saver]
+
+    private enum Keys: String, CodingKey { case savers, reactions, watched }
+    private struct Watcher: Decodable {
+        let username: String
+        let name: String?
+        let avatarUrl: String?
+        let at: String?
+        let isYou: Bool?
+    }
+
+    init(savers: [Saver] = [], reactions: [LiveReactionEvent] = [], watched: [Saver] = []) {
+        self.savers = savers
+        self.reactions = reactions
+        self.watched = watched
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        savers = (try? c.decode(Lossy<Saver>.self, forKey: .savers))?.items ?? []
+        reactions = (try? c.decode(Lossy<LiveReactionEvent>.self, forKey: .reactions))?.items ?? []
+        watched = ((try? c.decode(Lossy<Watcher>.self, forKey: .watched))?.items ?? []).map {
+            Saver(username: $0.username, name: $0.name, avatarUrl: $0.avatarUrl, savedAt: $0.at, isYou: $0.isYou ?? false)
+        }
+    }
+}
+
+private struct LeftChannel: Decodable { let removed: Int? }
+
 struct PostReactionsPage: Decodable {
     let reactions: [LiveReactionEvent]
 
@@ -1027,6 +1062,17 @@ struct KeepAnswer: Decodable {
 extension ADHXClient {
     /// Who you can send a post to (`GET /api/app/send`).
     /// Everyone's reactions to a post, oldest first (`GET /api/app/reactions`).
+    /// Who saved, reacted to and watched a post.
+    func who(_ post: PostRef) async throws -> PostPeople {
+        try await send("GET", "/api/app/who",
+                       query: [URLQueryItem(name: "platform", value: post.platform), URLQueryItem(name: "id", value: post.id)])
+    }
+
+    /// Leave a kept From everyone channel (the player's keep toggle).
+    func leaveGroupChannel(_ slug: String) async throws {
+        let _: LeftChannel = try await send("DELETE", "/api/app/channels/group/\(Self.pathPart(slug))/keep")
+    }
+
     func reactions(to post: PostRef) async throws -> [LiveReactionEvent] {
         let page: PostReactionsPage = try await send(
             "GET", "/api/app/reactions",

@@ -198,6 +198,8 @@ type QueueResponse = SearchResponse & {
   /** The kinds the feed was filtered to, and (New) unseen posts of other kinds. */
   types?: FeedKind[]
   waiting?: Partial<Record<FeedKind, number>>
+  /** Home's lineup: how many posts each part holds. */
+  sections?: Record<string, number>
   /** Members only: who else is tuned in. */
   watchers?: Saver[]
   /** A From everyone channel you kept as one of yours ("Kept · Open"). */
@@ -205,11 +207,11 @@ type QueueResponse = SearchResponse & {
 }
 
 const FEED_TITLES: Record<BlendMode, string> = {
-  new: 'New',
+  new: 'Home',
   everyone: 'Everyone',
   friends: 'Friends only',
   mine: 'Mine',
-  lineup: 'New',
+  lineup: 'Home',
 }
 
 /** Blended feed items are plain posts; "saved" is whether you're among the savers. */
@@ -449,6 +451,8 @@ export function TheaterV2({
   const feedCursor = useRef<string | null>(null)
   const feedLoading = useRef<Promise<boolean> | null>(null)
   const [feedTotal, setFeedTotal] = useState(0)
+  /** Home's lineup: how many posts each part holds (`just`, `unseen`, `foryou`). */
+  const [feedSections, setFeedSections] = useState<Record<string, number> | null>(null)
   const [caughtUp, setCaughtUp] = useState(false)
   /** "Show more / less from …", loaded when "Why this one" first opens. */
   const [weights, setWeights] = useState<Record<string, FeedWeight> | null>(null)
@@ -590,7 +594,8 @@ export function TheaterV2({
           if (response.types?.length) setShownTypes(response.types)
           setFeedWaiting(response.waiting ?? {})
           setFeedTotal(response.total ?? results.length)
-          // Opened New with nothing left: straight to the end card.
+          setFeedSections(response.sections ?? null)
+          // Opened Home with nothing left: straight to the end card.
           setCaughtUp(source.feed === 'new' && results.length === 0 && !response.nothingYet)
         }
         if (source.groupChannel) setGroupKept(response.kept ?? null)
@@ -1978,7 +1983,23 @@ export function TheaterV2({
         : ''
   const fullTransport = wide && layout !== 'panel' && !tallFrame
   const muteOnFrame = isVideo && !fullTransport
-  const unseen = source.feed === 'new' ? (caughtUp ? 0 : Math.max(0, feedTotal - index)) : null
+  const unseen =
+    source.feed === 'new'
+      ? caughtUp
+        ? 0
+        : feedSections
+          ? // The lineup: Just saved and Not seen yet still ahead (For you aside).
+            Math.max(
+              0,
+              (feedSections.just ?? 0) +
+                (feedSections.unseen ?? 0) -
+                items.slice(0, index).filter((i) => {
+                  const part = (i.post as { section?: string }).section
+                  return part === 'just' || part === 'unseen'
+                }).length,
+            )
+          : Math.max(0, feedTotal - index)
+      : null
   const countLine =
     source.feed === 'new'
       ? `${unseen ?? 0} you haven’t seen`

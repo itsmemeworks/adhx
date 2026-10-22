@@ -1,48 +1,38 @@
 package com.adhx.share.feed
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
-import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
-import androidx.compose.material3.Icon
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.Dp
-import com.adhx.share.net.FriendNote
 import android.widget.Toast
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
-import com.adhx.share.net.PhonePost
-import com.adhx.share.ui.Glyphs
-import com.adhx.share.ui.GobShape
-import com.adhx.share.ui.faceColor
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,23 +40,43 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.adhx.share.library.BackTitleRow
 import com.adhx.share.library.PosterCard
 import com.adhx.share.library.Route
+import com.adhx.share.library.ToastPill
 import com.adhx.share.net.ChannelKind
+import com.adhx.share.net.FriendNote
+import com.adhx.share.net.PhonePost
 import com.adhx.share.net.Saver
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Avatar
 import com.adhx.share.ui.Copy
+import com.adhx.share.ui.Glyphs
+import com.adhx.share.ui.GobShape
 import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.Spinner
+import com.adhx.share.ui.faceColor
 
 /**
  * One channel (`/api/app/channels/{kind}/{slug}`): a friend's saves with
@@ -327,5 +337,64 @@ private fun PlayButton(onClick: () -> Unit) {
         Icon(Glyphs.Play, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(8.dp))
         Text(Copy.PLAY_ALL, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+    }
+}
+
+/**
+ * A group channel's bar over its player (boards 15.8, 15.10): Close (down),
+ * then the channel's name, which is the toggle: "+ Coding with AI" keeps it as
+ * one of yours, "✓ Coding with AI" leaves it. [toast] shows under it.
+ */
+@Composable
+fun BoxScope.GroupChannelBar(title: String, kept: Boolean, busy: Boolean, toast: String?, onClose: () -> Unit, onToggle: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent)))
+            .statusBarsPadding()
+            .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .clickable(onClickLabel = "Close", role = Role.Button, onClick = onClose)
+                    .semantics { contentDescription = "Close" },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Glyphs.Chevron, contentDescription = null, tint = AdhxColors.Cream, modifier = Modifier.size(18.dp).rotate(90f))
+            }
+            val label = if (kept) Copy.LEAVE_THIS_CHANNEL else Copy.KEEP_CHANNEL
+            Row(
+                Modifier
+                    .weight(1f, fill = false)
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(50))
+                    .clickable(enabled = !busy, onClickLabel = label, role = Role.Button, onClick = onToggle)
+                    .clearAndSetSemantics {
+                        contentDescription = "$title. $label"
+                        role = Role.Button
+                        selected = kept
+                    }
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                if (busy) {
+                    Spinner(size = 14.dp, stroke = 2.dp)
+                } else {
+                    Icon(if (kept) Glyphs.Check else Glyphs.Plus, contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(16.dp))
+                }
+                Text(title, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Cream, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        if (toast != null) {
+            ToastPill(toast, Modifier.align(Alignment.CenterHorizontally))
+        }
     }
 }

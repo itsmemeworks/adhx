@@ -296,18 +296,19 @@ unfinished delivery (kept on the phone only). Tap one to watch it in the
 player; one that isn't saved (or is gone from your saves) opens the link you
 shared, on its own network.
 
-## Home: New · Channels · Live
+## Home: Home · Channels · Live
 
 One light row sits on top: Gob (Settings), the tabs, and Search. The full
 behaviour and endpoints are in
 [the spec's friends feed section](../../docs/specs/phone-app.md#the-friends-feed-on-the-phone).
 
-- **New** (`GET /api/app/feed?mode=new`) plays what you haven't seen, with a
-  count on the tab and a why chip over the byline. Tap it for Why this one,
+- **Home** (`GET /api/app/feed?mode=lineup`) plays the lineup (Just saved,
+  Not seen yet, For you), with a count on the tab. "Ana sent you this" and
+  For you's "Like … you kept" sit over the bottom row; tap one for Why this one,
   Everyone · Friends only · Mine, and **Show less from Ben** / **Show more
   from Ana** (`GET/PUT /api/app/feed/weights`). A post someone sent you leads
   with "Pete sent you this" and their face; a "Like … you kept" reason shows
-  that post of yours as a small thumbnail. Tap New again for What's in your
+  that post of yours as a small thumbnail. Tap Home again for What's in your
   feed: videos and photos by default, text posts and articles if you want
   them (`/api/app/feed/types`, also kept on the phone). Posts count as seen
   after 2 s on stage or when you swipe past (`POST /api/app/seen`, batched).
@@ -322,9 +323,10 @@ behaviour and endpoints are in
   (`/api/app/channels/{kind}/{slug}`) and plays from the one you tap. Posts
   you haven't saved or seen carry a yellow **New** (`isNew`), and **Play the
   4 new** plays just those. A friend's channel shows their latest note as a
-  paper tile. A From everyone channel has **Keep this channel**
+  paper tile. A From everyone channel's page has **Keep this channel**
   (`POST /api/app/channels/group/{slug}/keep`), which then reads **Kept ·
-  Open**.
+  Open**; in its player the name beside Close is the keep/leave toggle
+  ("+ name" keeps it, "✓ name" leaves it with `DELETE` on the same address).
 - **Live** (`GET /api/app/live`): the moments your lot are saving into, with
   how busy each is ("3 saves in 10 min · Ana, Ben and Jo"). Groups still
   forming are dashed rows with a bell for **Tell me when it's live**
@@ -333,7 +335,7 @@ behaviour and endpoints are in
   every minute while open and every 15 minutes with WorkManager, on the "Live"
   notification channel. Tune in asks `/api/app/live/{slug}` every 5 s for new
   posts, who's watching and reactions (`POST /api/app/live/{slug}/react`).
-- **Faces** on the byline and search tiles open that friend's channel.
+- **Faces** on search tiles and in the player's who row open that friend's channel.
 
 A server without the feed (404) keeps the old home: My saves. A feed with
 nothing saved yet (`nothingYet`) says "Nothing new yet. Save something for
@@ -356,9 +358,8 @@ Down the right, top to bottom:
 | **React**              | Six emoji or a few words, on every post. Yours floats up at once with your face and is kept with `POST /api/app/reactions`; if it doesn't go, it's taken back with "Couldn't send that. Try again."                                 |
 | **Save**               | Yellow when the post is in your saves; on a friend's post it saves it to yours too.                                                                                                                                                 |
 | **Share**              | Sends what your ADHX kept, not a link: the send sheet fetches the file and hands it to WhatsApp, Copy, Files, Save to phone or More, or sends the post straight to one of your people.                                              |
-| **Save to phone**      | Puts the video, sound or every photo of an album in the gallery under ADHX (Android 10 and up); a text post's words go to the clipboard.                                                                                            |
 | **The network's mark** | Opens the original-post sheet: who posted it, their words in full (or a kept X article), **Open on {network}** and **Copy link**.                                                                                                   |
-| **More**               | Just for me (on your own saves), Sound, Fit video, Repeat, Dock (picture in picture), Hide controls, Open on {network}, Share the video, Copy link, Copy the words and **Share an ADHX link** (only opens for people on your ADHX). |
+| **More**               | Save to your phone (the video, sound or every photo of an album in the gallery under ADHX, Android 10 and up), Just for me (on your own saves), Sound, Fit video, Repeat, Dock (picture in picture), Hide controls, Open on {network}, Share the video, Copy link, Copy the words and **Share an ADHX link** (only opens for people on your ADHX). |
 
 When you land on a post, the reactions people already left float up with
 their faces (the newest 12, oldest first), once per post per run. Live keeps
@@ -374,10 +375,16 @@ its own room and doesn't replay.
   save when a video ends; on, it loops.
 - **Dock** keeps a video playing in a small window with previous and next
   buttons; it also goes there by itself when you leave the app mid-video.
-- Along the bottom: who saved it (with a friend's note in a speech bubble),
-  the network's mark and who posted it, the first lines of text with links
-  shortened and tappable, and a thin line you can drag to seek. A video that
-  can't play says why, in the server's words.
+- Along the bottom (layout C, boards 15.7–15.10), one row clear of the
+  gesture bar: the first saver's face ("+2" when others saved it too), the
+  line you drag to seek (a photo's time on a photo) and where you are ("5 of
+  51", which opens Up next). Tap the face and the row shows everyone on the
+  post (`GET /api/app/who`) with a sticker each in a fixed corner: saved,
+  their reaction, watched; ✕ or the next post brings the line back. Friends'
+  notes float up first, like reactions, in the serif. Above the row: "Pete
+  replied · 2m", and the reasons faces can't say ("Ana sent you this" with
+  Reply, "Like … you kept"), or a lock on your Just for me saves. A video
+  that can't play says why, in the server's words.
 
 Share downloads use separate private cache batches, so starting another share
 keeps earlier recipients' files usable. Failed batches are removed at once;
@@ -426,7 +433,7 @@ bottom.
   account's own default on the server applies. On sends `private: true`; off
   applies only to a new save when acknowledging publication. An untouched off
   default never makes an existing private repeat shared.
-- **On their way**: a pill over the New player ("3 on their way") while posts
+- **On their way**: a pill over the Home player ("3 on their way") while posts
   are processing, asking `GET /api/app/doing` every 5 s while it's on screen
   (15 s while nothing is). Tap it for each post's picture, step and progress;
   ones that need you show why and **Retry** (`POST /api/app/doing/retry`).
@@ -515,7 +522,7 @@ app/src/main/java/com/adhx/share/
   main/    MainActivity (screens and back), Connect, email sign-in, Settings,
            Shared lately, Your people and join approvals, change picture, invites
   doing/   On their way: the pill, its sheet and the full list
-  feed/    Home (New · Channels · Live), the caught-up page, Why this one,
+  feed/    Home (Home · Channels · Live), the caught-up page, Why this one,
            channels, Live and Tuned in, the reactions row, seen batching
   library/ The player, the original-post sheet, reactions on posts, the send
            sheet, the reader, picture in picture, My saves, search, More

@@ -18,7 +18,7 @@ import { QuickSearch, openQuickSearch } from './QuickSearch'
 export type NavId = 'new' | 'now' | 'channels' | 'saves' | 'search'
 
 export const NAV: { id: NavId; label: string; href: string }[] = [
-  { id: 'new', label: 'New', href: '/play?feed=new' },
+  { id: 'new', label: 'Home', href: '/play?feed=new' },
   { id: 'now', label: 'Right now', href: '/now' },
   { id: 'channels', label: 'Channels', href: '/channels' },
   { id: 'saves', label: 'My saves', href: '/play?recent=1' },

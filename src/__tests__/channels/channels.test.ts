@@ -20,7 +20,12 @@ vi.mock('@/lib/semantic/supervisor', () => ({
 }))
 
 import { groupCount, groupSaves, kmeans, seedFrom } from '@/lib/channels/cluster'
-import { computeAutoChannels, getAutoChannels, keepAutoChannel } from '@/lib/channels/auto'
+import {
+  autoChannelsBuilding,
+  computeAutoChannels,
+  getAutoChannels,
+  keepAutoChannel,
+} from '@/lib/channels/auto'
 import { channelQueue } from '@/lib/channels/channels'
 import { CHANNEL_NAMES } from '@/lib/channels/names'
 import { saveEmbedding } from '@/lib/semantic/store'
@@ -129,8 +134,25 @@ describe('made for you channels', () => {
     await getAutoChannels(USER_A, deps)
     expect(deps.chooseName.mock.calls.length).toBe(calls)
     testInstance.sqlite.exec(`UPDATE auto_channels SET model = 'old'`)
-    await getAutoChannels(USER_A, deps)
+    // The stored set is served at once while it's rebuilt.
+    expect((await getAutoChannels(USER_A, deps)).length).toBeGreaterThan(0)
+    await autoChannelsBuilding(USER_A)
     expect(deps.chooseName.mock.calls.length).toBeGreaterThan(calls)
+  })
+
+  it('goes on without channels that take too long to build the first time', async () => {
+    await seedLibrary(USER_A)
+    let release: (name: string | null) => void = () => {}
+    const chooseName = vi.fn(() => new Promise<string | null>((resolve) => (release = resolve)))
+    const deps = { embedNames: nameVectors, chooseName, firstWaitMs: 20 }
+    expect(await getAutoChannels(USER_A, deps)).toEqual([])
+    const building = autoChannelsBuilding(USER_A)!
+    // Each name is asked for in turn; answer them all.
+    const answer = setInterval(() => release(null), 5)
+    const built = await building
+    clearInterval(answer)
+    expect(built.length).toBeGreaterThan(0)
+    expect((await getAutoChannels(USER_A, deps)).length).toBe(built.length)
   })
 
   it('keeps a channel as a public tag, never past the per-post tag limit', async () => {

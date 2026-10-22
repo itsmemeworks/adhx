@@ -438,3 +438,50 @@ describe('reactions on a post, from the phone', () => {
     expect((await busy.json()).code).toBe('busy')
   })
 })
+
+describe("who's on a post (/api/app/who)", () => {
+  const who = async (as: string, query: string) => {
+    const { GET: whoGET } = await import('@/app/api/app/who/route')
+    const key = createAccessKey(as, 'Phone', 'phone')!.key
+    const res = await whoGET(
+      new NextRequest(`${BASE}/api/app/who?${query}`, {
+        headers: { authorization: `Bearer ${key}` },
+      }),
+    )
+    return { status: res.status, body: await res.json() }
+  }
+  const view = (userId: string, id: string, at: string) =>
+    testInstance.db
+      .insert(schema.postViews)
+      .values({ userId, platform: 'twitter', postId: id, seenAt: at })
+      .run()
+
+  it('names who saved, reacted and watched, to members who can see the post', async () => {
+    expect((await react(BEN, { ...pub, emoji: '😂' })).status).toBe(200)
+    view(BEN, 'pub', '2026-10-22T09:00:00.000Z')
+    view(PETE, 'pub', '2026-10-22T10:00:00.000Z')
+    view(MUM, 'pub', '2026-10-22T11:00:00.000Z')
+    testInstance.db
+      .insert(schema.userBans)
+      .values({ userId: MUM, createdAt: new Date().toISOString(), createdBy: PETE })
+      .run()
+    const seen = await who(PETE, 'platform=twitter&id=pub')
+    expect(seen.status).toBe(200)
+    expect(seen.body.savers.map((s: { username: string }) => s.username)).toContain('ana')
+    expect(seen.body.reactions.map((r: { emoji: string }) => r.emoji)).toEqual(['😂'])
+    // Newest first; Mum is banned, so never shown.
+    expect(
+      seen.body.watched.map((w: { username: string; isYou: boolean }) => [w.username, w.isYou]),
+    ).toEqual([
+      ['pete', true],
+      ['ben', false],
+    ])
+  })
+
+  it('says nothing about a post you can’t see, and refuses a bad id', async () => {
+    view(ANA, 'priv', '2026-10-22T09:00:00.000Z')
+    expect((await who(PETE, 'platform=twitter&id=priv')).status).toBe(404)
+    expect((await who(ANA, 'platform=twitter&id=priv')).status).toBe(200)
+    expect((await who(PETE, 'platform=twitter&id=')).status).toBe(400)
+  })
+})

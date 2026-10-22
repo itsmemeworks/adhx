@@ -559,7 +559,7 @@ export function WhyPanel({
 // ——— Phones ———
 
 const PHONE_TABS: { id: NavId; label: string; href: string }[] = [
-  { id: 'new', label: 'New', href: '/play?feed=new' },
+  { id: 'new', label: 'Home', href: '/play?feed=new' },
   { id: 'channels', label: 'Channels', href: '/channels' },
   { id: 'now', label: 'Live', href: '/now' },
 ]

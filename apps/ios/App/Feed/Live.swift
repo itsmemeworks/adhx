@@ -674,7 +674,7 @@ struct TunedInScreen: View {
                         Text(model.loadError != nil ? "Can’t reach this room" : (model.gone ? "This one’s over." : "Nothing in it yet."))
                             .font(Theme.serif(34))
                             .foregroundStyle(.white)
-                        Text(model.loadError ?? (model.gone ? "Everyone’s moved on. Plenty more in New." : "Hang on, your lot are saving."))
+                        Text(model.loadError ?? (model.gone ? "Everyone’s moved on. Plenty more on Home." : "Hang on, your lot are saving."))
                             .font(Theme.sans(15))
                             .foregroundStyle(Theme.muted)
                         if model.loadError != nil {

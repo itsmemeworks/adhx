@@ -737,6 +737,35 @@ data class LiveReaction(
     val at: String? = null,
 )
 
+/**
+ * Who's on a post (`GET /api/app/who`), for the player's face row: who saved
+ * it (newest first, as on feed items), the reactions kept on it (oldest
+ * first) and the members who watched it (newest first).
+ */
+@Serializable
+data class WhoResponse(
+    val savers: List<Saver> = emptyList(),
+    @Serializable(with = LiveReactionsSerializer::class)
+    val reactions: List<LiveReaction> = emptyList(),
+    val watched: List<Watcher> = emptyList(),
+)
+
+/** A member who watched a post (2 s on screen, or swiped past). */
+@Serializable
+data class Watcher(
+    val username: String = "",
+    val name: String? = null,
+    val avatarUrl: String? = null,
+    val at: String? = null,
+    val isYou: Boolean = false,
+) {
+    fun asSaver() = Saver(username = username, name = name, avatarUrl = avatarUrl, isYou = isYou)
+}
+
+/** Leaving a group channel you kept: how many posts came off your copy of it. */
+@Serializable
+data class LeaveChannelResponse(val removed: Int = 0)
+
 /** What a file that wouldn't play says when asked: gone (404/410, maybe with the server's words) or not. */
 data class FileTrouble(val gone: Boolean, val reason: String?)
 

@@ -567,7 +567,7 @@ describe('New in the theater', () => {
     await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('a'))
     expect(
       fetchMock.mock.calls.some(([u]) =>
-        String(u).startsWith('/api/feed/blend?mode=new&limit=20&types=text'),
+        String(u).startsWith('/api/feed/blend?mode=lineup&limit=20&types=text'),
       ),
     ).toBe(true)
   })
@@ -576,7 +576,7 @@ describe('New in the theater', () => {
     pages.first = { items: [], nextCursor: null, caughtUp: true, nothingYet: false, total: 0 }
     render(<TheaterV2 source={source} />)
     expect(await screen.findByText('You’re all caught up.')).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: 'New' })[0]).toHaveAttribute('aria-current', 'page')
+    expect(screen.getAllByRole('link', { name: 'Home' })[0]).toHaveAttribute('aria-current', 'page')
   })
 
   it('on a brand-new server, asks for the first save', async () => {

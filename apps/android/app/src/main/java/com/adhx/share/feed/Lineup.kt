@@ -64,9 +64,9 @@ import com.adhx.share.ui.SerifFamily
 import kotlinx.coroutines.launch
 
 /*
- * New's lineup on the phone (boards 13.3 and 13.5): a strip under the tabs
- * says which part is playing, a pill above the byline says where you are in
- * it and opens Up next, the whole lineup in its three parts.
+ * Home's lineup on the phone (boards 13.3, 13.5 and 15.7): a strip under the
+ * tabs says which part is playing, the player's count pill says where you are
+ * in it and opens Up next, the whole lineup in its three parts.
  */
 
 /** Where a post is in the lineup: "Just saved · 1 of 2". */
@@ -146,29 +146,6 @@ fun LineupStrip(ui: FeedUi, playingKey: String?, modifier: Modifier = Modifier) 
                 )
             }
         }
-    }
-}
-
-/** "Just saved · 1 of 2" above the byline: opens Up next. */
-@Composable
-fun LineupPill(spot: LineupSpot, onOpen: () -> Unit) {
-    val title = Lineup.title(spot.part)
-    Row(
-        Modifier
-            .height(40.dp)
-            .clip(RoundedCornerShape(50))
-            .background(Color.Black.copy(alpha = 0.55f))
-            .border(1.dp, AdhxColors.White.copy(alpha = 0.14f), RoundedCornerShape(50))
-            .clickable(onClickLabel = "Open Up next", onClick = onOpen)
-            .clearAndSetSemantics { contentDescription = "$title, ${spot.position} of ${spot.count}. Open Up next" }
-            .padding(start = 10.dp, end = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Icon(Glyphs.Lines, contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(16.dp))
-        Text(title, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White, maxLines = 1)
-        Text("· ${spot.position} of ${spot.count}", fontSize = 14.sp, color = AdhxColors.Muted, maxLines = 1)
-        Icon(Glyphs.Chevron, contentDescription = null, tint = AdhxColors.Muted, modifier = Modifier.size(12.dp).rotate(-90f))
     }
 }
 
@@ -341,28 +318,6 @@ fun QueueSheet(
                 }
             }
         }
-    }
-}
-
-/** "Ana’s saves · 3 of 24" above the byline in a channel or a search: opens Up next. */
-@Composable
-fun QueuePill(name: String, position: Int, count: Int, onOpen: () -> Unit) {
-    Row(
-        Modifier
-            .height(40.dp)
-            .clip(RoundedCornerShape(50))
-            .background(Color.Black.copy(alpha = 0.55f))
-            .border(1.dp, AdhxColors.White.copy(alpha = 0.14f), RoundedCornerShape(50))
-            .clickable(onClickLabel = "Open Up next", onClick = onOpen)
-            .clearAndSetSemantics { contentDescription = "$name, $position of $count. Open Up next" }
-            .padding(start = 10.dp, end = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Icon(Glyphs.Lines, contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(16.dp))
-        Text(name, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-        Text("· $position of $count", fontSize = 14.sp, color = AdhxColors.Muted, maxLines = 1)
-        Icon(Glyphs.Chevron, contentDescription = null, tint = AdhxColors.Muted, modifier = Modifier.size(12.dp).rotate(-90f))
     }
 }
 
