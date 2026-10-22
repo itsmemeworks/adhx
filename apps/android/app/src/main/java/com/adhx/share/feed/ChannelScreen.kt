@@ -76,6 +76,7 @@ import com.adhx.share.ui.GobShape
 import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.Spinner
+import com.adhx.share.ui.SquircleShape
 import com.adhx.share.ui.faceColor
 
 /**
@@ -258,7 +259,7 @@ private fun NoteTile(note: FriendNote, person: Saver?, title: String?, server: S
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
+            .clip(SquircleShape(18.dp))
             .background(NotePaper)
             .clickable(onClickLabel = Copy.PLAY, onClick = onClick)
             .padding(16.dp),

@@ -256,7 +256,8 @@ export function LearningSheet({
           </button>
         </div>
         {now && (
-          <div className="flex items-center gap-3 rounded-2xl bg-black px-3.5 py-3">
+          // 24 px sheet, 20 px padding: the 8 px floor.
+          <div className="flex items-center gap-3 rounded-[8px] bg-black px-3.5 py-3">
             <span
               aria-hidden
               className="block h-[18px] w-[18px] shrink-0 animate-nx-spin rounded-full border-[3px] border-[#333] border-t-nx-accent"

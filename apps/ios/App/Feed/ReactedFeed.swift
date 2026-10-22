@@ -139,7 +139,7 @@ private struct ReactedTile: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 7)
                         .frame(minWidth: 22, minHeight: 22)
-                        .frosted(Capsule(), dim: 0.45)
+                        .frosted(Capsule(style: .continuous), dim: 0.45)
                         .padding(6)
                 }
             }
@@ -170,7 +170,7 @@ private struct ReactedTile: View {
                         .lineLimit(1)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 4)
-                        .background(Capsule().fill(Face.colour(for: last.saver.username)))
+                        .background(Capsule(style: .continuous).fill(Face.colour(for: last.saver.username)))
                         .frame(maxWidth: 64, alignment: .leading)
                         .fixedSize(horizontal: false, vertical: true)
                 }

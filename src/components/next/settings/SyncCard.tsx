@@ -11,6 +11,7 @@ import { learningSummary, type LearningStatus } from '../onboarding/learning'
 import type { XSyncState } from '../onboarding/useXSync'
 import { usePreferences } from '@/lib/preferences-context'
 import {
+  IN_CARD,
   PRIMARY,
   SECONDARY,
   SettingRow,
@@ -86,7 +87,7 @@ function SyncProgressBlock({
   const words = learningSummary(learning).rows.find((r) => r.id === 'words')
   const imported = sync.processed
   return (
-    <div className="flex flex-col gap-3.5 rounded-[18px] bg-black p-4 md:p-5" role="status">
+    <div className={`flex flex-col gap-3.5 bg-black p-4 md:p-5 ${IN_CARD}`} role="status">
       <div className="flex items-baseline gap-2.5">
         <span className="font-nx-serif text-[56px] leading-[0.9] tabular-nums">
           {String(imported)}
@@ -126,7 +127,7 @@ function SyncProgressBlock({
           {sync.thumbs.map((t) => (
             <span
               key={t.id}
-              className="relative block h-12 animate-nx-pop overflow-hidden rounded-md bg-[#1c1b19]"
+              className="relative block h-12 animate-nx-pop overflow-hidden rounded-[8px] bg-[#1c1b19]"
             >
               {t.img && (
                 <NxImage
@@ -146,7 +147,7 @@ function SyncProgressBlock({
 
 function Count({ n, label }: { n: number; label: string }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1 rounded-2xl bg-black/40 px-3 py-3">
+    <div className={`flex min-w-0 flex-col gap-1 bg-black/40 px-3 py-3 ${IN_CARD}`}>
       <span className="font-nx-serif text-[28px] leading-none tabular-nums">{String(n)}</span>
       <span className="text-xs leading-snug text-white/55">{label}</span>
     </div>
@@ -295,7 +296,7 @@ export function SyncCard({
           {running && <SyncProgressBlock sync={sync} learning={learning} />}
 
           {sync.status === 'done' && (
-            <div className="flex flex-col gap-3 rounded-[18px] bg-black p-4" role="status">
+            <div className={`flex flex-col gap-3 bg-black p-4 ${IN_CARD}`} role="status">
               <span className="flex items-center gap-3">
                 <span className="flex h-8 w-8 shrink-0 animate-nx-pop items-center justify-center rounded-full bg-nx-accent text-black">
                   <Check aria-hidden className="h-4 w-4" strokeWidth={3.2} />
@@ -315,7 +316,7 @@ export function SyncCard({
           )}
 
           {sync.status === 'error' && (
-            <div className="flex flex-col gap-2 rounded-[18px] bg-black p-4" role="alert">
+            <div className={`flex flex-col gap-2 bg-black p-4 ${IN_CARD}`} role="alert">
               <span className="font-nx-serif text-[24px] leading-none">
                 That sync didn’t finish
               </span>
@@ -337,7 +338,9 @@ export function SyncCard({
                 <span>{sync.status === 'error' ? 'Try again' : 'Sync X bookmarks'}</span>
               </button>
             ) : (
-              <p className="m-0 rounded-full border border-white/15 px-4 py-3 text-center text-sm text-white/75">
+              <p
+                className={`m-0 border border-white/15 px-4 py-3 text-center text-sm text-white/75 ${IN_CARD}`}
+              >
                 {`You can sync again in ${formatWait(waitMs)}.`}
               </p>
             ))}
@@ -377,7 +380,7 @@ export function SyncHistoryCard({
       {loading ? (
         <div aria-hidden className="flex flex-col gap-2">
           {[0, 1, 2].map((i) => (
-            <span key={i} className="nx-shimmer animate-nx-shimmer block h-12 rounded-2xl" />
+            <span key={i} className={`nx-shimmer animate-nx-shimmer block h-12 ${IN_CARD}`} />
           ))}
         </div>
       ) : syncs.length === 0 ? (
@@ -387,7 +390,7 @@ export function SyncHistoryCard({
           {syncs.map((log) => (
             <li
               key={log.id}
-              className="flex items-center gap-3 rounded-2xl bg-black/40 px-4 py-3 text-sm"
+              className={`flex items-center gap-3 bg-black/40 px-4 py-3 text-sm ${IN_CARD}`}
             >
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate font-bold">{formatWhen(log.startedAt)}</span>

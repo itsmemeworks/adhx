@@ -92,10 +92,13 @@ export function Sheet({
         aria-label={label}
         tabIndex={-1}
         style={anchor ?? undefined}
+        // `--nx-nest` is the curve for what lines its edges: radius − padding −
+        // border, at least 8 px. 22 − 16 on phones; 20 − 16 or 14 − 6 when wide;
+        // 22 − 8 − 1 = 13 beside the rail.
         className={cn(
-          'fixed inset-x-0 bottom-0 z-50 flex max-h-[78dvh] flex-col gap-3 overflow-y-auto rounded-t-[22px] bg-[#1c1b19]/[0.98] p-4 pb-[max(16px,env(safe-area-inset-bottom))] font-nx-sans text-white shadow-[0_-10px_40px_rgba(0,0,0,0.5)] outline-none',
+          'fixed inset-x-0 bottom-0 z-50 flex max-h-[78dvh] flex-col gap-3 overflow-y-auto rounded-t-[22px] bg-[#1c1b19]/[0.98] p-4 [--nx-nest:8px] pb-[max(16px,env(safe-area-inset-bottom))] font-nx-sans text-white shadow-[0_-10px_40px_rgba(0,0,0,0.5)] outline-none',
           anchor
-            ? 'md:left-auto md:top-auto md:max-h-[calc(100dvh-96px)] md:w-[308px] md:gap-0.5 md:rounded-[22px] md:border md:border-white/10 md:bg-nx-surface/[0.94] md:p-2 md:shadow-[0_24px_60px_rgba(0,0,0,0.6)] md:backdrop-blur-xl'
+            ? 'md:left-auto md:top-auto md:max-h-[calc(100dvh-96px)] md:w-[308px] md:gap-0.5 md:rounded-[22px] md:border md:border-white/10 md:bg-nx-surface/[0.94] md:p-2 md:[--nx-nest:13px] md:shadow-[0_24px_60px_rgba(0,0,0,0.6)] md:backdrop-blur-xl'
             : side === 'right'
               ? 'md:bottom-4 md:left-auto md:right-24 md:top-24 md:max-h-none md:w-[360px] md:rounded-[20px]'
               : 'md:inset-x-auto md:bottom-auto md:right-24 md:top-1/2 md:w-[280px] md:-translate-y-1/3 md:rounded-[14px] md:p-1.5',
@@ -191,7 +194,7 @@ export function UpNextSheet({
                     type="button"
                     onClick={() => onPlay(index)}
                     aria-label={`Play ${text || item.post.author}`}
-                    className="relative block aspect-[3/4] w-full overflow-hidden rounded-xl bg-nx-surface text-left"
+                    className="relative block aspect-[3/4] w-full overflow-hidden rounded-[var(--nx-nest)] bg-nx-surface text-left"
                   >
                     {cover ? (
                       <NxImage
@@ -317,7 +320,7 @@ export function MoreSheet({
                 aria-label={row.value ? `${row.label}: ${row.value}` : undefined}
                 onClick={row.onSelect}
                 className={cn(
-                  'flex shrink-0 items-center gap-3 rounded-[14px] px-3.5 text-left text-[15px] font-semibold hover:bg-white/[0.06]',
+                  'flex shrink-0 items-center gap-3 rounded-[var(--nx-nest)] px-3.5 text-left text-[15px] font-semibold hover:bg-white/[0.06]',
                   row.hint ? 'min-h-[60px] bg-[#262320] py-2 hover:bg-[#2c2925]' : 'min-h-12',
                   row.danger ? 'text-[#ff8a7a]' : 'text-nx-cream',
                   row.className,
@@ -483,7 +486,7 @@ export function SaveSheet({
           autoComplete="off"
           placeholder="Find or create a channel"
           onChange={(e) => setQuery(e.target.value)}
-          className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3.5 text-[15px] text-white outline-none placeholder:text-white/40 focus:border-nx-accent"
+          className="h-11 w-full rounded-[var(--nx-nest)] border border-white/10 bg-black/40 px-3.5 text-[15px] text-white outline-none placeholder:text-white/40 focus:border-nx-accent"
         />
       </form>
       {channels === null ? (
@@ -500,7 +503,7 @@ export function SaveSheet({
                   aria-checked={on}
                   disabled={busy === c.tag}
                   onClick={() => onToggle(c.tag, !on)}
-                  className="flex min-h-[52px] w-full items-center gap-3 rounded-xl px-2 text-left hover:bg-white/[0.06] disabled:opacity-60"
+                  className="flex min-h-[52px] w-full items-center gap-3 rounded-[var(--nx-nest)] px-2 text-left hover:bg-white/[0.06] disabled:opacity-60"
                 >
                   <span
                     aria-hidden
@@ -534,7 +537,7 @@ export function SaveSheet({
           type="button"
           onClick={() => onCreate(query)}
           disabled={busy === needle}
-          className="flex min-h-12 items-center gap-2 rounded-xl px-2 text-left text-[15px] font-bold text-nx-accent hover:bg-white/[0.06]"
+          className="flex min-h-12 items-center gap-2 rounded-[var(--nx-nest)] px-2 text-left text-[15px] font-bold text-nx-accent hover:bg-white/[0.06]"
         >
           <Plus aria-hidden className="h-[18px] w-[18px]" strokeWidth={2.4} />
           <span>{`New channel “${needle}”`}</span>
@@ -564,7 +567,7 @@ export function PrivateRow({
       aria-checked={on}
       disabled={busy}
       onClick={() => onChange(!on)}
-      className="flex min-h-[52px] w-full items-center gap-3 rounded-xl bg-white/[0.04] px-3 text-left hover:bg-white/[0.08] disabled:opacity-60"
+      className="flex min-h-[52px] w-full items-center gap-3 rounded-[var(--nx-nest)] bg-white/[0.04] px-3 text-left hover:bg-white/[0.08] disabled:opacity-60"
     >
       <Lock
         aria-hidden
@@ -633,7 +636,8 @@ export function ShareSheet({
   }
   return (
     <Sheet label="Share" onClose={onClose} side="menu" anchor={anchor}>
-      <div className="flex flex-col gap-3 md:p-2.5">
+      {/* Its own 10 px inset beside the rail: 22 − 8 − 10 − 1 leaves the 8 px floor. */}
+      <div className="flex flex-col gap-3 md:p-2.5 md:[--nx-nest:8px]">
         <span className="text-[15px] font-bold">Share this post</span>
         <label className="sr-only" htmlFor="nx-share-link">
           Link to this post
@@ -644,12 +648,12 @@ export function ShareSheet({
           readOnly
           value={url}
           onFocus={(e) => e.currentTarget.select()}
-          className="h-11 w-full rounded-[10px] bg-white/[0.08] px-3 text-[13px] text-white/85 outline-none focus:ring-2 focus:ring-nx-accent"
+          className="h-11 w-full rounded-[var(--nx-nest)] bg-white/[0.08] px-3 text-[13px] text-white/85 outline-none focus:ring-2 focus:ring-nx-accent"
         />
         <button
           type="button"
           onClick={() => void copy()}
-          className="flex h-11 items-center justify-center gap-2 rounded-full bg-nx-accent text-[15px] font-extrabold text-black"
+          className="flex h-11 items-center justify-center gap-2 rounded-[var(--nx-nest)] bg-nx-accent text-[15px] font-extrabold text-black"
         >
           {copied === 'yes' && <Check aria-hidden className="h-4 w-4" />}
           <span>{copied === 'yes' ? 'Link copied' : 'Copy link'}</span>
@@ -658,7 +662,7 @@ export function ShareSheet({
           <button
             type="button"
             onClick={() => void navigator.share({ url }).catch(() => {})}
-            className="h-11 rounded-full border border-white/25 text-[15px] font-bold text-white"
+            className="h-11 rounded-[var(--nx-nest)] border border-white/25 text-[15px] font-bold text-white"
           >
             More ways to share…
           </button>
@@ -732,11 +736,11 @@ export function WhySheet({
           <X aria-hidden className="h-4 w-4" />
         </button>
       </div>
-      <div className="flex items-center gap-3 rounded-2xl bg-white/[0.05] p-2">
+      <div className="flex items-center gap-3 rounded-[var(--nx-nest)] bg-white/[0.05] p-2">
         {cover ? (
-          <NxImage src={cover} alt="" className="h-14 w-11 shrink-0 rounded-lg object-cover" />
+          <NxImage src={cover} alt="" className="h-14 w-11 shrink-0 rounded-[8px] object-cover" />
         ) : (
-          <span aria-hidden className="h-14 w-11 shrink-0 rounded-lg bg-nx-cream" />
+          <span aria-hidden className="h-14 w-11 shrink-0 rounded-[8px] bg-nx-cream" />
         )}
         <span className="line-clamp-2 min-w-0 text-sm font-semibold">
           {text || `@${item.post.author}`}

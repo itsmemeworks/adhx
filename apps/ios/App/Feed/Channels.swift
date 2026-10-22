@@ -407,7 +407,7 @@ private struct GroupTile: View {
                             .foregroundStyle(.black)
                             .padding(.horizontal, 9)
                             .frame(height: 24)
-                            .background(Capsule().fill(Theme.accent))
+                            .background(Capsule(style: .continuous).fill(Theme.accent))
                             .padding(8)
                     }
                 }
@@ -470,9 +470,9 @@ private struct PersonButton: View {
                             .foregroundStyle(.black)
                             .padding(.horizontal, 5)
                             .frame(minWidth: 22, minHeight: 22)
-                            .background(Capsule().fill(Theme.accent))
+                            .background(Capsule(style: .continuous).fill(Theme.accent))
                             .padding(2)
-                            .background(Capsule().fill(Theme.app))
+                            .background(Capsule(style: .continuous).fill(Theme.app))
                             .fixedSize()
                             .offset(x: 0, y: -2)
                     }
@@ -525,7 +525,8 @@ private struct MineRow: View {
         HStack(spacing: 12) {
             CoverImage(url: ADHXClient.resolve(channel.covers.first, against: server))
                 .frame(width: 56, height: 56)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                // 20 − 8 inset: follows the row's curve.
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
                 Text(channel.name)
                     .font(Theme.sans(15, .heavy))

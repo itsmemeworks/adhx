@@ -70,7 +70,7 @@ export function DangerZone({
         <button
           type="button"
           onClick={() => setOpen('delete')}
-          className="inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-full bg-[#e5484d] px-4 text-sm font-bold text-white hover:bg-[#d13b40]"
+          className="inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-[var(--nx-nest)] bg-[#e5484d] px-4 text-sm font-bold text-white hover:bg-[#d13b40]"
         >
           Delete account
         </button>
@@ -132,7 +132,7 @@ export function DangerZone({
               type="button"
               onClick={() => void (open === 'clear' ? clearData() : deleteAccount())}
               disabled={typed !== WORD[open] || busy}
-              className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-full bg-[#e5484d] px-4 text-sm font-bold text-white hover:bg-[#d13b40] disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-[var(--nx-nest)] bg-[#e5484d] px-4 text-sm font-bold text-white hover:bg-[#d13b40] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy && <RefreshCw aria-hidden className="h-4 w-4 animate-spin" />}
               <span>{open === 'clear' ? 'Clear data' : 'Delete account'}</span>

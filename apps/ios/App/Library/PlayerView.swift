@@ -133,7 +133,7 @@ struct PlayerView: View {
                     .foregroundStyle(.black)
                     .padding(.horizontal, 16)
                     .frame(minHeight: 40)
-                    .background(Capsule().fill(Theme.cream))
+                    .background(Capsule(style: .continuous).fill(Theme.cream))
                     .padding(.top, extras.toastTop)
                     .transition(.opacity)
                     .allowsHitTesting(false)
@@ -631,7 +631,7 @@ private struct PostPage: View {
                     .lineLimit(1)
                     .padding(.horizontal, 10)
                     .frame(height: 26)
-                    .frosted(Capsule(), dim: 0.45)
+                    .frosted(Capsule(style: .continuous), dim: 0.45)
                     .padding(.bottom, 8)
                     .accessibilityElement(children: .combine)
                 }
@@ -1210,9 +1210,9 @@ private struct WhyChip: View {
             .padding(.leading, 10)
             .padding(.trailing, 14)
             .frame(height: 40)
-            .frosted(Capsule(), dim: 0.55)
-            .overlay(Capsule().strokeBorder(.white.opacity(0.14), lineWidth: 1))
-            .contentShape(Capsule())
+            .frosted(Capsule(style: .continuous), dim: 0.55)
+            .overlay(Capsule(style: .continuous).strokeBorder(.white.opacity(0.14), lineWidth: 1))
+            .contentShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Why this one: \(text)")
@@ -1290,8 +1290,8 @@ private struct Scrubber: View {
             let thickness: CGFloat = dragging ? 6 : 4
             let thumb: CGFloat = dragging ? 20 : 14
             ZStack(alignment: .leading) {
-                Capsule().fill(.white.opacity(0.25)).frame(height: thickness)
-                Capsule().fill(dragging ? Theme.accent : colour)
+                Capsule(style: .continuous).fill(.white.opacity(0.25)).frame(height: thickness)
+                Capsule(style: .continuous).fill(dragging ? Theme.accent : colour)
                     .frame(width: box.size.width * fraction, height: thickness)
                 // Always there, so the line reads as something to drag.
                 Circle().fill(dragging ? Theme.accent : colour)
@@ -1336,8 +1336,8 @@ private struct ProgressLine: View {
         GeometryReader { geo in
             let at = geo.size.width * min(max(fraction, 0), 1)
             ZStack(alignment: .leading) {
-                Capsule().fill(.white.opacity(handle ? 0.25 : 0.22))
-                Capsule().fill(colour).frame(width: at)
+                Capsule(style: .continuous).fill(.white.opacity(handle ? 0.25 : 0.22))
+                Capsule(style: .continuous).fill(colour).frame(width: at)
                 if handle {
                     Circle().fill(colour)
                         .frame(width: 14, height: 14)
@@ -1481,7 +1481,7 @@ private struct WordsCard: View {
                                 .foregroundStyle(.black)
                                 .padding(.horizontal, 18)
                                 .frame(height: 40)
-                                .background(Capsule().fill(Theme.cream))
+                                .background(Capsule(style: .continuous).fill(Theme.cream))
                         }
                         .accessibilityHint("Opens the whole post to read")
                     }
@@ -1678,7 +1678,7 @@ private struct ArticleBody: View {
                         .font(Theme.serif(reading ? 24 : 21))
                         .foregroundStyle(Theme.cream)
                         .padding(.leading, 14)
-                        .overlay(alignment: .leading) { Capsule().fill(Theme.accent).frame(width: 3) }
+                        .overlay(alignment: .leading) { Capsule(style: .continuous).fill(Theme.accent).frame(width: 3) }
                 case .rule:
                     Rectangle().fill(Theme.hairline).frame(height: 1)
                 }

@@ -122,10 +122,10 @@ struct PreparingPill: View {
         }
         .padding(.horizontal, 14)
         .frame(minHeight: 34)
-        .background(Capsule().fill(.ultraThinMaterial))
-        .overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 1))
+        .background(Capsule(style: .continuous).fill(.ultraThinMaterial))
+        .overlay(Capsule(style: .continuous).strokeBorder(.white.opacity(0.12), lineWidth: 1))
         .shimmer()
-        .clipShape(Capsule())
+        .clipShape(Capsule(style: .continuous))
         .onAppear {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulse = true }
@@ -290,7 +290,8 @@ struct CantPlayCard: View {
 
     @Environment(\.openURL) private var openURL
 
-    /// One row, always (board 14.8).
+    /// One row, always (board 14.8). Its buttons take 24 − 20 inset − 1 border,
+    /// under 8, so 8: they follow the card's curve.
     private var buttons: some View {
         HStack(spacing: 8) { buttonList }
     }
@@ -301,19 +302,19 @@ struct CantPlayCard: View {
             case .gone:
                 if let next {
                     Button("Next now", action: next)
-                        .buttonStyle(PillButtonStyle(kind: .primary, height: 44, fullWidth: false, fontSize: 14))
+                        .buttonStyle(PillButtonStyle(kind: .primary, height: 44, fullWidth: false, fontSize: 14, cornerRadius: 8))
                 }
                 if privacy.isSaved(post), !gone {
                     Button(removing ? "Removing…" : "Remove from my saves") { Task { await remove() } }
-                        .buttonStyle(PillButtonStyle(kind: .outline, height: 44, fullWidth: false, fontSize: 14))
+                        .buttonStyle(PillButtonStyle(kind: .outline, height: 44, fullWidth: false, fontSize: 14, cornerRadius: 8))
                         .disabled(removing)
                 }
             case .cantLoad:
                 Button("Try again", action: retry)
-                    .buttonStyle(PillButtonStyle(kind: .primary, height: 48, fullWidth: false))
+                    .buttonStyle(PillButtonStyle(kind: .primary, height: 48, fullWidth: false, cornerRadius: 8))
                 if let next {
                     Button("Skip it", action: next)
-                        .buttonStyle(PillButtonStyle(kind: .outline, height: 48, fullWidth: false))
+                        .buttonStyle(PillButtonStyle(kind: .outline, height: 48, fullWidth: false, cornerRadius: 8))
                 }
             }
     }

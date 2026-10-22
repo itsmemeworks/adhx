@@ -164,7 +164,8 @@ export function ChannelsScreen() {
                         key={c.slug}
                         className="flex items-center gap-3.5 rounded-[20px] border border-white/[0.08] bg-nx-surface p-2.5"
                       >
-                        <span className="relative block h-16 w-16 shrink-0 overflow-hidden rounded-[14px] bg-[#2a2620]">
+                        {/* 20 px corners, 10 px padding, 1 px border: 9 px. */}
+                        <span className="relative block h-16 w-16 shrink-0 overflow-hidden rounded-[9px] bg-[#2a2620]">
                           {cover?.img && (
                             <NxImage
                               src={cover.img}
@@ -238,7 +239,8 @@ export function ChannelsScreen() {
                           disabled={keeping === c.slug}
                           onClick={() => void keep(c)}
                           aria-label={`Keep ${c.name} as one of your channels`}
-                          className="absolute bottom-3 right-3 flex h-8 items-center whitespace-nowrap rounded-full bg-black/55 px-3 text-xs font-extrabold text-white backdrop-blur-md hover:bg-black/75 disabled:opacity-60"
+                          // In the tile's corner: 22 − 12 = 10 px.
+                          className="absolute bottom-3 right-3 flex h-8 items-center whitespace-nowrap rounded-[10px] bg-black/55 px-3 text-xs font-extrabold text-white backdrop-blur-md hover:bg-black/75 disabled:opacity-60"
                         >
                           Keep
                         </button>

@@ -52,10 +52,14 @@ export function ProfileHero({
   )
 }
 
+/**
+ * The hero's buttons. It has 28 px corners and 20 px padding (36 px from md),
+ * so they sit at the 8 px floor.
+ */
 export const PRIMARY_ACTION =
-  'flex h-[50px] items-center gap-2 rounded-full bg-nx-accent px-6 text-base font-extrabold text-black'
+  'flex h-[50px] items-center gap-2 rounded-[8px] bg-nx-accent px-6 text-base font-extrabold text-black'
 export const SECONDARY_ACTION =
-  'flex h-[50px] items-center gap-2 rounded-full border border-white/30 px-5 text-base font-bold text-white'
+  'flex h-[50px] items-center gap-2 rounded-[8px] border border-white/30 px-5 text-base font-bold text-white'
 
 export function PlayLink({ href, label = 'Play' }: { href: string; label?: string }) {
   return (

@@ -49,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -79,6 +80,7 @@ import com.adhx.share.ui.Faces
 import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.SettingsCopy
+import com.adhx.share.ui.SquircleShape
 import com.adhx.share.ui.faceColor
 
 /** The red of Remove and Decline. */
@@ -391,6 +393,7 @@ fun SettingsScreen(
     if (confirmRemove) {
         AlertDialog(
             onDismissRequest = { confirmRemove = false },
+            shape = SquircleShape(28.dp),
             containerColor = AdhxColors.Surface,
             titleContentColor = AdhxColors.White,
             textContentColor = AdhxColors.Muted,
@@ -422,7 +425,7 @@ private fun WaitingCard(
     errors: Map<String, String>,
     onDecide: (JoinRequest, String) -> Unit,
 ) {
-    val shape = RoundedCornerShape(22.dp)
+    val shape = SquircleShape(22.dp)
     Column(
         Modifier
             .fillMaxWidth()
@@ -466,6 +469,8 @@ private fun WaitingCard(
                     QuietButton(SettingsCopy.DECLINE) { onDecide(request, JoinDecision.DECLINE) }
                 }
             }
+            // The last request's buttons sit on the card's foot: 22 − 14 padding = 8 (the same for every request).
+            val inner = SquircleShape(SquircleShape.nested(22.dp, 14.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PillButton(
                     SettingsCopy.letIn(request),
@@ -473,6 +478,7 @@ private fun WaitingCard(
                     enabled = !busy,
                     onClick = { onDecide(request, JoinDecision.APPROVE) },
                     modifier = Modifier.weight(1f),
+                    shape = inner,
                 )
                 PillButton(
                     SettingsCopy.NOT_NOW,
@@ -480,6 +486,7 @@ private fun WaitingCard(
                     enabled = !busy,
                     onClick = { onDecide(request, JoinDecision.NOT_NOW) },
                     modifier = Modifier.weight(1f),
+                    shape = inner,
                 )
             }
             errors[request.id]?.let { Text(it, fontSize = 13.sp, color = AdhxColors.Warn) }
@@ -511,8 +518,8 @@ private fun PillButton(
     modifier: Modifier = Modifier,
     height: Int = 44,
     fontSize: Int = 15,
+    shape: Shape = RoundedCornerShape(50),
 ) {
-    val shape = RoundedCornerShape(50)
     Box(
         modifier
             .height(height.dp)
@@ -538,7 +545,7 @@ private fun Section(content: @Composable ColumnScope.() -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .clip(SquircleShape(22.dp))
             .background(AdhxColors.Surface),
         content = content,
     )

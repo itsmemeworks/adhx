@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -87,6 +86,7 @@ import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.PrimaryButton
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.Spinner
+import com.adhx.share.ui.SquircleShape
 import com.adhx.share.ui.faceColor
 import kotlinx.coroutines.launch
 import java.io.File
@@ -188,7 +188,7 @@ fun PictureFlow(vm: MainViewModel, connection: Connection, onChanged: () -> Unit
         onDismissRequest = { if (!ui.busy) onClose() },
         sheetState = state,
         containerColor = AdhxColors.Surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = SquircleShape.top(28.dp),
         dragHandle = { SheetHandle(AdhxColors.Hairline) },
     ) {
         Column(
@@ -216,7 +216,7 @@ fun PictureFlow(vm: MainViewModel, connection: Connection, onChanged: () -> Unit
             }
             Column(
                 Modifier
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(SquircleShape(20.dp))
                     .background(AdhxColors.Card),
             ) {
                 ChoiceRow(Glyphs.Photo, PictureCopy.CHOOSE, PictureCopy.CHOOSE_NOTE, enabled = !ui.busy) {
@@ -314,7 +314,7 @@ private fun ChoiceRow(
 private fun GobSwatch(colour: GobColours.Colour, enabled: Boolean, onClick: () -> Unit) {
     Column(
         Modifier
-            .clip(RoundedCornerShape(14.dp))
+            .clip(SquircleShape(14.dp))
             .clickable(enabled = enabled, role = Role.Button, onClickLabel = "Use a ${colour.label.lowercase()} Gob", onClick = onClick)
             .padding(6.dp)
             .semantics(mergeDescendants = true) { contentDescription = "${colour.label} Gob" },

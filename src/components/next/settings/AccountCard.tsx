@@ -9,7 +9,7 @@ import { MAX_USERNAME_CHANGES } from '@/lib/auth/username-rules'
 import { cn } from '@/lib/utils'
 import { GobShape } from '../GobShape'
 import { AvatarDialog, useRecentSave } from './AvatarDialog'
-import { INPUT, PRIMARY, SECONDARY, SettingsCard, Switch } from './parts'
+import { IN_CARD, INPUT, PRIMARY, SECONDARY, SettingsCard, Switch } from './parts'
 
 /** `user_preferences` key for "Just for me by default" (as in lib/bookmarks/privacy.ts). */
 const PRIVATE_DEFAULT_KEY = 'save.privateDefault'
@@ -294,7 +294,10 @@ function EmailRow({ me }: { me: AuthMe }) {
             setError(null)
             setEditing(true)
           }}
-          className="flex min-h-16 items-center gap-3 rounded-[20px] border-[1.5px] border-dashed border-[#4a453e] py-2.5 pl-2.5 pr-4 text-left text-sm font-semibold leading-[1.35] text-nx-cream hover:border-nx-muted"
+          className={cn(
+            'flex min-h-16 items-center gap-3 border-[1.5px] border-dashed border-[#4a453e] py-2.5 pl-2.5 pr-4 text-left text-sm font-semibold leading-[1.35] text-nx-cream hover:border-nx-muted',
+            IN_CARD,
+          )}
         >
           <span
             aria-hidden
@@ -413,7 +416,11 @@ export function AccountCard({ me, refresh }: { me: AuthMe; refresh: () => void }
         <button
           type="button"
           onClick={signOut}
-          className="flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13px] font-semibold text-nx-muted hover:bg-white/10 hover:text-nx-cream"
+          // In the card's top corner, so it follows the card's curve.
+          className={cn(
+            'flex h-9 items-center gap-1.5 whitespace-nowrap px-3 text-[13px] font-semibold text-nx-muted hover:bg-white/10 hover:text-nx-cream',
+            IN_CARD,
+          )}
         >
           <LogOut aria-hidden className="h-3.5 w-3.5" />
           <span>Sign out</span>

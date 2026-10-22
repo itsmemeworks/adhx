@@ -181,7 +181,8 @@ struct SendSheet: View {
                 // An upright poster, 54 × 96, with the kind on a small dark disc.
                 CoverImage(url: ADHXClient.resolve(post.posterUrl ?? post.media.first?.url, against: model.server))
                     .frame(width: 54, height: 96)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    // 22 − 14 inset − 1 border is under 8, so 8: follows the card's curve.
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .overlay(alignment: .bottomLeading) {
                         Image(systemName: post.kind == "photo" ? "photo" : "video")
                             .font(.system(size: 10, weight: .semibold))
@@ -218,8 +219,8 @@ struct SendSheet: View {
                 }
                 GeometryReader { box in
                     ZStack(alignment: .leading) {
-                        Capsule().fill(.white.opacity(0.12))
-                        Capsule().fill(model.failed ? Theme.warn : Theme.accent)
+                        Capsule(style: .continuous).fill(.white.opacity(0.12))
+                        Capsule(style: .continuous).fill(model.failed ? Theme.warn : Theme.accent)
                             .frame(width: max(box.size.width * model.fraction, model.fraction > 0 ? 6 : 0))
                     }
                 }
@@ -227,7 +228,9 @@ struct SendSheet: View {
                 .animation(.linear(duration: 0.2), value: model.fraction)
                 if model.failed {
                     Button("Try again") { model.start() }
-                        .buttonStyle(PillButtonStyle(kind: .outline, height: 40, fullWidth: false, fontSize: 14))
+                        // In the card's corner: 8, like the poster.
+                        .buttonStyle(PillButtonStyle(kind: .outline, height: 40, fullWidth: false, fontSize: 14,
+                                                     cornerRadius: 8))
                 }
             }
             .accessibilityElement(children: .combine)

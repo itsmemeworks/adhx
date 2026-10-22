@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -65,6 +64,7 @@ import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.PrimaryButton
 import com.adhx.share.ui.Spinner
+import com.adhx.share.ui.SquircleShape
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.delay
@@ -222,7 +222,7 @@ private fun ScanPanel(onClick: () -> Unit, busy: Boolean) {
         Modifier
             .fillMaxWidth()
             .height(340.dp)
-            .clip(RoundedCornerShape(28.dp))
+            .clip(SquircleShape(28.dp))
             .background(AdhxColors.Surface)
             .clickable(enabled = !busy, onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -282,7 +282,7 @@ private fun TypeForm(vm: MainViewModel, busy: Boolean) {
             placeholder = { Text("adhx.example.com") },
             singleLine = true,
             enabled = !busy,
-            shape = RoundedCornerShape(16.dp),
+            shape = SquircleShape(16.dp),
             colors = fieldColors,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth(),
@@ -296,7 +296,7 @@ private fun TypeForm(vm: MainViewModel, busy: Boolean) {
             placeholder = { Text("ABCD-EFGH") },
             singleLine = true,
             enabled = !busy,
-            shape = RoundedCornerShape(16.dp),
+            shape = SquircleShape(16.dp),
             colors = fieldColors,
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.Characters,
@@ -330,7 +330,7 @@ private fun EmailForm(vm: MainViewModel, ui: EmailSignInUi) {
             placeholder = { Text("adhx.example.com") },
             singleLine = true,
             enabled = !ui.busy,
-            shape = RoundedCornerShape(16.dp),
+            shape = SquircleShape(16.dp),
             colors = fieldColors(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth(),
@@ -342,7 +342,7 @@ private fun EmailForm(vm: MainViewModel, ui: EmailSignInUi) {
             placeholder = { Text("you@example.com") },
             singleLine = true,
             enabled = !ui.busy,
-            shape = RoundedCornerShape(16.dp),
+            shape = SquircleShape(16.dp),
             colors = fieldColors(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Send),
             keyboardActions = KeyboardActions(onSend = { submit() }),
@@ -396,7 +396,7 @@ private fun CodeForm(vm: MainViewModel, ui: EmailSignInUi) {
             singleLine = true,
             // Read-only rather than disabled while checking, so the field keeps the keyboard.
             readOnly = ui.busy,
-            shape = RoundedCornerShape(16.dp),
+            shape = SquircleShape(16.dp),
             colors = fieldColors(),
             textStyle = LocalTextStyle.current.copy(fontSize = 24.sp, letterSpacing = 6.sp),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),

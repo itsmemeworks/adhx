@@ -18,18 +18,19 @@ struct ResumeCard: View {
                 .foregroundStyle(Theme.muted)
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(.white.opacity(0.18))
-                    Capsule().fill(Theme.accent)
+                    Capsule(style: .continuous).fill(.white.opacity(0.18))
+                    Capsule(style: .continuous).fill(Theme.accent)
                         .frame(width: proxy.size.width * min(1, spot.seconds / max(spot.duration, spot.seconds, 1)))
                 }
             }
             .frame(height: 4)
             .accessibilityHidden(true)
+            // 24 − 20 inset − 1 border is under 8, so 8: follows the card's curve.
             HStack(spacing: 10) {
                 Button("Resume from \(ResumeStore.clock(spot.seconds))", action: resume)
-                    .buttonStyle(PillButtonStyle(kind: .primary, height: 48))
+                    .buttonStyle(PillButtonStyle(kind: .primary, height: 48, cornerRadius: 8))
                 Button("Start over", action: startOver)
-                    .buttonStyle(PillButtonStyle(kind: .outline, height: 48, fullWidth: false))
+                    .buttonStyle(PillButtonStyle(kind: .outline, height: 48, fullWidth: false, cornerRadius: 8))
             }
         }
         .padding(20)

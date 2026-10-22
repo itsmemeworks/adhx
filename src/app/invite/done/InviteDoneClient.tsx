@@ -31,6 +31,13 @@ interface Friend extends Person {
 
 const nameOf = (p: Person) => p.name?.trim() || p.username
 
+/**
+ * A phone step: 22 px corners, a 1 px border and 18 px padding, so its buttons
+ * and code box sit at the 8 px floor (22 − 18 − 1 = 3).
+ */
+const STEP_CARD =
+  'flex flex-col gap-3 rounded-[22px] border border-white/[0.08] bg-nx-surface p-[18px] [--nx-nest:8px]'
+
 /** "Ana’s", "James’" */
 function possessive(name: string): string {
   return name.endsWith('s') ? `${name}’` : `${name}’s`
@@ -181,9 +188,10 @@ export function InviteDoneClient({
                 )}
               </PhoneSteps>
               <div className="mt-8 hidden flex-col gap-6 sm:flex sm:flex-row sm:items-center sm:gap-9">
+                {/* 28 px frame, 14 px padding: the code inside curves at 14 px. */}
                 <div className="flex-none self-start rounded-[28px] bg-[#e4dac8] p-3.5 shadow-[0_30px_70px_rgba(0,0,0,0.55)] sm:self-auto">
                   {pairing && !expired ? (
-                    <span className="relative block h-[240px] w-[240px] overflow-hidden rounded-xl bg-[#f4f1ea] p-3 md:h-[268px] md:w-[268px]">
+                    <span className="relative block h-[240px] w-[240px] overflow-hidden rounded-[14px] bg-[#f4f1ea] p-3 md:h-[268px] md:w-[268px]">
                       <img
                         src={pairing.qr}
                         alt="QR code to connect your phone"
@@ -197,7 +205,7 @@ export function InviteDoneClient({
                       </span>
                     </span>
                   ) : (
-                    <span className="flex h-[240px] w-[240px] flex-col items-center justify-center gap-3 rounded-xl bg-[#f4f1ea] p-4 text-center text-nx-ink md:h-[268px] md:w-[268px]">
+                    <span className="flex h-[240px] w-[240px] flex-col items-center justify-center gap-3 rounded-[14px] bg-[#f4f1ea] p-4 text-center text-nx-ink md:h-[268px] md:w-[268px]">
                       {pairing && expired && <span className="text-sm">That code ran out.</span>}
                       <button
                         type="button"
@@ -345,7 +353,8 @@ export function InviteDoneClient({
           </div>
 
           {waiting > 0 && (
-            <div className="flex items-center gap-3.5 rounded-[20px] bg-[#262320] px-4 py-3.5">
+            // Along the card's bottom: 28 − 28 − 1 leaves the 8 px floor.
+            <div className="flex items-center gap-3.5 rounded-[8px] bg-[#262320] px-4 py-3.5">
               <span className="flex flex-none">
                 {waitingFaces.map((f, i) => (
                   <NxAvatar
@@ -403,7 +412,7 @@ function PhoneSteps({
   )
   return (
     <div className="mt-6 flex flex-col gap-3.5 sm:hidden">
-      <section className="flex flex-col gap-3 rounded-[22px] border border-white/[0.08] bg-nx-surface p-[18px]">
+      <section className={STEP_CARD}>
         <h2 className="m-0 flex items-center gap-2.5 text-base font-extrabold">
           {step(1, true)}
           <span>Get the app</span>
@@ -416,7 +425,7 @@ function PhoneSteps({
               target="_blank"
               rel="noreferrer"
               className={cn(
-                'flex h-[52px] items-center justify-center gap-2 whitespace-nowrap rounded-full text-[17px] font-extrabold',
+                'flex h-[52px] items-center justify-center gap-2 whitespace-nowrap rounded-[var(--nx-nest)] text-[17px] font-extrabold',
                 i === 0
                   ? 'bg-nx-accent text-black'
                   : 'border-[1.5px] border-nx-cream text-nx-cream',
@@ -430,7 +439,7 @@ function PhoneSteps({
           <span className="text-sm text-nx-muted">Ask whoever invited you where to get it.</span>
         )}
       </section>
-      <section className="flex flex-col gap-3 rounded-[22px] border border-white/[0.08] bg-nx-surface p-[18px]">
+      <section className={STEP_CARD}>
         <h2 className="m-0 flex items-center gap-2.5 text-base font-extrabold">
           {step(2, false)}
           <span>Got the app? Connect it</span>
@@ -439,7 +448,7 @@ function PhoneSteps({
           <>
             <a
               href={link}
-              className="flex h-[52px] items-center justify-center gap-2.5 whitespace-nowrap rounded-full bg-nx-cream text-[17px] font-extrabold text-black"
+              className="flex h-[52px] items-center justify-center gap-2.5 whitespace-nowrap rounded-[var(--nx-nest)] bg-nx-cream text-[17px] font-extrabold text-black"
             >
               <Smartphone aria-hidden className="h-[18px] w-[18px]" />
               <span>Connect this phone</span>
@@ -449,7 +458,7 @@ function PhoneSteps({
               <span className="whitespace-nowrap">or type this code in the app</span>
               <span aria-hidden className="h-px flex-1 bg-white/[0.08]" />
             </span>
-            <div className="flex items-center gap-3 rounded-[18px] border-[1.5px] border-dashed border-white/[0.16] px-[18px] py-3.5">
+            <div className="flex items-center gap-3 rounded-[var(--nx-nest)] border-[1.5px] border-dashed border-white/[0.16] px-[18px] py-3.5">
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="whitespace-nowrap text-[28px] font-extrabold leading-[1.1] tracking-[0.08em]">
                   {code}

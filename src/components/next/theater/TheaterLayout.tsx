@@ -304,13 +304,14 @@ export function UpNextList({
                   : undefined
               }
             >
+              {/* Tucked into the row's corner: its radius less the 8 px padding. */}
               <Thumb
                 item={item}
                 className={cn(
-                  variant === 'feed' && 'h-[70px] w-[50px] rounded-[10px]',
-                  variant === 'saves' && 'h-16 w-16 rounded-xl',
-                  variant === 'channel' && 'h-14 w-11 rounded-xl',
-                  variant === 'moment' && 'h-12 w-12 rounded-xl',
+                  variant === 'feed' && 'h-[70px] w-[50px] rounded-[8px]',
+                  variant === 'saves' && 'h-16 w-16 rounded-[8px]',
+                  variant === 'channel' && 'h-14 w-11 rounded-[10px]',
+                  variant === 'moment' && 'h-12 w-12 rounded-[10px]',
                 )}
               />
               <span className="flex min-w-0 flex-1 flex-col gap-1">
@@ -404,7 +405,8 @@ export function NextCard({
         className,
       )}
     >
-      <Thumb item={item} className="h-10 w-[72px] rounded-lg" />
+      {/* 18 − 10 − 1 leaves the 8 px floor. */}
+      <Thumb item={item} className="h-10 w-[72px] rounded-[8px]" />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="whitespace-nowrap text-xs text-nx-muted">{when}</span>
         <span className="truncate text-sm font-semibold">
@@ -692,7 +694,7 @@ export function FeedFilterSheet({
       <div
         role="group"
         aria-label="What’s in your feed"
-        className="flex flex-col overflow-hidden rounded-[18px] bg-[#262320]"
+        className="flex flex-col overflow-hidden rounded-[var(--nx-nest)] bg-[#262320]"
       >
         {FEED_KINDS.map((kind, i) => {
           const on = types.includes(kind)
@@ -745,7 +747,7 @@ export function FeedFilterSheet({
       <button
         type="button"
         onClick={onClose}
-        className="h-[52px] shrink-0 rounded-full bg-nx-accent text-[15px] font-extrabold text-black"
+        className="h-[52px] shrink-0 rounded-[var(--nx-nest)] bg-nx-accent text-[15px] font-extrabold text-black"
       >
         {`Show ${summary.toLowerCase()}`}
       </button>

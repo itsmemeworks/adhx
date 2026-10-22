@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
@@ -46,6 +45,7 @@ import com.adhx.share.ui.Copy
 import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.SettingsCopy
+import com.adhx.share.ui.SquircleShape
 
 /**
  * Settings → Your people: everyone let in on this ADHX, each with their
@@ -89,7 +89,7 @@ fun PeopleScreen(people: PeopleViewModel, server: String, onBack: () -> Unit, on
                 Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .clip(RoundedCornerShape(22.dp))
+                    .clip(SquircleShape(22.dp))
                     .background(AdhxColors.Surface),
             ) {
                 items(members, key = { it.username }) { person ->
