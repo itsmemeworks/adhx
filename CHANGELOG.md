@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.7.0](https://github.com/itsmemeworks/adhx/compare/v2.6.0...v2.7.0) (2026-10-22)
+
+
+### Features
+
+* home and the player's layout c on both phones ([#623](https://github.com/itsmemeworks/adhx/issues/623)) ([3e0f34f](https://github.com/itsmemeworks/adhx/commit/3e0f34f10553053f1547d1a3912bba82867c6577))
+
+
+### Bug Fixes
+
+* isolate resume history and repair lineup and playback recovery ([#621](https://github.com/itsmemeworks/adhx/issues/621)) ([f3a8297](https://github.com/itsmemeworks/adhx/commit/f3a8297f06089b79173cc28da66478947b1577b6))
+
 ## [2.6.0](https://github.com/itsmemeworks/adhx/compare/v2.5.0...v2.6.0) (2026-10-22)
 
 
