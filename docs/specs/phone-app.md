@@ -771,7 +771,7 @@ freeBytes, processing, remoteConnected } }`. `thumbnail` (like Shared lately's
   go; 404 `not_found` for a channel you never kept.
 - `GET /api/app/who?platform&id` → who's on a post, for the bottom row's
   faces (board 15.9): `{ "savers": [Saver], "reactions": [{ id, emoji, text,
-  at, saver }], "watched": [{ username, name, avatarUrl, at, isYou }] }`.
+at, saver }], "watched": [{ username, name, avatarUrl, at, isYou }] }`.
   Only members who can see the post are listed (banned ones never), newest
   first, at most 50 watchers; 404 `not_found` when you can't see it, 400
   `bad_post` for a bad address. Watching counts the way Home's seen does, so
