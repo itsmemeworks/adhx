@@ -89,7 +89,7 @@ struct PeopleListView: View {
                                 .foregroundStyle(person.banned ? Theme.warn : Theme.faint)
                                 .padding(.horizontal, 7)
                                 .frame(minHeight: 20)
-                                .overlay(Capsule().strokeBorder(person.banned ? Theme.warn : Theme.hairline,
+                                .overlay(Capsule(style: .continuous).strokeBorder(person.banned ? Theme.warn : Theme.hairline,
                                                                 lineWidth: 1))
                         }
                     }

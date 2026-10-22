@@ -61,6 +61,7 @@ import com.adhx.share.ui.KeepUpright
 import com.adhx.share.ui.NetworkMark
 import com.adhx.share.ui.SansFamily
 import com.adhx.share.ui.SerifFamily
+import com.adhx.share.ui.SquircleShape
 import kotlinx.coroutines.launch
 
 /*
@@ -176,7 +177,7 @@ fun UpNextSheet(
         onDismissRequest = onDismiss,
         sheetState = state,
         containerColor = AdhxColors.Surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = SquircleShape.top(28.dp),
         dragHandle = { SheetHandle() },
     ) {
         Column(Modifier.navigationBarsPadding().padding(horizontal = 16.dp)) {
@@ -281,7 +282,7 @@ fun QueueSheet(
         onDismissRequest = onDismiss,
         sheetState = state,
         containerColor = AdhxColors.Surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = SquircleShape.top(28.dp),
         dragHandle = { SheetHandle() },
     ) {
         Column(Modifier.navigationBarsPadding().padding(horizontal = 16.dp)) {
@@ -342,9 +343,9 @@ internal fun UpNextRow(post: PhonePost, server: String, playing: Boolean, watche
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(SquircleShape(16.dp))
             .background(if (playing) AdhxColors.Accent.copy(alpha = 0.10f) else Color.Transparent)
-            .border(1.dp, if (playing) AdhxColors.Accent.copy(alpha = 0.35f) else Color.Transparent, RoundedCornerShape(16.dp))
+            .border(1.dp, if (playing) AdhxColors.Accent.copy(alpha = 0.35f) else Color.Transparent, SquircleShape(16.dp))
             .clickable(onClick = onTap)
             .clearAndSetSemantics {
                 contentDescription = description
@@ -357,7 +358,7 @@ internal fun UpNextRow(post: PhonePost, server: String, playing: Boolean, watche
     ) {
         Box(Modifier.size(10.dp).clip(CircleShape).background(if (unseen) AdhxColors.Accent else Color.Transparent))
         Box(
-            Modifier.size(52.dp).clip(RoundedCornerShape(12.dp)).background(AdhxColors.Placeholder),
+            Modifier.size(52.dp).clip(SquircleShape(12.dp)).background(AdhxColors.Placeholder),
             contentAlignment = Alignment.Center,
         ) {
             NetworkMark(post.platform, size = 18.dp)

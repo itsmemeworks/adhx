@@ -72,6 +72,7 @@ import com.adhx.share.ui.Copy
 import com.adhx.share.ui.Faces
 import com.adhx.share.ui.Glyphs
 import com.adhx.share.ui.SerifFamily
+import com.adhx.share.ui.SquircleShape
 
 /** The board's green for "This phone is connected". */
 private val Green = Color(0xFF7FD1AE)
@@ -236,7 +237,7 @@ private fun WeekCard(post: PhonePost, server: String) {
     Box(
         Modifier
             .size(width = 146.dp, height = 232.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(SquircleShape(20.dp))
             .background(AdhxColors.Placeholder),
     ) {
         if (poster != null) AsyncImage(poster, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())

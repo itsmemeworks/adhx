@@ -101,7 +101,7 @@ export function NoteField({
             }
           }}
           className={cn(
-            'h-12 w-full rounded-xl border border-white/10 bg-black/40 px-3.5 text-[15px] text-white outline-none placeholder:text-white/40 focus:border-nx-accent',
+            'h-12 w-full rounded-[var(--nx-nest,12px)] border border-white/10 bg-black/40 px-3.5 text-[15px] text-white outline-none placeholder:text-white/40 focus:border-nx-accent',
             used >= COUNT_FROM && 'pr-16',
           )}
         />

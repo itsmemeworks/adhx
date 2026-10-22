@@ -268,6 +268,14 @@ same).
 - **Line clamps:** put padding on a wrapper and `line-clamp-N` on a child with
   no vertical padding, or a clipped line peeks through.
 - **Dark is the only theme.** There is no theme toggle.
+- **Nested corners.** Anything inside a rounded container, along its edge or
+  in a corner, gets radius = the container's radius − the gap − its border,
+  at least 8. Example: Live's 26 px card with an 8 px inset and a 2 px ring
+  gives a 16 px Tune in. Free-standing buttons keep their shape. On the web,
+  use `rounded-[Npx]` with the arithmetic in a comment, or `--nx-nest` for
+  shared buttons that appear both in and out of cards. The phones draw
+  squircles (iOS `.continuous`, Android `ui/Squircle.kt`); the web keeps
+  round corners because Safari has no `corner-shape`.
 
 ### Words in the product
 

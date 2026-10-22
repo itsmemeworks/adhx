@@ -2,6 +2,7 @@ package com.adhx.share.library
 
 import android.content.Context
 import com.adhx.share.data.ConnectionStore
+import com.adhx.share.ui.SquircleShape
 import java.security.MessageDigest
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -157,9 +158,9 @@ fun ResumeCard(spot: ResumeSpot, onResume: () -> Unit, onStartOver: () -> Unit, 
         modifier
             .padding(horizontal = 24.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
+            .clip(SquircleShape(24.dp))
             .background(AdhxColors.Surface.copy(alpha = 0.92f))
-            .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.1f), SquircleShape(24.dp))
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -182,9 +183,11 @@ fun ResumeCard(spot: ResumeSpot, onResume: () -> Unit, onStartOver: () -> Unit, 
             val fraction = if (spot.durationMs > 0) (spot.positionMs.toFloat() / spot.durationMs).coerceIn(0f, 1f) else 0f
             Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(AdhxColors.Accent))
         }
+        // Along the card's foot: 24 − 20 padding = 4, so the 8dp floor.
+        val inner = SquircleShape(SquircleShape.nested(24.dp, 20.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PrimaryButton("Resume from ${Resume.clock(spot.positionMs)}", onClick = onResume, modifier = Modifier.weight(1f))
-            OutlineButton("Start over", onClick = onStartOver, minHeight = 48.dp)
+            PrimaryButton("Resume from ${Resume.clock(spot.positionMs)}", onClick = onResume, modifier = Modifier.weight(1f), shape = inner)
+            OutlineButton("Start over", onClick = onStartOver, minHeight = 48.dp, shape = inner)
         }
     }
 }

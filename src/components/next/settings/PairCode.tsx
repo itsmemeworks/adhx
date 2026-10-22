@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { QrCode, RefreshCw } from 'lucide-react'
-import { PRIMARY } from './parts'
+import { IN_CARD, PRIMARY } from './parts'
 
 /**
  * Connecting the phone app, shared by Settings → Phone app and /invite/done:
@@ -146,7 +146,7 @@ export function PairCodeBox({
             alt="QR code to connect the phone app"
             width={196}
             height={196}
-            className="h-[196px] w-[196px] rounded-2xl bg-white p-3.5"
+            className={`h-[196px] w-[196px] bg-white p-3.5 ${IN_CARD}`}
           />
           <span className="font-mono text-[17px] font-bold tracking-[0.12em] text-nx-cream">
             {spacedPairCode(pairing.code)}
@@ -156,7 +156,9 @@ export function PairCodeBox({
           </span>
         </>
       ) : (
-        <div className="flex h-[196px] w-full flex-col items-center justify-center gap-3 rounded-2xl bg-black/40 p-4 text-center sm:w-[196px]">
+        <div
+          className={`flex h-[196px] w-full flex-col items-center justify-center gap-3 bg-black/40 p-4 text-center sm:w-[196px] ${IN_CARD}`}
+        >
           {pairing && expired && (
             <span className="text-[13px] text-white/65">That code ran out.</span>
           )}

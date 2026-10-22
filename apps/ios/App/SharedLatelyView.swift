@@ -115,7 +115,7 @@ struct ConnectionPill: View {
         .foregroundStyle(Theme.muted)
         .padding(.vertical, 8)
         .padding(.horizontal, 14)
-        .background(Capsule().fill(Theme.surface))
+        .background(Capsule(style: .continuous).fill(Theme.surface))
         .accessibilityElement(children: .combine)
     }
 
@@ -145,7 +145,8 @@ private struct ShareRow: View {
         let (status, tone) = Format.statusLine(record)
         Button(action: open) {
             HStack(spacing: 12) {
-                NetworkTile(platform: record.platform)
+                // 18 − 12 inset is under 8, so 8: follows the row's curve.
+                NetworkTile(platform: record.platform, cornerRadius: 8)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(Format.title(record))
                         .font(Theme.sans(15, .bold))

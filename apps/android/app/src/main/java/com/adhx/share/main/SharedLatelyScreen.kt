@@ -48,6 +48,7 @@ import com.adhx.share.ui.AdhxBrand
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
 import com.adhx.share.ui.NetworkMark
+import com.adhx.share.ui.SquircleShape
 import kotlinx.coroutines.delay
 
 /** "Shared lately" (Home.dc.html): what this phone shared. A row opens the post in the player. */
@@ -164,16 +165,17 @@ private fun HistoryRow(item: HistoryItem, now: Long, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
+            .clip(SquircleShape(18.dp))
             .background(AdhxColors.Surface)
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Tucked into the row's corner: 18 − 12 padding = 6, so the 8dp floor.
         Box(
             Modifier
                 .size(40.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(SquircleShape(8.dp))
                 .background(AdhxColors.Black),
             contentAlignment = Alignment.Center,
         ) {

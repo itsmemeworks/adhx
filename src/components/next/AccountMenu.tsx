@@ -202,5 +202,6 @@ export function AccountMenu({
   )
 }
 
+/** A menu row: the menu's 16 px corners less its 6 px padding. */
 const ROW =
-  'flex h-10 w-full items-center gap-2.5 rounded-xl px-3 text-left hover:bg-white/10 focus-visible:bg-white/10'
+  'flex h-10 w-full items-center gap-2.5 rounded-[10px] px-3 text-left hover:bg-white/10 focus-visible:bg-white/10'

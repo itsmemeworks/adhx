@@ -92,7 +92,8 @@ struct WhySheet: View {
         HStack(spacing: 12) {
             CoverImage(url: ADHXClient.resolve(post.posterUrl, against: server))
                 .frame(width: 40, height: 56)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                // 16 − 8 inset: follows the row's curve.
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {
                 Text(post.article?.title ?? (post.text.isEmpty ? "@\(post.author.handle)" : post.text))
                     .font(Theme.sans(14, .semibold))
@@ -222,7 +223,7 @@ struct WhoseSaves: View {
                 option("Mine", on: mode == .mine) { choose(.mine) }
             }
             .padding(4)
-            .background(Capsule().fill(caps ? Theme.plate : Theme.app))
+            .background(Capsule(style: .continuous).fill(caps ? Theme.plate : Theme.app))
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Whose saves")
         }
@@ -236,8 +237,8 @@ struct WhoseSaves: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 .frame(maxWidth: .infinity, minHeight: caps ? 40 : 44)
-                .background(Capsule().fill(on ? Theme.ink : .clear))
-                .contentShape(Capsule())
+                .background(Capsule(style: .continuous).fill(on ? Theme.ink : .clear))
+                .contentShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(on ? .isSelected : [])
@@ -456,9 +457,9 @@ private struct WeightButton: View {
         .foregroundStyle(on ? .black : Theme.ink)
         .padding(.horizontal, 8)
         .frame(maxWidth: .infinity, minHeight: 48)
-        .background(Capsule().fill(on ? Theme.ink : Theme.plate))
-        .overlay(Capsule().strokeBorder(.white.opacity(on ? 0 : 0.12)))
-        .contentShape(Capsule())
+        .background(Capsule(style: .continuous).fill(on ? Theme.ink : Theme.plate))
+        .overlay(Capsule(style: .continuous).strokeBorder(.white.opacity(on ? 0 : 0.12)))
+        .contentShape(Capsule(style: .continuous))
         .opacity(busy ? 0.6 : 1)
     }
 }

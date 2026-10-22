@@ -13,6 +13,8 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -100,6 +102,7 @@ import com.adhx.share.ui.NetworkMark
 import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.PrimaryButton
 import com.adhx.share.ui.SerifFamily
+import com.adhx.share.ui.SquircleShape
 import com.adhx.share.ui.serifLineBox
 import com.adhx.share.ui.SkeletonBar
 import com.adhx.share.ui.Spinner
@@ -202,6 +205,12 @@ fun ShareSheetScreen(
     }
 }
 
+/** The card's corners, and what sits in them: 28 − 20 padding = 8 on the saving/saved card. */
+private val CardInner = SquircleShape(SquircleShape.nested(28.dp, 20.dp))
+
+/** The same on the branded cards, whose padding is 18: 28 − 18 = 10. */
+private val BrandInner = SquircleShape(SquircleShape.nested(28.dp, 18.dp))
+
 @Composable
 private fun Sheet(frosted: Boolean, onTouched: () -> Unit, onDismiss: () -> Unit, brand: Boolean = true, content: @Composable () -> Unit) {
     val density = LocalDensity.current
@@ -231,10 +240,10 @@ private fun Sheet(frosted: Boolean, onTouched: () -> Unit, onDismiss: () -> Unit
                 },
             )
             .offset { IntOffset(0, dragOffset.roundToInt()) }
-            .shadow(30.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black, spotColor = Color.Black)
-            .clip(RoundedCornerShape(28.dp))
+            .shadow(30.dp, SquircleShape(28.dp), ambientColor = Color.Black, spotColor = Color.Black)
+            .clip(SquircleShape(28.dp))
             .background(AdhxColors.Surface.copy(alpha = glass))
-            .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(28.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.1f), SquircleShape(28.dp))
             // Any touch on the sheet keeps it open (no auto-close).
             .pointerInput(Unit) {
                 awaitPointerEventScope {
@@ -292,7 +301,7 @@ private fun SavedContent(
             Modifier
                 .weight(1f)
                 .height(52.dp)
-                .clip(RoundedCornerShape(50))
+                .clip(CardInner)
                 .background(AdhxColors.Card)
                 .clickable(role = Role.Button, onClick = onOpen),
             contentAlignment = Alignment.Center,
@@ -303,7 +312,7 @@ private fun SavedContent(
             Modifier
                 .weight(1f)
                 .height(52.dp)
-                .clip(RoundedCornerShape(50))
+                .clip(CardInner)
                 .background(AdhxColors.Accent)
                 .clickable(role = Role.Button, onClick = onDone),
             contentAlignment = Alignment.Center,
@@ -328,7 +337,7 @@ private fun CardTop(ui: ShareUi, title: String, line: String?, done: Boolean = f
             Box(
                 Modifier
                     .matchParentSize()
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(CardInner)
                     .background(AdhxColors.Placeholder),
                 contentAlignment = Alignment.Center,
             ) {
@@ -391,12 +400,12 @@ private fun NoteField(note: String, onNote: (String) -> Unit, justForMe: Boolean
             Modifier
                 .fillMaxWidth()
                 .height(48.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(SquircleShape(16.dp))
                 .background(AdhxColors.Background)
                 .border(
                     1.dp,
                     if (focused || note.isNotEmpty()) AdhxColors.Accent.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.12f),
-                    RoundedCornerShape(16.dp),
+                    SquircleShape(16.dp),
                 )
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.CenterStart,
@@ -436,7 +445,7 @@ private fun OfflineContent(ui: ShareUi, onJustForMe: (Boolean) -> Unit, onDone: 
         }
     }
     JustForMeRow(on = ui.justForMe, onChange = onJustForMe)
-    PrimaryButton("Done", onClick = onDone, modifier = Modifier.fillMaxWidth())
+    PrimaryButton("Done", onClick = onDone, modifier = Modifier.fillMaxWidth(), shape = BrandInner)
 }
 
 @Composable
@@ -446,7 +455,7 @@ private fun MessageContent(ui: ShareUi, title: String, body: String, button: Str
         Text(title, fontFamily = SerifFamily, fontSize = 30.sp, lineHeight = 32.sp, color = AdhxColors.White)
         Text(body, fontSize = 14.sp, lineHeight = 20.sp, color = AdhxColors.Muted)
     }
-    PrimaryButton(button, onClick = onButton, modifier = Modifier.fillMaxWidth())
+    PrimaryButton(button, onClick = onButton, modifier = Modifier.fillMaxWidth(), shape = BrandInner)
 }
 
 @Composable
@@ -456,8 +465,8 @@ private fun NotConnectedContent(onOpenApp: () -> Unit, onClose: () -> Unit) {
         Text(Copy.NOT_CONNECTED_BODY, fontSize = 14.sp, lineHeight = 20.sp, color = AdhxColors.Muted)
     }
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        OutlineButton("Not now", onClick = onClose, modifier = Modifier.weight(1f))
-        PrimaryButton("Open ADHX Share", onClick = onOpenApp, modifier = Modifier.weight(1f))
+        OutlineButton("Not now", onClick = onClose, modifier = Modifier.weight(1f), shape = BrandInner)
+        PrimaryButton("Open ADHX Share", onClick = onOpenApp, modifier = Modifier.weight(1f), shape = BrandInner)
     }
 }
 
@@ -467,7 +476,7 @@ private fun NotConnectedContent(onOpenApp: () -> Unit, onClose: () -> Unit) {
  */
 @Composable
 private fun Audience(ui: ShareUi) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = SquircleShape(18.dp)
     Row(
         Modifier
             .fillMaxWidth()
@@ -566,7 +575,7 @@ private fun Poster(url: String?, platform: String?) {
     Box(
         Modifier
             .size(width = width, height = height)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(SquircleShape(12.dp))
             .background(AdhxColors.Placeholder),
         contentAlignment = Alignment.Center,
     ) {
@@ -609,7 +618,7 @@ private fun StatusBox(content: @Composable () -> Unit) {
     Box(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(SquircleShape(16.dp))
             // Darker glass inside the card, not a solid block.
             .background(AdhxColors.Black.copy(alpha = 0.4f))
             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -618,16 +627,13 @@ private fun StatusBox(content: @Composable () -> Unit) {
     }
 }
 
-/** A 1dp dashed outline with rounded corners (the "just for you" box). */
+/** A 1dp dashed outline with squircle corners (the "just for you" box). */
 private fun Modifier.dashedBorder(color: Color, corner: Dp): Modifier = drawBehind {
     val stroke = 1.dp.toPx()
-    drawRoundRect(
-        color = color,
-        topLeft = androidx.compose.ui.geometry.Offset(stroke / 2, stroke / 2),
-        size = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke),
-        cornerRadius = androidx.compose.ui.geometry.CornerRadius(corner.toPx()),
-        style = Stroke(stroke, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()))),
-    )
+    val outline = SquircleShape(corner).createOutline(androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke), layoutDirection, this)
+    translate(stroke / 2, stroke / 2) {
+        drawOutline(outline, color, style = Stroke(stroke, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()))))
+    }
 }
 
 @Composable

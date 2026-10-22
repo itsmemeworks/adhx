@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-22 — Nested corners everywhere, squircles on the phones
+
+- Owner: a button inside a card should follow the card's curve (comment on canvas board 7.3), then "all buttons" and "all curves should be squircles".
+- Rule: inner radius = container radius − gap − border, minimum 8, for elements along a container's edge or corner. Free-standing buttons (rail, header pills, chips, round icon buttons) unchanged. Written up in CLAUDE.md (Rendering and the theater).
+- iOS: every Capsule `.continuous` (rounded rects already were); `PillButtonStyle(cornerRadius:)`; Live card (Tune in + mosaic 16), Live rows, resume/can't-play cards, settings cards, send sheet, react picker, share extension card.
+- Android: new `ui/Squircle.kt` (continuous Bézier corners, 1.28× radius, clamped; unit-tested) for every rounded rectangle; same containers as iOS; buttons take an optional `shape`.
+- Web: 36 next-design files (settings, theater sheets, Right now, channels, search, start, profile, doing, invite); `--nx-nest` for shared buttons. Admin console left as is.
+- Canvas: 32 boards (108 values) plus 7.3. Checked: iOS simulator, Android emulator, web Right now and Settings on a parity server; builds and tests green.
+
 ## 2026-10-22 — TikToks only signed-in accounts see now save (and can download)
 
 - Owner report: a TikTok shared to ADHX wouldn't download. It's one TikTok marks "may not be comfortable for some audiences": yt-dlp gets "Log in for access" and the tnktok mirror "Could not find an aweme play URL", so the save answered 404 "TikTok not available" and nothing was kept.

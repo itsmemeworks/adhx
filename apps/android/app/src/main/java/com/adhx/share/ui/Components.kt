@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -87,14 +88,20 @@ fun NetworkMark(platform: String?, size: Dp = 16.dp, tint: Color = AdhxColors.Wh
     )
 }
 
-/** The yellow pill button. */
+/** The yellow pill button; inside a rounded card, pass the card's nested [shape]. */
 @Composable
-fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+fun PrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    shape: Shape = RoundedCornerShape(26.dp),
+) {
     Button(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.defaultMinSize(minHeight = 52.dp),
-        shape = RoundedCornerShape(26.dp),
+        shape = shape,
         colors = ButtonDefaults.buttonColors(
             containerColor = AdhxColors.Accent,
             contentColor = AdhxColors.Black,
@@ -107,7 +114,7 @@ fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifi
     }
 }
 
-/** The cream outline pill button. */
+/** The cream outline pill button; inside a rounded card, pass the card's nested [shape]. */
 @Composable
 fun OutlineButton(
     text: String,
@@ -116,12 +123,13 @@ fun OutlineButton(
     color: Color = AdhxColors.Cream,
     minHeight: Dp = 52.dp,
     enabled: Boolean = true,
+    shape: Shape = RoundedCornerShape(minHeight / 2),
 ) {
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.defaultMinSize(minHeight = minHeight),
-        shape = RoundedCornerShape(minHeight / 2),
+        shape = shape,
         // The boards' outline is a 1dp hairline; a coloured button keeps an edge in its colour.
         border = BorderStroke(1.dp, if (enabled && color != AdhxColors.Cream) color else AdhxColors.Hairline),
         colors = ButtonDefaults.outlinedButtonColors(
@@ -255,7 +263,7 @@ fun JustForMeRow(
         modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .clip(SquircleShape(14.dp))
             .toggleable(value = on, enabled = enabled, role = Role.Switch, onValueChange = onChange)
             .semantics(mergeDescendants = true) { stateDescription = if (on) Copy.JUST_FOR_ME_ON else Copy.SHARED_STATE },
         verticalAlignment = Alignment.CenterVertically,

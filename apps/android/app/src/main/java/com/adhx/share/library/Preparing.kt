@@ -44,6 +44,7 @@ import com.adhx.share.net.StatusResponse
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
 import com.adhx.share.ui.SerifFamily
+import com.adhx.share.ui.SquircleShape
 
 /** The words under a save that isn't ready to play yet. */
 const val GETTING_READY = "Getting it ready… it’ll be here in a moment."
@@ -101,7 +102,7 @@ fun PosterSkeleton(width: Dp, modifier: Modifier = Modifier, corner: Dp = 18.dp)
             .pulse()
             .width(width)
             .aspectRatio(9f / 16f)
-            .clip(RoundedCornerShape(corner))
+            .clip(SquircleShape(corner))
             .background(AdhxColors.Placeholder)
             .shimmer(),
     )

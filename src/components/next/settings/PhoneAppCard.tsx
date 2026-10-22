@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, Smartphone, Trash2 } from 'lucide-react'
-import { SECONDARY, SettingsCard, timeSince } from './parts'
+import { IN_CARD, SECONDARY, SettingsCard, timeSince } from './parts'
 import {
   APP_DOWNLOADS,
   LocalOnlyWarning,
@@ -133,7 +133,7 @@ export function PhoneAppCard() {
       {connected && (
         <div
           role="status"
-          className="flex items-center gap-3 rounded-2xl bg-[#7ddc8a]/12 px-4 py-3 text-[15px] font-semibold text-[#7ddc8a]"
+          className={`flex items-center gap-3 bg-[#7ddc8a]/12 px-4 py-3 text-[15px] font-semibold text-[#7ddc8a] ${IN_CARD}`}
         >
           <Check aria-hidden className="h-5 w-5 shrink-0" strokeWidth={3} />
           <span>{`${connected} is connected. Share a post to try it.`}</span>
@@ -145,7 +145,7 @@ export function PhoneAppCard() {
           Connected phones
         </span>
         {phones === null ? (
-          <span aria-hidden className="nx-shimmer animate-nx-shimmer block h-14 rounded-2xl" />
+          <span aria-hidden className={`nx-shimmer animate-nx-shimmer block h-14 ${IN_CARD}`} />
         ) : phones.length === 0 ? (
           <span className="text-[13px] text-white/55">None yet.</span>
         ) : (
@@ -153,7 +153,7 @@ export function PhoneAppCard() {
             {phones.map((phone) => (
               <li
                 key={phone.id}
-                className="flex items-center gap-3 rounded-2xl bg-black/40 px-4 py-3 text-sm"
+                className={`flex items-center gap-3 bg-black/40 px-4 py-3 text-sm ${IN_CARD}`}
               >
                 <Smartphone aria-hidden className="h-4 w-4 shrink-0 text-white/55" />
                 <span className="flex min-w-0 flex-1 flex-col">

@@ -43,6 +43,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
@@ -77,6 +79,7 @@ import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.PrimaryButton
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.Spinner
+import com.adhx.share.ui.SquircleShape
 import com.adhx.share.ui.rememberReducedMotion
 import com.adhx.share.ui.sansLineBox
 import com.adhx.share.ui.serifLineBox
@@ -208,13 +211,16 @@ private fun BigMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit) 
     val urls = moment.covers.mapNotNull { AdhxApi.resolve(server, it)?.toString() }
     val watching = Copy.watching(moment.watching.coerceAtLeast(moment.watchers.size))
     val line = Copy.momentLine(moment.posts, moment.people, moment.savers, moment.recentSaves, moment.windowMinutes)
+    // The mosaic and Tune in follow the card's curve: 26 − 8 padding − the 2dp ring = 16 (board 7.3),
+    // the same with or without the ring so the card doesn't change shape when it goes live.
+    val inner = SquircleShape(SquircleShape.nested(26.dp, 10.dp))
     Column(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 5.dp)
-            .clip(RoundedCornerShape(26.dp))
+            .clip(SquircleShape(26.dp))
             .background(AdhxColors.Surface)
-            .then(if (moment.live) Modifier.border(2.dp, LiveRing, RoundedCornerShape(26.dp)) else Modifier)
+            .then(if (moment.live) Modifier.border(2.dp, LiveRing, SquircleShape(26.dp)) else Modifier)
             .clickable(onClickLabel = Copy.TUNE_IN, onClick = onTuneIn)
             // The board's 2dp ring sits outside its 8dp of padding; border() draws inside this box.
             .padding(if (moment.live) 10.dp else 8.dp)
@@ -227,7 +233,7 @@ private fun BigMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit) 
             Modifier
                 .fillMaxWidth()
                 .height(178.dp)
-                .clip(RoundedCornerShape(20.dp)),
+                .clip(inner),
         ) {
             // One tall cover on the left; two on top and one wide underneath on the right.
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -277,7 +283,7 @@ private fun BigMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit) 
             Modifier
                 .fillMaxWidth()
                 .height(52.dp)
-                .clip(RoundedCornerShape(50))
+                .clip(inner)
                 .background(AdhxColors.Accent)
                 .clickable(onClick = onTuneIn),
             horizontalArrangement = Arrangement.Center,
@@ -307,15 +313,16 @@ private fun SmallMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 5.dp)
-            .clip(RoundedCornerShape(22.dp))
+            .clip(SquircleShape(22.dp))
             .background(AdhxColors.Surface)
-            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(22.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.08f), SquircleShape(22.dp))
             .clickable(onClickLabel = Copy.TUNE_IN, onClick = onTuneIn)
             .padding(start = 8.dp, end = 10.dp, top = 8.dp, bottom = 8.dp)
             .semantics(mergeDescendants = true) { },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Cover(url, Modifier.size(width = 76.dp, height = 88.dp).clip(RoundedCornerShape(16.dp)))
+        // Tucked into the row's corner: 22 − 8 padding = 14.
+        Cover(url, Modifier.size(width = 76.dp, height = 88.dp).clip(SquircleShape(14.dp)))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             if (moment.live) {
@@ -356,14 +363,14 @@ private fun SmallMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit
 private fun FormingRow(forming: FormingMoment, server: String, busy: Boolean = false, onBell: (() -> Unit)? = null) {
     val url = forming.covers.firstOrNull()?.let { AdhxApi.resolve(server, it)?.toString() }
     val line = Copy.toGoLive(forming.left, forming.unit)
-    val shape = RoundedCornerShape(22.dp)
+    val shape = SquircleShape(22.dp)
     Row(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 5.dp)
             .clip(shape)
             .background(AdhxColors.Surface)
-            .drawBehind { dashedOutline(Color.White.copy(alpha = 0.2f), 22.dp.toPx()) }
+            .drawBehind { dashedOutline(Color.White.copy(alpha = 0.2f), shape) }
             .padding(start = 8.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -380,7 +387,8 @@ private fun FormingRow(forming: FormingMoment, server: String, busy: Boolean = f
                 },
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Cover(url, Modifier.size(width = 76.dp, height = 88.dp).clip(RoundedCornerShape(16.dp)))
+            // Tucked into the row's corner: 22 − 8 padding = 14.
+            Cover(url, Modifier.size(width = 76.dp, height = 88.dp).clip(SquircleShape(14.dp)))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(
@@ -390,7 +398,7 @@ private fun FormingRow(forming: FormingMoment, server: String, busy: Boolean = f
                     fontWeight = FontWeight.ExtraBold,
                     color = AdhxColors.Accent,
                     modifier = Modifier
-                        .drawBehind { dashedOutline(AdhxColors.Accent.copy(alpha = 0.7f), size.height / 2) }
+                        .drawBehind { dashedOutline(AdhxColors.Accent.copy(alpha = 0.7f), RoundedCornerShape(50)) }
                         .padding(horizontal = 9.dp, vertical = 4.dp),
                 )
                 Text(forming.title, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -426,17 +434,18 @@ private fun BellButton(title: String, on: Boolean, busy: Boolean, onClick: () ->
     }
 }
 
-/** A 1dp dashed rounded outline just inside the bounds. */
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.dashedOutline(color: Color, radius: Float) {
+/** A 1dp dashed outline of [shape] just inside the bounds. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.dashedOutline(color: Color, shape: androidx.compose.ui.graphics.Shape) {
     val stroke = 1.dp.toPx()
-    drawRoundRect(
-        color = color,
-        topLeft = androidx.compose.ui.geometry.Offset(stroke / 2, stroke / 2),
-        size = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke),
-        cornerRadius = androidx.compose.ui.geometry.CornerRadius(radius, radius),
-        style = androidx.compose.ui.graphics.drawscope.Stroke(
-            width = stroke,
-            pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 4.dp.toPx())),
-        ),
-    )
+    val outline = shape.createOutline(androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke), layoutDirection, this)
+    translate(stroke / 2, stroke / 2) {
+        drawOutline(
+            outline,
+            color = color,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                width = stroke,
+                pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 4.dp.toPx())),
+            ),
+        )
+    }
 }

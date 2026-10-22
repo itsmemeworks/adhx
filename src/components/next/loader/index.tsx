@@ -190,7 +190,8 @@ export function PasteToast({
       )}
     >
       {state === 'saved' && thumbSrc ? (
-        <span className="relative block h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-nx-skeleton">
+        // In the toast's corner: 16 − 10 leaves the 8 px floor (its button too).
+        <span className="relative block h-11 w-11 shrink-0 overflow-hidden rounded-[8px] bg-nx-skeleton">
           <NxImage src={thumbSrc} alt="" className="absolute inset-0 h-full w-full object-cover" />
         </span>
       ) : (
@@ -219,7 +220,7 @@ export function PasteToast({
         <button
           type="button"
           onClick={action.onClick}
-          className="h-9 shrink-0 rounded-full bg-nx-accent px-3 text-[13px] font-extrabold text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          className="h-9 shrink-0 rounded-[8px] bg-nx-accent px-3 text-[13px] font-extrabold text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
           {action.label}
         </button>

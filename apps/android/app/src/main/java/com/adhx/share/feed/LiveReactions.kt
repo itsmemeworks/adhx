@@ -70,6 +70,7 @@ import com.adhx.share.ui.GobShape
 import com.adhx.share.ui.KeepUpright
 import com.adhx.share.ui.SansFamily
 import com.adhx.share.ui.SerifFamily
+import com.adhx.share.ui.SquircleShape
 import com.adhx.share.ui.faceColor
 import com.adhx.share.ui.rememberReducedMotion
 
@@ -107,10 +108,10 @@ fun ReactPicker(
                 .heightIn(max = 320.dp)
                 .widthIn(max = 520.dp)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(26.dp))
+                .clip(SquircleShape(26.dp))
                 // The boards' glass is 88% over a blur; without the blur it needs to be nearly solid.
                 .background(AdhxColors.Surface.copy(alpha = 0.96f))
-                .border(1.dp, AdhxColors.White.copy(alpha = 0.1f), RoundedCornerShape(26.dp))
+                .border(1.dp, AdhxColors.White.copy(alpha = 0.1f), SquircleShape(26.dp))
                 .verticalScroll(rememberScrollState())
                 // Taps on the card stay on the card.
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = {})
@@ -319,7 +320,7 @@ private fun TextReaction(who: Saver?, text: String, server: String, face: Dp) {
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
                 .padding(bottom = (face / 2 - 4.dp).coerceAtLeast(0.dp))
-                .clip(RoundedCornerShape(20.dp))
+                .clip(SquircleShape(20.dp))
                 .background(color)
                 .padding(start = 13.dp, end = 13.dp, top = 6.dp, bottom = 7.dp),
         )

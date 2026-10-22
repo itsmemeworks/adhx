@@ -24,10 +24,10 @@ struct OnTheirWayPill: View {
         .padding(.leading, 10)
         .padding(.trailing, 14)
         .frame(minHeight: 34)
-        .background(Capsule().fill(.black.opacity(0.6)))
-        .overlay(Capsule().strokeBorder(moving > 0 ? Theme.accent : Theme.live.opacity(0.8), lineWidth: 1.5))
+        .background(Capsule(style: .continuous).fill(.black.opacity(0.6)))
+        .overlay(Capsule(style: .continuous).strokeBorder(moving > 0 ? Theme.accent : Theme.live.opacity(0.8), lineWidth: 1.5))
         .padding(.vertical, 5)
-        .contentShape(Capsule())
+        .contentShape(Capsule(style: .continuous))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(spoken)
         .accessibilityHint("Shows what your ADHX is doing")
@@ -158,8 +158,9 @@ struct DoingRow: View {
                     .foregroundStyle(.black)
                     .padding(.horizontal, 16)
                     .frame(minWidth: 72, minHeight: 40)
-                    .background(Capsule().fill(Theme.cream))
-                    .contentShape(Capsule())
+                    // 18 − 10 inset: follows the row's curve.
+                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.cream))
+                    .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .buttonStyle(.plain)
                     .disabled(doing.retrying.contains(item.id))
                     .accessibilityLabel("Retry \(item.title)")
@@ -204,7 +205,8 @@ struct DoingRow: View {
             }
         }
         .frame(width: 48, height: 48)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        // 18 − 10 inset: follows the row's curve.
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .accessibilityHidden(true)
     }
 
@@ -255,8 +257,8 @@ private struct ThinBar: View {
     var body: some View {
         GeometryReader { box in
             ZStack(alignment: .leading) {
-                Capsule().fill(Theme.hairline)
-                Capsule().fill(colour)
+                Capsule(style: .continuous).fill(Theme.hairline)
+                Capsule(style: .continuous).fill(colour)
                     .frame(width: max(4, box.size.width * min(1, max(0, fraction))))
                     .animation(.easeOut(duration: 0.4), value: fraction)
             }

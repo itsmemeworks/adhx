@@ -55,6 +55,7 @@ import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.KeepUpright
 import com.adhx.share.ui.NetworkMark
 import com.adhx.share.ui.SerifFamily
+import com.adhx.share.ui.SquircleShape
 import com.adhx.share.ui.openUrl
 import com.adhx.share.ui.rememberLinked
 import kotlinx.coroutines.launch
@@ -141,7 +142,7 @@ fun OriginalSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, o
         onDismissRequest = onDismiss,
         sheetState = state,
         containerColor = AdhxColors.Surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = SquircleShape.top(28.dp),
         dragHandle = { BottomSheetDefaults.DragHandle(color = AdhxColors.Hairline) },
     ) {
         Column(

@@ -159,7 +159,9 @@ export function ChannelPage({
                 </span>
                 <span>{`@${username} · ${total === 1 ? '1 post' : `${total} posts`}${mine && isPublic === false ? ' · Private' : ''}`}</span>
               </span>
-              <span className="mt-2 hidden flex-wrap gap-2.5 [text-shadow:none] md:mt-auto md:flex">
+              {/* In the hero's corner from md: 22 − 32 leaves the 8 px floor. Below
+                  md they sit under it, outside any card, and stay pills. */}
+              <span className="mt-2 hidden flex-wrap gap-2.5 [text-shadow:none] md:mt-auto md:flex md:[--nx-nest:8px]">
                 <PlayButton username={username} tag={tag} />
                 {!mine && (
                   <SaveChannelButton
@@ -173,7 +175,7 @@ export function ChannelPage({
                   <button
                     type="button"
                     onClick={() => void copy()}
-                    className="flex h-[50px] items-center gap-2 rounded-full bg-white/15 px-[18px] text-sm font-semibold"
+                    className="flex h-[50px] items-center gap-2 rounded-[var(--nx-nest,9999px)] bg-white/15 px-[18px] text-sm font-semibold"
                   >
                     <Link2 aria-hidden className="h-4 w-4" />
                     <span>{copied ? 'Copied' : `${host}${path}`}</span>
@@ -266,7 +268,7 @@ function PlayButton({
   return (
     <Link
       href={channelPlayHref(username, tag)}
-      className={`flex h-[50px] items-center gap-2 rounded-full bg-nx-accent px-[22px] text-base font-extrabold text-black md:h-[50px] ${className ?? ''}`}
+      className={`flex h-[50px] items-center gap-2 rounded-[var(--nx-nest,9999px)] bg-nx-accent px-[22px] text-base font-extrabold text-black md:h-[50px] ${className ?? ''}`}
     >
       <Play aria-hidden className="h-4 w-4" fill="currentColor" strokeWidth={0} />
       <span>Play</span>
@@ -288,7 +290,7 @@ function SaveChannelButton({
   onSave: () => void
   className?: string
 }) {
-  const base = `flex h-[50px] items-center gap-2 rounded-full border-[1.5px] border-white bg-black/30 px-5 text-[15px] font-bold ${className ?? ''}`
+  const base = `flex h-[50px] items-center gap-2 rounded-[var(--nx-nest,9999px)] border-[1.5px] border-white bg-black/30 px-5 text-[15px] font-bold ${className ?? ''}`
   if (!signedIn) {
     return (
       <Link href={startHref(path)} className={base}>
@@ -333,7 +335,7 @@ function VisibilityToggle({
       role="group"
       aria-label="Who can see this channel"
       className={cn(
-        'flex shrink-0 items-center gap-1 rounded-full bg-white/15 p-1 [text-shadow:none]',
+        'flex shrink-0 items-center gap-1 rounded-[var(--nx-nest,9999px)] bg-white/15 p-1 [text-shadow:none]',
         compact ? 'h-[52px]' : 'h-[50px]',
       )}
     >
@@ -348,7 +350,7 @@ function VisibilityToggle({
           disabled={busy}
           onClick={() => !on && onChange(value)}
           className={cn(
-            'flex h-full items-center gap-1.5 rounded-full px-3.5 text-sm font-bold disabled:opacity-70',
+            'flex h-full items-center gap-1.5 rounded-[var(--nx-nest,9999px)] px-3.5 text-sm font-bold disabled:opacity-70',
             on ? 'bg-nx-cream text-black' : 'text-white/80',
           )}
         >

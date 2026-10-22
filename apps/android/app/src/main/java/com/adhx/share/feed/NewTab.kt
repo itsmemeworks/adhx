@@ -102,6 +102,7 @@ import com.adhx.share.ui.PrimaryButton
 import com.adhx.share.ui.Segmented
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.Spinner
+import com.adhx.share.ui.SquircleShape
 import com.adhx.share.ui.rememberReducedMotion
 import com.adhx.share.ui.serifLineBox
 import kotlinx.coroutines.delay
@@ -354,7 +355,7 @@ private fun WhySheet(
         onDismissRequest = onDismiss,
         sheetState = state,
         containerColor = AdhxColors.Surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = SquircleShape.top(28.dp),
         dragHandle = { SheetHandle() },
     ) {
         Column(
@@ -557,15 +558,16 @@ private fun PostSummary(post: PhonePost, server: String) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(SquircleShape(16.dp))
             .background(AdhxColors.Background)
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Tucked into the row's corner: 16 − 8 padding = 8.
         Box(
             Modifier
                 .size(width = 40.dp, height = 56.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .clip(SquircleShape(8.dp))
                 .background(AdhxColors.Placeholder),
         ) {
             if (poster != null) AsyncImage(poster, null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
@@ -787,9 +789,9 @@ private fun WatchedCard(watched: List<PhonePost>, server: String, modifier: Modi
     Row(
         modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .clip(SquircleShape(22.dp))
             .background(AdhxColors.Surface)
-            .border(1.dp, AdhxColors.White.copy(alpha = 0.08f), RoundedCornerShape(22.dp))
+            .border(1.dp, AdhxColors.White.copy(alpha = 0.08f), SquircleShape(22.dp))
             .padding(14.dp)
             .semantics(mergeDescendants = true) { },
         verticalAlignment = Alignment.CenterVertically,
@@ -805,9 +807,9 @@ private fun WatchedCard(watched: List<PhonePost>, server: String, modifier: Modi
                             .offset(x = (30 * i).dp)
                             .rotate(listOf(-5f, -1f, 3f, 6f)[i])
                             .size(width = 40.dp, height = 58.dp)
-                            .background(AdhxColors.Surface, RoundedCornerShape(11.dp))
+                            .background(AdhxColors.Surface, SquircleShape(11.dp))
                             .padding(2.dp)
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(SquircleShape(10.dp))
                             .background(AdhxColors.Placeholder),
                     )
                 }

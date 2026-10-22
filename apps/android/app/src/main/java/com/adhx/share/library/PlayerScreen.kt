@@ -160,6 +160,7 @@ import com.adhx.share.ui.PrivateLock
 import com.adhx.share.ui.SansFamily
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.Spinner
+import com.adhx.share.ui.SquircleShape
 import com.adhx.share.ui.openUrl
 import com.adhx.share.ui.rememberLinked
 import com.adhx.share.ui.rememberReducedMotion
@@ -1329,7 +1330,7 @@ private fun MediaPage(
                     // Centred in the space left of the right column, like the caption.
                     modifier = Modifier
                         .padding(start = 24.dp, end = 88.dp, top = 32.dp, bottom = 32.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(SquircleShape(14.dp))
                         .background(Color.Black.copy(alpha = 0.7f))
                         .padding(16.dp),
                 )
