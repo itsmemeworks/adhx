@@ -157,7 +157,9 @@ jobs:
           load: true
           push: false
           tags: ${{ env.IMAGE_TAG }}
-          build-args: SENTRY_RELEASE=${{ github.sha }}
+          # Validation images never ship. Keep this stable so metadata-only PR
+          # commits can reuse compiled layers; the image tag still names the SHA.
+          build-args: SENTRY_RELEASE=ci
           # PR caches are isolated by GitHub's branch permissions. A new PR can
           # also reuse the trusted multi-platform cache from release builds.
           cache-from: |

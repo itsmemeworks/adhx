@@ -33,6 +33,8 @@ jobs:
           cache-dependency-path: |
             apps/android/**/*.gradle*
             apps/android/**/gradle-wrapper.properties
+            apps/android/gradle.properties
+            apps/android/gradle/libs.versions.toml
       - uses: android-actions/setup-android@v4
         with:
           packages: 'platform-tools platforms;android-37.0 build-tools;36.0.0'

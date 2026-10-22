@@ -52,7 +52,10 @@ ARM64 scopes. Subsequent runs on the same PR reuse layers, and new PRs can
 read the default branch's release cache (`adhx-main`). GitHub isolates caches
 by branch, so unrelated PRs cannot use one another's private cache entries.
 A changed application still compiles; dependency and runtime installation layers
-can be reused. Cache export is best effort and limited to two minutes. Both
+can be reused. Validation images use a stable `SENTRY_RELEASE=ci` so changing
+only the commit identity does not invalidate compilation; their image tags still
+identify the exact checked revision, and published releases retain their source
+SHA. Cache export is best effort and limited to two minutes. Both
 assembled images are still scanned and smoke-tested on native runners, and
 nothing is published from a PR.
 
