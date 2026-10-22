@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 /// New: the friends feed (`/api/app/feed`), a page at a time, and the posts
 /// you've watched (`/api/app/seen`). A post counts as seen after 2 s on
@@ -179,6 +180,11 @@ final class FeedModel: ObservableObject {
             if replacing {
                 sections = mode == .new && lineupSupported ? page.sections : nil
                 watched = []
+                // A fresh send may resurface a post watched in the previous lineup.
+                // Keep unsent batches, but acknowledge it again in this session.
+                sent.removeAll()
+                shownKey = nil
+                dwell?.cancel()
             } else if let counts = page.sections, sections != nil {
                 sections = counts
             }
@@ -305,8 +311,8 @@ final class FeedModel: ObservableObject {
     }
 
     private func markSeen(_ post: PhonePost) {
-        guard sent.insert(post.key).inserted else { return }
         watched.insert(post.key)
+        guard sent.insert(post.key).inserted else { return }
         pending.append(post.ref)
         if pending.count >= Self.batch {
             Task { await flushSeen() }

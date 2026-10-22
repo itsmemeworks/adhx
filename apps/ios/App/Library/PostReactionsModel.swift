@@ -53,9 +53,9 @@ final class PostReactionsModel: ObservableObject {
         replay?.cancel()
         floating.removeAll()
         answer = nil
-        if let post, let cached = Self.cache[post.key] { noteAnswer(cached, for: post.key) }
-        guard let scope = Self.prepareScope(), let client = Store.client(), let post,
-              again || !Self.replayed.contains(post.key) else { return }
+        guard let scope = Self.prepareScope(), let client = Store.client(), let post else { return }
+        if !again, let cached = Self.cache[post.key] { noteAnswer(cached, for: post.key) }
+        guard again || !Self.replayed.contains(post.key) else { return }
         let generation = Self.generation
         replay = Task { [weak self] in
             try? await Task.sleep(nanoseconds: Self.firstDelay)
@@ -109,6 +109,7 @@ final class PostReactionsModel: ObservableObject {
     }
 
     private func noteAnswer(_ list: [LiveReactionEvent], for key: String) {
+        answer = nil
         let now = Date()
         guard let newest = list.last(where: { reaction in
             guard !reaction.saver.isYou, let at = reaction.at.flatMap(Format.parseISO) else { return false }

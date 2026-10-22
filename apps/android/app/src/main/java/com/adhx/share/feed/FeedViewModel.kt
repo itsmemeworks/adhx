@@ -224,6 +224,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
                 feedJob?.cancel()
                 channelJob?.cancel()
                 flushJob?.cancel()
+                seen.clear()
                 if (server == null) prefs.clear()
                 _feed.value = FeedUi(types = prefs.types)
                 _channels.value = ChannelsUi()
@@ -345,7 +346,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun restart(mode: String, types: Set<String>) {
-        seen.leaveStage(System.currentTimeMillis())
+        seen.newSession(System.currentTimeMillis())
         flushSeen()
         feedJob?.cancel()
         feedPage = 0
@@ -420,7 +421,9 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
         val batch = seen.drain()
         if (batch.isEmpty() || !sendSeen) return
         viewModelScope.launch {
-            when (val result = AdhxApi(connection).seen(batch)) {
+            val result = AdhxApi(connection).seen(batch)
+            if (!connection.sameCredential(store.current())) return@launch
+            when (result) {
                 is ApiResult.Ok -> Unit
                 // An older server without /seen: nothing to keep trying.
                 is ApiResult.Failed -> if (result.status != 404 && result.status != 400) seen.failed(batch)

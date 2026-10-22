@@ -280,7 +280,10 @@ cursor); `blend-db.ts` loads candidates and context. Routes:
 `GET /api/feed/blend?mode=new|everyone|friends|mine&types=…` and the phone's
 `GET /api/app/feed`; `GET|PUT /api/feed/weights` and `/api/feed/types` (and
 their `/api/app/` twins) store Show more / Show less and "What's in your feed"
-in `user_preferences` (`feed.weights`, `feed.types`).
+in `user_preferences` (`feed.weights`, `feed.types`). A bounded `feed.sitting`
+record holds the last view and the end of the previous sitting, including
+replays; it does not overwrite `post_views.seen_at` (the first view). Existing
+libraries use their historical view rows until a sitting is recorded.
 
 - **Candidates.** `new`: posts someone else saved in the last 14 days that you
   haven't seen, plus every unseen send to you however old. `everyone`: all
@@ -299,7 +302,7 @@ in `user_preferences` (`feed.weights`, `feed.types`).
   post it resembles, for a thumbnail.
 - **Snapshots.** The first page fixes the order under a random seed for about
   five minutes (in memory, per viewer); later pages re-read savers, moderation
-  and gone posts, so only ordering is cached, never authorization. A weight
+  and gone posts, plus current unseen senders and notes, so only ordering is cached, never authorization. A weight
   change clears that viewer's snapshots.
 - **End states.** `caughtUp` ("You're all caught up. Go touch grass."),
   `nothingYet` (nobody else saved anything in the window) and `waiting`

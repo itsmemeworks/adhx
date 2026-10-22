@@ -6,7 +6,7 @@ import Foundation
 enum KnownPeople { static func clear() {} }
 #endif
 
-/// Run without a device: swiftc -D ADHX_HISTORY_TEST Shared/API.swift Shared/FriendsAPI.swift Shared/Network.swift Shared/NetworkPaths.swift Shared/SVGPath.swift Shared/Storage.swift Tests/QueuedPrivacyTests.swift -o /tmp/adhx-privacy-tests && /tmp/adhx-privacy-tests
+/// Run without a device: swiftc -D ADHX_HISTORY_TEST Shared/API.swift Shared/FriendsAPI.swift Shared/Network.swift Shared/NetworkPaths.swift Shared/SVGPath.swift Shared/ResumeStore.swift Shared/Storage.swift Tests/QueuedPrivacyTests.swift -o /tmp/adhx-privacy-tests && /tmp/adhx-privacy-tests
 @main
 struct QueuedPrivacyTests {
     static func restored(_ record: ShareRecord) throws -> ShareRecord {
