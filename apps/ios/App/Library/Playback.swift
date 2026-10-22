@@ -179,7 +179,7 @@ final class Playback: ObservableObject {
             Task { @MainActor in
                 guard let self else { return }
                 // Watched to the end: nothing to pick up next time.
-                if let key = self.postKey { resumes.forget(key) }
+                if let key = self.postKey { self.resumes.forget(key) }
                 if self.repeatOne {
                     self.replay()
                 } else {

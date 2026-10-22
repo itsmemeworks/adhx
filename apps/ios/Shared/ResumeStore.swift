@@ -92,4 +92,3 @@ struct ResumeStore {
         return "\(days) days ago"
     }
 }
-
