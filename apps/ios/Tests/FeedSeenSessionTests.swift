@@ -62,13 +62,22 @@ enum KnownPeople { static func remember(_ people: [Saver]) {} }
   static func client() -> FixtureClient? { transport }
 }
 @main struct FeedSeenSessionTests {
+  /// Flushes until the 2 s dwell has produced `calls` batches. A fixed 2.1 s
+  /// sleep raced the dwell timer on busy CI runners; this allows up to 8 s.
+  @MainActor static func waitForSeen(_ feed: FeedModel, _ client: FixtureClient, calls: Int) async {
+    for _ in 0..<80 {
+      try? await Task.sleep(nanoseconds: 100_000_000)
+      await feed.flushSeen()
+      if client.seenCalls.count >= calls { return }
+    }
+  }
+
   @MainActor static func main() async {
     let feed = FeedModel()
     let client = Store.transport
     await feed.reload()
     feed.shown(0)
-    try? await Task.sleep(nanoseconds: 2_100_000_000)
-    await feed.flushSeen()
+    await waitForSeen(feed, client, calls: 1)
     precondition(client.seenCalls.flatMap { $0 }.map(\.key) == ["a"])
     precondition(feed.watched.contains("a"))
     // A later first-time send by a friend makes this already-watched post New again.
@@ -77,8 +86,7 @@ enum KnownPeople { static func remember(_ people: [Saver]) {} }
     client.page.items[0].sentToYou = true
     await feed.reload()
     feed.shown(0)
-    try? await Task.sleep(nanoseconds: 2_100_000_000)
-    await feed.flushSeen()
+    await waitForSeen(feed, client, calls: 2)
     precondition(client.seenCalls.count == 2, "a fresh send gets a new acknowledgement")
     precondition(feed.watched.contains("a"))
     precondition(feed.unseenLeft == 2)
