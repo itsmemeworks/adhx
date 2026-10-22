@@ -63,6 +63,19 @@ async function seedUserData(userId: string) {
   await testInstance.db
     .insert(schema.postViews)
     .values([{ userId, platform: 'twitter', postId: 't1', seenAt: '2024-01-01T10:00:00Z' }])
+  await testInstance.db.insert(schema.postWatchCounts).values([
+    {
+      userId,
+      platform: 'twitter',
+      postId: 't1',
+      year: 2024,
+      plays: 3,
+      finishes: 2,
+      seconds: 40,
+      firstAt: '2024-01-01T10:00:00Z',
+      lastAt: '2024-01-01T10:00:00Z',
+    },
+  ])
   await testInstance.db
     .insert(schema.syncLogs)
     .values([
@@ -189,6 +202,9 @@ describe('API: /api/account/clear', () => {
     const views = await testInstance.db.select().from(schema.postViews)
     expect(views.map((v) => v.userId)).not.toContain(USER_A)
     expect(views.map((v) => v.userId)).toContain(USER_B)
+    // So do its watch counts.
+    const watched = await testInstance.db.select().from(schema.postWatchCounts)
+    expect(watched.map((w) => w.userId)).toEqual([USER_B])
 
     // OAuth token should still exist
     const oauth = await testInstance.db
@@ -256,6 +272,13 @@ describe('API: /api/account', () => {
       testInstance.db
         .select()
         .from(schema.phoneSaveQueue)
+        .all()
+        .map((row) => row.userId),
+    ).toEqual([USER_B])
+    expect(
+      testInstance.db
+        .select()
+        .from(schema.postWatchCounts)
         .all()
         .map((row) => row.userId),
     ).toEqual([USER_B])

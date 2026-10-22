@@ -151,6 +151,7 @@ import {
   useWide,
 } from './TheaterLayout'
 import { SEEN_AFTER_MS, useSeenPosts } from './useSeenPosts'
+import { useWatchCounts } from './useWatchCounts'
 import {
   DEFAULT_FEED_KINDS,
   FEED_KINDS,
@@ -681,6 +682,8 @@ export function TheaterV2({
   const { me, loading: authLoading } = useAuthMe()
   // Seen (the feed's watched list): 2s on stage, or skipped. Members only.
   const markSeen = useSeenPosts(!authLoading && !!me?.user && !source.shared, me?.user?.id)
+  // Watch counts (plays, finishes, seconds): members only, never a shared preview.
+  useWatchCounts(!authLoading && !!me?.user && !source.shared, me?.user?.id, currentKey, isVideo)
   const currentKeyRef = useRef(currentKey)
   currentKeyRef.current = currentKey
   useEffect(() => {

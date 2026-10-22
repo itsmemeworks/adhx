@@ -511,6 +511,14 @@ data class FeedTypesBody(val types: List<String> = emptyList())
 @Serializable
 data class SeenRequest(val posts: List<PostRef>)
 
+/** One post in `POST /api/app/watched`: plays, finishes and whole seconds since the last batch. */
+@Serializable
+data class WatchedPost(val platform: String, val id: String, val plays: Int, val finishes: Int, val seconds: Int)
+
+/** `POST /api/app/watched` (at most 50). */
+@Serializable
+data class WatchedRequest(val posts: List<WatchedPost>)
+
 /** Search scopes: everyone's saves on this server, or yours. */
 object SearchScope {
     const val EVERYONE = "everyone"
