@@ -63,7 +63,9 @@ The website caches only `site/.next/cache`, keyed by platform, Node version,
 lockfile and compiler configuration. Android caches Gradle dependencies and
 build outputs; `testDebugUnitTest --rerun` ensures its tests execute even when
 compilation is cached. Test results and security reports are never treated as
-cached validation. An updated PR cancels its superseded CI run.
+cached validation. An updated PR cancels its superseded CI run. The final build
+gate uses `!cancelled()` rather than `always()`, so it still reports failed image
+checks but cannot keep a cancelled workflow's concurrency slot occupied.
 
 For media tests, the Ubuntu installer uses HTTPS Ubuntu repositories instead of
 the slow Azure HTTP mirror. Signed `.deb` downloads are cached per Ubuntu

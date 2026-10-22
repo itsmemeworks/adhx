@@ -76,8 +76,9 @@ jobs:
   build:
     needs: container-smoke
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     if: |
-      always() && github.event_name != 'workflow_run' &&
+      !cancelled() && github.event_name != 'workflow_run' &&
       !(github.event.pull_request.user.login == 'github-actions[bot]' &&
         github.head_ref == 'release-please--branches--main' &&
         github.event.pull_request.head.repo.full_name == github.repository)
