@@ -122,8 +122,11 @@ struct UpNextSheet: View {
                         ForEach(feed.lineupParts, id: \.self) { part in
                             heading(part)
                             ForEach(Array(rows(part)), id: \.post.key) { row in
-                                UpNextRow(post: row.post, server: server, playing: row.index == feed.currentIndex,
-                                          watched: feed.watched.contains(row.post.key), part: part) {
+                                let playing = row.index == feed.currentIndex
+                                let watched = feed.watched.contains(row.post.key)
+                                UpNextRow(post: row.post, server: server, playing: playing, watched: watched,
+                                          dot: part.isUnseen && !watched && !playing,
+                                          chip: part == .foryou ? row.post.why : nil) {
                                     jump(row.post.key)
                                     dismiss?()
                                 }
@@ -170,18 +173,119 @@ struct UpNextSheet: View {
     }
 }
 
+/// Up next for any other queue (board 14.3, 14.4): a channel newest first,
+/// a search best match first. One list; tap any post to start there.
+struct QueueSheet: View {
+    let posts: [PhonePost]
+    let current: Int
+    let server: URL
+    /// "Ana’s saves", "“synth”".
+    let name: String
+    /// How the list is ordered, in a line.
+    let note: String
+    /// Posts watched while this player has been up (dimmed).
+    let watched: Set<String>
+    /// A chip under a post: how a search matched it.
+    var chip: (PhonePost) -> String? = { _ in nil }
+    var nearEnd: (Int) -> Void = { _ in }
+    let jump: (String) -> Void
+    @Environment(\.boardDismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Up next")
+                    .font(Theme.serif(34))
+                    .foregroundStyle(Theme.ink)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 8)
+                Text("\(name) · \(posts.count)")
+                    .font(Theme.sans(13))
+                    .foregroundStyle(Theme.faint)
+                    .lineLimit(1)
+            }
+            Text(note)
+                .font(Theme.sans(14))
+                .foregroundStyle(Theme.muted)
+            ScrollViewReader { reader in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 4) {
+                        ForEach(Array(posts.enumerated()), id: \.element.key) { index, post in
+                            let playing = index == current
+                            let seen = watched.contains(post.key)
+                            UpNextRow(post: post, server: server, playing: playing, watched: seen,
+                                      dot: post.isNew == true && !seen && !playing, chip: chip(post)) {
+                                jump(post.key)
+                                dismiss?()
+                            }
+                            .id(post.key)
+                            .onAppear { nearEnd(index) }
+                        }
+                    }
+                    .padding(.top, 4)
+                }
+                .scrollIndicators(.hidden)
+                .onAppear {
+                    if current < posts.count { reader.scrollTo(posts[current].key, anchor: .center) }
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+    }
+}
+
+/// "Ana’s saves · 3 of 24" above the byline in a channel or a search: opens Up next.
+struct QueuePill: View {
+    let name: String
+    let position: Int
+    let count: Int
+    let open: () -> Void
+
+    var body: some View {
+        Button(action: open) {
+            HStack(spacing: 8) {
+                Image(systemName: "list.bullet")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Theme.accent)
+                Text(name)
+                    .font(Theme.sans(14, .heavy))
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(1)
+                Text("· \(position) of \(count)")
+                    .font(Theme.sans(14))
+                    .foregroundStyle(Theme.muted)
+                    .fixedSize()
+                Image(systemName: "chevron.up")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Theme.muted)
+            }
+            .padding(.leading, 10)
+            .padding(.trailing, 12)
+            .frame(height: 40)
+            .frosted(Capsule(), dim: 0.55)
+            .overlay(Capsule().strokeBorder(.white.opacity(0.14), lineWidth: 1))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(name), \(position) of \(count). Open Up next")
+    }
+}
+
 /// One post in Up next: a dot while you haven't seen it, its picture, its
-/// words and who saved it; For you says why it's there.
-private struct UpNextRow: View {
+/// words and who saved it; a chip for why (For you) or how it matched (search).
+struct UpNextRow: View {
     let post: PhonePost
     let server: URL
     let playing: Bool
-    /// Watched in this lineup: dimmed, no dot.
+    /// Watched while this player has been up: dimmed, no dot.
     let watched: Bool
-    let part: LineupSection
+    /// You haven't seen it.
+    let dot: Bool
+    var chip: String?
     let tap: () -> Void
 
-    private var unseen: Bool { part.isUnseen && !watched && !playing }
+    private var unseen: Bool { dot }
     private var passed: Bool { watched && !playing }
 
     var body: some View {
@@ -219,8 +323,8 @@ private struct UpNextRow: View {
                             .foregroundStyle(Theme.muted)
                             .lineLimit(1)
                     }
-                    if part == .foryou, let why = post.why {
-                        Text(why)
+                    if let chip {
+                        Text(chip)
                             .font(Theme.sans(12, .bold))
                             .foregroundStyle(Theme.cream)
                             .lineLimit(1)
@@ -273,7 +377,7 @@ private struct UpNextRow: View {
     private var accessibility: String {
         var words = [title, meta]
         if playing { words.insert("Now playing", at: 0) } else if unseen { words.append("not seen yet") }
-        if part == .foryou, let why = post.why { words.append(why) }
+        if let chip { words.append(chip) }
         return words.joined(separator: ", ")
     }
 }

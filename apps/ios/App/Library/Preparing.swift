@@ -139,8 +139,14 @@ struct PreparingPill: View {
 struct PreparingOverlay: View {
     let post: PhonePost
     @ObservedObject var playback: Playback
+    /// Play the next post (nil when there's none).
+    var next: (() -> Void)? = nil
+    /// Your save of it was removed.
+    var removed: () -> Void = {}
     @State private var status: StatusResult?
     @State private var retriedKept = false
+    /// Waiting this long for a first frame, while nothing is being kept, is "can't load".
+    static let patience: UInt64 = 15_000_000_000
 
     private var preparing: Bool {
         guard let s = status?.status else { return false }
@@ -152,14 +158,12 @@ struct PreparingOverlay: View {
             if preparing {
                 PreparingCard(percent: status?.percent, converting: status?.step == "converting")
                     .transition(.opacity.combined(with: .scale(scale: 0.96)))
-            } else if let problem = playback.problem {
-                Text(problem)
-                    .font(Theme.sans(15))
-                    .foregroundStyle(Theme.cream)
-                    .multilineTextAlignment(.center)
-                    .padding(16)
-                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(.black.opacity(0.7)))
-                    .padding(32)
+            } else if let trouble = playback.trouble {
+                CantPlayCard(post: post, trouble: trouble, words: playback.problem,
+                             next: next, retry: playback.retry, removed: removed)
+                    .id(post.key)
+                    // Above the rail of buttons on the right.
+                    .padding(.bottom, 240)
             } else if !playback.ready {
                 RingSpinner().frame(width: 34, height: 34)
             }
@@ -169,6 +173,12 @@ struct PreparingOverlay: View {
             status = nil
             retriedKept = false
             await follow()
+        }
+        .task(id: post.key) {
+            // Never a spinner that just sits there (board 14.9).
+            try? await Task.sleep(nanoseconds: Self.patience)
+            guard !Task.isCancelled, !preparing else { return }
+            playback.gaveUpWaiting()
         }
     }
 
@@ -192,6 +202,144 @@ struct PreparingOverlay: View {
                 if KeepStatus.final.contains(s.status) && !was { return }
             }
             try? await Task.sleep(nanoseconds: 2_000_000_000)
+        }
+    }
+}
+
+/// A post that can't play says why, and never just sits there (boards 14.8,
+/// 14.9). Gone from its network: where and why, then the next one after 3 s.
+/// Can't load: it's the connection, Try again or Skip.
+struct CantPlayCard: View {
+    let post: PhonePost
+    let trouble: Playback.Trouble
+    /// The server's words, when it said why.
+    let words: String?
+    let next: (() -> Void)?
+    let retry: () -> Void
+    let removed: () -> Void
+    @ObservedObject private var privacy = PrivacyStore.shared
+    @State private var countdown = 3
+    @State private var removing = false
+    @State private var removeError: String?
+    /// Your save of it has gone.
+    @State private var gone = false
+
+    private var network: String { Network.name(post.platform) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(trouble == .gone ? "Can’t play this one here" : "Couldn’t load this one")
+                .font(Theme.serif(30))
+                .foregroundStyle(Theme.ink)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            Text(message)
+                .font(Theme.sans(15))
+                .foregroundStyle(Theme.cream)
+                .fixedSize(horizontal: false, vertical: true)
+            if trouble == .gone, let source = post.sourceUrl.flatMap(URL.init(string:)) {
+                Button("Open on \(network)") { openURL(source) }
+                    .font(Theme.sans(15, .heavy))
+                    .foregroundStyle(Theme.accent)
+                    .buttonStyle(.plain)
+            }
+            if trouble == .gone, next != nil, countdown > 0 {
+                HStack(spacing: 10) {
+                    ProgressRing(fraction: Double(3 - countdown) / 3, size: 28)
+                    Text("Playing the next one in \(countdown)")
+                        .font(Theme.sans(14))
+                        .foregroundStyle(Theme.muted)
+                        .accessibilityAddTraits(.updatesFrequently)
+                }
+            }
+            if let removeError {
+                Text(removeError).font(Theme.sans(13)).foregroundStyle(Theme.warn)
+            }
+            if gone {
+                Label("Removed from your saves", systemImage: "checkmark")
+                    .font(Theme.sans(14, .bold))
+                    .foregroundStyle(Theme.good)
+            }
+            buttons
+        }
+        .padding(20)
+        .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Theme.surface.opacity(0.92)))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(.white.opacity(0.1), lineWidth: 1))
+        .padding(.horizontal, 16)
+        .accessibilityElement(children: .contain)
+        .task {
+            // Gone: move on by itself, unless something here is being done.
+            guard trouble == .gone, let next else { return }
+            while countdown > 0 {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                guard !Task.isCancelled, !removing else { return }
+                countdown -= 1
+            }
+            next()
+        }
+    }
+
+    private var message: String {
+        switch trouble {
+        case .gone:
+            // The server's words, unless they're the generic ones.
+            if let words, !words.isEmpty, !words.hasPrefix("This video couldn"),
+               !words.hasPrefix("This one couldn’t be downloaded yet") { return words }
+            return "It was taken down or made private on \(network) before your ADHX could keep a copy."
+        case .cantLoad:
+            return "Your ADHX didn’t answer in time. It’s still saved; this is just the connection."
+        }
+    }
+
+    @Environment(\.openURL) private var openURL
+
+    /// One row, always (board 14.8).
+    private var buttons: some View {
+        HStack(spacing: 8) { buttonList }
+    }
+
+    @ViewBuilder
+    private var buttonList: some View {
+            switch trouble {
+            case .gone:
+                if let next {
+                    Button("Next now", action: next)
+                        .buttonStyle(PillButtonStyle(kind: .primary, height: 44, fullWidth: false, fontSize: 14))
+                }
+                if privacy.isSaved(post), !gone {
+                    Button(removing ? "Removing…" : "Remove from my saves") { Task { await remove() } }
+                        .buttonStyle(PillButtonStyle(kind: .outline, height: 44, fullWidth: false, fontSize: 14))
+                        .disabled(removing)
+                }
+            case .cantLoad:
+                Button("Try again", action: retry)
+                    .buttonStyle(PillButtonStyle(kind: .primary, height: 48, fullWidth: false))
+                if let next {
+                    Button("Skip it", action: next)
+                        .buttonStyle(PillButtonStyle(kind: .outline, height: 48, fullWidth: false))
+                }
+            }
+    }
+
+    private func done() {
+        removing = false
+        gone = true
+        removed()
+        next?()
+    }
+
+    private func remove() async {
+        guard let client = Store.client() else { return }
+        removing = true
+        removeError = nil
+        do {
+            try await client.removeSave(platform: post.platform, id: post.postId)
+            done()
+        } catch let error as APIError where error.code == "not_saved" {
+            done()
+        } catch {
+            removing = false
+            removeError = "Couldn’t remove it just now. Try again."
         }
     }
 }

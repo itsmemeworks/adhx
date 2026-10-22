@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db, runInTransaction } from '@/lib/db'
 import {
-  activity,
   bookmarks,
   bookmarkLinks,
   bookmarkTags,
@@ -14,6 +13,7 @@ import { expandUrls } from '@/lib/utils/url-expander'
 import { captureException, metrics } from '@/lib/sentry'
 import { recordPostAnalytic } from '@/lib/analytics/record'
 import { withAuth } from '@/lib/api/with-auth'
+import { removeSave } from '@/lib/bookmarks/remove'
 
 // GET /api/bookmarks/[id]?platform=twitter|instagram|tiktok - Get single bookmark
 export const GET = withAuth(
@@ -195,65 +195,8 @@ export const DELETE = withAuth(
       const { id } = await params
       const platform = request.nextUrl.searchParams.get('platform') || 'twitter'
 
-      // Delete bookmark and all related records atomically using a transaction.
-      // This ensures all-or-nothing deletion - if any delete fails, all are rolled back.
-      runInTransaction(() => {
-        db.delete(bookmarkTags)
-          .where(
-            and(
-              eq(bookmarkTags.userId, userId),
-              eq(bookmarkTags.platform, platform),
-              eq(bookmarkTags.bookmarkId, id),
-            ),
-          )
-          .run()
-        db.delete(bookmarkMedia)
-          .where(
-            and(
-              eq(bookmarkMedia.userId, userId),
-              eq(bookmarkMedia.platform, platform),
-              eq(bookmarkMedia.bookmarkId, id),
-            ),
-          )
-          .run()
-        db.delete(bookmarkLinks)
-          .where(
-            and(
-              eq(bookmarkLinks.userId, userId),
-              eq(bookmarkLinks.platform, platform),
-              eq(bookmarkLinks.bookmarkId, id),
-            ),
-          )
-          .run()
-        db.delete(archivedPosts)
-          .where(
-            and(
-              eq(archivedPosts.userId, userId),
-              eq(archivedPosts.platform, platform),
-              eq(archivedPosts.bookmarkId, id),
-            ),
-          )
-          .run()
-        db.delete(bookmarks)
-          .where(
-            and(
-              eq(bookmarks.userId, userId),
-              eq(bookmarks.platform, platform),
-              eq(bookmarks.id, id),
-            ),
-          )
-          .run() // The public "saved" pulse for a save that no longer exists.
-        db.delete(activity)
-          .where(
-            and(
-              eq(activity.userId, userId),
-              eq(activity.action, 'save'),
-              eq(activity.platform, platform),
-              eq(activity.bookmarkId, id),
-            ),
-          )
-          .run()
-      })
+      // The save and everything hanging off it, all or nothing.
+      removeSave(userId, platform, id)
 
       metrics.bookmarkDeleted()
       recordPostAnalytic('post.delete', { userId, platform, bookmarkId: id })

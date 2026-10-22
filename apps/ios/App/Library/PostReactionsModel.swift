@@ -7,6 +7,10 @@ import Combine
 @MainActor
 final class PostReactionsModel: ObservableObject {
     @Published private(set) var floating: [FloatingReaction] = []
+    /// The newest reaction from someone else on the post on screen, from the
+    /// last week: "Pete replied · 2m".
+    @Published private(set) var answer: (key: String, reaction: LiveReactionEvent)?
+    static let answerFor: TimeInterval = 7 * 86_400
     /// Posts already replayed this run of the app, in any player.
     private static var replayed = Set<String>()
     /// What each post had when it was fetched (plus yours since).
@@ -48,6 +52,8 @@ final class PostReactionsModel: ObservableObject {
     func arrive(_ post: PostRef?, again: Bool = false) {
         replay?.cancel()
         floating.removeAll()
+        answer = nil
+        if let post, let cached = Self.cache[post.key] { noteAnswer(cached, for: post.key) }
         guard let scope = Self.prepareScope(), let client = Store.client(), let post,
               again || !Self.replayed.contains(post.key) else { return }
         let generation = Self.generation
@@ -67,6 +73,7 @@ final class PostReactionsModel: ObservableObject {
             }
             guard !Task.isCancelled, Self.generation == generation,
                   Self.connectionScope() == scope else { return }
+            self?.noteAnswer(list, for: post.key)
             Self.replayed.insert(post.key)
             for reaction in list.suffix(Self.shown) {
                 guard !Task.isCancelled, Self.generation == generation,
@@ -99,6 +106,15 @@ final class PostReactionsModel: ObservableObject {
             floating.removeAll { $0.id == item.id }
             return false
         }
+    }
+
+    private func noteAnswer(_ list: [LiveReactionEvent], for key: String) {
+        let now = Date()
+        guard let newest = list.last(where: { reaction in
+            guard !reaction.saver.isYou, let at = reaction.at.flatMap(Format.parseISO) else { return false }
+            return now.timeIntervalSince(at) < Self.answerFor
+        }) else { return }
+        answer = (key, newest)
     }
 
     @discardableResult

@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-22 — Phones: pick up where you left off, Up next everywhere, reply, can't play
+
+- Owner picked boards 14.2, 14.3/14.4, 14.5–14.7 and 14.8/14.9 from page 14 of the design canvas.
+- Resume: positions of long posts (≥60 s, 15 s margins) kept on the phone only (300, 30 days); a post you left part-way waits paused under "Pick up where you left off?" with Resume / Start over. Back and app stop save it; the end forgets it.
+- Up next: channels and search get a pill above the byline and a one-list Up next (dots for `isNew`, dims what you've passed, search says how each matched).
+- Reply: a sent post gets Reply; it's a reaction on that post, so the sender sees it float up and in Reactions. "Pete replied · 2m" when someone else reacted in the last week. Playback waits while the sheet is open.
+- Can't play: 404/410 (asked with the phone key, so the server's reason shows) → "Can’t play this one here", Open on the network (link), one row of Next now (3 s countdown, only with a next post) + Remove from my saves (new `DELETE /api/app/saves`, shared `removeSave()` with the web delete). Other failures or 15 s without a frame → "Couldn’t load this one", Try again / Skip it.
+- Checked on the iOS simulator and Android emulator against the parity server. Not run: the 15 s can't-load path and the gone countdown with a next post; Start over not tapped on Android.
+
 ## 2026-10-21 — New on the phones is the lineup (boards 13.3 and 13.5)
 
 - Owner ask: opening the app should always autoplay something, predictably: newest, then what you haven't seen, then topics from what you interact with. Picked 13.3 (the lineup) and 13.5 (Up next in three parts) from the design canvas.

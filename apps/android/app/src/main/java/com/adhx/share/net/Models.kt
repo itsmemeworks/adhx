@@ -737,6 +737,9 @@ data class LiveReaction(
     val at: String? = null,
 )
 
+/** What a file that wouldn't play says when asked: gone (404/410, maybe with the server's words) or not. */
+data class FileTrouble(val gone: Boolean, val reason: String?)
+
 /** The quick reactions in the React picker, and what a screen reader calls each. */
 object Reaction {
     val emoji = listOf("😂", "🔥", "😭", "👀", "💀", "❤️")

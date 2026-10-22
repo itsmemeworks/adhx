@@ -484,6 +484,9 @@ fun matchLabel(on: List<String>): String = when {
     else -> "Related"
 }
 
+/** How a search matched a post, for Up next's chip; null outside a search. */
+fun matchChip(post: PhonePost): String? = post.match?.let { matchLabel(it.on) }
+
 /** The heading over the results, after where the best one was found. */
 fun foundHeading(on: List<String>): String = when (matchLabel(on)) {
     "On screen" -> "Found it on screen"

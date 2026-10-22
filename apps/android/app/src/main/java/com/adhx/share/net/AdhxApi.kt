@@ -393,6 +393,20 @@ class AdhxApi(private val server: String, private val key: String?) {
     }
 
     /**
+     * Removes your save of a post (`DELETE /api/app/saves?platform&id`), from
+     * "Remove from my saves" on a post that can't play. Others' saves stay;
+     * 404 `not_saved` means it's already gone from yours.
+     */
+    suspend fun removeSave(platform: String, id: String): ApiResult<Unit> {
+        val base = url("api/app/saves") ?: return badAddress
+        val url = base.newBuilder()
+            .addQueryParameter("platform", platform)
+            .addQueryParameter("id", id)
+            .build()
+        return send(authed(url).delete().build()) { _, _ -> }
+    }
+
+    /**
      * React to any post (`POST /api/app/reactions`): one [Reaction.emoji], or a
      * few words (at most [Reaction.MAX_TEXT]). It's kept on the post. 429 `busy` when sending too fast.
      */
@@ -608,6 +622,33 @@ class AdhxApi(private val server: String, private val key: String?) {
          * Why a file won't play: a video the server can't serve answers 404 or
          * 410 with `{ reason }` in plain words. Null when it didn't say.
          */
+        /**
+         * Why a file failed, by asking for two bytes of it: [FileTrouble.gone]
+         * for a 404 or 410 (with the server's words when it gave any), else
+         * not gone (the connection, or the server didn't answer).
+         */
+        suspend fun fileTrouble(url: String): FileTrouble = withContext(Dispatchers.IO) {
+            val request = try {
+                Request.Builder().url(url).header("Range", "bytes=0-1").build()
+            } catch (e: IllegalArgumentException) {
+                return@withContext FileTrouble(gone = false, reason = null)
+            }
+            try {
+                client.newCall(request).await().use { response ->
+                    if (response.code != 404 && response.code != 410) return@use FileTrouble(gone = false, reason = null)
+                    val text = response.body?.string().orEmpty()
+                    val reason = try {
+                        json.decodeFromString(ReasonBody.serializer(), text).reason?.takeIf { it.isNotBlank() }
+                    } catch (e: IllegalArgumentException) {
+                        null
+                    }
+                    FileTrouble(gone = true, reason = reason)
+                }
+            } catch (e: IOException) {
+                FileTrouble(gone = false, reason = null)
+            }
+        }
+
         suspend fun reason(url: String): String? = withContext(Dispatchers.IO) {
             val request = try {
                 Request.Builder().url(url).header("Range", "bytes=0-1").build()

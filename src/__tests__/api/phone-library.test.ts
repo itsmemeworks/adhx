@@ -20,7 +20,10 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 vi.mock('@/lib/auth/session', () => ({ getCurrentUserId: vi.fn(async () => sessionUser) }))
-vi.mock('@/lib/sentry', () => ({ captureException: vi.fn(), metrics: {} }))
+vi.mock('@/lib/sentry', () => ({
+  captureException: vi.fn(),
+  metrics: { bookmarkDeleted: vi.fn() },
+}))
 let keepOn = true
 let cutoff: string | null = null
 vi.mock('@/lib/keep/config', async (importOriginal) => ({
@@ -294,6 +297,36 @@ describe('GET /api/app/saves', () => {
     const res = await saves('', searchKey)
     expect(res.status).toBe(401)
     expect(res.body.code).toBe('bad_key')
+  })
+})
+
+describe('DELETE /api/app/saves', () => {
+  const remove = async (query: string, key?: string) => {
+    const { DELETE } = await import('@/app/api/app/saves/route')
+    const res = await DELETE(
+      new NextRequest(`${BASE}/api/app/saves${query}`, {
+        method: 'DELETE',
+        ...(key ? { headers: { authorization: `Bearer ${key}` } } : {}),
+      }),
+    )
+    return { status: res.status, body: await res.json() }
+  }
+
+  it('removes only your save, and says when it isn’t yours', async () => {
+    saveFor('user-1', 'gone', '2026-10-21T10:00:00Z', {}, [{ type: 'video' }])
+    saveFor('user-2', 'gone', '2026-10-21T10:00:00Z')
+    const ana = await phoneKey('user-1')
+    expect(await remove('?platform=twitter&id=gone', ana)).toEqual({
+      status: 200,
+      body: { ok: true },
+    })
+    expect((await saves('?platform=twitter&id=gone', ana)).status).toBe(404)
+    // Ben still has his.
+    const ben = await phoneKey('user-2')
+    expect((await saves('?platform=twitter&id=gone', ben)).status).toBe(200)
+    expect((await remove('?platform=twitter&id=gone', ana)).status).toBe(404)
+    expect((await remove('?platform=twitter&id=', ana)).status).toBe(400)
+    expect((await remove('?platform=twitter&id=gone')).status).toBe(401)
   })
 })
 
