@@ -175,7 +175,8 @@ struct PlayerView: View {
                     PostPage(post: post, server: server, onScreen: post.key == current,
                              playback: playback, clean: $clean, extras: pageExtras, say: say,
                              openFriend: { friend = $0 }, send: { sending = $0 },
-                             advance: { next() },
+                             advance: { next() }, hasNext: hasNext(after: post),
+                             reply: replier(post), answer: answer(post),
                              held: sending != nil || pageExtras.react?.isOpen == true, landscape: landscape)
                         .containerRelativeFrame([.horizontal, .vertical])
                         .id(post.key)
@@ -250,7 +251,7 @@ struct PlayerView: View {
         }
         onShow(index)
         let post = posts[index]
-        playback.show(post.plays ? ADHXClient.resolve(post.media.first?.url, against: server) : nil)
+        playback.show(post.plays ? ADHXClient.resolve(post.media.first?.url, against: server) : nil, key: post.key)
     }
 
     /// A video ended with Repeat off (or a photo's time ran out): on to the next save.
@@ -271,6 +272,28 @@ struct PlayerView: View {
         let text = words.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         react(.text(text))
+    }
+
+    private func hasNext(after post: PhonePost) -> Bool {
+        guard let at = posts.firstIndex(where: { $0.key == post.key }) else { return false }
+        return at + 1 < posts.count || extras.endPage != nil
+    }
+
+    private func replier(_ post: PhonePost) -> (LiveSay) async -> Bool {
+        { say in await replyTo(post, say) }
+    }
+
+    private func answer(_ post: PhonePost) -> LiveReactionEvent? {
+        guard let answer = reactions.answer, answer.key == post.key else { return nil }
+        return answer.reaction
+    }
+
+    /// A reply to whoever sent `post`: a reaction on it, floating at once.
+    private func replyTo(_ post: PhonePost, _ say: LiveSay) async -> Bool {
+        let you = YourFace.shared.you(from: post.savers.first(where: \.isYou))
+        let sent = await reactions.react(say, you: you, to: post.ref)
+        if sent { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+        return sent
     }
 
     /// Floats at once with your face; kept for whoever watches it next.
@@ -320,6 +343,12 @@ private struct PostPage: View {
     var send: (PhonePost) -> Void = { _ in }
     /// A photo's time ran out: on to the next post.
     var advance: () -> Void = {}
+    /// Something plays after this one (else a post that can't play just stays).
+    var hasNext = true
+    /// Sends a reply to whoever sent this post (a reaction on it).
+    var reply: ((LiveSay) async -> Bool)? = nil
+    /// The newest answer from someone else on this post, for "Pete replied · 2m".
+    var answer: LiveReactionEvent? = nil
     /// Something over the player (the send sheet, Live's picker): photos wait.
     var held = false
     /// Turned sideways: the media whole, and taps only pause.
@@ -344,6 +373,8 @@ private struct PostPage: View {
     @State private var photoPaused = false
     /// The original post: who posted it, their words in full, and the way there.
     @State private var original = false
+    /// "Reply to Ana" is up.
+    @State private var replying = false
 
     /// Words over a picture get a soft shadow; nothing else does.
     private var overMedia: Bool { post.kind != "text" && post.kind != "article" }
@@ -399,6 +430,25 @@ private struct PostPage: View {
             ActivitySheet(items: share.items, onComplete: { share.export?.cleanup() })
                 .presentationDetents([.medium, .large])
         }
+        .onChange(of: replying) { _, open in
+            // The video waits while you answer, so the reply lands on this post.
+            guard post.plays, onScreen else { return }
+            if open { playback.stop() } else { playback.resume() }
+        }
+        .sheet(isPresented: $replying) {
+            if let sender = WhyChip.face(post), let reply {
+                ReplySheet(sender: sender, server: server,
+                           note: post.savers.first { $0.username == sender.username }?.note,
+                           send: { what in
+                               let sent = await reply(what)
+                               if sent { replying = false; say("Sent to \(sender.displayName)") }
+                               return sent
+                           })
+                    .presentationDetents([.height(340)])
+                    .presentationDragIndicator(.visible)
+                    .frostedSheet()
+            }
+        }
         .sheet(isPresented: $more) {
             MoreSheet(post: post, server: server, say: say, onWhy: extras.onWhy.map { open in { open(post) } },
                       playback: post.plays && onScreen ? playback : nil,
@@ -434,9 +484,17 @@ private struct PostPage: View {
                     if post.kind == "video" {
                         PlayerLayerView(player: playback.player, fill: !(playback.fitVideo || landscape)) { playback.attach($0) }
                     }
-                    if playback.problem != nil || !playback.ready {
+                    if let spot = playback.resumeOffer {
+                        // A long post you left part-way (board 14.2).
+                        Color.black.opacity(0.45).allowsHitTesting(false)
+                        ResumeCard(spot: spot, resume: playback.acceptResume, startOver: playback.startOver)
+                            // Above the rail of buttons on the right.
+                            .padding(.bottom, 240)
+                    } else if playback.problem != nil || !playback.ready {
                         // Still being kept on your ADHX: an animated card until it's ready.
-                        PreparingOverlay(post: post, playback: playback)
+                        PreparingOverlay(post: post, playback: playback, next: hasNext ? advance : nil, removed: {
+                            say("Removed from your saves")
+                        })
                     } else if playback.paused {
                         Image(systemName: "play.fill")
                             .font(.system(size: 32))
@@ -493,7 +551,7 @@ private struct PostPage: View {
 
     /// The photo timer runs while this photo is on screen and nothing is over it.
     private var photoTimerKey: String {
-        let running = onScreen && !photoPaused && !held && !more && !savedSheet && sharing == nil
+        let running = onScreen && !photoPaused && !held && !more && !savedSheet && sharing == nil && !replying
         // Repeat switched on after the last post's time ran out starts it again.
         return "\(running)-\(photo)-\(playback.repeatOne)"
     }
@@ -501,7 +559,7 @@ private struct PostPage: View {
     /// Photos move on by themselves, `PhotoTimer.seconds` each: the next photo
     /// in an album, then the next post.
     private func runPhotoTimer() async {
-        guard onScreen, !photoPaused, !held, !more, !savedSheet, sharing == nil else { return }
+        guard onScreen, !photoPaused, !held, !more, !savedSheet, sharing == nil, !replying else { return }
         let step = 0.1
         while !Task.isCancelled {
             try? await Task.sleep(nanoseconds: UInt64(step * 1_000_000_000))
@@ -560,10 +618,19 @@ private struct PostPage: View {
                     .padding(.bottom, 8)
                     .accessibilityElement(children: .combine)
                 }
+                if let answer {
+                    // Someone answered a post you sent or saved (board 14.7).
+                    RepliedChip(reaction: answer, server: server)
+                        .padding(.bottom, 10)
+                }
                 if let why = post.why, let onWhy = extras.onWhy, !WhyChip.repeatsByline(post) {
-                    WhyChip(text: WhyChip.label(post, why: why), kind: post.whyReasons.first?.kind,
-                            face: WhyChip.face(post), server: server) { onWhy(post) }
-                        .padding(.bottom, 12)
+                    HStack(spacing: 8) {
+                        WhyChip(text: WhyChip.label(post, why: why), kind: post.whyReasons.first?.kind,
+                                face: WhyChip.face(post), server: server) { onWhy(post) }
+                        // A post someone sent you can be answered (board 14.5).
+                        if WhyChip.face(post) != nil, reply != nil { ReplyButton { replying = true } }
+                    }
+                    .padding(.bottom, 12)
                 }
                 if let noted = SaverWords.noted(post.savers), let note = noted.note {
                     NoteBubble(saver: noted, note: note, server: server)

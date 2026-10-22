@@ -3,9 +3,15 @@ import Combine
 
 // Compile the production model against deterministic connection/transport fixtures:
 // swiftc apps/ios/App/Library/PostReactionsModel.swift apps/ios/Tests/ReactionConnectionTests.swift -o /tmp/adhx-reaction-connections && /tmp/adhx-reaction-connections
-struct Saver: Sendable { let username: String }
+struct Saver: Sendable { let username: String; var isYou = false }
 struct PostRef: Sendable { let key: String }
-struct LiveReactionEvent: Sendable { let id: String; let saver: Saver; let emoji: String?; let text: String? }
+struct LiveReactionEvent: Sendable {
+    let id: String; let saver: Saver; let emoji: String?; let text: String?
+    var at: String? = nil
+}
+enum Format {
+    static func parseISO(_ s: String) -> Date? { ISO8601DateFormatter().date(from: s) }
+}
 struct FloatingReaction: Sendable {
     let id = UUID()
     let event: LiveReactionEvent

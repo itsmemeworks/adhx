@@ -430,6 +430,14 @@ struct ADHXClient {
 
     /// Remove this phone: the server revokes this key (and only this key).
     /// A short wait, since the phone forgets the key either way.
+    /// Removes your save of a post (`DELETE /api/app/saves`); others' saves stay.
+    func removeSave(platform: String, id: String) async throws {
+        let _: RemovedAnswer = try await send("DELETE", "/api/app/saves", query: [
+            URLQueryItem(name: "platform", value: platform),
+            URLQueryItem(name: "id", value: id),
+        ], timeout: 10)
+    }
+
     func removeThisPhone() async throws {
         let _: RemovedAnswer = try await send("DELETE", "/api/app/me", timeout: 8)
     }

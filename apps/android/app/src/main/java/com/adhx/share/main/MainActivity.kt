@@ -51,6 +51,8 @@ import com.adhx.share.ui.LocalOrientation
 import com.adhx.share.ui.OrientationHost
 import com.adhx.share.library.PipHost
 import com.adhx.share.library.PlayerScreen
+import com.adhx.share.library.QueueInfo
+import com.adhx.share.library.matchChip
 import com.adhx.share.library.PostLinkScreen
 import com.adhx.share.library.Route
 import com.adhx.share.library.SavesHome
@@ -295,6 +297,12 @@ private fun ConnectedApp(
                         onPage = {},
                         topBar = { BackBar(back) },
                         onSaver = openPerson,
+                        queue = QueueInfo(
+                            // A friend's channel reads "Ana’s saves", as on its page.
+                            name = channel.person?.let { if (it.isYou) "Your saves" else "${it.label}’s saves" }
+                                ?: channel.title.ifBlank { "This channel" },
+                            note = "Newest first, like the channel. Tap any post to start there.",
+                        ),
                     )
                 }
             }
@@ -339,6 +347,11 @@ private fun ConnectedApp(
                         onPage = library::onSearchPage,
                         topBar = { BackBar(back) },
                         onSaver = openPerson,
+                        queue = QueueInfo(
+                            name = "“${results.searched.ifBlank { results.query }.trim()}”",
+                            note = "Best match first, like your search. Each says how it matched.",
+                            chip = ::matchChip,
+                        ),
                     )
                 }
             }

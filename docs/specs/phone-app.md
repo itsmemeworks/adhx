@@ -402,6 +402,10 @@ on the web). `limit` 1–50 (default 20).
 - `?platform=…&id=…` instead: `200 { item: PhonePost }` for one of your saves,
   archived or not (Shared lately opens it in the player), or
   `404 { code: 'not_saved' }`.
+- `DELETE /api/app/saves?platform=…&id=…` removes your save of a post and
+  everything hanging off it (the same as the web's delete): `200 { ok: true }`,
+  `404 not_saved` when it isn't yours, `400 bad_post`. Others' saves stay. The
+  player's "Remove from my saves" on a post that can't play uses it.
 
 ### `GET /api/app/search?q&scope&type&offset&limit`
 
@@ -491,6 +495,35 @@ reactions?: [{ id, saver, emoji?, text?, at }] }`, polled every 5 s while
   screen.
 
 ## The player and search (both platforms)
+
+- **Pick up where you left off** (board 14.2): a video or sound of a minute or
+  more that you leave part-way (not in its first or last 15 s) is remembered
+  on the phone (never sent anywhere; 300 posts, 30 days). When it comes round
+  again in any player it waits, paused, under "Pick up where you left off? /
+  You were 12:40 into this, yesterday." with **Resume from 12:40** and
+  **Start over**. Watching to the end forgets it.
+- **Up next everywhere** (14.3, 14.4): channels and search show a pill above
+  the byline ("Ana’s saves · 3 of 24", "“synth” · 1 of 16") that opens Up next
+  as one list: the channel newest first, the search best match first with
+  how each matched ("On screen", "Said in the video", …). Dots mark posts you
+  haven't seen (`isNew`), ones left behind in this player are dimmed, Now
+  playing is highlighted, and tapping a post plays from there.
+- **Reply to a send** (14.5–14.7): a post someone sent you has **Reply**
+  beside "Ana sent you this". "Reply to Ana" offers the six emoji and a few
+  words (40 characters); it goes as a reaction on that post
+  (`POST /api/app/reactions`), so Ana sees it float up when she next watches
+  it and in Reactions. A post whose newest reaction from someone else is less
+  than a week old says so above the byline: "Pete replied · 2m", "Pete
+  reacted 😂 · 2m".
+- **Can't play** (14.8, 14.9): never a spinner that just sits there. A file
+  that answers 404/410 (asked with the phone key, so members get the server's
+  reason) shows "Can’t play this one here" with the reason, then plays the
+  next one after 3 seconds ("Playing the next one in 3"; **Next now**), with
+  **Open on LinkedIn** and **Remove from my saves** (yours only). Any other
+  failure, or no first frame after 15 s while nothing is being kept, shows
+  "Couldn’t load this one / Your ADHX didn’t answer in time. It’s still
+  saved; this is just the connection." with **Try again** (carrying on from
+  the same point) and **Skip it**.
 
 - **Home** has one row on top: Gob (opens Settings, where Shared lately now
   lives), the **New · Channels · Live** tabs, and Search everyone's saves.

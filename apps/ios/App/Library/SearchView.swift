@@ -78,9 +78,11 @@ struct SearchView: View {
         .toolbar(.hidden, for: .navigationBar)
         .onAppear { focused = library.query.isEmpty }
         .fullScreenCover(item: $playing) { start in
-            PlayerScreen(posts: library.results, server: server, start: start.key) { index in
-                library.loadMoreSearchIfNeeded(at: index)
-            }
+            PlayerScreen(posts: library.results, server: server, start: start.key,
+                         onShow: { index in library.loadMoreSearchIfNeeded(at: index) },
+                         queue: QueueInfo(name: "“\(library.query.trimmingCharacters(in: .whitespacesAndNewlines))”",
+                                          note: "Best match first, like your search. Each says how it matched.",
+                                          chip: PostTile.matchLabel))
         }
     }
 
@@ -209,6 +211,14 @@ struct PlayerStart: Identifiable {
     var id: String { key }
 }
 
+/// A queue's name and order for Up next: "Ana’s saves", newest first.
+struct QueueInfo {
+    let name: String
+    let note: String
+    /// How a post matched, for a search.
+    var chip: (PhonePost) -> String? = { _ in nil }
+}
+
 /// The player over everything, with a way back.
 struct PlayerScreen: View {
     let posts: [PhonePost]
@@ -225,14 +235,22 @@ struct PlayerScreen: View {
     var onClose: (() -> Void)? = nil
     /// Repeat on from the start ("Open in ADHX" on the share card).
     var startRepeating = false
+    /// A channel or a search: "Ana’s saves · 3 of 24" above the byline opens Up next.
+    var queue: QueueInfo? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var clean = false
     @State private var scrubbing = false
     @State private var index = 0
+    @State private var jumpTo: String?
+    @State private var upNext = false
+    /// Posts left behind while this player has been up (Up next dims them).
+    @State private var watched: Set<String> = []
 
     var body: some View {
-        PlayerView(posts: posts, server: server, clean: $clean, scrubbing: $scrubbing, start: start,
-                   extras: PlayerExtras(replayReactions: replayReactions, startRepeating: startRepeating), onShow: { shown in
+        PlayerView(posts: posts, server: server, clean: $clean, scrubbing: $scrubbing, jumpTo: $jumpTo, start: start,
+                   extras: PlayerExtras(replayReactions: replayReactions, startRepeating: startRepeating,
+                                        queuePill: queuePill), onShow: { shown in
+                       if index != shown, index < posts.count { watched.insert(posts[index].key) }
                        index = shown
                        onShow(shown)
                    })
@@ -269,6 +287,21 @@ struct PlayerScreen: View {
                     .padding(.top, 4)
                 }
             }
+            .boardSheet(isPresented: $upNext, height: 640) {
+                if let queue {
+                    QueueSheet(posts: posts, current: index, server: server, name: queue.name, note: queue.note,
+                               watched: watched, chip: queue.chip, nearEnd: onShow) { key in jumpTo = key }
+                }
+            }
+    }
+
+    /// The pill for a queue with more than one post.
+    private var queuePill: ((PhonePost) -> AnyView?)? {
+        guard let queue, posts.count > 1 else { return nil }
+        return { post in
+            guard let at = posts.firstIndex(where: { $0.key == post.key }) else { return nil }
+            return AnyView(QueuePill(name: queue.name, position: at + 1, count: posts.count) { upNext = true })
+        }
     }
 }
 
@@ -475,10 +508,13 @@ struct PostTile: View {
     }
 
     /// "On screen", "Said in the video", "In the words", "Related"; else the network.
-    private var chip: String {
-        guard let match = post.match else { return Network.name(post.platform) }
+    private var chip: String { Self.matchLabel(post) ?? Network.name(post.platform) }
+
+    /// How a search matched it, or nil outside a search.
+    static func matchLabel(_ post: PhonePost) -> String? {
+        guard let match = post.match else { return nil }
         if match.strength == "related" { return "Related" }
-        switch Self.lead(post) {
+        switch lead(post) {
         case "speech": return "Said in the video"
         case "screen": return "On screen"
         case "picture": return "In the picture"

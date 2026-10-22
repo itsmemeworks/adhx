@@ -158,6 +158,9 @@ import com.adhx.share.ui.rememberLinked
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import com.adhx.share.feed.QueuePill
+import com.adhx.share.feed.QueueSheet
+import com.adhx.share.net.LiveReaction
 
 /** How the post on screen is playing. */
 private class Playback {
@@ -167,6 +170,8 @@ private class Playback {
     var drawn by mutableStateOf(false)
     var paused by mutableStateOf(false)
     var problem by mutableStateOf<String?>(null)
+    /** What kind of can't-play [problem] is, once known (boards 14.8, 14.9). */
+    var trouble by mutableStateOf<Trouble?>(null)
     var positionMs by mutableLongStateOf(0L)
     var durationMs by mutableLongStateOf(0L)
 
@@ -179,10 +184,17 @@ private class Playback {
         drawn = false
         paused = false
         problem = null
+        trouble = null
         positionMs = 0L
         durationMs = 0L
     }
 }
+
+/**
+ * A channel's or a search's name and order, for "Ana’s saves · 3 of 24" above
+ * the byline and its Up next (boards 14.3, 14.4); [chip] says how a search matched.
+ */
+data class QueueInfo(val name: String, val note: String, val chip: (PhonePost) -> String? = { null })
 
 /** A short line near the top ("Repeating this one", "Saved to your phone"). */
 private data class Notice(val text: String, val at: Long = System.nanoTime())
@@ -239,6 +251,8 @@ fun PlayerScreen(
     /** Go to this post (`platform:id`), then say so with [onJumped] (Up next). */
     jumpTo: String? = null,
     onJumped: () -> Unit = {},
+    /** A channel or a search: its pill above the byline opens Up next. */
+    queue: QueueInfo? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -265,6 +279,24 @@ fun PlayerScreen(
     var shareProgress by remember { mutableStateOf<Float?>(null) }
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     val playback = remember { Playback() }
+    // Picking up where you left off (board 14.2): the post the player has, and a spot it offers.
+    val resume = remember { ResumeStore.get(context) }
+    var playingKey by remember { mutableStateOf<String?>(null) }
+    var resumeOffer by remember { mutableStateOf<ResumeSpot?>(null) }
+    // Try again: load the same file afresh, from where it was.
+    var retryTick by remember { mutableIntStateOf(0) }
+    var retryFrom by remember { mutableStateOf<Long?>(null) }
+    var removing by remember { mutableStateOf(false) }
+    var removeError by remember { mutableStateOf<String?>(null) }
+    // Posts whose save you removed from a can't-play card (a tick shows instead).
+    val removedKeys = remember { androidx.compose.runtime.mutableStateListOf<String>() }
+    // Up next for a channel or a search, the posts left behind meanwhile, and where to go.
+    var queueOpen by remember { mutableStateOf(false) }
+    val watched = remember { androidx.compose.runtime.mutableStateListOf<String>() }
+    var queueJump by remember { mutableStateOf<String?>(null) }
+    // A post you were sent can be answered; answers from others show as "Pete replied · 2m".
+    var replyTo by remember { mutableStateOf<PhonePost?>(null) }
+    val answers = remember { androidx.compose.runtime.mutableStateMapOf<String, LiveReaction>() }
     var reading by remember { mutableStateOf<PhonePost?>(null) }
     var more by remember { mutableStateOf<PhonePost?>(null) }
     // The original post's sheet (the rail's network button).
@@ -307,6 +339,14 @@ fun PlayerScreen(
         }
     }
 
+    // Leaving the app or the player: remember where you are in a long post.
+    fun rememberSpot() {
+        val key = playingKey ?: return
+        val p = player ?: return
+        if (resumeOffer != null || playback.trouble != null) return
+        p.duration.takeIf { it != C.TIME_UNSET && it > 0 }?.let { resume.leave(key, p.currentPosition, it) }
+    }
+
     // While the app can be seen (full screen or as a small window): the
     // decoder is let go once it can't.
     DisposableEffect(lifecycle) {
@@ -314,6 +354,7 @@ fun PlayerScreen(
             when (event) {
                 Lifecycle.Event.ON_START -> if (player == null) player = buildPlayer(context)
                 Lifecycle.Event.ON_STOP -> {
+                    rememberSpot()
                     player?.release()
                     player = null
                 }
@@ -323,6 +364,7 @@ fun PlayerScreen(
         lifecycle.addObserver(observer)
         onDispose {
             lifecycle.removeObserver(observer)
+            rememberSpot()
             player?.release()
             player = null
         }
@@ -336,7 +378,11 @@ fun PlayerScreen(
     val mediaUrl = current?.takeIf { PostKind.plays(it.kind) }?.media?.firstOrNull()?.url
         ?.let { AdhxApi.resolve(server, it)?.toString() }
 
+    var lastSettled by remember { mutableIntStateOf(settled) }
     LaunchedEffect(settled) {
+        posts.getOrNull(lastSettled)?.key?.takeIf { lastSettled != settled && it !in watched }?.let { watched.add(it) }
+        lastSettled = settled
+        removeError = null
         scrub = null
         // The end page has buttons of its own: never leave it hidden.
         if (end != null && settled == posts.size) hidden = false
@@ -354,6 +400,7 @@ fun PlayerScreen(
         val settledAt = SystemClock.uptimeMillis()
         val connection = ConnectionStore.get(context).current() ?: return@LaunchedEffect
         val key = PostReactionsMemory.key(connection.server, connection.key, post.key)
+        PostReactionsMemory.cachedFor(key, false)?.let { list -> Replies.answer(list)?.let { answers[post.key] = it } }
         if (!PostReactionsMemory.shouldReplay(key, replayReactions)) return@LaunchedEffect
         val kept = PostReactionsMemory.cachedFor(key, replayReactions)
             ?: when (val got = AdhxApi(connection).postReactions(post.platform, post.id)) {
@@ -366,6 +413,7 @@ fun PlayerScreen(
                 else -> return@LaunchedEffect
             }
         if (!connection.sameCredential(ConnectionStore.get(context).current())) return@LaunchedEffect
+        Replies.answer(kept)?.let { answers[post.key] = it }
         val plan = replayPlan(kept)
         if (plan.isEmpty()) {
             PostReactionsMemory.markReplayed(key)
@@ -410,6 +458,12 @@ fun PlayerScreen(
         if (at >= 0) goTo(at)
         onJumped()
     }
+    LaunchedEffect(queueJump) {
+        val key = queueJump ?: return@LaunchedEffect
+        val at = posts.indexOfFirst { it.key == key }
+        if (at >= 0) goTo(at)
+        queueJump = null
+    }
 
     // Something new on top (saved while the app was away, or a save that was
     // on its way): at the top, it slides in from above; further down the
@@ -449,17 +503,46 @@ fun PlayerScreen(
         }
     }
 
-    LaunchedEffect(player, mediaUrl) {
+    LaunchedEffect(player, mediaUrl, retryTick) {
+        val from = retryFrom
+        retryFrom = null
+        val key = current?.key?.takeIf { mediaUrl != null }
+        val samePost = key != null && key == playingKey
+        // Leaving a long post part-way: remember where (not when it's the same one coming back).
+        val before = playingKey
+        if (before != null && !samePost && resumeOffer == null && playback.durationMs > 0) {
+            resume.leave(before, playback.positionMs, playback.durationMs)
+        }
+        val wasAt = playback.positionMs
         playback.reset()
         val p = player ?: return@LaunchedEffect
+        playingKey = key
         if (mediaUrl == null) {
+            resumeOffer = null
             p.stop()
             p.clearMediaItems()
             return@LaunchedEffect
         }
+        // The same post again (Try again, or back in the app): carry on. A new one
+        // you left part-way waits for Resume or Start over.
+        // A pending offer stays put if the same post is set up again.
+        val pending = if (samePost) resumeOffer else null
+        resumeOffer = when {
+            from != null -> null
+            pending != null -> pending
+            !samePost -> key?.let { resume.spot(it) }
+            else -> null
+        }
         p.setMediaItem(MediaItem.fromUri(mediaUrl))
         p.prepare()
-        p.playWhenReady = true
+        val carryOn = from ?: wasAt.takeIf { samePost && resumeOffer == null }
+        if (carryOn != null && carryOn > 1000) p.seekTo(carryOn)
+        if (resumeOffer != null) {
+            playback.paused = true
+            p.playWhenReady = false
+        } else {
+            p.playWhenReady = true
+        }
         while (isActive) {
             playback.positionMs = p.currentPosition.coerceAtLeast(0L)
             playback.durationMs = p.duration.takeIf { it != C.TIME_UNSET }?.coerceAtLeast(0L) ?: 0L
@@ -479,7 +562,7 @@ fun PlayerScreen(
 
     fun togglePlay() {
         val p = player ?: return
-        if (playback.problem != null) return
+        if (playback.problem != null || resumeOffer != null) return
         if (p.playbackState == Player.STATE_ENDED) {
             p.seekTo(0)
             p.play()
@@ -496,7 +579,8 @@ fun PlayerScreen(
     // With Repeat off, a video that ends moves on to the next save.
     var ended by remember { mutableIntStateOf(0) }
     LaunchedEffect(ended) {
-        if (ended > 0 && !repeat) following()?.let { goTo(it) }
+        // Not while you're answering it or looking through Up next.
+        if (ended > 0 && !repeat && replyTo == null && !queueOpen) following()?.let { goTo(it) }
     }
 
     // A video on screen can go in a small window.
@@ -525,7 +609,11 @@ fun PlayerScreen(
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) playback.ready = true
-                if (playbackState == Player.STATE_ENDED) ended++
+                if (playbackState == Player.STATE_ENDED) {
+                    // Watched to the end: nothing to pick up next time.
+                    playingKey?.let { resume.forget(it) }
+                    ended++
+                }
             }
 
             override fun onRenderedFirstFrame() {
@@ -535,6 +623,7 @@ fun PlayerScreen(
             override fun onPlayerError(error: PlaybackException) {
                 val url = p?.currentMediaItem?.localConfiguration?.uri?.toString()
                 playback.problem = if (kindNow == PostKind.AUDIO) "This sound couldn’t load." else "This video couldn’t load."
+                playback.trouble = Trouble.CANT_LOAD
                 failedUrl = url
             }
         }
@@ -544,9 +633,49 @@ fun PlayerScreen(
     // A video that can't play says why (404/410 with `{ reason }`), like the web player.
     LaunchedEffect(failedUrl) {
         val url = failedUrl ?: return@LaunchedEffect
-        val reason = AdhxApi.reason(url)
-        if (reason != null && url == mediaUrl) playback.problem = reason
+        // 404 or 410 is gone, with the server's words when it gave any; anything else is the connection.
+        val trouble = AdhxApi.fileTrouble(url)
+        if (trouble.gone && url == mediaUrl) {
+            playback.trouble = Trouble.GONE
+            playback.problem = trouble.reason
+        }
         failedUrl = null
+    }
+    // Never a spinner that just sits there: no first frame after a while, and
+    // nothing being kept, is "can't load" (board 14.9).
+    LaunchedEffect(mediaUrl, retryTick, player != null) {
+        val post = current ?: return@LaunchedEffect
+        if (mediaUrl == null || player == null) return@LaunchedEffect
+        delay(CantPlay.PATIENCE_MS)
+        if (playback.ready || playback.trouble != null) return@LaunchedEffect
+        val connection = ConnectionStore.get(context).current() ?: return@LaunchedEffect
+        val status = AdhxApi(connection).status(post.platform, post.id)
+        if (status is ApiResult.Ok && stillKeeping(status.value.status)) return@LaunchedEffect
+        if (!playback.ready && playback.trouble == null && current?.key == post.key) {
+            playback.problem = CantPlay.GENERIC
+            playback.trouble = Trouble.CANT_LOAD
+        }
+    }
+
+    // Over the caption: an answer someone left, the queue's pill, then the
+    // caller's own (the why chip), with Reply beside it on a post you were sent.
+    val captionTop: @Composable (PhonePost) -> Unit = { post ->
+        val answer = answers[post.key]
+        val at = posts.indexOfFirst { it.key == post.key }
+        val pill = queue?.takeIf { posts.size > 1 && at >= 0 }
+        val sender = if (ownReact) Replies.sender(post) else null
+        if (answer != null || pill != null || aboveCaption != null || sender != null) {
+            Column(Modifier.padding(bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                answer?.let { RepliedChip(it, server) }
+                pill?.let { QueuePill(it.name, at + 1, posts.size) { queueOpen = true } }
+                if (aboveCaption != null || sender != null) {
+                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        aboveCaption?.invoke(post)
+                        if (sender != null) ReplyButton { replyTo = post }
+                    }
+                }
+            }
+        }
     }
 
     Box(
@@ -576,7 +705,7 @@ fun PlayerScreen(
                 landscape = landscape,
                 repeat = repeat,
                 // A photo's timer waits while a sheet or picker is up, in the small window and while the app is away.
-                held = more != null || original != null || sendingPost != null || reading != null || reactingNow || inPip || player == null,
+                held = more != null || original != null || sendingPost != null || reading != null || replyTo != null || queueOpen || reactingNow || inPip || player == null,
                 onPhotosDone = { following()?.let { scope.launch { goTo(it) } } },
                 onHide = { hidden = true },
                 // Sideways hides everything, without touching what upright had.
@@ -600,7 +729,7 @@ fun PlayerScreen(
                 onMore = { more = post },
                 onOriginal = { original = post },
                 onSaver = onSaver,
-                aboveCaption = aboveCaption,
+                aboveCaption = captionTop,
                 belowCaption = belowCaption,
                 // Live's React (its room), or the player's own on every other post.
                 onReact = onReact?.let { react -> { react(post) } } ?: {
@@ -664,6 +793,71 @@ fun PlayerScreen(
                     .padding(start = 16.dp, end = 84.dp, top = 170.dp, bottom = 300.dp),
             )
         }
+        // A long post you left part-way waits under "Pick up where you left off?" (board 14.2).
+        val offer = resumeOffer
+        if (offer != null && !inPip && current != null && PostKind.plays(current.kind)) {
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                ResumeCard(
+                    spot = offer,
+                    onResume = {
+                        resumeOffer = null
+                        player?.seekTo(offer.positionMs)
+                        player?.playWhenReady = true
+                        playback.paused = false
+                    },
+                    onStartOver = {
+                        resumeOffer = null
+                        playingKey?.let { resume.forget(it) }
+                        player?.seekTo(0)
+                        player?.playWhenReady = true
+                        playback.paused = false
+                    },
+                )
+            }
+        }
+        // A post that can't play says why and moves on (boards 14.8, 14.9).
+        val trouble = playback.trouble
+        if (trouble != null && !inPip && current != null && PostKind.plays(current.kind)) {
+            val next = following()?.takeIf { it < posts.size }
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CantPlayCard(
+                    trouble = trouble,
+                    platform = current.platform,
+                    words = playback.problem,
+                    sourceUrl = current.sourceUrl,
+                    onNext = next?.let { { scope.launch { goTo(it) }; Unit } },
+                    onRetry = {
+                        retryFrom = playback.positionMs
+                        retryTick++
+                    },
+                    onRemove = if (current.yours && current.key !in removedKeys) {
+                        {
+                            val post = current
+                            val connection = ConnectionStore.get(context).current()
+                            if (connection != null && !removing) {
+                                removing = true
+                                removeError = null
+                                scope.launch {
+                                    val result = AdhxApi(connection).removeSave(post.platform, post.id)
+                                    removing = false
+                                    if (result is ApiResult.Ok || (result is ApiResult.Failed && result.status == 404)) {
+                                        removedKeys.add(post.key)
+                                        following()?.takeIf { it < posts.size }?.let { goTo(it) }
+                                    } else {
+                                        removeError = "Couldn’t remove it just now. Try again."
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        null
+                    },
+                    removing = removing,
+                    removed = current.key in removedKeys,
+                    removeError = removeError,
+                )
+            }
+        }
         if (!inPip && !landscape && !(toastInTopBar && topBarShown)) notice?.let { NoticePill(it.text, Modifier.align(Alignment.TopCenter)) }
         if (!inPip) {
             picking?.let { post ->
@@ -680,6 +874,42 @@ fun PlayerScreen(
             }
         }
         reading?.let { Reader(it, onClose = { reading = null }) }
+        if (!inPip && queueOpen && queue != null) {
+            QueueSheet(
+                posts = posts,
+                current = settled,
+                server = server,
+                name = queue.name,
+                note = queue.note,
+                watched = watched.toSet(),
+                chip = queue.chip,
+                onPick = { queueJump = it },
+                onDismiss = { queueOpen = false },
+            )
+        }
+        if (!inPip) {
+            replyTo?.let { post ->
+                Replies.sender(post)?.let { sender ->
+                    ReplySheet(
+                        sender = sender,
+                        server = server,
+                        note = post.savers.firstOrNull { it.username == sender.username }?.note,
+                        send = { emoji, text ->
+                            val connection = ConnectionStore.get(context).current()
+                            val sent = connection != null &&
+                                AdhxApi(connection).reactToPost(post.platform, post.id, emoji = emoji, text = text) is ApiResult.Ok
+                            if (sent && connection != null) {
+                                val me = Saver(username = connection.username ?: "you", name = Copy.YOU, avatarUrl = connection.avatarUrl, isYou = true)
+                                floats.add(emoji, text, me)
+                                notice = Notice("Sent to ${sender.label}")
+                            }
+                            sent
+                        },
+                        onDismiss = { replyTo = null },
+                    )
+                }
+            }
+        }
         if (!inPip) {
             sendingPost?.let { post -> SendSheet(post, server, onNotice = { text -> notice = Notice(text) }, onDismiss = { sendingPost = null }) }
         }
@@ -954,7 +1184,7 @@ private fun PostPage(
             ) {
                 if (photos.size > 1) Dots(count = photos.size, current = album.currentPage)
                 if (aboveCaption != null) {
-                    Box(Modifier.padding(start = 16.dp, end = 84.dp, bottom = 14.dp)) { aboveCaption(post) }
+                    Box(Modifier.padding(start = 16.dp, end = 84.dp)) { aboveCaption(post) }
                 }
                 Copy.noteOf(post.savers)?.let { (saver, note) ->
                     NoteBubble(saver, note, server, Modifier.padding(start = 16.dp, end = 84.dp, bottom = 6.dp))
@@ -1055,7 +1285,7 @@ private fun MediaPage(
         if (onScreen && !pip) {
             val problem = playback.problem
             when {
-                problem != null -> Text(
+                problem != null && playback.trouble == null -> Text(
                     problem,
                     fontSize = 15.sp,
                     lineHeight = 21.sp,
@@ -1068,6 +1298,7 @@ private fun MediaPage(
                         .background(Color.Black.copy(alpha = 0.7f))
                         .padding(16.dp),
                 )
+                playback.trouble != null -> Unit
                 !playback.ready -> Spinner(size = 34.dp, stroke = 3.dp)
                 playback.paused -> PausedMark()
             }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -229,11 +230,15 @@ fun UpNextSheet(
                     if (row is PhonePost) {
                         val index = ui.items.indexOf(row)
                         LaunchedEffect(row.key) { if (index >= ui.items.size - 4) onNearEnd() }
+                        val playing = row.key == playingKey
+                        val watched = row.key in ui.watched
                         UpNextRow(
                             post = row,
                             server = server,
-                            playing = row.key == playingKey,
-                            watched = row.key in ui.watched,
+                            playing = playing,
+                            watched = watched,
+                            dot = Lineup.isUnseen(row.section) && !watched && !playing,
+                            chip = row.headline.takeIf { row.section == Lineup.FOR_YOU },
                             onTap = {
                                 scope.launch { state.hide() }.invokeOnCompletion {
                                     onPick(row.key)
@@ -269,14 +274,109 @@ fun UpNextSheet(
     }
 }
 
-/** One post in Up next: a dot while you haven't seen it, its picture, its words and who saved it; For you says why. */
+/**
+ * Up next for any other queue (boards 14.3, 14.4): a channel newest first, a
+ * search best match first. One list; tap any post to start there.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun UpNextRow(post: PhonePost, server: String, playing: Boolean, watched: Boolean, onTap: () -> Unit) {
-    val unseen = Lineup.isUnseen(post.section) && !watched && !playing
+fun QueueSheet(
+    posts: List<PhonePost>,
+    current: Int,
+    server: String,
+    /** "Ana’s saves", "“synth”". */
+    name: String,
+    /** How the list is ordered, in a line. */
+    note: String,
+    /** Posts watched while this player has been up (dimmed). */
+    watched: Set<String>,
+    /** A chip under a post: how a search matched it. */
+    chip: (PhonePost) -> String?,
+    onPick: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    KeepUpright()
+    val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    val list = rememberLazyListState()
+    LaunchedEffect(Unit) { if (current > 2) list.scrollToItem(current - 2) }
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = state,
+        containerColor = AdhxColors.Surface,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        dragHandle = { SheetHandle() },
+    ) {
+        Column(Modifier.navigationBarsPadding().padding(horizontal = 16.dp)) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    "Up next",
+                    fontFamily = SerifFamily,
+                    fontSize = 34.sp,
+                    lineHeight = 36.sp,
+                    color = AdhxColors.White,
+                    modifier = Modifier.weight(1f).semantics { heading() },
+                )
+                Text("$name · ${posts.size}", fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, modifier = Modifier.padding(bottom = 6.dp))
+            }
+            Text(note, fontSize = 14.sp, color = AdhxColors.Muted, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
+            LazyColumn(state = list, modifier = Modifier.heightIn(max = 560.dp)) {
+                itemsIndexed(posts, key = { _, post -> post.key }) { index, post ->
+                    val playing = index == current
+                    val seen = post.key in watched
+                    UpNextRow(
+                        post = post,
+                        server = server,
+                        playing = playing,
+                        watched = seen,
+                        dot = post.isNew && !seen && !playing,
+                        chip = chip(post),
+                        onTap = {
+                            scope.launch { state.hide() }.invokeOnCompletion {
+                                onPick(post.key)
+                                onDismiss()
+                            }
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** "Ana’s saves · 3 of 24" above the byline in a channel or a search: opens Up next. */
+@Composable
+fun QueuePill(name: String, position: Int, count: Int, onOpen: () -> Unit) {
+    Row(
+        Modifier
+            .height(40.dp)
+            .clip(RoundedCornerShape(50))
+            .background(Color.Black.copy(alpha = 0.55f))
+            .border(1.dp, AdhxColors.White.copy(alpha = 0.14f), RoundedCornerShape(50))
+            .clickable(onClickLabel = "Open Up next", onClick = onOpen)
+            .clearAndSetSemantics { contentDescription = "$name, $position of $count. Open Up next" }
+            .padding(start = 10.dp, end = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(Glyphs.Lines, contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(16.dp))
+        Text(name, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+        Text("· $position of $count", fontSize = 14.sp, color = AdhxColors.Muted, maxLines = 1)
+        Icon(Glyphs.Chevron, contentDescription = null, tint = AdhxColors.Muted, modifier = Modifier.size(12.dp).rotate(-90f))
+    }
+}
+
+/**
+ * One post in Up next: a [dot] while you haven't seen it, its picture, its
+ * words and who saved it; a [chip] for why (For you) or how it matched (search).
+ */
+@Composable
+internal fun UpNextRow(post: PhonePost, server: String, playing: Boolean, watched: Boolean, dot: Boolean, chip: String?, onTap: () -> Unit) {
+    val unseen = dot
     val passed = watched && !playing
     val title = upNextTitle(post)
     val meta = upNextMeta(post)
-    val why = post.headline.takeIf { post.section == Lineup.FOR_YOU }
+    val why = chip
     val description = listOfNotNull(
         if (playing) "Now playing" else null,
         title,

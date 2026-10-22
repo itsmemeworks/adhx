@@ -21,6 +21,15 @@ final class Playback: ObservableObject {
     @Published private(set) var ready = false
     /// Why it can't play, in the server's words when it gave any.
     @Published private(set) var problem: String?
+    /// What kind of can't-play it is (board 14.8 / 14.9).
+    @Published private(set) var trouble: Trouble?
+
+    enum Trouble: Equatable {
+        /// Gone from the network before your ADHX kept a copy (404 / 410).
+        case gone
+        /// The connection or the server didn't answer: Try again or Skip.
+        case cantLoad
+    }
     @Published private(set) var currentURL: URL?
     /// On: the video loops. Off (the default): the next save plays when it ends.
     /// Switched on after a video has run out (the last post), it plays again.
@@ -36,6 +45,10 @@ final class Playback: ObservableObject {
     @Published var scrubTime: Double?
     /// A video finished with Repeat off.
     var onEnded: () -> Void = {}
+    /// The post on screen (`platform:id`), for picking up where you left off.
+    private var postKey: String?
+    /// A long post you left part-way: it waits, paused, for Resume or Start over.
+    @Published private(set) var resumeOffer: ResumeStore.Spot?
     private var timeWatch: Any?
 
     /// The phone's own small window (picture-in-picture): from the button, or
@@ -126,15 +139,20 @@ final class Playback: ObservableObject {
         time = seconds
     }
 
-    /// Play this file, or stop when nothing on screen plays.
-    func show(_ url: URL?) {
+    /// Play this file, or stop when nothing on screen plays. `key` is the
+    /// post's, so a long one you left part-way offers to pick up there.
+    func show(_ url: URL?, key: String? = nil) {
         guard url != currentURL else {
-            if url != nil, !paused { player.play() }
+            if url != nil, !paused, resumeOffer == nil { player.play() }
             return
         }
+        leaveCurrent()
+        postKey = url == nil ? nil : key
+        resumeOffer = postKey.flatMap(ResumeStore.spot(for:))
         currentURL = url
         atEnd = false
         problem = nil
+        trouble = nil
         ready = false
         paused = false
         time = 0
@@ -156,6 +174,8 @@ final class Playback: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
+                // Watched to the end: nothing to pick up next time.
+                if let key = self.postKey { ResumeStore.forget(key) }
                 if self.repeatOne {
                     self.replay()
                 } else {
@@ -165,18 +185,64 @@ final class Playback: ObservableObject {
             }
         }
         player.replaceCurrentItem(with: item)
+        if resumeOffer != nil {
+            // Waits for Resume or Start over (board 14.2).
+            paused = true
+            player.pause()
+        } else {
+            player.play()
+        }
+    }
+
+    /// Resume from where you left off.
+    func acceptResume() {
+        guard let spot = resumeOffer else { return }
+        resumeOffer = nil
+        seek(to: spot.seconds)
+        paused = false
         player.play()
     }
 
-    /// Load the same file again (its copy has just been kept).
+    /// Start over from the top, forgetting where you were.
+    func startOver() {
+        guard resumeOffer != nil else { return }
+        resumeOffer = nil
+        if let key = postKey { ResumeStore.forget(key) }
+        seek(to: 0)
+        paused = false
+        player.play()
+    }
+
+    /// Remember where you are in the post on screen (leaving it, or the app).
+    private func leaveCurrent() {
+        guard let key = postKey, resumeOffer == nil, currentURL != nil, duration > 0 else { return }
+        ResumeStore.leave(key, at: time, of: duration)
+    }
+
+    /// Load the same file again (its copy has just been kept, or Try again),
+    /// carrying on from the same point.
     func retry() {
         let url = currentURL
+        let key = postKey
+        let at = time
+        let offer = resumeOffer
         currentURL = nil
+        postKey = nil
+        resumeOffer = nil
         show(url)
+        postKey = key
+        if let offer {
+            // Still asking "Pick up where you left off?": keep asking.
+            resumeOffer = offer
+            paused = true
+            player.pause()
+        } else if at > 1 {
+            seek(to: at)
+        }
     }
 
     func togglePause() {
-        guard currentURL != nil else { return }
+        guard currentURL != nil, resumeOffer == nil else { return }
         if atEnd { return replay() }
         paused.toggle()
         if paused { player.pause() } else { player.play() }
@@ -192,12 +258,13 @@ final class Playback: ObservableObject {
 
     /// Leaving the player (or the app going to the background).
     func stop() {
+        leaveCurrent()
         player.pause()
         paused = true
     }
 
     func resume() {
-        guard currentURL != nil else { return }
+        guard currentURL != nil, resumeOffer == nil else { return }
         paused = false
         player.play()
     }
@@ -209,6 +276,7 @@ final class Playback: ObservableObject {
             ready = true
         case .failed:
             problem = "This video couldn’t load."
+            trouble = .cantLoad
             Task { await explain(url) }
         default:
             break
@@ -216,15 +284,30 @@ final class Playback: ObservableObject {
     }
 
     /// A video that can't play says why (404/410 with `{ reason }`), like the web player.
+    /// 404 or 410 is gone (with the server's words when it says why);
+    /// anything else, or no answer, is the connection.
     private func explain(_ url: URL) async {
         var request = URLRequest(url: url, timeoutInterval: 10)
         request.setValue("bytes=0-1", forHTTPHeaderField: "Range")
+        // Why it's gone is for members: the key goes only to your own ADHX.
+        if let server = Store.server, AuthImageLoader.sameOrigin(url, server), let key = Store.key {
+            request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        }
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               let http = response as? HTTPURLResponse, [404, 410].contains(http.statusCode),
-              let body = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let reason = body["reason"] as? String, url == currentURL
+              url == currentURL
         else { return }
-        problem = reason
+        trouble = .gone
+        let body = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        problem = body?["reason"] as? String
+    }
+
+    /// Nothing came after a long wait (and it isn't still being kept): say so
+    /// rather than spin.
+    func gaveUpWaiting() {
+        guard currentURL != nil, !ready, trouble == nil else { return }
+        problem = "This video couldn’t load."
+        trouble = .cantLoad
     }
 }
 

@@ -66,6 +66,13 @@ struct PlayQueue: Identifiable {
     var start: String? = nil
     /// A group channel, which you can keep as one of yours.
     var group: GroupChannelRef? = nil
+    /// Its name for Up next ("Ana’s saves"); nil plays without one.
+    var name: String? = nil
+
+    /// "Ana’s saves · 3 of 24" and Up next, newest first like the channel.
+    var info: QueueInfo? {
+        name.map { QueueInfo(name: $0, note: "Newest first, like the channel. Tap any post to start there.") }
+    }
 }
 
 /// A From everyone channel being played: its name, and the channel of yours
@@ -119,7 +126,7 @@ struct ChannelsView: View {
         )
         .fullScreenCover(item: $playing) { queue in
             PlayerScreen(posts: queue.posts, server: server, start: queue.start ?? queue.posts.first?.key ?? "",
-                         group: queue.group)
+                         group: queue.group, queue: queue.info)
         }
         .fullScreenCover(item: $playingReacted) { start in
             ReactedPlayer(model: reacted, server: server, start: start.key)
@@ -272,7 +279,7 @@ struct ChannelsView: View {
             switch await model.queue(kind, slug: slug) {
             case .success(let queue) where !queue.items.isEmpty:
                 let group = kind == .group ? GroupChannelRef(slug: slug, name: name ?? slug, kept: queue.kept) : nil
-                playing = PlayQueue(posts: queue.items, group: group)
+                playing = PlayQueue(posts: queue.items, group: group, name: name ?? "This channel")
             case .success:
                 problem = "Nothing in that one right now."
             case .failure(let error):
@@ -609,7 +616,8 @@ struct FriendChannelBody: View {
         }
         .task(id: friend.username) { await load() }
         .fullScreenCover(item: $playing) { queue in
-            PlayerScreen(posts: queue.posts, server: server, start: queue.start ?? queue.posts.first?.key ?? "")
+            PlayerScreen(posts: queue.posts, server: server, start: queue.start ?? queue.posts.first?.key ?? "",
+                         queue: queue.info)
         }
     }
 
@@ -638,7 +646,7 @@ struct FriendChannelBody: View {
             if !posts.isEmpty {
                 HStack(spacing: 8) {
                     Button {
-                        playing = PlayQueue(posts: posts)
+                        playing = PlayQueue(posts: posts, name: title)
                     } label: {
                         Label("Play all", systemImage: "play.fill")
                             .labelStyle(TightLabel())
@@ -646,7 +654,7 @@ struct FriendChannelBody: View {
                     .buttonStyle(PillButtonStyle(kind: .primary, height: 48, fullWidth: false, fontSize: 15))
                     if let fresh = queue?.fresh, !fresh.isEmpty {
                         Button {
-                            playing = PlayQueue(posts: fresh)
+                            playing = PlayQueue(posts: fresh, name: title)
                         } label: {
                             HStack(spacing: 8) {
                                 Circle().fill(Theme.accent).frame(width: 7, height: 7).accessibilityHidden(true)
@@ -700,7 +708,7 @@ struct FriendChannelBody: View {
                             switch tile {
                             case .post(let post):
                                 Button {
-                                    playing = PlayQueue(posts: posts, start: post.key)
+                                    playing = PlayQueue(posts: posts, start: post.key, name: title)
                                 } label: {
                                     PostTile(post: post, server: server, hiddenSaver: friend.username)
                                 }
@@ -708,7 +716,7 @@ struct FriendChannelBody: View {
                             case .note(let note):
                                 Button {
                                     let start = posts.contains { $0.key == note.key } ? note.key : posts.first?.key
-                                    playing = PlayQueue(posts: posts, start: start)
+                                    playing = PlayQueue(posts: posts, start: start, name: title)
                                 } label: {
                                     NoteCard(note: note, friend: friend, server: server,
                                              post: posts.first { $0.key == note.key })
