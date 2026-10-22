@@ -19,6 +19,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Open question for the owner before any UI: may members see each other's exact counts, or only their own? Totals are fine either way.
 - Checked: API/helper/hook tests, Swift tally suite, Android unit test + debug build, iOS simulator build. Not run on a device: counts from real playback.
 
+## 2026-10-22 — Bound media installs and reuse CI build caches
+
+- A reported slow test job spent over 20 minutes fetching Ubuntu FFmpeg dependencies before tests started. Use a bounded HTTPS Ubuntu install with reusable signed package downloads and fresh APT metadata.
+- Native AMD64/ARM64 PR images now reuse scoped BuildKit layers and the trusted release cache; website compiler and Android Gradle caches avoid repeated setup/compilation. Android tests explicitly rerun.
+- Cancel superseded PR checks; bound media/browser setup and overall test/browser jobs. Keep image scans, native smoke tests, audits and test execution on every relevant commit.
+- Release triggers/publication and deployed services are unchanged. Cache scope, cold-build limits and validation policy are documented in `docs/releasing.md`.
+- In flight: installer regressions and workflow lint locally; hosted cold/warm cache checks required on this PR before merge.
+
 ## 2026-10-22 — yt-dlp fallbacks, and X's copyright takedowns say so
 
 - Owner asked for the recommendations after the TikTok fix: yt-dlp wherever a mirror fails, and every network's login wall recognised. Builds on #624 (`YTDLP_COOKIES`).

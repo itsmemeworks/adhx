@@ -26,6 +26,12 @@ on:
 permissions:
   contents: read
 
+# A new PR revision supersedes its previous checks. Keep manual and trusted
+# release-metadata runs separate, including manual runs for different refs.
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || inputs.ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release-compatibility:
     runs-on: ubuntu-latest
@@ -70,8 +76,9 @@ jobs:
   build:
     needs: container-smoke
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     if: |
-      always() && github.event_name != 'workflow_run' &&
+      !cancelled() && github.event_name != 'workflow_run' &&
       !(github.event.pull_request.user.login == 'github-actions[bot]' &&
         github.head_ref == 'release-please--branches--main' &&
         github.event.pull_request.head.repo.full_name == github.repository)
@@ -141,14 +148,25 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
 
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Build assembled runner image
-        run: |
-          docker build \
-            --platform linux/${{ matrix.arch }} \
-            --target runner \
-            --build-arg SENTRY_RELEASE="$GITHUB_SHA" \
-            --tag "$IMAGE_TAG" \
-            .
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: runner
+          platforms: linux/${{ matrix.arch }}
+          load: true
+          push: false
+          tags: ${{ env.IMAGE_TAG }}
+          # Validation images never ship. Keep this stable so metadata-only PR
+          # commits can reuse compiled layers; the image tag still names the SHA.
+          build-args: SENTRY_RELEASE=ci
+          # PR caches are isolated by GitHub's branch permissions. A new PR can
+          # also reuse the trusted multi-platform cache from release builds.
+          cache-from: |
+            type=gha,scope=adhx-ci-${{ matrix.arch }}
+            type=gha,scope=adhx-main
+          cache-to: type=gha,scope=adhx-ci-${{ matrix.arch }},mode=max,timeout=2m,ignore-error=true
 
       - name: Scan the assembled image for fixable high and critical advisories
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -196,6 +214,13 @@ jobs:
         with:
           node-version: '26'
           cache: 'pnpm'
+      - name: Restore the website compiler cache
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: site/.next/cache
+          key: site-next-${{ runner.os }}-${{ runner.arch }}-node26-${{ hashFiles('pnpm-lock.yaml', 'site/next.config.*') }}-${{ github.sha }}
+          restore-keys: |
+            site-next-${{ runner.os }}-${{ runner.arch }}-node26-${{ hashFiles('pnpm-lock.yaml', 'site/next.config.*') }}-
       - run: pnpm install --frozen-lockfile
       # Validation only: Pages publishing remains a separate manual workflow.
       - run: pnpm site:build
@@ -256,6 +281,7 @@ jobs:
         github.head_ref == 'release-please--branches--main' &&
         github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
 
@@ -276,8 +302,22 @@ jobs:
       - name: Type check
         run: pnpm typecheck
 
+      - name: Identify the runner package cache
+        id: apt-cache
+        run: |
+          . /etc/os-release
+          echo "os=$ID-$VERSION_ID" >> "$GITHUB_OUTPUT"
+          echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+      - name: Restore downloaded media packages
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ~/.cache/adhx/apt/archives/*.deb
+          key: media-apt-${{ steps.apt-cache.outputs.os }}-${{ runner.arch }}-${{ hashFiles('scripts/ci/install-media-tools.sh') }}-${{ steps.apt-cache.outputs.week }}
+          restore-keys: |
+            media-apt-${{ steps.apt-cache.outputs.os }}-${{ runner.arch }}-${{ hashFiles('scripts/ci/install-media-tools.sh') }}-
       - name: Install maintained media tools
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        timeout-minutes: 8
+        run: bash scripts/ci/install-media-tools.sh
 
       - name: Run tests
         run: pnpm test
@@ -302,6 +342,7 @@ jobs:
         github.head_ref == 'release-please--branches--main' &&
         github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -316,6 +357,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
+        timeout-minutes: 8
         run: pnpm exec playwright install --with-deps chromium webkit
 
       - name: Run browser tests
