@@ -16,7 +16,7 @@ import { execFile } from 'child_process'
 import { ffmpegPath } from '@/lib/media/ffmpeg'
 import { remoteProcessing } from '@/lib/processing/config'
 import { absolutePath, mimeFor, postDir, slotFor, type KeptKind, type NewKeptFile } from './store'
-import { isAudioOnly, ytdlpDownload, ytdlpInfo, YtdlpError } from './ytdlp'
+import { isAudioOnly, isSignInOnly, ytdlpDownload, ytdlpInfo, YtdlpError } from './ytdlp'
 
 const MAX_IMAGE_BYTES = 80 * 1024 * 1024
 const MAX_DIRECT_VIDEO_BYTES = 4 * 1024 * 1024 * 1024
@@ -189,6 +189,8 @@ async function collectGeneric(target: KeepTarget, dir: string): Promise<Collecte
   }
 
   if (ytError && MEDIA_ONLY.has(target.platform)) throw ytError
+  // Behind a sign-in, the page's preview picture isn't the post: say why instead.
+  if (ytError instanceof YtdlpError && isSignInOnly(ytError.message)) throw ytError
 
   // Picture posts: the images the page shows link previews.
   const hosts = MEDIA_HOSTS[target.platform] ?? []

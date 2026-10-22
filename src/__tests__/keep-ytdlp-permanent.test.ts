@@ -1,4 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
 import { isPermanent } from '@/lib/keep/ytdlp'
 
 describe('which yt-dlp failures are final', () => {
@@ -47,5 +50,54 @@ describe('running yt-dlp', () => {
     expect(args.slice(-2)).toEqual(['--', 'https://www.youtube.com/watch?v=x'])
     vi.doUnmock('child_process')
     vi.doUnmock('@/lib/media/ffmpeg')
+  })
+
+  it('hands it a private copy of the cookies file, and removes the copy after', async () => {
+    vi.resetModules()
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'adhx-owner-'))
+    const owners = path.join(dir, 'cookies.txt')
+    fs.writeFileSync(
+      owners,
+      '# Netscape HTTP Cookie File\n.tiktok.com\tTRUE\t/\tTRUE\t0\tsid\tabc\n',
+    )
+    const seen: { args: string[]; copy: string | null }[] = []
+    vi.doMock('child_process', () => ({
+      execFile: (
+        _bin: string,
+        args: string[],
+        _opts: unknown,
+        done: (e: null, out: string) => void,
+      ) => {
+        const at = args.indexOf('--cookies')
+        const copy = at >= 0 ? args[at + 1] : null
+        // yt-dlp rewrites the file it's given; the owner's must stay as it was.
+        if (copy) fs.writeFileSync(copy, 'rewritten by yt-dlp')
+        seen.push({ args, copy })
+        done(null, '{}')
+        return { stdout: null, stderr: null }
+      },
+    }))
+    vi.doMock('@/lib/media/ffmpeg', () => ({ ffmpegPath: async () => '/usr/bin/ffmpeg' }))
+    vi.stubEnv('YTDLP_COOKIES', owners)
+    try {
+      const { ytdlpInfo } = await import('@/lib/keep/ytdlp')
+      await ytdlpInfo('https://www.tiktok.com/@a/video/1')
+      const [{ args, copy }] = seen
+      expect(copy).toBeTruthy()
+      expect(copy).not.toBe(owners)
+      expect(args.slice(-2)).toEqual(['--', 'https://www.tiktok.com/@a/video/1'])
+      expect(fs.existsSync(copy!)).toBe(false)
+      expect(fs.readFileSync(owners, 'utf8')).toContain('sid\tabc')
+
+      // A missing file: run without, as if unset.
+      vi.stubEnv('YTDLP_COOKIES', path.join(dir, 'gone.txt'))
+      await ytdlpInfo('https://www.tiktok.com/@a/video/2')
+      expect(seen[1].args).not.toContain('--cookies')
+    } finally {
+      vi.unstubAllEnvs()
+      fs.rmSync(dir, { recursive: true, force: true })
+      vi.doUnmock('child_process')
+      vi.doUnmock('@/lib/media/ffmpeg')
+    }
   })
 })

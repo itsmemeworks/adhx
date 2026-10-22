@@ -69,6 +69,13 @@ vi.mock('@/lib/keep/describe', () => ({
 
 vi.mock('@/lib/keep/worker', () => ({ wakeKeep: vi.fn() }))
 
+// yt-dlp describes a TikTok the mirror can't see; by default it can't either.
+const mockYtdlpInfo = vi.fn()
+vi.mock('@/lib/keep/ytdlp', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/keep/ytdlp')>('@/lib/keep/ytdlp')
+  return { ...actual, ytdlpInfo: (...args: unknown[]) => mockYtdlpInfo(...args) }
+})
+
 import { POST } from '@/app/api/bookmarks/add/route'
 
 function createRequest(body: object): NextRequest {
@@ -662,8 +669,62 @@ describe('POST /api/bookmarks/add — TikTok', () => {
     beforeTransaction = null
     vi.clearAllMocks()
     mockFetchTikTokMetadata.mockReset()
+    mockYtdlpInfo.mockReset()
+    mockYtdlpInfo.mockImplementation(async () => {
+      const { YtdlpError } = await import('@/lib/keep/ytdlp')
+      throw new YtdlpError('Unable to download webpage')
+    })
   })
   afterEach(() => testInstance.close())
+
+  const savedRow = () =>
+    testInstance.db
+      .select()
+      .from(schema.bookmarks)
+      .where(
+        and(
+          eq(schema.bookmarks.userId, 'user-123'),
+          eq(schema.bookmarks.platform, 'tiktok'),
+          eq(schema.bookmarks.id, REAL_SNOWFLAKE_ID),
+        ),
+      )
+      .all()[0]
+
+  it('saves a TikTok only signed-in viewers can see, so its download can say why', async () => {
+    mockFetchTikTokMetadata.mockResolvedValue(null)
+    const { YtdlpError } = await import('@/lib/keep/ytdlp')
+    mockYtdlpInfo.mockRejectedValue(
+      new YtdlpError(
+        `[TikTok] ${REAL_SNOWFLAKE_ID}: This post may not be comfortable for some audiences. Log in for access.`,
+      ),
+    )
+    const response = await POST(
+      createRequest({
+        url: `https://www.tiktok.com/@someuser/video/${REAL_SNOWFLAKE_ID}?_r=1&_t=ZN-x`,
+      }),
+    )
+    expect(response.status).toBe(200)
+    expect(savedRow()).toMatchObject({ author: 'someuser', category: 'video', text: '' })
+  })
+
+  it('describes it with yt-dlp when the mirror can’t (cookies let the server in)', async () => {
+    mockFetchTikTokMetadata.mockResolvedValue(null)
+    mockYtdlpInfo.mockResolvedValue({ description: 'a very loud bird', uploader: 'Some User' })
+    const response = await POST(
+      createRequest({ url: `https://www.tiktok.com/@someuser/video/${REAL_SNOWFLAKE_ID}` }),
+    )
+    expect(response.status).toBe(200)
+    expect(savedRow()).toMatchObject({ text: 'a very loud bird', authorName: 'Some User' })
+  })
+
+  it('still refuses a TikTok neither the mirror nor yt-dlp can find', async () => {
+    mockFetchTikTokMetadata.mockResolvedValue(null)
+    const response = await POST(
+      createRequest({ url: `https://www.tiktok.com/@someuser/video/${REAL_SNOWFLAKE_ID}` }),
+    )
+    expect(response.status).toBe(404)
+    expect(savedRow()).toBeUndefined()
+  })
 
   it('derives createdAt from the TikTok Snowflake id (tnktok metadata carries no date)', async () => {
     mockFetchTikTokMetadata.mockResolvedValue({

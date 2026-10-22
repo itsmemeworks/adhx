@@ -13,6 +13,7 @@ import { appPost, qualityLabel } from '@/lib/app/phone-app'
 import { networkLabel } from '@/lib/platform/networks'
 import { keepEnabled, keepMinFreeBytes } from '@/lib/keep/config'
 import { isKeepConverting, keepProgress } from '@/lib/keep/progress'
+import { isSignInOnly } from '@/lib/keep/ytdlp'
 import { freeDiskBytes, KEEP_MAX_ATTEMPTS, wakeKeep } from '@/lib/keep/worker'
 import { seenBy, saversFor } from '@/lib/people/savers'
 import type { Saver } from '@/lib/people/types'
@@ -145,6 +146,7 @@ export function keepReason(lastError: string | null, platform: string): string {
   const e = lastError ?? ''
   if (/yt-dlp is not installed/i.test(e))
     return 'This server can’t download yet: yt-dlp is missing.'
+  if (isSignInOnly(e)) return `${network} only shows this one to signed-in accounts.`
   if (/private|login|log in|sign in|cookies/i.test(e)) return `It’s private on ${network}.`
   if (/drm/i.test(e)) return `${network} locks this one.`
   if (/too large|larger than|max-?filesize/i.test(e)) return 'It’s too big to keep.'

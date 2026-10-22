@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-22 — TikToks only signed-in accounts see now save (and can download)
+
+- Owner report: a TikTok shared to ADHX wouldn't download. It's one TikTok marks "may not be comfortable for some audiences": yt-dlp gets "Log in for access" and the tnktok mirror "Could not find an aweme play URL", so the save answered 404 "TikTok not available" and nothing was kept.
+- Saves: when the mirror can't see a TikTok, yt-dlp describes it (10 s budget); if TikTok answers "log in", it's saved bare (author + id) so it's queued, instead of refused. Gone posts still 404.
+- New optional `YTDLP_COOKIES` (a signed-in browser's cookies.txt): every yt-dlp run gets a private copy (yt-dlp rewrites the file), so saves and downloads can see these posts. Documented in `.env.example`, both Compose files and the NAS guide.
+- The phone/admin reason now says "TikTok only shows this one to signed-in accounts." (was "It's private on TikTok."), and such posts never keep the page's preview picture as a photo.
+- Not verified end to end with real cookies (no signed-in TikTok here); covered by unit/API tests and the real yt-dlp refusal text.
+
 ## 2026-10-22 — Phones: Home, and the player's layout C
 
 - Owner: "New" became **Home** everywhere (phones, web nav, site, docs); the web theater's feed asks for `mode=lineup`.

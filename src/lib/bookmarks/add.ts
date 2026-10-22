@@ -5,7 +5,12 @@ import { eq, and } from 'drizzle-orm'
 import { metrics } from '@/lib/sentry'
 import { handleRouteError } from '@/lib/api/response'
 import { fetchInstagramMetadata } from '@/lib/media/instafix'
-import { fetchTikTokMetadata, resolveTikTokUrl, isTikTokShortLink } from '@/lib/media/tnktok'
+import {
+  fetchTikTokMetadata,
+  resolveTikTokUrl,
+  isTikTokShortLink,
+  type TikTokMetadata,
+} from '@/lib/media/tnktok'
 import { tiktokCreatedAtFromId } from '@/lib/media/tiktok-id'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { detectPlatformPost } from '@/lib/platform/url'
@@ -24,6 +29,7 @@ import { keptFilesFor } from '@/lib/keep/store'
 import { expandShortLink, isShortLink } from '@/lib/keep/shortlinks'
 import { keptSrc } from '@/lib/keep/src'
 import { wakeKeep } from '@/lib/keep/worker'
+import { isSignInOnly, ytdlpInfo, YtdlpError } from '@/lib/keep/ytdlp'
 import { cancelledSave, type SaveGuard } from './save-guard'
 import { applyRepeatSave, newSavePrivate, withPrivateDefault, type SaveOptions } from './privacy'
 import { newSaveNote } from './note'
@@ -346,6 +352,28 @@ async function addInstagramPost(
   })
 }
 
+/** How long a save waits for yt-dlp to describe a TikTok the mirror couldn't. */
+const TIKTOK_YTDLP_WAIT_MS = 10_000
+
+/**
+ * The mirror can't see posts TikTok only shows to signed-in viewers ("may not
+ * be comfortable for some audiences"). yt-dlp can, with the owner's cookies
+ * (`YTDLP_COOKIES`). Without them TikTok still says the post is there, behind
+ * a sign-in: save it bare, and its download says why until it can. Anything
+ * else (gone, a mirror and yt-dlp both failing) is a miss.
+ */
+async function tiktokFromYtdlp(url: string): Promise<Partial<TikTokMetadata> | null> {
+  try {
+    const info = await ytdlpInfo(url, { timeoutMs: TIKTOK_YTDLP_WAIT_MS })
+    return {
+      description: info.description || info.title || undefined,
+      authorName: info.uploader || info.channel || undefined,
+    }
+  } catch (error) {
+    return error instanceof YtdlpError && isSignInOnly(error.message) ? {} : null
+  }
+}
+
 async function addTikTokVideo(
   userId: string,
   handle: string,
@@ -366,7 +394,10 @@ async function addTikTokVideo(
     )
     .limit(1)
 
-  const meta = await fetchTikTokMetadata(handle, videoId)
+  const tiktokUrl = `https://www.tiktok.com/@${handle}/video/${videoId}`
+  const meta =
+    (await fetchTikTokMetadata(handle, videoId)) ??
+    (existing ? null : await tiktokFromYtdlp(tiktokUrl))
   if (!meta) {
     if (existing) {
       const current = runInTransaction(
@@ -400,7 +431,6 @@ async function addTikTokVideo(
   }
 
   const now = new Date().toISOString()
-  const tiktokUrl = `https://www.tiktok.com/@${handle}/video/${videoId}`
 
   const result = runInTransaction(() => {
     if (!canSave()) return null

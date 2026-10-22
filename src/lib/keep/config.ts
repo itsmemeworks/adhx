@@ -38,6 +38,14 @@ export function ytdlpPath(): string {
   return process.env['YTDLP_PATH'] || 'yt-dlp'
 }
 
+/**
+ * A cookies file from a browser signed in to the networks (Netscape
+ * `cookies.txt`), for posts they only show to signed-in viewers. Unset: none.
+ */
+export function ytdlpCookies(): string | null {
+  return process.env['YTDLP_COOKIES']?.trim() || null
+}
+
 export function maxFileSize(): string {
   const raw = process.env['KEEP_MAX_FILESIZE']
   return raw && /^\d+(\.\d+)?[KMG]?$/i.test(raw) ? raw : '4G'
