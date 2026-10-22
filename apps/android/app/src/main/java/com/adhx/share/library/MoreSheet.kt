@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Share
@@ -64,6 +63,7 @@ import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
 import com.adhx.share.ui.Glyphs
 import com.adhx.share.ui.NetworkMark
+import com.adhx.share.ui.SquircleShape
 import com.adhx.share.ui.openUrl
 import kotlinx.coroutines.launch
 
@@ -124,7 +124,7 @@ fun MoreSheet(
         onDismissRequest = onDismiss,
         sheetState = state,
         containerColor = AdhxColors.Surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = SquircleShape.top(28.dp),
         dragHandle = { BottomSheetDefaults.DragHandle(color = AdhxColors.Hairline) },
     ) {
         Column(
@@ -313,7 +313,7 @@ private fun Header(post: PhonePost, server: String, network: String, onClose: ()
             Modifier
                 .width(40.dp)
                 .height(64.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(SquircleShape(8.dp))
                 .background(AdhxColors.Placeholder),
             contentAlignment = Alignment.Center,
         ) {
@@ -364,7 +364,7 @@ private fun MoreRow(icon: Painter?, title: String, subtitle: String, onClick: ()
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(SquircleShape(14.dp))
             .clickable(onClick = onClick)
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -372,7 +372,7 @@ private fun MoreRow(icon: Painter?, title: String, subtitle: String, onClick: ()
         Box(
             Modifier
                 .size(40.dp)
-                .clip(RoundedCornerShape(11.dp))
+                .clip(SquircleShape(11.dp))
                 .background(AdhxColors.Accent),
             contentAlignment = Alignment.Center,
         ) {

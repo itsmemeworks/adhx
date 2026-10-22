@@ -56,6 +56,7 @@ import com.adhx.share.ui.KeepUpright
 import com.adhx.share.ui.PrimaryButton
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.Spinner
+import com.adhx.share.ui.SquircleShape
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
@@ -191,7 +192,7 @@ fun InviteSheet(connection: Connection, onClose: () -> Unit) {
         onDismissRequest = onClose,
         sheetState = state,
         containerColor = AdhxColors.Surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = SquircleShape.top(28.dp),
         dragHandle = { SheetHandle(AdhxColors.Hairline) },
     ) {
         Column(
@@ -257,7 +258,7 @@ fun InviteSheet(connection: Connection, onClose: () -> Unit) {
                 invites.isEmpty() -> Text(InviteCopy.NONE, fontSize = 14.sp, color = AdhxColors.Faint)
                 else -> Column(
                     Modifier
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(SquircleShape(20.dp))
                         .background(AdhxColors.Card),
                 ) {
                     val now = Instant.now()

@@ -12,11 +12,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import com.adhx.share.ui.Glyphs
+import com.adhx.share.ui.SquircleShape
 import com.adhx.share.ui.openUrl
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -115,9 +115,9 @@ fun CantPlayCard(
         modifier
             .padding(horizontal = 16.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
+            .clip(SquircleShape(24.dp))
             .background(AdhxColors.Surface.copy(alpha = 0.92f))
-            .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.1f), SquircleShape(24.dp))
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -177,18 +177,21 @@ fun CantPlayCard(
     }
 }
 
-/** A 44dp pill for the card's one row: yellow, or outlined. */
+/** The card's one row follows its curve: 24 − 20 padding = 4, so the 8dp floor. */
+private val PillShape = SquircleShape(SquircleShape.nested(24.dp, 20.dp))
+
+/** A 44dp button for the card's one row: yellow, or outlined. */
 @Composable
 private fun SmallPill(text: String, primary: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
     Box(
         Modifier
             .height(44.dp)
-            .clip(RoundedCornerShape(50))
+            .clip(PillShape)
             .then(
                 if (primary) {
                     Modifier.background(AdhxColors.Accent)
                 } else {
-                    Modifier.border(1.dp, AdhxColors.White.copy(alpha = 0.3f), RoundedCornerShape(50))
+                    Modifier.border(1.dp, AdhxColors.White.copy(alpha = 0.3f), PillShape)
                 },
             )
             .clickable(enabled = enabled, onClick = onClick)

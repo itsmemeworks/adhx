@@ -52,6 +52,7 @@ import com.adhx.share.ui.Avatar
 import com.adhx.share.ui.Copy
 import com.adhx.share.ui.Glyphs
 import com.adhx.share.ui.Spinner
+import com.adhx.share.ui.SquircleShape
 import kotlinx.coroutines.launch
 
 /** Where each face in the row stands: whether they have it, whether it's gone to them, whether it's going. */
@@ -164,7 +165,7 @@ private fun SendFace(person: SendPerson, server: String, sending: Boolean, onCli
     Column(
         Modifier
             .width(56.dp)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+            .clip(SquircleShape(14.dp))
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .semantics(mergeDescendants = true) {
                 contentDescription = Copy.sendTo(person.label, person.has, person.sent)

@@ -14,8 +14,8 @@ struct ReplyButton: View {
             .foregroundStyle(.black)
             .padding(.horizontal, 16)
             .frame(height: 40)
-            .background(Capsule().fill(Theme.accent))
-            .contentShape(Capsule())
+            .background(Capsule(style: .continuous).fill(Theme.accent))
+            .contentShape(Capsule(style: .continuous))
             .buttonStyle(.plain)
     }
 }
@@ -84,15 +84,15 @@ struct ReplySheet: View {
                     .foregroundStyle(.black)
                     .padding(.horizontal, 16)
                     .frame(height: 40)
-                    .background(Capsule().fill(Theme.accent))
+                    .background(Capsule(style: .continuous).fill(Theme.accent))
                     .buttonStyle(.plain)
                     .disabled(sending || words.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding(.leading, 16)
             .padding(.trailing, 6)
             .frame(height: 52)
-            .background(Capsule().fill(Theme.app))
-            .overlay(Capsule().strokeBorder(typing || !words.isEmpty ? Theme.accent.opacity(0.6) : .white.opacity(0.12), lineWidth: 1))
+            .background(Capsule(style: .continuous).fill(Theme.app))
+            .overlay(Capsule(style: .continuous).strokeBorder(typing || !words.isEmpty ? Theme.accent.opacity(0.6) : .white.opacity(0.12), lineWidth: 1))
             if let problem {
                 Text(problem).font(Theme.sans(13)).foregroundStyle(Theme.warn)
             }
@@ -141,8 +141,8 @@ struct RepliedChip: View {
         .padding(.leading, 6)
         .padding(.trailing, 12)
         .frame(height: 34)
-        .frosted(Capsule(), dim: 0.55)
-        .overlay(Capsule().strokeBorder(.white.opacity(0.14), lineWidth: 1))
+        .frosted(Capsule(style: .continuous), dim: 0.55)
+        .overlay(Capsule(style: .continuous).strokeBorder(.white.opacity(0.14), lineWidth: 1))
         .accessibilityElement(children: .combine)
     }
 

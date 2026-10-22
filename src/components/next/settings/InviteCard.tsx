@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Check, Copy, Link2, Share2, X } from 'lucide-react'
-import { INPUT, PRIMARY, SECONDARY, SettingsCard } from './parts'
+import { IN_CARD, INPUT, PRIMARY, SECONDARY, SettingsCard } from './parts'
 
 export interface PendingInvite {
   id: string
@@ -227,13 +227,13 @@ export function InviteCard() {
       )}
 
       {inv.made && (
-        <div className="flex flex-col gap-2.5 rounded-2xl bg-black/40 p-4">
+        <div className={`flex flex-col gap-2.5 bg-black/40 p-4 ${IN_CARD}`}>
           <span className="text-[13px] text-white/65">
             {inv.made.nameHint
               ? `For ${inv.made.nameHint}. Send it to them; it’s shown only this once.`
               : 'Send it to them; it’s shown only this once.'}
           </span>
-          <code className="block select-all break-all rounded-xl bg-black px-3 py-2.5 font-mono text-[13px] text-nx-cream">
+          <code className="block select-all break-all rounded-[8px] bg-black px-3 py-2.5 font-mono text-[13px] text-nx-cream">
             {inv.made.url}
           </code>
           <div className="flex flex-wrap gap-2">
@@ -269,7 +269,7 @@ export function InviteCard() {
             {inv.invites.map((invite) => (
               <li
                 key={invite.id}
-                className="flex items-center gap-3 rounded-2xl bg-black/40 px-4 py-3 text-sm"
+                className={`flex items-center gap-3 bg-black/40 px-4 py-3 text-sm ${IN_CARD}`}
               >
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate font-bold">

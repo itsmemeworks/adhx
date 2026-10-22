@@ -86,6 +86,7 @@ import com.adhx.share.ui.Segmented
 import com.adhx.share.ui.Spinner
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import com.adhx.share.ui.SquircleShape
 
 private val PROMPTS = listOf(
     "that video with the squirrel",
@@ -336,7 +337,7 @@ fun PosterCard(
         Modifier
             .fillMaxWidth()
             .height(height)
-            .clip(RoundedCornerShape(18.dp))
+            .clip(SquircleShape(18.dp))
             .background(if (image != null) AdhxColors.Placeholder else AdhxColors.Surface)
             .clickable(onClickLabel = "Play", onClick = onClick),
     ) {

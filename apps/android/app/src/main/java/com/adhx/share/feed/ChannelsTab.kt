@@ -68,6 +68,7 @@ import com.adhx.share.ui.GobShape
 import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.Spinner
+import com.adhx.share.ui.SquircleShape
 
 /**
  * Channels: Reactions (posts people reacted to, newest first), "From everyone" (channels made from the whole group's saves),
@@ -132,7 +133,7 @@ fun ChannelsTab(feed: FeedViewModel, server: String, actions: HomeActions, heade
                         fontWeight = FontWeight.SemiBold,
                         color = AdhxColors.Accent,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(SquircleShape(8.dp))
                             .clickable(onClick = actions.onPeople)
                             .padding(horizontal = 4.dp, vertical = 2.dp),
                     )
@@ -216,7 +217,7 @@ fun CoverGrid(covers: List<String>, server: String, size: Dp, modifier: Modifier
     Column(
         modifier
             .size(size)
-            .clip(RoundedCornerShape(corner))
+            .clip(SquircleShape(corner))
             .background(AdhxColors.Background),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
@@ -244,7 +245,7 @@ private fun GroupTile(channel: GroupChannel, server: String, onClick: () -> Unit
     Column(
         Modifier
             .width(160.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(SquircleShape(20.dp))
             .clickable(onClick = onClick)
             .semantics(mergeDescendants = true) { contentDescription = "${channel.name}, $line" },
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -296,7 +297,7 @@ private fun PersonBubble(friend: FriendChannel, server: String, onClick: () -> U
     Column(
         Modifier
             .width(62.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(SquircleShape(16.dp))
             .clickable(onClick = onClick)
             .clearAndSetSemantics { contentDescription = Copy.friendDescription(friend.label, friend.newCount) },
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -349,7 +350,7 @@ private fun InviteBubble(onClick: () -> Unit) {
     Column(
         Modifier
             .width(62.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(SquircleShape(16.dp))
             .clickable(onClick = onClick)
             .semantics(mergeDescendants = true) { },
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -381,17 +382,18 @@ private fun MineRow(title: String, line: String, cover: String?, server: String,
         Modifier
             .padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(SquircleShape(20.dp))
             .background(AdhxColors.Surface)
             .clickable(onClick = onClick)
             .padding(8.dp)
             .semantics(mergeDescendants = true) { },
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Tucked into the card's corner: 20 − 8 padding = 12.
         Box(
             Modifier
                 .size(56.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(SquircleShape(12.dp))
                 .background(if (url == null) AdhxColors.Accent else AdhxColors.Placeholder),
             contentAlignment = Alignment.Center,
         ) {

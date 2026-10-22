@@ -43,7 +43,7 @@ private struct BoardSheetHost<Sheet: View>: ViewModifier {
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
                 VStack(spacing: 0) {
-                    Capsule()
+                    Capsule(style: .continuous)
                         .fill(.white.opacity(0.22))
                         .frame(width: 40, height: 5)
                         .padding(.top, 8)

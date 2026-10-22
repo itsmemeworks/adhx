@@ -40,8 +40,8 @@ struct FirstSaverButton: View {
                                 .foregroundStyle(.black)
                                 .padding(.horizontal, 4)
                                 .frame(minWidth: 18, minHeight: 18)
-                                .background(Capsule().fill(Theme.cream))
-                                .overlay(Capsule().strokeBorder(.black, lineWidth: 2))
+                                .background(Capsule(style: .continuous).fill(Theme.cream))
+                                .overlay(Capsule(style: .continuous).strokeBorder(.black, lineWidth: 2))
                                 .offset(x: 6, y: 4)
                         }
                     }
@@ -72,9 +72,9 @@ struct CountPill: View {
             }
             .padding(.horizontal, 10)
             .frame(height: 36)
-            .frosted(Capsule(), dim: 0.55)
-            .overlay(Capsule().strokeBorder(.white.opacity(0.14), lineWidth: 1))
-            .contentShape(Capsule())
+            .frosted(Capsule(style: .continuous), dim: 0.55)
+            .overlay(Capsule(style: .continuous).strokeBorder(.white.opacity(0.14), lineWidth: 1))
+            .contentShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(count.label ?? count.text). Open Up next")

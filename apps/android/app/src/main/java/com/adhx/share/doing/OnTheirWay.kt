@@ -71,6 +71,7 @@ import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.Segmented
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.SettingsCopy
+import com.adhx.share.ui.SquircleShape
 
 /** Green: it plays already. */
 private val Playable = Color(0xFF7FD1AE)
@@ -162,7 +163,7 @@ fun DoingSheet(
         onDismissRequest = onDismiss,
         sheetState = state,
         containerColor = AdhxColors.Surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = SquircleShape.top(28.dp),
     ) {
         Column(
             Modifier
@@ -224,7 +225,7 @@ fun DoingRow(
     onRetry: () -> Unit,
     showRetry: Boolean,
 ) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = SquircleShape(18.dp)
     Row(
         Modifier
             .fillMaxWidth()
@@ -279,7 +280,8 @@ fun DoingRow(
 
 @Composable
 private fun Thumb(item: DoingItem, server: String) {
-    val shape = RoundedCornerShape(12.dp)
+    // Tucked into the row's corner: 18 − 10 padding = 8.
+    val shape = SquircleShape(8.dp)
     val url = item.thumbnail?.takeIf { it.isNotBlank() }?.let { AdhxApi.resolve(server, it)?.toString() }
     Box(
         Modifier

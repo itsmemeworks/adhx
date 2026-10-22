@@ -56,16 +56,17 @@ export function PublicHome() {
             </p>
             <WatchALink />
           </div>
+          {/* Along the hero's bottom: 28 − 20 (40 from md) leaves the 8 px floor. */}
           <div className="flex shrink-0 flex-wrap gap-2.5">
             <Link
               href="/start"
-              className="flex h-[52px] items-center rounded-full bg-nx-accent px-7 text-base font-extrabold text-black"
+              className="flex h-[52px] items-center rounded-[8px] bg-nx-accent px-7 text-base font-extrabold text-black"
             >
               Start saving
             </Link>
             <a
               href="#nx-rightnow"
-              className="flex h-[52px] items-center rounded-full border border-white/30 px-6 text-base font-bold"
+              className="flex h-[52px] items-center rounded-[8px] border border-white/30 px-6 text-base font-bold"
             >
               Watch what’s live
             </a>

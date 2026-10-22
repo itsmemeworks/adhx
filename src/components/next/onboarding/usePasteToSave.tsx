@@ -178,11 +178,12 @@ export function usePasteToSave({
             name="link"
             autoFocus
             placeholder="Paste a post link"
-            className="h-10 min-w-0 flex-1 rounded-xl bg-black px-3 text-[15px] text-white outline-none"
+            // 16 px corners, 8 px padding: 8 px.
+            className="h-10 min-w-0 flex-1 rounded-[8px] bg-black px-3 text-[15px] text-white outline-none"
           />
           <button
             type="submit"
-            className="h-10 rounded-full bg-nx-accent px-4 text-sm font-extrabold text-black"
+            className="h-10 rounded-[8px] bg-nx-accent px-4 text-sm font-extrabold text-black"
           >
             Save
           </button>
@@ -213,7 +214,8 @@ export function usePasteToSave({
                 <span className="flex-1 text-[15px] font-bold">{toast.message}</span>
                 <a
                   href="/start"
-                  className="h-9 rounded-full bg-nx-accent px-3.5 text-[13px] font-extrabold leading-9 text-black"
+                  // 16 − 10 leaves the 8 px floor.
+                  className="h-9 rounded-[8px] bg-nx-accent px-3.5 text-[13px] font-extrabold leading-9 text-black"
                 >
                   Sign in
                 </a>
@@ -229,7 +231,7 @@ export function usePasteToSave({
                 <button
                   type="button"
                   onClick={() => toast.watchPath && navigateToAppPath(toast.watchPath)}
-                  className="h-9 shrink-0 rounded-full bg-nx-accent px-3.5 text-[13px] font-extrabold text-black"
+                  className="h-9 shrink-0 rounded-[8px] bg-nx-accent px-3.5 text-[13px] font-extrabold text-black"
                 >
                   Watch it anyway
                 </button>

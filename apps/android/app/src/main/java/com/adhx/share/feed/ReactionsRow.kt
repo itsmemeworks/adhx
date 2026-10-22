@@ -44,6 +44,7 @@ import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Avatar
 import com.adhx.share.ui.Glyphs
 import com.adhx.share.ui.SerifFamily
+import com.adhx.share.ui.SquircleShape
 import com.adhx.share.ui.faceColor
 
 /** The words of the Reactions row on Channels. */
@@ -136,7 +137,7 @@ private fun ReactedTile(post: PhonePost, server: String, onClick: () -> Unit) {
         Modifier
             .width(116.dp)
             .height(156.dp)
-            .clip(RoundedCornerShape(18.dp))
+            .clip(SquircleShape(18.dp))
             .background(if (image != null) AdhxColors.Placeholder else AdhxColors.Surface)
             .clickable(onClickLabel = "Play", onClick = onClick)
             .clearAndSetSemantics { contentDescription = ReactionsCopy.describe(post) },

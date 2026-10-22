@@ -159,8 +159,8 @@ struct SettingsView: View {
                 .fixedSize()
                 .padding(.horizontal, 14)
                 .frame(minHeight: 40)
-                .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 1))
-                .contentShape(Capsule())
+                .overlay(Capsule(style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
+                .contentShape(Capsule(style: .continuous))
                 .buttonStyle(.plain)
         }
         .padding(14)
@@ -190,7 +190,7 @@ struct SettingsView: View {
                     .foregroundStyle(.black)
                     .padding(.horizontal, 6)
                     .frame(minWidth: 20, minHeight: 20)
-                    .background(Capsule().fill(Theme.accent))
+                    .background(Capsule(style: .continuous).fill(Theme.accent))
             }
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isHeader)
@@ -237,7 +237,8 @@ struct SettingsView: View {
                         Text("Let \(request.shownName) in")
                     }
                 }
-                .buttonStyle(PillButtonStyle(kind: .primary, height: 44, fontSize: 15))
+                // 22 − 14 inset − 1 border is under 8, so 8: follows the card's curve.
+                .buttonStyle(PillButtonStyle(kind: .primary, height: 44, fontSize: 15, cornerRadius: 8))
                 Button("Not now") {
                     Task { await settings.answer(request, .notNow) }
                 }
@@ -410,7 +411,8 @@ struct SettingsView: View {
                     Text("Send waiting links now")
                 }
             }
-            .buttonStyle(PillButtonStyle(kind: .primary, height: 48))
+            // 22 − 16 inset is under 8, so 8: follows the card's curve.
+            .buttonStyle(PillButtonStyle(kind: .primary, height: 48, cornerRadius: 8))
             .disabled(model.sending)
             .padding(.top, 4)
         }
@@ -543,14 +545,16 @@ private struct DoingSettingsRow: View {
 }
 
 /// "Not now": a hairline outline, 15/700 (the boards' quiet second answer).
+/// It sits in the waiting card: 22 − 14 inset − 1 border is under 8, so 8.
 private struct QuietOutline: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
+        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
+        return configuration.label
             .font(Theme.sans(15, .bold))
             .foregroundStyle(Theme.ink)
             .frame(maxWidth: .infinity, minHeight: 44)
-            .overlay(Capsule().strokeBorder(Color(hex: 0x4A453E), lineWidth: 1))
-            .contentShape(Capsule())
+            .overlay(shape.strokeBorder(Color(hex: 0x4A453E), lineWidth: 1))
+            .contentShape(shape)
             .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }

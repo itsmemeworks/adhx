@@ -18,8 +18,8 @@ struct LineupStrip: View {
                 VStack(alignment: .leading, spacing: 6) {
                     GeometryReader { proxy in
                         ZStack(alignment: .leading) {
-                            Capsule().fill(.white.opacity(0.22))
-                            Capsule().fill(Theme.accent)
+                            Capsule(style: .continuous).fill(.white.opacity(0.22))
+                            Capsule(style: .continuous).fill(Theme.accent)
                                 .frame(width: proxy.size.width * state.fill)
                         }
                     }
@@ -259,7 +259,7 @@ struct UpNextRow: View {
                             .lineLimit(1)
                             .padding(.horizontal, 8)
                             .frame(height: 22)
-                            .background(Capsule().fill(Theme.raised))
+                            .background(Capsule(style: .continuous).fill(Theme.raised))
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
 import { cn } from '@/lib/utils'
-import { SettingRow, SettingsCard, Switch } from './parts'
+import { IN_CARD, SettingRow, SettingsCard, Switch } from './parts'
 
 const BIONIC_SAMPLE: [string, string][] = [
   ['Bo', 'lds the '],
@@ -97,7 +97,8 @@ export function PreferencesCard() {
                 aria-checked={selected}
                 onClick={() => updatePreference('bodyFont', key)}
                 className={cn(
-                  'flex min-h-[44px] items-center gap-3 rounded-2xl border-[1.5px] px-4 py-3 text-left transition-colors',
+                  'flex min-h-[44px] items-center gap-3 border-[1.5px] px-4 py-3 text-left transition-colors',
+                  IN_CARD,
                   selected
                     ? 'border-nx-accent bg-nx-accent/10'
                     : 'border-white/10 bg-black/40 hover:border-white/30',

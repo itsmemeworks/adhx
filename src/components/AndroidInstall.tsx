@@ -242,7 +242,8 @@ export function AndroidSettingsCard() {
           <button
             type="button"
             onClick={() => void install()}
-            className="inline-flex h-11 shrink-0 items-center gap-1 rounded-full bg-nx-accent px-4 text-[15px] font-extrabold text-black"
+            // In the card's top corner: 22 − 16 leaves the 8 px floor.
+            className="inline-flex h-11 shrink-0 items-center gap-1 rounded-[8px] bg-nx-accent px-4 text-[15px] font-extrabold text-black"
           >
             <Plus className="h-4 w-4" aria-hidden />
             <span>Add</span>

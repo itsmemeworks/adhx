@@ -54,7 +54,8 @@ export function SharedSavesNotice() {
       <button
         type="button"
         onClick={close}
-        className="flex h-11 shrink-0 items-center whitespace-nowrap rounded-full bg-[#141414] px-[22px] text-[15px] font-extrabold text-nx-cream"
+        // 22 px corners, 10 px in: 12 px.
+        className="flex h-11 shrink-0 items-center whitespace-nowrap rounded-[12px] bg-[#141414] px-[22px] text-[15px] font-extrabold text-nx-cream"
       >
         Got it
       </button>

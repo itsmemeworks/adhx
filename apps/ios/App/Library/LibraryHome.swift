@@ -285,7 +285,7 @@ struct LibraryHome: View {
                         .foregroundStyle(.black)
                         .padding(.horizontal, 16)
                         .frame(minHeight: 40)
-                        .background(Capsule().fill(Theme.accent))
+                        .background(Capsule(style: .continuous).fill(Theme.accent))
                 }
                 .transition(.opacity)
             } else if !library.saves.isEmpty {
@@ -496,8 +496,8 @@ private struct TabPills: View {
                     .fixedSize()
                     .padding(.horizontal, on ? 16 : 14)
                     .frame(height: 40)
-                    .background(Capsule().fill(on ? Theme.cream : .clear))
-                    .contentShape(Capsule())
+                    .background(Capsule(style: .continuous).fill(on ? Theme.cream : .clear))
+                    .contentShape(Capsule(style: .continuous))
                     // Over the corner, so the tab stays sized for its label.
                     .overlay(alignment: .topTrailing) {
                         if item == .new, let newBadge {
@@ -507,8 +507,8 @@ private struct TabPills: View {
                                 .foregroundStyle(.black)
                                 .padding(.horizontal, 5)
                                 .frame(minWidth: 20, minHeight: 20)
-                                .background(Capsule().fill(Theme.accent))
-                                .overlay(Capsule().strokeBorder(.black, lineWidth: 2))
+                                .background(Capsule(style: .continuous).fill(Theme.accent))
+                                .overlay(Capsule(style: .continuous).strokeBorder(.black, lineWidth: 2))
                                 .fixedSize()
                                 // The boards' corner: 8 past the right, 9 above the top.
                                 .offset(x: 8, y: -9)
@@ -525,9 +525,9 @@ private struct TabPills: View {
         .padding(4)
         .background {
             if overMedia {
-                Color.clear.frosted(Capsule(), dim: 0.5)
+                Color.clear.frosted(Capsule(style: .continuous), dim: 0.5)
             } else {
-                Capsule().fill(Theme.surface)
+                Capsule(style: .continuous).fill(Theme.surface)
             }
         }
         .accessibilityElement(children: .contain)
