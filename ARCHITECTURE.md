@@ -265,8 +265,8 @@ member, post and UTC year, only for posts the member can see. They are never
 pruned (Wrapped reads a whole year). `src/lib/people/watch-counts.ts` reads a
 member's own count on a post, a post's total across members who aren't banned
 (no names, only for members who can see it) and a member's year (posts,
-hours, most rewatched). Nothing shows them yet; whether members may see each
-other's exact counts is still open.
+hours, most rewatched). Nothing shows them yet. A member's exact counts are
+shown only to that member; others get totals without names.
 
 ## New: the blended feed
 

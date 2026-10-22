@@ -10,9 +10,10 @@ import { seenBy } from './savers'
  * `src/lib/watch/record.ts`): "watched 14×", a post's plays across everyone,
  * and a member's year (Wrapped). Named to friends, never to strangers:
  *
- * - A member's own counts are theirs. Whether members may see each other's
- *   exact counts is still an open product question, so nothing here names
- *   anyone; `postPlays` is a total with no names.
+ * - A member's exact counts are shown only to that member: call
+ *   `watchCountFor` and `watchYear` with the signed-in viewer's own id, never
+ *   someone else's. `postPlays` is a total with no names, which any member
+ *   who can see the post may have.
  * - Totals count only members who aren't banned, and only for a post the
  *   viewer can see. An admin-hidden post has none. Moderation is read fail
  *   closed (it throws when it can't be read).

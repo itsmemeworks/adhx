@@ -671,7 +671,8 @@ it; on a server without these endpoints (404) the app falls back as noted.
   after a play or finish, at once when 50 wait, and when the app goes to the
   background or comes back. A failed batch goes back (a 404 from an older
   server, or a 400, is dropped). The web theater does the same through
-  `POST /api/watched`.
+  `POST /api/watched`. A member's exact counts are only ever shown to that
+  member; other members may see a post's total, with no names.
 - `GET /api/app/channels` → `{ group: [{ slug, name, size, covers, savers? }],
 friends: [{ username, name, avatarUrl, size, newCount, covers }],
 mine: [{ slug, name, size, covers }] }`; covers are addresses (posts are

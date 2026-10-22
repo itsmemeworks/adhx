@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-22 — Watch counts: who sees what
+
+- Owner decided: members see only their own exact counts ("watched 14×", their Wrapped); totals across everyone, without names, are fine. Written into CLAUDE.md, ARCHITECTURE, the phone spec and `src/lib/people/watch-counts.ts`. No UI yet.
+
 ## 2026-10-22 — Watch counts: the data for "watched 14×" and Wrapped
 
 - Owner wants playful counters and a year-end ADHX Wrapped; counting only starts the day this ships, so the data layer goes first, with no UI.
