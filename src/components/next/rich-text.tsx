@@ -221,7 +221,7 @@ export function LinkCard({ card, className }: { card: LinkCardData; className?: 
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
       className={cn(
-        'group block overflow-hidden rounded-2xl border border-nx-bone bg-white/60 text-nx-ink no-underline transition-colors hover:bg-white',
+        'group block overflow-hidden rounded-2xl border border-nx-bone bg-white/60 text-nx-bg no-underline transition-colors hover:bg-white',
         className,
       )}
     >
@@ -239,11 +239,11 @@ export function LinkCard({ card, className }: { card: LinkCardData; className?: 
           <span className="line-clamp-2 text-[15px] font-bold leading-snug">{card.title}</span>
         )}
         {card.description && (
-          <span className="line-clamp-2 text-[13px] leading-snug text-nx-on-cream">
+          <span className="line-clamp-2 text-[13px] leading-snug text-nx-on-cream-soft">
             {card.description}
           </span>
         )}
-        <span className="text-[12px] font-semibold uppercase tracking-wide text-nx-on-cream">
+        <span className="text-[12px] font-semibold uppercase tracking-wide text-nx-on-cream-soft">
           {card.site}
         </span>
       </span>

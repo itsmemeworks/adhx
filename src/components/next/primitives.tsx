@@ -141,6 +141,32 @@ export function NxAvatar({
 }
 
 /** The X logo, sized and coloured by the caller. Decorative. */
+/**
+ * The one switch's look (the design system's Switch): 48×28, a 22 knob inset
+ * 3 that slides. On is the accent with a black knob; off is `line` with a
+ * cream knob, so the knob carries the state. The row or button around it
+ * carries the role.
+ */
+export function SwitchLook({ on, className }: { on: boolean; className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'relative block h-7 w-12 shrink-0 rounded-full transition-colors duration-150',
+        on ? 'bg-nx-accent' : 'bg-nx-line',
+        className,
+      )}
+    >
+      <span
+        className={cn(
+          'absolute top-[3px] h-[22px] w-[22px] rounded-full shadow-nx-knob transition-[left] duration-150',
+          on ? 'left-[23px] bg-nx-on-accent' : 'left-[3px] bg-nx-cream',
+        )}
+      />
+    </span>
+  )
+}
+
 export function XLogo({ className }: { className?: string }) {
   return (
     <svg aria-hidden viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -154,7 +180,7 @@ export function Scrim({ className, children }: { className?: string; children: R
   return (
     <div
       className={cn(
-        'nx-scrim nx-text-shadow absolute inset-x-0 bottom-0 flex flex-col text-white',
+        'nx-scrim nx-text-shadow absolute inset-x-0 bottom-0 flex flex-col text-nx-ink',
         className,
       )}
     >
@@ -180,7 +206,7 @@ export function MediaChip({
         'pointer-events-none absolute whitespace-nowrap rounded-[7px] px-2 py-[5px] text-[11px] font-bold leading-none',
         tone === 'accent'
           ? 'bg-nx-accent text-black shadow-nx-plate'
-          : 'nx-plate text-white tabular-nums',
+          : 'nx-plate text-nx-ink tabular-nums',
         className,
       )}
     >
@@ -224,12 +250,12 @@ export function StageProgress({
       aria-hidden
       className={cn(
         'h-1 rounded-full',
-        tone === 'light' ? 'bg-nx-cream/25' : 'bg-nx-ink/15',
+        tone === 'light' ? 'bg-nx-cream/25' : 'bg-nx-bg/15',
         className,
       )}
     >
       <div
-        className={cn('h-1 rounded-full', tone === 'light' ? 'bg-nx-accent' : 'bg-nx-ink')}
+        className={cn('h-1 rounded-full', tone === 'light' ? 'bg-nx-accent' : 'bg-nx-bg')}
         style={{ width: `${pct}%` }}
       />
     </div>

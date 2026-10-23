@@ -1067,10 +1067,17 @@ Adding to a channel and saving for offline are not in this version.
 
 ## Colours and type
 
-Background `#0f0e0c` (app) / `#000000` (behind sheets), surface `#1a1814`,
-raised `#2a2620`, placeholder `#2a2825`, hairline `#4a453c`, accent `#ffd23f`,
-cream `#f2ead9`, muted `#c9bfab`, faint `#a89f8d`, good `#7ddc8a`, warn
-`#ffb59a`. Headings are Instrument Serif, everything else Hanken Grotesk
+Colours are the design system's tokens, with the same names and values on
+every platform: web `--nx-<name>` / Tailwind `nx-<name>` (`src/app/globals.css`),
+iOS `Theme.<name>` (`Shared/Theme.swift`), Android `AdhxColors.<Name>`
+(`ui/Theme.kt`). The main ones: `bg` #0f0e0c (the app ground), `stage` #000000
+(behind media and sheets), `surface` #1a1814, `sheet` #1c1b19, `raised`
+#2a2620, `plate` #262320, `placeholder` #2a2825, `hairline` #2a2620 (quiet
+dividers), `line` #4a453e (control borders), `accent` #ffd23f, `cream`
+#f2ead9 (selected and toasts, never yellow), `ink` #f4f1ea, `ink-soft`
+#c9bfab, `ink-faint` #a89f8d, `good` #7ddc8a, `warn` #ffb59a, `live` #ff5a3c,
+`danger` #ff8a7a, `danger-fill` #e5484d, `watching` #5ee38a, and the paper,
+person and moment sets. Name tokens, never hex values. Headings are Instrument Serif, everything else Hanken Grotesk
 (system font is fine where bundling isn't). The mark is Gob
 (`src/components/next/Gob.tsx`): a yellow body tilted −4°, mismatched eyes
 (r7, and r11 with a highlight) and a mouth tilted −7°. App icons come from

@@ -5,7 +5,7 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
-            Theme.app.ignoresSafeArea()
+            Theme.bg.ignoresSafeArea()
             if let mode = Self.sharePreview, model.isConnected {
                 sharePreview(mode)
             } else if model.isConnected {

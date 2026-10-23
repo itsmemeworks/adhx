@@ -103,7 +103,7 @@ export function PostsView({ data }: { data: PostsBoard }) {
         <div className="flex min-w-0 flex-col gap-4">
           <Card className="flex flex-col gap-3 px-[18px] py-4">
             <CardHead title="By kind" />
-            <div aria-hidden className="flex h-3.5 overflow-hidden rounded-full bg-[#262320]">
+            <div aria-hidden className="flex h-3.5 overflow-hidden rounded-full bg-nx-plate">
               {(Object.keys(KIND_COLOURS) as (keyof typeof KIND_COLOURS)[]).map((k) => (
                 <span
                   key={k}
@@ -154,7 +154,7 @@ export function PostsView({ data }: { data: PostsBoard }) {
               <h3 className="m-0 text-base font-extrabold">Needs attention</h3>
               <Link
                 href="/admin/processing"
-                className="ml-auto text-[13px] font-extrabold text-nx-accent underline hover:text-white"
+                className="ml-auto text-[13px] font-extrabold text-nx-accent underline hover:text-nx-ink"
               >
                 All of it
               </Link>
@@ -208,10 +208,10 @@ export function PostsView({ data }: { data: PostsBoard }) {
                 ))}
               </ul>
             ) : (
-              <p className="m-0 text-sm text-[#a39b8b]">Nothing needs you.</p>
+              <p className="m-0 text-sm text-nx-ink-faint">Nothing needs you.</p>
             )}
             {data.attentionPrivate > 0 && (
-              <span className="text-xs text-[#a39b8b]">
+              <span className="text-xs text-nx-ink-faint">
                 {`And ${plural(data.attentionPrivate, 'Just for me post')}, counted, never listed.`}
               </span>
             )}

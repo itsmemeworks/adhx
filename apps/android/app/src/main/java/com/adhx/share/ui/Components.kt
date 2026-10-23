@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
@@ -72,14 +73,14 @@ fun AdhxBrand(markSize: Dp = 30.dp, modifier: Modifier = Modifier) {
             fontFamily = SerifFamily,
             fontSize = (markSize.value * 0.88f).sp,
             lineHeight = (markSize.value * 0.88f).sp,
-            color = AdhxColors.White,
+            color = AdhxColors.Ink,
         )
     }
 }
 
 /** A network's mark (from simple-icons), white unless told otherwise. */
 @Composable
-fun NetworkMark(platform: String?, size: Dp = 16.dp, tint: Color = AdhxColors.White) {
+fun NetworkMark(platform: String?, size: Dp = 16.dp, tint: Color = AdhxColors.Ink) {
     Icon(
         painter = painterResource(Networks.icon(platform)),
         contentDescription = Networks.name(platform),
@@ -88,7 +89,10 @@ fun NetworkMark(platform: String?, size: Dp = 16.dp, tint: Color = AdhxColors.Wh
     )
 }
 
-/** The yellow pill button; inside a rounded card, pass the card's nested [shape]. */
+/**
+ * The yellow pill button; inside a rounded card, pass the card's nested
+ * [shape]. Disabled, the whole button fades to half.
+ */
 @Composable
 fun PrimaryButton(
     text: String,
@@ -100,13 +104,13 @@ fun PrimaryButton(
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.defaultMinSize(minHeight = 52.dp),
+        modifier = modifier.defaultMinSize(minHeight = 52.dp).alpha(if (enabled) 1f else 0.5f),
         shape = shape,
         colors = ButtonDefaults.buttonColors(
             containerColor = AdhxColors.Accent,
-            contentColor = AdhxColors.Black,
-            disabledContainerColor = AdhxColors.Raised,
-            disabledContentColor = AdhxColors.Faint,
+            contentColor = AdhxColors.OnAccent,
+            disabledContainerColor = AdhxColors.Accent,
+            disabledContentColor = AdhxColors.OnAccent,
         ),
         contentPadding = PaddingValues(horizontal = 20.dp),
     ) {
@@ -114,13 +118,13 @@ fun PrimaryButton(
     }
 }
 
-/** The cream outline pill button; inside a rounded card, pass the card's nested [shape]. */
+/** The outline pill button (ink words); inside a rounded card, pass the card's nested [shape]. */
 @Composable
 fun OutlineButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    color: Color = AdhxColors.Cream,
+    color: Color = AdhxColors.Ink,
     minHeight: Dp = 52.dp,
     enabled: Boolean = true,
     shape: Shape = RoundedCornerShape(minHeight / 2),
@@ -130,11 +134,11 @@ fun OutlineButton(
         enabled = enabled,
         modifier = modifier.defaultMinSize(minHeight = minHeight),
         shape = shape,
-        // The boards' outline is a 1dp hairline; a coloured button keeps an edge in its colour.
-        border = BorderStroke(1.dp, if (enabled && color != AdhxColors.Cream) color else AdhxColors.Hairline),
+        // The boards' outline is a 1dp line; a coloured button keeps an edge in its colour.
+        border = BorderStroke(1.dp, if (enabled && color != AdhxColors.Ink) color else AdhxColors.Line),
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = color,
-            disabledContentColor = AdhxColors.Faint,
+            disabledContentColor = AdhxColors.InkFaint,
         ),
         contentPadding = PaddingValues(horizontal = 20.dp),
     ) {
@@ -142,9 +146,9 @@ fun OutlineButton(
     }
 }
 
-/** The small yellow-on-hairline spinner. */
+/** The small yellow-on-line spinner. */
 @Composable
-fun Spinner(size: Dp = 14.dp, stroke: Dp = 2.dp, track: Color = AdhxColors.Hairline) {
+fun Spinner(size: Dp = 14.dp, stroke: Dp = 2.dp, track: Color = AdhxColors.Line) {
     CircularProgressIndicator(
         modifier = Modifier.size(size),
         color = AdhxColors.Accent,
@@ -238,7 +242,7 @@ fun Segmented(
                     label,
                     fontSize = fontSize.sp,
                     fontWeight = if (on) FontWeight.ExtraBold else FontWeight.SemiBold,
-                    color = if (on) AdhxColors.Black else AdhxColors.Cream,
+                    color = if (on) AdhxColors.OnCream else AdhxColors.Ink,
                     maxLines = 1,
                     softWrap = false,
                 )
@@ -273,51 +277,51 @@ fun JustForMeRow(
             Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(if (on) AdhxColors.Accent else AdhxColors.Card),
+                .background(if (on) AdhxColors.Accent else AdhxColors.Plate),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Glyphs.Lock, contentDescription = null, tint = if (on) AdhxColors.Black else AdhxColors.Muted, modifier = Modifier.size(18.dp))
+            Icon(Glyphs.Lock, contentDescription = null, tint = if (on) AdhxColors.OnAccent else AdhxColors.InkSoft, modifier = Modifier.size(18.dp))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(Copy.JUST_FOR_ME, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White)
-            Text(if (on) Copy.JUST_FOR_ME_ON else Copy.JUST_FOR_ME_OFF, fontSize = 13.sp, color = AdhxColors.Faint)
+            Text(Copy.JUST_FOR_ME, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Ink)
+            Text(if (on) Copy.JUST_FOR_ME_ON else Copy.JUST_FOR_ME_OFF, fontSize = 13.sp, color = AdhxColors.InkFaint)
         }
         if (busy) {
             Spinner(size = 20.dp, stroke = 2.dp)
         }
-        AdhxSwitch(on, enabled = enabled, large = true)
+        AdhxSwitch(on, enabled = enabled)
     }
 }
 
 /**
- * The boards' switch: yellow with a black knob when on, dark with a cream
- * knob when off. 48×28 in lists; [large] is the share card's 52×32.
+ * The one switch: 48×28, a 22 knob inset 3 that slides; yellow with a black
+ * knob when on, the [AdhxColors.Line] track with a cream knob when off.
  */
 @Composable
-fun AdhxSwitch(on: Boolean, modifier: Modifier = Modifier, enabled: Boolean = true, large: Boolean = false) {
-    val width = if (large) 52.dp else 48.dp
-    val knob = if (large) 24.dp else 22.dp
-    val inset = if (large) 4.dp else 3.dp
+fun AdhxSwitch(on: Boolean, modifier: Modifier = Modifier, enabled: Boolean = true) {
+    val width = 48.dp
+    val knob = 22.dp
+    val inset = 3.dp
     val x by androidx.compose.animation.core.animateDpAsState(if (on) width - knob - inset else inset, label = "knob")
     Box(
         modifier
             .size(width = width, height = knob + inset * 2)
             .clip(CircleShape)
-            .background(if (on) AdhxColors.Accent.copy(alpha = if (enabled) 1f else 0.55f) else AdhxColors.Hairline),
+            .background(if (on) AdhxColors.Accent.copy(alpha = if (enabled) 1f else 0.55f) else AdhxColors.Line),
     ) {
         Box(
             Modifier
                 .padding(start = x, top = inset)
                 .size(knob)
                 .clip(CircleShape)
-                .background(if (on) AdhxColors.Black else AdhxColors.Cream),
+                .background(if (on) AdhxColors.OnAccent else AdhxColors.Cream),
         )
     }
 }
 
 /** The small lock on a "Just for me" save. */
 @Composable
-fun PrivateLock(size: Dp = 14.dp, tint: Color = AdhxColors.Cream, modifier: Modifier = Modifier) {
+fun PrivateLock(size: Dp = 14.dp, tint: Color = AdhxColors.Ink, modifier: Modifier = Modifier) {
     Icon(
         Icons.Filled.Lock,
         contentDescription = Copy.PRIVATE_LABEL,

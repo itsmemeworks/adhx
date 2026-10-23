@@ -50,11 +50,11 @@ struct SettingsView: View {
                     // Which release this phone runs, to match against the GitHub tags.
                     Text("ADHX Share \(Self.version)")
                         .font(Theme.sans(12, .bold))
-                        .foregroundStyle(Theme.muted)
+                        .foregroundStyle(Theme.inkSoft)
                         .textSelection(.enabled)
                     Text("Your friends have better taste than the algorithm.")
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.faint)
+                        .foregroundStyle(Theme.inkFaint)
                 }
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
@@ -65,7 +65,7 @@ struct SettingsView: View {
             .padding(.bottom, 24)
         }
         .refreshable { await settings.load() }
-        .background(Theme.app.ignoresSafeArea())
+        .background(Theme.bg.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .task {
             let app = model
@@ -146,7 +146,7 @@ struct SettingsView: View {
                     .minimumScaleFactor(0.8)
                 Text(youLine(username))
                     .font(Theme.sans(13))
-                    .foregroundStyle(Theme.faint)
+                    .foregroundStyle(Theme.inkFaint)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -159,7 +159,7 @@ struct SettingsView: View {
                 .fixedSize()
                 .padding(.horizontal, 14)
                 .frame(minHeight: 40)
-                .overlay(Capsule(style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
+                .overlay(Capsule(style: .continuous).strokeBorder(.white.opacity(0.25), lineWidth: 1.5))
                 .contentShape(Capsule(style: .continuous))
                 .buttonStyle(.plain)
         }
@@ -223,7 +223,7 @@ struct SettingsView: View {
                         .lineLimit(1)
                     Text(invitedLine(request))
                         .font(Theme.sans(13))
-                        .foregroundStyle(Theme.faint)
+                        .foregroundStyle(Theme.inkFaint)
                         .lineLimit(1)
                 }
             }
@@ -250,11 +250,11 @@ struct SettingsView: View {
             HStack(spacing: 6) {
                 Text("Nobody gets in until you say yes.")
                     .font(Theme.sans(12))
-                    .foregroundStyle(Theme.faint)
+                    .foregroundStyle(Theme.inkFaint)
                 Spacer(minLength: 0)
                 Button("Decline") { declining = request }
                     .font(Theme.sans(12, .bold))
-                    .foregroundStyle(Theme.warn)
+                    .foregroundStyle(Theme.danger)
                     .frame(minHeight: 28)
                     .contentShape(Rectangle())
                     .buttonStyle(.plain)
@@ -293,7 +293,7 @@ struct SettingsView: View {
                             // Everyone but you, like the boards' "4".
                             Text("\(others.count)")
                                 .font(Theme.sans(14))
-                                .foregroundStyle(Theme.faint)
+                                .foregroundStyle(Theme.inkFaint)
                         }
                     }
                 }
@@ -357,7 +357,7 @@ struct SettingsView: View {
                     .minimumScaleFactor(0.85)
                 Text(Links.displayHost(model.server))
                     .font(Theme.sans(12))
-                    .foregroundStyle(Theme.faint)
+                    .foregroundStyle(Theme.inkFaint)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -365,7 +365,7 @@ struct SettingsView: View {
             Button(model.removing ? "Removing…" : "Remove this phone") { confirmRemove = true }
                 .disabled(model.removing)
                 .font(Theme.sans(13, .bold))
-                .foregroundStyle(Theme.warn)
+                .foregroundStyle(Theme.danger)
                 .lineLimit(1)
                 .fixedSize()
                 .padding(.horizontal, 10)
@@ -391,7 +391,7 @@ struct SettingsView: View {
         switch model.connection {
         case .connected: return Theme.good
         case .unreachable: return Theme.warn
-        case .checking: return Theme.faint
+        case .checking: return Theme.inkFaint
         }
     }
 
@@ -402,7 +402,7 @@ struct SettingsView: View {
                 .foregroundStyle(.white)
             Text("They go by themselves when your ADHX can be reached.")
                 .font(Theme.sans(13))
-                .foregroundStyle(Theme.muted)
+                .foregroundStyle(Theme.inkSoft)
             Button {
                 Task { await model.sendWaitingNow() }
             } label: {
@@ -464,7 +464,7 @@ struct SettingsRow<Trailing: View>: View {
                 if let subtitle {
                     Text(subtitle)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.faint)
+                        .foregroundStyle(Theme.inkFaint)
                         .lineLimit(2)
                 }
             }
@@ -472,7 +472,7 @@ struct SettingsRow<Trailing: View>: View {
             trailing()
             Image(systemName: "chevron.right")
                 .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(Theme.faint)
+                .foregroundStyle(Theme.inkFaint)
                 .accessibilityHidden(true)
         }
         .padding(.horizontal, 16)
@@ -495,7 +495,7 @@ private struct ToggleRow: View {
                 if let subtitle {
                     Text(subtitle)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.faint)
+                        .foregroundStyle(Theme.inkFaint)
                 }
             }
         }
@@ -513,7 +513,7 @@ private struct FeedTypesRow: View {
         SettingsRow(title: "What’s in your feed") {
             Text(line)
                 .font(Theme.sans(14))
-                .foregroundStyle(Theme.faint)
+                .foregroundStyle(Theme.inkFaint)
                 .lineLimit(1)
         }
     }
@@ -544,8 +544,9 @@ private struct DoingSettingsRow: View {
     }
 }
 
-/// "Not now": a hairline outline, 15/700 (the boards' quiet second answer).
-/// It sits in the waiting card: 22 − 14 inset − 1 border is under 8, so 8.
+/// "Not now": the outline button (1.5pt white .25), 15/700 (the boards' quiet
+/// second answer). It sits in the waiting card: 22 − 14 inset − 1.5 border is
+/// under 8, so 8.
 private struct QuietOutline: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -553,7 +554,7 @@ private struct QuietOutline: ButtonStyle {
             .font(Theme.sans(15, .bold))
             .foregroundStyle(Theme.ink)
             .frame(maxWidth: .infinity, minHeight: 44)
-            .overlay(shape.strokeBorder(Color(hex: 0x4A453E), lineWidth: 1))
+            .overlay(shape.strokeBorder(.white.opacity(0.25), lineWidth: 1.5))
             .contentShape(shape)
             .opacity(configuration.isPressed ? 0.7 : 1)
     }

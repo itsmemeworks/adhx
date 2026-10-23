@@ -221,7 +221,7 @@ export function SettingsScreen() {
   ]
 
   return (
-    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
+    <div className="min-h-dvh bg-nx-bg font-nx-sans text-nx-cream">
       <NxHeader>
         <LearningPill status={learning.status} onOpen={() => setLearningOpen(true)} />
       </NxHeader>
@@ -241,10 +241,10 @@ export function SettingsScreen() {
                 className={cn(
                   'flex h-11 items-center gap-2.5 whitespace-nowrap rounded-full px-3.5 text-[15px]',
                   active === href
-                    ? 'bg-[#262320] font-extrabold text-nx-cream'
+                    ? 'bg-nx-plate font-extrabold text-nx-cream'
                     : danger
-                      ? 'font-semibold text-[#ff5a3c] hover:bg-white/5'
-                      : 'font-semibold text-[#c9bfab] hover:bg-white/5 hover:text-white',
+                      ? 'font-semibold text-nx-live hover:bg-white/5'
+                      : 'font-semibold text-nx-ink-soft hover:bg-white/5 hover:text-nx-ink',
                 )}
               >
                 <Icon aria-hidden className="h-[18px] w-[18px] shrink-0" />
@@ -265,7 +265,7 @@ export function SettingsScreen() {
               <Server aria-hidden className="h-4 w-4 text-nx-accent" />
               <span>On your server</span>
             </span>
-            <span className="text-[13px] leading-snug text-[#a39b8b]">
+            <span className="text-[13px] leading-snug text-nx-ink-faint">
               No ads, no tracking, no algorithm. Just your lot.
             </span>
           </div>
@@ -276,7 +276,7 @@ export function SettingsScreen() {
             <h1 className="m-0 font-nx-serif text-[44px] font-normal leading-none md:text-[56px]">
               Settings
             </h1>
-            <p className="m-0 text-[15px] text-white/60">
+            <p className="m-0 text-[15px] text-nx-ink/60">
               You, your people, your phone, and how you watch and read.
             </p>
           </div>
@@ -287,8 +287,8 @@ export function SettingsScreen() {
               className={cn(
                 'flex items-center gap-3 rounded-2xl px-4 py-3 text-[15px] font-semibold',
                 notice.type === 'success'
-                  ? 'bg-[#7ddc8a]/12 text-[#7ddc8a]'
-                  : 'bg-[#ff8a7a]/12 text-[#ff8a7a]',
+                  ? 'bg-nx-good/12 text-nx-good'
+                  : 'bg-nx-danger/12 text-nx-danger',
               )}
             >
               {notice.type === 'success' ? (
@@ -379,20 +379,20 @@ export function SettingsScreen() {
               onError={(text) => setNotice({ type: 'error', text })}
             />
 
-            <footer className="flex flex-col items-center gap-2 pt-4 text-[13px] text-white/45">
+            <footer className="flex flex-col items-center gap-2 pt-4 text-[13px] text-nx-ink/45">
               <a
                 href={GITHUB_RELEASE_URL}
-                className="underline-offset-2 hover:text-white hover:underline"
+                className="underline-offset-2 hover:text-nx-ink hover:underline"
               >
                 {`ADHX v${APP_VERSION}`}
               </a>
               <span className="flex gap-3">
-                <a href="/privacy" className="underline-offset-2 hover:text-white hover:underline">
+                <a href="/privacy" className="underline-offset-2 hover:text-nx-ink hover:underline">
                   Privacy
                 </a>
                 <a
                   href="https://github.com/itsmemeworks/adhx/blob/main/SECURITY.md"
-                  className="underline-offset-2 hover:text-white hover:underline"
+                  className="underline-offset-2 hover:text-nx-ink hover:underline"
                 >
                   Security
                 </a>

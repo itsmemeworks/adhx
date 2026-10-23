@@ -20,7 +20,7 @@ export default function Error({
   }, [error])
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-black font-nx-sans text-white">
+    <div className="fixed inset-0 z-[60] flex flex-col bg-black font-nx-sans text-nx-ink">
       <header className="px-4 py-3 md:px-7 md:py-[18px]">
         <NxLogo />
       </header>
@@ -28,7 +28,7 @@ export default function Error({
         <h1 className="m-0 font-nx-serif text-[40px] font-normal leading-none md:text-[52px]">
           Something slipped
         </h1>
-        <p className="m-0 max-w-[420px] text-[15px] text-white/70">
+        <p className="m-0 max-w-[420px] text-[15px] text-nx-ink/70">
           That didn’t work. Give it another try, or head to Right now.
         </p>
         <div className="flex flex-wrap justify-center gap-2.5">
@@ -47,7 +47,9 @@ export default function Error({
             Right now
           </Link>
         </div>
-        {error.digest && <p className="m-0 text-xs text-white/45">{`Error ID: ${error.digest}`}</p>}
+        {error.digest && (
+          <p className="m-0 text-xs text-nx-ink/45">{`Error ID: ${error.digest}`}</p>
+        )}
       </main>
     </div>
   )

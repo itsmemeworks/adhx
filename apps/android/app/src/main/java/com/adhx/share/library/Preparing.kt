@@ -45,6 +45,7 @@ import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.SquircleShape
+import com.adhx.share.ui.rememberReducedMotion
 
 /** The words under a save that isn't ready to play yet. */
 const val GETTING_READY = "Getting it ready… it’ll be here in a moment."
@@ -56,8 +57,9 @@ fun onTheirWay(count: Int): String = if (count == 1) "1 on its way" else "$count
 fun stillKeeping(status: String?): Boolean =
     status == KeepStatus.WAITING || status == KeepStatus.KEEPING || status == KeepStatus.RETRYING
 
-/** A light band sweeping across, over a placeholder. */
+/** A light band sweeping across, over a placeholder (none when animations are off). */
 fun Modifier.shimmer(): Modifier = composed {
+    if (rememberReducedMotion()) return@composed Modifier
     val sweep by rememberInfiniteTransition(label = "shimmer").animateFloat(
         initialValue = -1f,
         targetValue = 2f,
@@ -78,8 +80,9 @@ fun Modifier.shimmer(): Modifier = composed {
     }
 }
 
-/** A slow breath in and out: scale and brightness. */
+/** A slow breath in and out: scale and brightness (held full when animations are off). */
 fun Modifier.pulse(): Modifier = composed {
+    if (rememberReducedMotion()) return@composed Modifier
     val t by rememberInfiniteTransition(label = "pulse").animateFloat(
         initialValue = 0f,
         targetValue = 1f,
@@ -135,22 +138,22 @@ fun PreparingCard(
             fontFamily = SerifFamily,
             fontSize = 24.sp,
             lineHeight = 29.sp,
-            color = AdhxColors.Cream,
+            color = AdhxColors.Ink,
             textAlign = TextAlign.Center,
         )
         if (count != null && count > 0) {
-            Text(onTheirWay(count), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Faint)
+            Text(onTheirWay(count), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AdhxColors.InkFaint)
         }
         if (post != null) {
             Copy.handle(post.author.handle)?.let {
-                Text(it, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = AdhxColors.White)
+                Text(it, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Ink)
             }
             post.text.takeIf { it.isNotBlank() }?.let {
                 Text(
                     it,
                     fontSize = 14.sp,
                     lineHeight = 20.sp,
-                    color = AdhxColors.Muted,
+                    color = AdhxColors.InkSoft,
                     textAlign = TextAlign.Center,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -177,15 +180,15 @@ private fun ProgressRing(status: StatusResponse?) {
                 progress = { fraction },
                 modifier = Modifier.size(44.dp),
                 color = AdhxColors.Accent,
-                trackColor = AdhxColors.White.copy(alpha = 0.18f),
+                trackColor = AdhxColors.Ink.copy(alpha = 0.18f),
                 strokeWidth = 4.dp,
             )
-            Text("$percent%", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AdhxColors.White)
+            Text("$percent%", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Ink)
         } else {
             CircularProgressIndicator(
                 modifier = Modifier.size(44.dp),
                 color = AdhxColors.Accent,
-                trackColor = AdhxColors.White.copy(alpha = 0.18f),
+                trackColor = AdhxColors.Ink.copy(alpha = 0.18f),
                 strokeWidth = 4.dp,
             )
         }
@@ -204,6 +207,6 @@ fun OnTheirWayPill(count: Int, modifier: Modifier = Modifier) {
     ) {
         PosterSkeleton(width = 12.dp, corner = 3.dp)
         Spacer(Modifier.width(8.dp))
-        Text(onTheirWay(count), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Cream)
+        Text(onTheirWay(count), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Ink)
     }
 }

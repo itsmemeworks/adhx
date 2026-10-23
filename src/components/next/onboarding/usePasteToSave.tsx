@@ -179,7 +179,7 @@ export function usePasteToSave({
             autoFocus
             placeholder="Paste a post link"
             // 16 px corners, 8 px padding: 8 px.
-            className="h-10 min-w-0 flex-1 rounded-[8px] bg-black px-3 text-[15px] text-white outline-none"
+            className="h-10 min-w-0 flex-1 rounded-[8px] bg-black px-3 text-[15px] text-nx-ink outline-none"
           />
           <button
             type="submit"
@@ -209,7 +209,7 @@ export function usePasteToSave({
             (toast.signIn ? (
               <div
                 role="status"
-                className="flex items-center gap-3 rounded-2xl bg-nx-surface/[.97] py-2.5 pl-4 pr-2.5 font-nx-sans text-white shadow-nx-toast"
+                className="flex items-center gap-3 rounded-2xl bg-nx-surface/[.97] py-2.5 pl-4 pr-2.5 font-nx-sans text-nx-ink shadow-nx-toast"
               >
                 <span className="flex-1 text-[15px] font-bold">{toast.message}</span>
                 <a
@@ -223,7 +223,7 @@ export function usePasteToSave({
             ) : toast.watchPath ? (
               <div
                 role="status"
-                className="flex items-center gap-3 rounded-2xl bg-nx-surface/[.97] py-2.5 pl-4 pr-2.5 font-nx-sans text-white shadow-nx-toast"
+                className="flex items-center gap-3 rounded-2xl bg-nx-surface/[.97] py-2.5 pl-4 pr-2.5 font-nx-sans text-nx-ink shadow-nx-toast"
               >
                 <span className="flex-1 text-[15px] font-bold">
                   {toast.message ? `Couldn’t save it: ${toast.message}` : 'Couldn’t save it'}

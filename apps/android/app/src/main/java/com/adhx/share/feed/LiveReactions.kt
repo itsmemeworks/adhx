@@ -111,7 +111,7 @@ fun ReactPicker(
                 .clip(SquircleShape(26.dp))
                 // The boards' glass is 88% over a blur; without the blur it needs to be nearly solid.
                 .background(AdhxColors.Surface.copy(alpha = 0.96f))
-                .border(1.dp, AdhxColors.White.copy(alpha = 0.1f), SquircleShape(26.dp))
+                .border(1.dp, AdhxColors.Ink.copy(alpha = 0.1f), SquircleShape(26.dp))
                 .verticalScroll(rememberScrollState())
                 // Taps on the card stay on the card.
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = {})
@@ -130,7 +130,7 @@ fun ReactPicker(
                         Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(AdhxColors.Button)
+                            .background(AdhxColors.Plate)
                             .clickable(enabled = !sending, onClickLabel = Reaction.names[emoji]) { onEmoji(emoji) }
                             .clearAndSetSemantics {
                                 contentDescription = Reaction.names[emoji]?.replaceFirstChar { it.uppercase() } ?: emoji
@@ -152,19 +152,19 @@ fun ReactPicker(
                         .weight(1f)
                         .heightIn(min = 44.dp)
                         .clip(RoundedCornerShape(50))
-                        .background(AdhxColors.Background)
-                        .border(1.dp, AdhxColors.Hairline, RoundedCornerShape(50))
+                        .background(AdhxColors.Bg)
+                        .border(1.dp, AdhxColors.Line, RoundedCornerShape(50))
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     if (words.isEmpty()) {
-                        Text(prompt, fontSize = 15.sp, color = AdhxColors.Faint, maxLines = 1, modifier = Modifier.clearAndSetSemantics { })
+                        Text(prompt, fontSize = 15.sp, color = AdhxColors.InkFaint, maxLines = 1, modifier = Modifier.clearAndSetSemantics { })
                     }
                     BasicTextField(
                         value = words,
                         onValueChange = { onWordsChange(Reaction.clip(it)) },
                         singleLine = true,
-                        textStyle = TextStyle(fontFamily = SansFamily, fontSize = 15.sp, color = AdhxColors.Cream),
+                        textStyle = TextStyle(fontFamily = SansFamily, fontSize = 15.sp, color = AdhxColors.Ink),
                         cursorBrush = SolidColor(AdhxColors.Accent),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                         keyboardActions = KeyboardActions(onSend = { send() }),
@@ -182,10 +182,10 @@ fun ReactPicker(
                         .padding(horizontal = 18.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(if (sending) "Sending…" else if (error != null) "Retry" else Copy.SEND, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = if (words.isBlank()) AdhxColors.Faint else Color.Black)
+                    Text(if (sending) "Sending…" else if (error != null) "Retry" else Copy.SEND, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = if (words.isBlank()) AdhxColors.InkFaint else Color.Black)
                 }
             }
-            Text("Kept on the post. Your people see it when they watch.", fontSize = 12.sp, color = AdhxColors.Muted)
+            Text("Kept on the post. Your people see it when they watch.", fontSize = 12.sp, color = AdhxColors.InkSoft)
             if (error != null) {
                 Text(error, color = AdhxColors.Warn, fontSize = 13.sp, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             }
@@ -193,7 +193,7 @@ fun ReactPicker(
                 Text(
                     Copy.charsLeft(Reaction.length(words)),
                     fontSize = 12.sp,
-                    color = if (Reaction.length(words) >= Reaction.MAX_TEXT) AdhxColors.Warn else AdhxColors.Faint,
+                    color = if (Reaction.length(words) >= Reaction.MAX_TEXT) AdhxColors.Warn else AdhxColors.InkFaint,
                     modifier = Modifier.align(Alignment.End).padding(end = 6.dp),
                 )
             }

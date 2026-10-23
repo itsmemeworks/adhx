@@ -198,13 +198,8 @@ struct Face: View {
     var server: URL?
     var size: CGFloat = 30
     /// The ring that separates overlapping faces (the colour behind them).
-    var ring: Color = .black
+    var ring: Color = Theme.stage
     @ObservedObject private var yours = YourFace.shared
-
-    /// The boards' five face colours, in the web's `FACE_COLOURS` order
-    /// (`src/components/next/faces.ts`), so a person has one colour everywhere.
-    static let colourHexes: [UInt32] = [0x7FD1AE, 0xFF8FA3, 0x6B8CFF, 0xC4A7FF, 0xFFB35C]
-    private static let colours: [Color] = colourHexes.map { Color(hex: $0) }
 
     /// The same colour for the same person on every device: FNV-1a over the
     /// lowercased username without "@", modulo the five colours (the web's
@@ -217,11 +212,11 @@ struct Face: View {
             hash ^= UInt32(unit)
             hash = hash &* 0x0100_0193
         }
-        return Int(hash % UInt32(colourHexes.count))
+        return Int(hash % UInt32(Theme.people.count))
     }
 
     static func colour(for username: String) -> Color {
-        colours[colourIndex(for: username)]
+        Theme.people[colourIndex(for: username)]
     }
 
     var body: some View {
@@ -256,7 +251,7 @@ struct FaceStack: View {
     let savers: [Saver]
     var server: URL?
     var size: CGFloat = 30
-    var ring: Color = .black
+    var ring: Color = Theme.stage
     var limit = 3
 
     var body: some View {

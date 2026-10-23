@@ -31,7 +31,7 @@ export function hourLabel(h: number): string {
 
 function LegendLine({ colour, label }: { colour: string; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-[#c9bfab]">
+    <span className="inline-flex items-center gap-1.5 text-xs text-nx-ink-soft">
       <span
         aria-hidden
         className="block h-[3px] w-3.5 rounded-full"
@@ -44,7 +44,7 @@ function LegendLine({ colour, label }: { colour: string; label: string }) {
 
 function Tile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1 rounded-2xl bg-[#262320] px-3.5 py-3">
+    <div className="flex flex-col gap-1 rounded-2xl bg-nx-plate px-3.5 py-3">
       <span className={LABEL}>{label}</span>
       <span className="text-sm font-extrabold">{value}</span>
     </div>
@@ -158,7 +158,7 @@ export function AnalyticsView({ data, rangeWords }: { data: AnalyticsBoard; rang
               />
             ))}
           </svg>
-          <div className="flex justify-between text-[11px] text-[#a39b8b]">
+          <div className="flex justify-between text-[11px] text-nx-ink-faint">
             <span>{shortDate(d[0]?.day)}</span>
             <span>{shortDate(d[Math.floor(d.length / 2)]?.day)}</span>
             <span>Today</span>
@@ -199,8 +199,8 @@ export function AnalyticsView({ data, rangeWords }: { data: AnalyticsBoard; rang
                   key={row.label}
                   className="grid grid-cols-[110px_minmax(0,1fr)_64px] items-center gap-2.5 text-sm"
                 >
-                  <span className="text-[#c9bfab]">{row.label}</span>
-                  <span aria-hidden className="h-[26px] overflow-hidden rounded-lg bg-[#262320]">
+                  <span className="text-nx-ink-soft">{row.label}</span>
+                  <span aria-hidden className="h-[26px] overflow-hidden rounded-lg bg-nx-plate">
                     <span
                       className="block h-[26px] rounded-lg"
                       style={{
@@ -220,10 +220,10 @@ export function AnalyticsView({ data, rangeWords }: { data: AnalyticsBoard; rang
               <ul className="m-0 flex list-none flex-col gap-2 p-0 text-sm">
                 {data.sources.map((s) => (
                   <li key={s.label} className="flex items-center gap-2.5">
-                    <span className="flex-1 text-[#c9bfab]">{s.label}</span>
+                    <span className="flex-1 text-nx-ink-soft">{s.label}</span>
                     <span
                       aria-hidden
-                      className="h-2 w-[120px] overflow-hidden rounded-full bg-[#262320]"
+                      className="h-2 w-[120px] overflow-hidden rounded-full bg-nx-plate"
                     >
                       <span
                         className="block h-2 bg-[#c4a7ff]"
@@ -235,7 +235,7 @@ export function AnalyticsView({ data, rangeWords }: { data: AnalyticsBoard; rang
                 ))}
               </ul>
             ) : (
-              <p className="m-0 text-sm text-[#a39b8b]">Nothing saved in this range.</p>
+              <p className="m-0 text-sm text-nx-ink-faint">Nothing saved in this range.</p>
             )}
           </Card>
         </div>

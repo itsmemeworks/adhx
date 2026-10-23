@@ -305,7 +305,7 @@ struct SectionTitle: View {
             if let detail {
                 Text(detail)
                     .font(Theme.sans(14))
-                    .foregroundStyle(Theme.faint)
+                    .foregroundStyle(Theme.inkFaint)
             }
         }
         .padding(.horizontal, 16)
@@ -327,7 +327,7 @@ struct EmptyNote: View {
                 .accessibilityAddTraits(.isHeader)
             Text(message)
                 .font(Theme.sans(15))
-                .foregroundStyle(Theme.muted)
+                .foregroundStyle(Theme.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
             if let retry {
                 Button("Try again", action: retry)
@@ -386,7 +386,7 @@ struct Mosaic: View {
                 }
             }
         }
-        .background(Theme.app)
+        .background(Theme.bg)
         .accessibilityHidden(true)
     }
 }
@@ -419,11 +419,11 @@ private struct GroupTile: View {
                 .lineLimit(1)
             HStack(spacing: 7) {
                 if !channel.savers.isEmpty {
-                    FaceStack(savers: channel.savers, server: server, size: 20, ring: Theme.app)
+                    FaceStack(savers: channel.savers, server: server, size: 20, ring: Theme.bg)
                 }
                 Text(detail)
                     .font(Theme.sans(12))
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.inkSoft)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
@@ -460,7 +460,7 @@ private struct PersonButton: View {
             // yellow when there's something new (a plate otherwise).
             Face(saver: person.asSaver, server: server, size: 60, ring: .clear)
                 .padding(2)
-                .background(GobShape().fill(Theme.app))
+                .background(GobShape().fill(Theme.bg))
                 .padding(2)
                 .background(GobShape().fill(person.newCount > 0 ? Theme.accent : Theme.plate))
                 .overlay(alignment: .topTrailing) {
@@ -472,7 +472,7 @@ private struct PersonButton: View {
                             .frame(minWidth: 22, minHeight: 22)
                             .background(Capsule(style: .continuous).fill(Theme.accent))
                             .padding(2)
-                            .background(Capsule(style: .continuous).fill(Theme.app))
+                            .background(Capsule(style: .continuous).fill(Theme.bg))
                             .fixedSize()
                             .offset(x: 0, y: -2)
                     }
@@ -534,7 +534,7 @@ private struct MineRow: View {
                     .lineLimit(1)
                 Text(detail)
                     .font(Theme.sans(13))
-                    .foregroundStyle(Theme.faint)
+                    .foregroundStyle(Theme.inkFaint)
                     .lineLimit(1)
             }
             Spacer(minLength: 0)
@@ -631,7 +631,7 @@ struct FriendChannelBody: View {
             HStack(spacing: 14) {
                 Face(saver: friend, server: server, size: 64, ring: .clear)
                     .padding(3)
-                    .background(GobShape().fill(Theme.app))
+                    .background(GobShape().fill(Theme.bg))
                     .padding(2)
                     .background(GobShape().fill(Face.colour(for: friend.username).opacity(0.35)))
                 VStack(alignment: .leading, spacing: 6) {
@@ -675,9 +675,9 @@ struct FriendChannelBody: View {
         let count = size ?? (queue != nil ? posts.count : nil)
         if count != nil || unseen > 0 {
             HStack(spacing: 0) {
-                if let count { Text(count == 1 ? "1 save" : "\(count) saves").foregroundStyle(Theme.muted) }
+                if let count { Text(count == 1 ? "1 save" : "\(count) saves").foregroundStyle(Theme.inkSoft) }
                 if unseen > 0 {
-                    Text(count == nil ? "" : " · ").foregroundStyle(Theme.muted)
+                    Text(count == nil ? "" : " · ").foregroundStyle(Theme.inkSoft)
                     Text("\(unseen) you haven’t seen").foregroundStyle(Theme.accent)
                 }
             }
@@ -691,13 +691,13 @@ struct FriendChannelBody: View {
         if queue == nil && error == nil {
             HStack { Spacer(); RingSpinner(size: 30, lineWidth: 3); Spacer() }.padding(.top, 30)
         } else if let error, queue == nil {
-            Text(error).font(Theme.sans(15)).foregroundStyle(Theme.muted)
+            Text(error).font(Theme.sans(15)).foregroundStyle(Theme.inkSoft)
             Button("Try again") { Task { await load() } }
                 .buttonStyle(PillButtonStyle(kind: .outline, height: 44, fullWidth: false))
         } else if posts.isEmpty {
             Text(friend.isYou ? "Nothing shared yet." : "Nothing from \(friend.displayName) yet. Give them a nudge.")
                 .font(Theme.sans(15))
-                .foregroundStyle(Theme.muted)
+                .foregroundStyle(Theme.inkSoft)
         } else {
             // Two columns of posters in their own shapes, each to the column
             // that's shorter so far (the boards' masonry); the note sits third.
@@ -776,9 +776,6 @@ private struct NoteCard: View {
     let server: URL
     let post: PhonePost?
 
-    private static let paper = Color(hex: 0xE4DAC8)
-    private static let ink = Color(hex: 0x141414)
-
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
@@ -793,14 +790,14 @@ private struct NoteCard: View {
             if let detail {
                 Text(detail)
                     .font(Theme.sans(12))
-                    .foregroundStyle(Color(hex: 0x3A352D))
+                    .foregroundStyle(Theme.paperInkSoft)
                     .lineLimit(2)
             }
         }
-        .foregroundStyle(Self.ink)
+        .foregroundStyle(Theme.paperInk)
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Self.paper))
+        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.paper))
         .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .accessibilityElement(children: .combine)
     }
@@ -852,6 +849,6 @@ struct FriendChannelScreen: View {
             .padding(.bottom, 40)
         }
         .scrollIndicators(.hidden)
-        .background(Theme.app.ignoresSafeArea())
+        .background(Theme.bg.ignoresSafeArea())
     }
 }

@@ -36,10 +36,7 @@ export function navFor(pathname: string | null): NavId | null {
 
 function LiveDot({ className }: { className?: string }) {
   return (
-    <span
-      aria-hidden
-      className={cn('block h-2 w-2 shrink-0 rounded-full bg-[#ff5a3c]', className)}
-    />
+    <span aria-hidden className={cn('block h-2 w-2 shrink-0 rounded-full bg-nx-live', className)} />
   )
 }
 
@@ -93,7 +90,7 @@ export function PrimaryNav({
               'flex h-10 items-center gap-2 whitespace-nowrap rounded-full px-3 text-sm transition-colors lg:h-11 lg:px-[18px] lg:text-[15px]',
               'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-nx-accent',
               on
-                ? 'bg-nx-accent font-extrabold text-black'
+                ? 'bg-nx-cream font-extrabold text-nx-on-cream'
                 : 'font-semibold text-nx-cream hover:bg-white/[0.06]',
             )}
           >
@@ -147,7 +144,7 @@ export function BottomNav({
               }
               className={cn(
                 'flex h-16 flex-1 flex-col items-center justify-center gap-1 text-[11px] font-bold',
-                on ? 'text-nx-accent' : 'text-white/60',
+                on ? 'text-nx-cream' : 'text-nx-ink/60',
               )}
             >
               <span className="relative">

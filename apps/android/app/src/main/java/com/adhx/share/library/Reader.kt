@@ -47,7 +47,7 @@ fun Reader(post: PhonePost, onClose: () -> Unit) {
     Box(
         Modifier
             .fillMaxSize()
-            .background(AdhxColors.Background),
+            .background(AdhxColors.Bg),
     ) {
         // The words scroll below the down arrow, never under it or the status bar.
         Column(
@@ -61,24 +61,24 @@ fun Reader(post: PhonePost, onClose: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Copy.handle(post.author.handle)?.let {
-                Text(it, fontSize = 14.sp, color = AdhxColors.Faint)
+                Text(it, fontSize = 14.sp, color = AdhxColors.InkFaint)
             }
             article?.title?.takeIf { it.isNotBlank() }?.let {
-                Text(it, fontFamily = SerifFamily, fontSize = 32.sp, lineHeight = 37.sp, color = AdhxColors.White)
+                Text(it, fontFamily = SerifFamily, fontSize = 32.sp, lineHeight = 37.sp, color = AdhxColors.Ink)
             }
             if (body.isEmpty()) {
                 article?.description?.takeIf { it.isNotBlank() && it != post.text }?.let {
-                    Text(it, fontSize = 17.sp, lineHeight = 26.sp, color = AdhxColors.Muted)
+                    Text(it, fontSize = 17.sp, lineHeight = 26.sp, color = AdhxColors.InkSoft)
                 }
             }
             article?.url?.takeIf { it.isNotBlank() }?.let {
-                Text(Links.display(it), fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(Links.display(it), fontSize = 13.sp, color = AdhxColors.InkFaint, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (body.isNotEmpty()) {
                 ArticleBodyText(body)
             } else if (post.text.isNotBlank()) {
                 // Links in the words open in the browser.
-                Text(rememberLinked(post.text), fontFamily = SerifFamily, fontSize = 22.sp, lineHeight = 32.sp, color = AdhxColors.Cream)
+                Text(rememberLinked(post.text), fontFamily = SerifFamily, fontSize = 22.sp, lineHeight = 32.sp, color = AdhxColors.Ink)
             }
         }
         val read = if (scroll.maxValue > 0) scroll.value.toFloat() / scroll.maxValue else 1f

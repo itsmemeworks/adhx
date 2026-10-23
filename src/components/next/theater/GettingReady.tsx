@@ -37,7 +37,7 @@ export function GettingReadyStage({
   return (
     <div
       data-testid="getting-ready"
-      className="absolute inset-0 z-[5] overflow-hidden bg-[#1a1814] font-nx-sans text-nx-cream"
+      className="absolute inset-0 z-[5] overflow-hidden bg-nx-surface font-nx-sans text-nx-cream"
     >
       {cover && (
         // The poster, blurred while the copy arrives.
@@ -128,7 +128,7 @@ export function GettingReadyStage({
                 className={cn(
                   'flex items-center gap-2.5 text-[13px]',
                   now && 'font-semibold',
-                  !done && !now && 'text-[#c9bfab]',
+                  !done && !now && 'text-nx-ink-soft',
                 )}
               >
                 {done ? (
@@ -145,7 +145,7 @@ export function GettingReadyStage({
                     className="shrink-0 animate-nx-spin [animation-duration:1.2s]"
                   >
                     <circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.2)" />
-                    <path d="M12 3a9 9 0 019 9" stroke="#f4f1ea" />
+                    <path d="M12 3a9 9 0 019 9" className="stroke-nx-ink" />
                   </svg>
                 ) : (
                   <svg
@@ -154,9 +154,8 @@ export function GettingReadyStage({
                     height="16"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="#a39b8b"
                     strokeWidth="2"
-                    className="shrink-0"
+                    className="shrink-0 stroke-nx-ink-faint"
                   >
                     <circle cx="12" cy="12" r="8" />
                   </svg>

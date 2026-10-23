@@ -189,7 +189,7 @@ fun PictureFlow(vm: MainViewModel, connection: Connection, onChanged: () -> Unit
         sheetState = state,
         containerColor = AdhxColors.Surface,
         shape = SquircleShape.top(28.dp),
-        dragHandle = { SheetHandle(AdhxColors.Hairline) },
+        dragHandle = { SheetHandle(AdhxColors.Line) },
     ) {
         Column(
             Modifier
@@ -207,17 +207,17 @@ fun PictureFlow(vm: MainViewModel, connection: Connection, onChanged: () -> Unit
                         fontFamily = SerifFamily,
                         fontSize = 30.sp,
                         lineHeight = 30.sp,
-                        color = AdhxColors.White,
+                        color = AdhxColors.Ink,
                         modifier = Modifier.semantics { heading() },
                     )
-                    Text(PictureCopy.NOTE, fontSize = 13.sp, lineHeight = 17.sp, color = AdhxColors.Faint)
+                    Text(PictureCopy.NOTE, fontSize = 13.sp, lineHeight = 17.sp, color = AdhxColors.InkFaint)
                 }
                 if (ui.busy) Spinner(size = 22.dp, stroke = 2.5.dp)
             }
             Column(
                 Modifier
                     .clip(SquircleShape(20.dp))
-                    .background(AdhxColors.Card),
+                    .background(AdhxColors.Plate),
             ) {
                 ChoiceRow(Glyphs.Photo, PictureCopy.CHOOSE, PictureCopy.CHOOSE_NOTE, enabled = !ui.busy) {
                     local = null
@@ -296,15 +296,15 @@ private fun ChoiceRow(
                 x -> Icon(
                     androidx.compose.ui.res.painterResource(com.adhx.share.R.drawable.ic_net_twitter),
                     contentDescription = null,
-                    tint = AdhxColors.Cream,
+                    tint = AdhxColors.Ink,
                     modifier = Modifier.size(18.dp),
                 )
                 icon != null -> Icon(icon, contentDescription = null, tint = if (danger) AdhxColors.Warn else AdhxColors.Accent, modifier = Modifier.size(22.dp))
             }
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = if (danger) AdhxColors.Warn else AdhxColors.White)
-            Text(note, fontSize = 13.sp, color = AdhxColors.Faint)
+            Text(title, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = if (danger) AdhxColors.Warn else AdhxColors.Ink)
+            Text(note, fontSize = 13.sp, color = AdhxColors.InkFaint)
         }
     }
 }
@@ -327,7 +327,7 @@ private fun GobSwatch(colour: GobColours.Colour, enabled: Boolean, onClick: () -
                 .clip(GobShape)
                 .background(Color(colour.argb)),
         )
-        Text(colour.label, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Muted)
+        Text(colour.label, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AdhxColors.InkSoft)
     }
 }
 
@@ -353,7 +353,7 @@ private fun CropDialog(
         Column(
             Modifier
                 .fillMaxSize()
-                .background(AdhxColors.Black)
+                .background(AdhxColors.Stage)
                 .systemBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -363,10 +363,10 @@ private fun CropDialog(
                     PictureCopy.CROP_TITLE,
                     fontFamily = SerifFamily,
                     fontSize = 32.sp,
-                    color = AdhxColors.White,
+                    color = AdhxColors.Ink,
                     modifier = Modifier.semantics { heading() },
                 )
-                Text(PictureCopy.CROP_NOTE, fontSize = 14.sp, color = AdhxColors.Faint)
+                Text(PictureCopy.CROP_NOTE, fontSize = 14.sp, color = AdhxColors.InkFaint)
             }
             Spacer(Modifier.weight(1f))
             BoxWithConstraints(
@@ -426,7 +426,7 @@ private fun CropDialog(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                     Spinner()
                     Spacer(Modifier.width(10.dp))
-                    Text(PictureCopy.SAVING, fontSize = 14.sp, color = AdhxColors.Muted)
+                    Text(PictureCopy.SAVING, fontSize = 14.sp, color = AdhxColors.InkSoft)
                 }
             }
             error?.let {

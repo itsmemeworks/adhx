@@ -95,7 +95,7 @@ struct LibraryHome: View {
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: library.preparing)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: doing.onTheirWay)
-        .background(Theme.app.ignoresSafeArea())
+        .background(Theme.bg.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .task {
             let app = model
@@ -376,7 +376,7 @@ struct LibraryHome: View {
                     // The post under it brings its own scrim (240 pt, like the boards).
                     Color.clear
                 } else {
-                    Theme.app
+                    Theme.bg
                 }
             }
             .ignoresSafeArea(edges: .top)
@@ -438,7 +438,7 @@ struct LibraryHome: View {
             } else if let error = library.loadError {
                 Text(error)
                     .font(Theme.sans(15))
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.inkSoft)
                 Button("Try again") { Task { await library.reload() } }
                     .buttonStyle(PillButtonStyle(kind: .outline, height: 44, fullWidth: false))
             } else if library.preparing > 0 {
@@ -463,7 +463,7 @@ private struct BarIcon: View {
     var body: some View {
         Image(systemName: name)
             .font(.system(size: 18, weight: .semibold))
-            .foregroundStyle(Color(hex: 0xF4F1EA))
+            .foregroundStyle(Theme.ink)
             .frame(width: 44, height: 44)
             .frosted(Circle(), dim: 0.45)
     }
@@ -491,7 +491,7 @@ private struct TabPills: View {
                         Text(item.title)
                     }
                     .font(Theme.sans(15, on ? .heavy : .semibold))
-                    .foregroundStyle(on ? .black : Color(hex: 0xF4F1EA))
+                    .foregroundStyle(on ? Theme.onCream : Theme.ink)
                     .lineLimit(1)
                     .fixedSize()
                     .padding(.horizontal, on ? 16 : 14)

@@ -196,7 +196,7 @@ export default async function CuratorProfilePage({ params }: Props) {
               <span className="flex items-center gap-3">
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-[17px] font-bold">{channelTitle(c.tag)}</span>
-                  <span className="text-[13px] text-white/55">
+                  <span className="text-[13px] text-nx-ink/55">
                     {`${c.count} post${c.count === 1 ? '' : 's'}${c.stats?.viewCount ? ` · ${c.stats.viewCount} views this week` : ''}`}
                   </span>
                 </span>

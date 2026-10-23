@@ -83,7 +83,7 @@ private struct OpeningPlayer: View {
             PlayerScreen(posts: [post], server: server, start: post.key, onClose: close, startRepeating: true)
         } else {
             ZStack(alignment: .topLeading) {
-                Color.black.ignoresSafeArea()
+                Theme.stage.ignoresSafeArea()
                 VStack(spacing: 14) {
                     if missing {
                         Text("That post isn’t in your saves yet.")
@@ -91,7 +91,7 @@ private struct OpeningPlayer: View {
                             .foregroundStyle(Theme.ink)
                         Text("Give it a moment and open it from Shared lately.")
                             .font(Theme.sans(14))
-                            .foregroundStyle(Theme.muted)
+                            .foregroundStyle(Theme.inkSoft)
                     } else {
                         RingSpinner().frame(width: 34, height: 34)
                     }

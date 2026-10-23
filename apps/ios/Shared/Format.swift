@@ -8,7 +8,7 @@ enum Format {
         var color: Color {
             switch self {
             case .busy: return Theme.accent
-            case .ok: return Theme.muted
+            case .ok: return Theme.inkSoft
             case .warn: return Theme.warn
             }
         }

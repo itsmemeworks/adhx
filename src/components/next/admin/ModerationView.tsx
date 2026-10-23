@@ -82,9 +82,9 @@ function PersonLookup({ initial = '' }: { initial?: string }) {
           Look up
         </button>
       </form>
-      {missing && <span className="text-xs text-[#ffb59a]">No one by that name.</span>}
+      {missing && <span className="text-xs text-nx-warn">No one by that name.</span>}
       {person && (
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-[#262320] p-2.5">
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-nx-plate p-2.5">
           <Face
             who={{
               username: person.username,
@@ -96,11 +96,11 @@ function PersonLookup({ initial = '' }: { initial?: string }) {
           <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
             <Link
               href={`/admin/people/${encodeURIComponent(person.username)}`}
-              className="text-sm font-extrabold text-[#f4f1ea] hover:underline"
+              className="text-sm font-extrabold text-nx-ink hover:underline"
             >
               {`${name} · ${person.banned ? 'Kept out' : person.isAdmin ? 'Admin' : 'Member'} since ${shortDate(person.createdAt)}`}
             </Link>
-            <span className="text-xs text-[#c9bfab]">
+            <span className="text-xs text-nx-ink-soft">
               {[
                 plural(person.bookmarkCount, 'save'),
                 person.notes !== undefined ? plural(person.notes, 'note') : null,
@@ -110,7 +110,7 @@ function PersonLookup({ initial = '' }: { initial?: string }) {
                 .filter(Boolean)
                 .join(' · ')}
             </span>
-            {error && <span className="text-xs text-[#ff8a7a]">{error}</span>}
+            {error && <span className="text-xs text-nx-danger">{error}</span>}
           </span>
           <span className="flex gap-2.5">
             <button
@@ -181,7 +181,7 @@ export function ModerationView({ data }: { data: ModerationBoard }) {
                   <Thumb src={h.thumbnail} size={40} radius={10} />
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="truncate text-sm font-extrabold">{h.title}</span>
-                    <span className="text-xs text-[#a39b8b]">
+                    <span className="text-xs text-nx-ink-faint">
                       {[
                         h.reason,
                         h.hiddenBy ? `hidden by ${displayName(h.hiddenBy)}` : null,
@@ -207,7 +207,7 @@ export function ModerationView({ data }: { data: ModerationBoard }) {
               ))}
             </ul>
           ) : (
-            <p className="m-0 text-sm text-[#a39b8b]">Nothing hidden.</p>
+            <p className="m-0 text-sm text-nx-ink-faint">Nothing hidden.</p>
           )}
         </Card>
         <Card className="flex min-h-[240px] flex-col gap-2.5 px-[18px] py-4">
@@ -219,7 +219,7 @@ export function ModerationView({ data }: { data: ModerationBoard }) {
                   <Face who={k.face} size={32} />
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="truncate text-sm font-extrabold">{displayName(k.face)}</span>
-                    <span className="text-xs text-[#a39b8b]">
+                    <span className="text-xs text-nx-ink-faint">
                       {[k.reason, k.by ? `by ${displayName(k.by)}` : null, shortDate(k.at)]
                         .filter(Boolean)
                         .join(' · ')}
@@ -244,7 +244,7 @@ export function ModerationView({ data }: { data: ModerationBoard }) {
             <div className="flex flex-1 flex-col items-center justify-center gap-2.5 text-center">
               <GobMark />
               <span className="text-[15px] font-extrabold">Nobody’s been kept out</span>
-              <span className="text-[13px] text-[#a39b8b]">
+              <span className="text-[13px] text-nx-ink-faint">
                 Keeping someone out signs them out everywhere and hides their saves. You can let
                 them back in.
               </span>
@@ -262,17 +262,17 @@ export function ModerationView({ data }: { data: ModerationBoard }) {
                     <span className="font-extrabold">
                       {l.actor ? displayName(l.actor) : 'Someone'}
                     </span>
-                    <span className="text-[#c9bfab]">{` ${l.verb} `}</span>
+                    <span className="text-nx-ink-soft">{` ${l.verb} `}</span>
                     <span className="font-extrabold">{l.target}</span>
                   </span>
-                  <span className="whitespace-nowrap text-[#a39b8b]" suppressHydrationWarning>
+                  <span className="whitespace-nowrap text-nx-ink-faint" suppressHydrationWarning>
                     {agoShort(l.at).replace(/ ago$/, '') === 'just now' ? 'Now' : shortDate(l.at)}
                   </span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="m-0 text-sm text-[#a39b8b]">Nothing in the last 30 days.</p>
+            <p className="m-0 text-sm text-nx-ink-faint">Nothing in the last 30 days.</p>
           )}
         </Card>
       </div>

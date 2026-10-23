@@ -12,7 +12,7 @@ import { NxHeader } from '../channels/ChannelParts'
 
 export function ProfileLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
+    <div className="min-h-dvh bg-nx-bg font-nx-sans text-nx-cream">
       <NxHeader current={null} />
       <main className="mx-auto flex max-w-[1600px] flex-col gap-8 px-4 pb-16 pt-4 md:px-7 md:pt-8">
         {children}
@@ -36,13 +36,13 @@ export function ProfileHero({
   actions?: ReactNode
 }) {
   return (
-    <section className="flex flex-col gap-5 rounded-[28px] bg-[#12110f] px-5 py-7 md:flex-row md:items-center md:px-9 md:py-9">
+    <section className="flex flex-col gap-5 rounded-[28px] bg-nx-deep px-5 py-7 md:flex-row md:items-center md:px-9 md:py-9">
       <NxAvatar author={{ avatarUrl, handle, name }} size={84} />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <h1 className="m-0 truncate font-nx-serif text-[40px] font-normal leading-none md:text-[56px]">
           {name}
         </h1>
-        <p className="m-0 text-[15px] text-white/65">
+        <p className="m-0 text-[15px] text-nx-ink/65">
           {/* No display name: the name already is the handle, so don't say it twice. */}
           {(name === `@${handle}` ? lines : [`@${handle}`, ...lines]).join(' · ')}
         </p>
@@ -59,7 +59,7 @@ export function ProfileHero({
 export const PRIMARY_ACTION =
   'flex h-[50px] items-center gap-2 rounded-[8px] bg-nx-accent px-6 text-base font-extrabold text-black'
 export const SECONDARY_ACTION =
-  'flex h-[50px] items-center gap-2 rounded-[8px] border border-white/30 px-5 text-base font-bold text-white'
+  'flex h-[50px] items-center gap-2 rounded-[8px] border border-white/30 px-5 text-base font-bold text-nx-ink'
 
 export function PlayLink({ href, label = 'Play' }: { href: string; label?: string }) {
   return (
@@ -117,8 +117,8 @@ export function ProfilePostGrid({ posts, author }: { posts: ProfilePost[]; autho
                 </span>
               </span>
             ) : (
-              <span className="flex flex-col gap-2 bg-nx-cream p-4 text-nx-ink">
-                <span className="text-[11px] font-bold uppercase tracking-wide text-nx-on-cream">
+              <span className="flex flex-col gap-2 bg-nx-cream p-4 text-nx-bg">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-nx-on-cream-soft">
                   {KIND_LABEL[post.kind]}
                 </span>
                 <span className="line-clamp-[8] font-nx-serif text-[19px] leading-[1.15]">

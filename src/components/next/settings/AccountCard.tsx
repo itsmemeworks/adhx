@@ -49,7 +49,7 @@ function Row({ children, divided = false }: { children: React.ReactNode; divided
 }
 
 function RowLabel({ children }: { children: string }) {
-  return <span className="text-[13px] font-semibold text-nx-soft">{children}</span>
+  return <span className="text-[13px] font-semibold text-nx-ink-soft">{children}</span>
 }
 
 /** Your picture, and the dialog that changes it. */
@@ -87,7 +87,9 @@ function PictureRow({ me, refresh }: { me: AuthMe; refresh: () => void }) {
             <Camera aria-hidden className="h-4 w-4" />
             <span>Change picture</span>
           </button>
-          <span className="whitespace-nowrap text-[13px] text-nx-muted">Shows on your saves</span>
+          <span className="whitespace-nowrap text-[13px] text-nx-ink-faint">
+            Shows on your saves
+          </span>
         </span>
       </div>
       {open && (
@@ -145,7 +147,7 @@ function DisplayNameRow({ me, refresh }: { me: AuthMe; refresh: () => void }) {
         }}
         className="flex flex-col gap-1.5"
       >
-        <label htmlFor="display-name" className="text-[13px] font-semibold text-nx-soft">
+        <label htmlFor="display-name" className="text-[13px] font-semibold text-nx-ink-soft">
           Display name
         </label>
         <input
@@ -164,7 +166,7 @@ function DisplayNameRow({ me, refresh }: { me: AuthMe; refresh: () => void }) {
         />
         <span
           role={state === 'error' ? 'alert' : 'status'}
-          className={cn('text-[13px]', state === 'error' ? 'text-[#ff8a7a]' : 'text-nx-muted')}
+          className={cn('text-[13px]', state === 'error' ? 'text-nx-danger' : 'text-nx-ink-faint')}
         >
           {state === 'saving'
             ? 'Saving…'
@@ -208,7 +210,7 @@ function PrivateDefaultRow({ me }: { me: AuthMe }) {
           <span id="private-default" className="whitespace-nowrap text-[15px] font-extrabold">
             Just for me by default
           </span>
-          <span className="text-[13px] leading-snug text-nx-muted">
+          <span className="text-[13px] leading-snug text-nx-ink-faint">
             New saves start private. You can share any of them later.
           </span>
         </span>
@@ -267,7 +269,7 @@ function EmailRow({ me }: { me: AuthMe }) {
             <span className="truncate text-base font-extrabold">{current}</span>
           ) : (
             editing && (
-              <span className="text-sm text-nx-soft">Add an email. It’s how you sign in.</span>
+              <span className="text-sm text-nx-ink-soft">Add an email. It’s how you sign in.</span>
             )
           )}
         </div>
@@ -295,7 +297,7 @@ function EmailRow({ me }: { me: AuthMe }) {
             setEditing(true)
           }}
           className={cn(
-            'flex min-h-16 items-center gap-3 border-[1.5px] border-dashed border-[#4a453e] py-2.5 pl-2.5 pr-4 text-left text-sm font-semibold leading-[1.35] text-nx-cream hover:border-nx-muted',
+            'flex min-h-16 items-center gap-3 border-[1.5px] border-dashed border-nx-line py-2.5 pl-2.5 pr-4 text-left text-sm font-semibold leading-[1.35] text-nx-cream hover:border-nx-ink-faint',
             IN_CARD,
           )}
         >
@@ -333,11 +335,11 @@ function EmailRow({ me }: { me: AuthMe }) {
         </form>
       )}
       {error && (
-        <p role="alert" className="m-0 text-[13px] text-[#ff8a7a]">
+        <p role="alert" className="m-0 text-[13px] text-nx-danger">
           {error}
         </p>
       )}
-      {sent && <p className="m-0 text-[13px] text-[#7ddc8a]">{sent}</p>}
+      {sent && <p className="m-0 text-[13px] text-nx-good">{sent}</p>}
     </Row>
   )
 }
@@ -369,10 +371,10 @@ function UsernameRow({ me, refresh }: { me: AuthMe; refresh: () => void }) {
           <span className="flex min-w-0 items-center gap-2 text-base font-extrabold">
             <span className="truncate">{`@${username}`}</span>
             {!canChange && (
-              <Lock aria-label="Can’t change" className="h-3.5 w-3.5 shrink-0 text-nx-muted" />
+              <Lock aria-label="Can’t change" className="h-3.5 w-3.5 shrink-0 text-nx-ink-faint" />
             )}
           </span>
-          <span className="text-[13px] text-nx-muted">{hint}</span>
+          <span className="text-[13px] text-nx-ink-faint">{hint}</span>
         </div>
         {canChange && !editing && (
           <button
@@ -418,7 +420,7 @@ export function AccountCard({ me, refresh }: { me: AuthMe; refresh: () => void }
           onClick={signOut}
           // In the card's top corner, so it follows the card's curve.
           className={cn(
-            'flex h-9 items-center gap-1.5 whitespace-nowrap px-3 text-[13px] font-semibold text-nx-muted hover:bg-white/10 hover:text-nx-cream',
+            'flex h-9 items-center gap-1.5 whitespace-nowrap px-3 text-[13px] font-semibold text-nx-ink-faint hover:bg-white/10 hover:text-nx-cream',
             IN_CARD,
           )}
         >

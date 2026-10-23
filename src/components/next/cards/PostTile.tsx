@@ -24,14 +24,14 @@ export function PostTile({ item, ...frame }: TileProps) {
       item={item}
       aspect={260 / 340}
       {...frame}
-      className={cn('flex flex-col gap-3.5 bg-nx-cream p-[18px] text-nx-ink', frame.className)}
+      className={cn('flex flex-col gap-3.5 bg-nx-cream p-[18px] text-nx-bg', frame.className)}
     >
       <span className="flex min-w-0 items-center gap-2">
         <NxAvatar author={author} size={32} />
         <span className="flex min-w-0 flex-col">
           <span className="truncate text-[13px] font-bold">{author.name}</span>
           {author.handle && (
-            <span className="truncate text-[12px] text-nx-on-cream">{author.handle}</span>
+            <span className="truncate text-[12px] text-nx-on-cream-soft">{author.handle}</span>
           )}
         </span>
       </span>

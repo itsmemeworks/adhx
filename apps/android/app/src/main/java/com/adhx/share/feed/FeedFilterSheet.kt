@@ -74,7 +74,7 @@ fun FeedFilterSheet(
         sheetState = state,
         containerColor = AdhxColors.Surface,
         shape = SquircleShape.top(28.dp),
-        dragHandle = { SheetHandle(AdhxColors.Hairline) },
+        dragHandle = { SheetHandle(AdhxColors.Line) },
     ) {
         Column(
             Modifier
@@ -88,17 +88,17 @@ fun FeedFilterSheet(
                     fontFamily = SerifFamily,
                     fontSize = 32.sp,
                     lineHeight = 32.sp,
-                    color = AdhxColors.White,
+                    color = AdhxColors.Ink,
                     modifier = Modifier.weight(1f).semantics { heading() },
                 )
                 if (newCount != null) {
-                    Text("$newCount new", fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, modifier = Modifier.padding(bottom = 4.dp))
+                    Text("$newCount new", fontSize = 13.sp, color = AdhxColors.InkFaint, maxLines = 1, modifier = Modifier.padding(bottom = 4.dp))
                 }
             }
             Column(
                 Modifier
                     .clip(SquircleShape(20.dp))
-                    .background(AdhxColors.Card),
+                    .background(AdhxColors.Plate),
             ) {
                 MediaType.all.forEachIndexed { i, type ->
                     val on = type in picked
@@ -122,13 +122,13 @@ fun FeedFilterSheet(
                     fontSize = 13.sp,
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 0.8.sp,
-                    color = AdhxColors.Faint,
+                    color = AdhxColors.InkFaint,
                 )
                 Segmented(
                     options = Copy.WHOSE,
                     selected = whoseIndex(whose),
                     onSelect = { whose = WHOSE_MODES[it] },
-                    background = AdhxColors.Card,
+                    background = AdhxColors.Plate,
                     height = 40.dp,
                     fontSize = 14,
                     modifier = Modifier.fillMaxWidth(),
@@ -136,7 +136,7 @@ fun FeedFilterSheet(
             }
             // What the switches leave out, by the current feed's count.
             val waiting = Copy.waitingNote(hidden.filterKeys { it !in picked })
-            if (waiting != null) Text(waiting, fontSize = 13.sp, lineHeight = 18.sp, color = AdhxColors.Faint)
+            if (waiting != null) Text(waiting, fontSize = 13.sp, lineHeight = 18.sp, color = AdhxColors.InkFaint)
             PrimaryButton(
                 Copy.showKinds(picked),
                 onClick = { scope.launch { state.hide() }.invokeOnCompletion { close() } },
@@ -177,10 +177,10 @@ private fun TypeRow(type: String, on: Boolean, enabled: Boolean, note: String?, 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Icon(typeIcon(type), contentDescription = null, tint = if (on) AdhxColors.Accent else AdhxColors.Faint, modifier = Modifier.size(22.dp))
+        Icon(typeIcon(type), contentDescription = null, tint = if (on) AdhxColors.Accent else AdhxColors.InkFaint, modifier = Modifier.size(22.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White)
-            Text(note ?: line, fontSize = 13.sp, color = if (note != null) AdhxColors.Accent else AdhxColors.Faint)
+            Text(title, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Ink)
+            Text(note ?: line, fontSize = 13.sp, color = if (note != null) AdhxColors.Accent else AdhxColors.InkFaint)
         }
         AdhxSwitch(on, enabled = enabled)
     }

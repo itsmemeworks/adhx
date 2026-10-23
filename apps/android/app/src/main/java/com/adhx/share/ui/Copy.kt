@@ -483,10 +483,10 @@ object Copy {
                 (item.percent?.let { "Keeping a copy · $it%" } ?: "Keeping a copy") to AdhxColors.Accent
             KeepStatus.RETRYING -> "Keeping a copy · trying again" to AdhxColors.Accent
             // A post with only words has no files to keep: it's simply saved.
-            KeepStatus.KEPT -> (keptWhat(item)?.let { "Kept · $it" } ?: "Saved") to AdhxColors.Muted
+            KeepStatus.KEPT -> (keptWhat(item)?.let { "Kept · $it" } ?: "Saved") to AdhxColors.InkSoft
             KeepStatus.UNAVAILABLE -> "Couldn’t keep a copy" to AdhxColors.Warn
-            KeepStatus.NOT_SAVED -> "Not in your saves any more" to AdhxColors.Faint
-            else -> "Saved" to AdhxColors.Muted
+            KeepStatus.NOT_SAVED -> "Not in your saves any more" to AdhxColors.InkFaint
+            else -> "Saved" to AdhxColors.InkSoft
         }
     }
 

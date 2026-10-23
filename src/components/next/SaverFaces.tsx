@@ -54,15 +54,15 @@ export function SaverFaces({
   const line = lineOverride ?? saversLine(savers)
   const faces = orderedSavers(savers).slice(0, 3)
   const ring =
-    tone === 'cream' ? 'border-nx-cream' : tone === 'plate' ? 'border-[#1c1b19]' : 'border-black/60'
+    tone === 'cream' ? 'border-nx-cream' : tone === 'plate' ? 'border-nx-sheet' : 'border-black/60'
   return (
     <span
       title={line}
       className={cn(
         'flex min-w-0 items-center gap-1.5',
-        tone === 'plate' && 'nx-plate h-7 rounded-full pl-1 pr-2.5 text-white',
-        tone === 'scrim' && 'text-white',
-        tone === 'cream' && 'text-nx-ink',
+        tone === 'plate' && 'nx-plate h-7 rounded-full pl-1 pr-2.5 text-nx-ink',
+        tone === 'scrim' && 'text-nx-ink',
+        tone === 'cream' && 'text-nx-bg',
         compact && tone === 'plate' && 'pr-1',
         className,
       )}
@@ -114,9 +114,9 @@ export function PrivateLock({
       title="Just for me"
       className={cn(
         'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
-        tone === 'plate' && 'nx-plate text-white',
-        tone === 'scrim' && 'bg-black/35 text-white',
-        tone === 'cream' && 'bg-nx-ink/10 text-nx-ink',
+        tone === 'plate' && 'nx-plate text-nx-ink',
+        tone === 'scrim' && 'bg-black/35 text-nx-ink',
+        tone === 'cream' && 'bg-nx-bg/10 text-nx-bg',
         className,
       )}
     >
@@ -263,7 +263,7 @@ export function SaversButton({
         {faces ?? (
           <SaverFaces savers={savers} tone={tone} className={cn('max-w-full', facesClassName)} />
         )}
-        {framed && open && <ChevronUp aria-hidden className="h-4 w-4 shrink-0 text-white" />}
+        {framed && open && <ChevronUp aria-hidden className="h-4 w-4 shrink-0 text-nx-ink" />}
       </button>
       {open &&
         at &&
@@ -281,14 +281,14 @@ export function SaversButton({
                 className="absolute -bottom-2 left-[34px] block h-3.5 w-3.5 rotate-45 border-b border-r border-white/[0.08] bg-nx-surface"
               />
             )}
-            <span className="px-3 pb-1.5 pt-2.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/55">
+            <span className="px-3 pb-1.5 pt-2.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-nx-ink/55">
               Who saved it
             </span>
             <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
               {list.map((s, i) => (
                 <li
                   key={s.username}
-                  className={cn('flex gap-3 rounded-[14px] px-3 py-2.5', i === 0 && 'bg-[#262320]')}
+                  className={cn('flex gap-3 rounded-[14px] px-3 py-2.5', i === 0 && 'bg-nx-plate')}
                 >
                   <NxAvatar
                     author={{ avatarUrl: s.avatarUrl, handle: s.username, name: saverName(s) }}
@@ -297,7 +297,7 @@ export function SaversButton({
                   <span className="flex min-w-0 flex-col gap-1.5">
                     <span className="flex items-baseline gap-2">
                       <span className="truncate text-[15px] font-extrabold">{saverName(s)}</span>
-                      <span className="shrink-0 text-[13px] text-white/55">
+                      <span className="shrink-0 text-[13px] text-nx-ink/55">
                         {timeAgo(s.savedAt)}
                       </span>
                     </span>
@@ -314,7 +314,7 @@ export function SaversButton({
               ))}
             </ul>
             {others > 0 && list.length > 1 && (
-              <span className="mt-1 flex items-center gap-2.5 border-t border-white/[0.08] px-3 pb-2 pt-3 text-sm font-semibold text-nx-soft">
+              <span className="mt-1 flex items-center gap-2.5 border-t border-white/[0.08] px-3 pb-2 pt-3 text-sm font-semibold text-nx-ink-soft">
                 <SaverFaces
                   savers={savers}
                   tone="plate"

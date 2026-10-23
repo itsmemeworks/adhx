@@ -49,7 +49,7 @@ export function PhotoTile({ item, ...frame }: TileProps) {
           <AuthorLine
             author={author}
             label={author.handle || author.name}
-            className="text-white/85"
+            className="text-nx-ink/85"
           />
           {caption && <span className="line-clamp-2 text-[12.5px] leading-[1.35]">{caption}</span>}
         </Scrim>

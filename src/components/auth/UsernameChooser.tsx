@@ -225,8 +225,8 @@ export function UsernameChooser({
 
       <div className="min-h-[18px] text-[13px]">
         {availability === 'checking' && <span className="text-white/55">Checking…</span>}
-        {availability === 'available' && <span className="text-[#7ddc8a]">Available</span>}
-        {availability === 'taken' && <span className="text-[#ff8a7a]">Taken. Try another.</span>}
+        {availability === 'available' && <span className="text-nx-good">Available</span>}
+        {availability === 'taken' && <span className="text-nx-danger">Taken. Try another.</span>}
         {availability === 'error' && (
           <span className="text-white/55">Couldn&rsquo;t check that name</span>
         )}
@@ -266,7 +266,7 @@ export function UsernameChooser({
       </div>
 
       {error && (
-        <p role="alert" className="m-0 text-[13px] text-[#ff8a7a]">
+        <p role="alert" className="m-0 text-[13px] text-nx-danger">
           {error}
         </p>
       )}
