@@ -24,7 +24,7 @@ the output says which one.
 ## The suites
 
 CI (`.github/workflows/native.yml`) runs **Live reliability** and **Queued
-privacy**, plus **Reaction connections**, **Playback recovery** and **Feed seen sessions**, on every PR that touches the apps, then builds the app for the
+privacy**, plus **Reaction connections**, **Playback recovery**, **Feed seen sessions** and **Watch tally**, on every PR that touches the apps, then builds the app for the
 simulator. Run the rest by hand when you change what they cover.
 
 | Suite                | What it checks                                                                                                                           | Files to compile (all under `apps/ios/`), plus `Tests/<Suite>.swift`                                                                                                              |
@@ -39,6 +39,7 @@ simulator. Run the rest by hand when you change what they cover.
 | Post people          | Production people model rejects late post/account responses, cancellation and reconnects                                                 | `App/Library/PostPeopleModel.swift`                                                                                                                                               |
 | Playback recovery    | Scoped/bounded resume history, rejected late writes, renewed/cancelled loading deadlines and Reply pause restoration                     | `Shared/ResumeStore.swift App/Library/PlaybackRecovery.swift`                                                                                                                     |
 | Feed seen sessions   | Fresh sends of watched posts are acknowledged again and update the lineup badge                                                          | `App/Feed/FeedModel.swift`                                                                                                                                                        |
+| Watch tally          | Watch counts: plays from the top, finishes, loops, resume and seeks not counted, batches keeping fractions of a second                   | `App/Library/WatchTally.swift`                                                                                                                                                    |
 | Player polish        | The 10-second photo timer, and links in captions shown short and tappable                                                                | `App/Library/PhotoTimer.swift App/Library/LinkedText.swift`                                                                                                                       |
 
 For example, the queued privacy suite:
@@ -67,6 +68,7 @@ t people $I/App/Library/PostPeopleModel.swift $I/Tests/PostPeopleTests.swift
 t reactions $I/Shared/API.swift $I/Shared/FriendsAPI.swift $I/Tests/PostReactionsTests.swift
 t recovery $I/Shared/ResumeStore.swift $I/App/Library/PlaybackRecovery.swift $I/Tests/PlaybackRecoveryTests.swift
 t seen $I/App/Feed/FeedModel.swift $I/Tests/FeedSeenSessionTests.swift
+t watch    $I/App/Library/WatchTally.swift $I/Tests/WatchTallyTests.swift
 t polish   $I/App/Library/PhotoTimer.swift $I/App/Library/LinkedText.swift $I/Tests/PlayerPolishTests.swift
 ```
 

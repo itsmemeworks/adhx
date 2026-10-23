@@ -238,6 +238,30 @@ export const postViews = sqliteTable(
   }),
 )
 
+// How many times a member watched a post (`post_watch_counts`, DDL in
+// src/lib/watch/schema-sql.ts): plays, finishes and seconds, added up per UTC
+// year for Wrapped. PK: (userId, platform, postId, year). User-linked (account
+// guard; cleared with the account). Never pruned.
+export const postWatchCounts = sqliteTable(
+  'post_watch_counts',
+  {
+    userId: text('user_id').notNull(),
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    year: integer('year').notNull(),
+    plays: integer('plays').notNull().default(0),
+    finishes: integer('finishes').notNull().default(0),
+    seconds: integer('seconds').notNull().default(0),
+    firstAt: text('first_at').notNull(),
+    lastAt: text('last_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.platform, table.postId, table.year] }),
+    postIdx: index('post_watch_counts_post_idx').on(table.platform, table.postId),
+    userYearIdx: index('post_watch_counts_user_year_idx').on(table.userId, table.year),
+  }),
+)
+
 // "Send straight to your people" (`post_sends`): one member sent a post to
 // another. The recipient sees it first in New ("Pete sent you this") until
 // `seen_at` (set when they see the post). PK: (fromUserId, toUserId,
@@ -1056,5 +1080,6 @@ export type UserIdentity = typeof userIdentities.$inferSelect
 export type NewUserIdentity = typeof userIdentities.$inferInsert
 export type Invite = typeof invites.$inferSelect
 export type PostView = typeof postViews.$inferSelect
+export type PostWatchCount = typeof postWatchCounts.$inferSelect
 export type LoginToken = typeof loginTokens.$inferSelect
 export type NewLoginToken = typeof loginTokens.$inferInsert

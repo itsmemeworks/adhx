@@ -276,6 +276,10 @@ server sends it, which it does for members only.
   (`/api/app/feed/types`) and on the phone, for servers that don't keep it.
 - **Home** marks a post seen after 2 seconds on screen, or as soon as you swipe
   past it, and sends them to `/api/app/seen` in batches.
+- Every player counts plays, finishes and seconds watched
+  (`App/Library/WatchTally.swift`) and sends them to `/api/app/watched`
+  (`WatchCounts.swift`, kept in the App Group across restarts, tied to the
+  server and key). Nothing shows them yet.
 - The share card names your people from the last Channels or feed the app
   loaded (kept on the phone in the App Group, cleared on Remove this phone),
   or says "Your people will see it".
@@ -354,6 +358,13 @@ registered for the app and the Share Extension on first use (`BundledFonts` in
 `Shared/Theme.swift`). Hanken Grotesk is one variable `.woff2`; each weight is
 picked on its `wght` axis. Without them the app falls back to the system serif
 and sans.
+
+Colours are the shared design system's tokens, one `static let` each in
+`enum Theme` (`bg`, `stage`, `surface`, `plate`, `line`, `accent`, `cream`,
+`ink`, `inkSoft`, `inkFaint`, `danger`, the paper, person and moment sets, …),
+named as on the web and Android. Use a token rather than a hex literal; only
+black and white alpha overlays stay literal. `hairline` is for quiet dividers
+only; control borders, the switch-off track and spinner tracks use `line`.
 
 ## Debug launch arguments
 

@@ -29,12 +29,18 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            apps/android/**/*.gradle*
+            apps/android/**/gradle-wrapper.properties
+            apps/android/gradle.properties
+            apps/android/gradle/libs.versions.toml
       - uses: android-actions/setup-android@v4
         with:
           packages: 'platform-tools platforms;android-37.0 build-tools;36.0.0'
       - name: Build debug app and run regression tests
         working-directory: apps/android
-        run: ./gradlew --no-daemon --max-workers=2 assembleDebug testDebugUnitTest exportRuntimeDependencies
+        run: ./gradlew --no-daemon --max-workers=2 --build-cache assembleDebug testDebugUnitTest --rerun exportRuntimeDependencies
       - name: Audit resolved Android runtime libraries
         run: node scripts/security/check-android.mjs apps/android/app/build/reports/runtime-dependencies.json
 
@@ -65,6 +71,10 @@ jobs:
           "$RUNNER_TEMP/adhx-playback-recovery"
           swiftc apps/ios/App/Feed/FeedModel.swift apps/ios/Tests/FeedSeenSessionTests.swift -o "$RUNNER_TEMP/adhx-feed-seen"
           "$RUNNER_TEMP/adhx-feed-seen"
+      - name: Test watch counts (plays, finishes, seconds)
+        run: |
+          swiftc apps/ios/App/Library/WatchTally.swift apps/ios/Tests/WatchTallyTests.swift -o "$RUNNER_TEMP/adhx-watch-tally"
+          "$RUNNER_TEMP/adhx-watch-tally"
       - name: Build unsigned app and share extension for the simulator
         run: >-
           xcodebuild -project apps/ios/ADHXShare.xcodeproj -scheme "ADHX Share"

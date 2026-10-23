@@ -151,7 +151,7 @@ export function FaceStack({
       ))}
       {more > 0 && (
         <span
-          className="relative flex items-center justify-center rounded-full bg-[#262320] font-extrabold text-nx-cream"
+          className="relative flex items-center justify-center rounded-full bg-nx-plate font-extrabold text-nx-cream"
           style={{
             width: size,
             height: size,
@@ -174,11 +174,11 @@ export type UpNextVariant = 'feed' | 'saves' | 'channel' | 'moment'
 function Thumb({ item, className }: { item: SearchResultItem; className: string }) {
   const cover = postCoverSrc(item.post)
   return (
-    <span className={cn('relative block shrink-0 overflow-hidden bg-[#262320]', className)}>
+    <span className={cn('relative block shrink-0 overflow-hidden bg-nx-plate', className)}>
       {cover ? (
         <NxImage src={cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
       ) : (
-        <span className="absolute inset-0 overflow-hidden bg-nx-cream p-1.5 font-nx-serif text-[11px] leading-[1.1] text-nx-ink">
+        <span className="absolute inset-0 overflow-hidden bg-nx-cream p-1.5 font-nx-serif text-[11px] leading-[1.1] text-nx-bg">
           {postWords(item.post).title}
         </span>
       )}
@@ -190,7 +190,7 @@ function Thumb({ item, className }: { item: SearchResultItem; className: string 
 function FeedWhy({ item, current }: { item: SearchResultItem; current: boolean }) {
   const savers = item.post.savers ?? []
   if (current && savers.length > 0) {
-    return <span className="truncate text-xs text-nx-muted">{bylineLine(savers, false)}</span>
+    return <span className="truncate text-xs text-nx-ink-faint">{bylineLine(savers, false)}</span>
   }
   const kind = whyKind(item.post)
   const label = whyLabel(item.post)
@@ -198,7 +198,7 @@ function FeedWhy({ item, current }: { item: SearchResultItem; current: boolean }
   // "Pete sent you this", led by Pete's face.
   if (kind === 'sent') {
     return (
-      <span className="flex min-w-0 items-center gap-1.5 text-xs text-nx-muted">
+      <span className="flex min-w-0 items-center gap-1.5 text-xs text-nx-ink-faint">
         <WhyLead post={item.post} size={14} />
         <span className="truncate">{label}</span>
       </span>
@@ -209,7 +209,7 @@ function FeedWhy({ item, current }: { item: SearchResultItem; current: boolean }
   // "Mum saved this · 1h", led by Mum's face.
   if ((kind === 'fresh' || kind === 'close') && solo.length > 0 && /saved this/.test(label)) {
     return (
-      <span className="flex min-w-0 items-center gap-1.5 text-xs text-nx-muted">
+      <span className="flex min-w-0 items-center gap-1.5 text-xs text-nx-ink-faint">
         <NxAvatar
           author={{
             avatarUrl: solo[0].avatarUrl,
@@ -223,7 +223,7 @@ function FeedWhy({ item, current }: { item: SearchResultItem; current: boolean }
     )
   }
   return (
-    <span className="flex min-w-0 items-center gap-1.5 text-xs text-nx-muted">
+    <span className="flex min-w-0 items-center gap-1.5 text-xs text-nx-ink-faint">
       <WhyIcon kind={kind} className="h-3 w-3 shrink-0 text-nx-accent" strokeWidth={2.4} />
       <span className="truncate">{label}</span>
     </span>
@@ -239,7 +239,7 @@ function SavesSub({ item }: { item: SearchResultItem }) {
       ? 'You saved this'
       : bylineLine(item.post.savers ?? [])
   return (
-    <span className="flex min-w-0 items-center gap-1.5 text-xs text-nx-muted">
+    <span className="flex min-w-0 items-center gap-1.5 text-xs text-nx-ink-faint">
       {item.post.isPrivate && <Lock aria-hidden className="h-3 w-3 shrink-0" strokeWidth={2.4} />}
       <span className="truncate">{[lead, ago, kindLine(item)].filter(Boolean).join(' · ')}</span>
     </span>
@@ -296,7 +296,7 @@ export function UpNextList({
                 (variant === 'channel' || variant === 'moment') &&
                   'gap-3 rounded-[18px] py-2 pl-2 pr-2.5 hover:bg-white/[0.04]',
                 current && variant === 'saves' && 'bg-nx-surface hover:bg-nx-surface',
-                current && variant !== 'saves' && 'bg-[#262320] hover:bg-[#262320]',
+                current && variant !== 'saves' && 'bg-nx-plate hover:bg-nx-plate',
               )}
               style={
                 current && (variant === 'channel' || variant === 'moment')
@@ -339,10 +339,12 @@ export function UpNextList({
                 {variant === 'feed' && <FeedWhy item={item} current={current} />}
                 {variant === 'saves' && <SavesSub item={item} />}
                 {variant === 'channel' && (
-                  <span className="truncate text-xs text-nx-muted">{kindLine(item)}</span>
+                  <span className="truncate text-xs text-nx-ink-faint">{kindLine(item)}</span>
                 )}
                 {variant === 'moment' && (
-                  <span className="truncate text-xs text-nx-muted">{sourceLine(item.post)}</span>
+                  <span className="truncate text-xs text-nx-ink-faint">
+                    {sourceLine(item.post)}
+                  </span>
                 )}
               </span>
               {variant === 'channel' && savers.length > 0 && (
@@ -358,7 +360,10 @@ export function UpNextList({
                   <FaceStack savers={savers.slice(0, 1)} size={24} max={1} ring="transparent" />
                   {item.savedAt && (
                     <span
-                      className={cn('text-[11px]', current ? 'font-extrabold' : 'text-nx-muted')}
+                      className={cn(
+                        'text-[11px]',
+                        current ? 'font-extrabold' : 'text-nx-ink-faint',
+                      )}
                       style={current ? { color: hue } : undefined}
                     >
                       {Date.now() - Date.parse(item.savedAt) < 120_000
@@ -408,7 +413,7 @@ export function NextCard({
       {/* 18 − 10 − 1 leaves the 8 px floor. */}
       <Thumb item={item} className="h-10 w-[72px] rounded-[8px]" />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="whitespace-nowrap text-xs text-nx-muted">{when}</span>
+        <span className="whitespace-nowrap text-xs text-nx-ink-faint">{when}</span>
         <span className="truncate text-sm font-semibold">
           {[title || `@${item.post.author}`, sourceLine(item.post)].join(' · ')}
         </span>
@@ -417,7 +422,7 @@ export function NextCard({
       <button
         type="button"
         onClick={onSkip}
-        className="h-11 shrink-0 whitespace-nowrap rounded-full bg-[#262320] px-[18px] text-sm font-semibold text-nx-cream hover:bg-[#2f2b27]"
+        className="h-11 shrink-0 whitespace-nowrap rounded-full bg-nx-plate px-[18px] text-sm font-semibold text-nx-cream hover:bg-nx-plate-hover"
       >
         Skip to it
       </button>
@@ -526,7 +531,7 @@ export function WhyPanel({
             <span className="rounded-full bg-nx-accent px-2.5 py-[5px] text-xs font-extrabold text-black">
               {WHY_TITLES[first.kind] ?? 'Why'}
             </span>
-            <span className="text-xs text-nx-muted">strongest signal</span>
+            <span className="text-xs text-nx-ink-faint">strongest signal</span>
           </span>
           <span className="flex items-center gap-3">
             <span className="min-w-0 flex-1 text-sm leading-[1.45] text-nx-cream">
@@ -543,7 +548,7 @@ export function WhyPanel({
         >
           <span className="text-sm font-extrabold">{WHY_TITLES[reason.kind] ?? 'Why'}</span>
           <span className="flex items-center gap-3">
-            <span className="min-w-0 flex-1 text-sm leading-[1.45] text-nx-soft">
+            <span className="min-w-0 flex-1 text-sm leading-[1.45] text-nx-ink-soft">
               {whyDetail(reason, item.post.savers)}
             </span>
             {reason.kind === 'like' && <LikeThumb post={reason.post} />}
@@ -551,7 +556,7 @@ export function WhyPanel({
         </div>
       ))}
       {friends}
-      <span className="mt-auto text-[13px] leading-normal text-nx-muted">
+      <span className="mt-auto text-[13px] leading-normal text-nx-ink-faint">
         No ad tech picked this. Your people did.
       </span>
     </aside>
@@ -581,7 +586,7 @@ export function PhoneTabs({
     <nav
       aria-label="Theater"
       className={cn(
-        'flex shrink-0 items-center gap-0.5 rounded-full bg-[#1a1814]/80 p-1 backdrop-blur-md',
+        'flex shrink-0 items-center gap-0.5 rounded-full bg-nx-surface/80 p-1 backdrop-blur-md',
         className,
       )}
     >
@@ -594,11 +599,11 @@ export function PhoneTabs({
             aria-current={on ? 'page' : undefined}
             className={cn(
               'relative flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-[15px]',
-              on ? 'bg-nx-cream font-extrabold text-black' : 'font-semibold text-white',
+              on ? 'bg-nx-cream font-extrabold text-nx-on-cream' : 'font-semibold text-nx-ink',
             )}
           >
             {tab.id === 'now' && (
-              <span aria-hidden className="block h-1.5 w-1.5 rounded-full bg-[#ff5a3c]" />
+              <span aria-hidden className="block h-1.5 w-1.5 rounded-full bg-nx-live" />
             )}
             <span>{tab.label}</span>
             {tab.id === 'new' && unseen !== null && unseen > 0 && (
@@ -641,7 +646,7 @@ export function RoundIconButton({
       title={label}
       onClick={onClick}
       className={cn(
-        'flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#1a1814]/80 text-white backdrop-blur-md',
+        'flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-nx-surface/80 text-nx-ink backdrop-blur-md',
         className,
       )}
     >
@@ -689,12 +694,14 @@ export function FeedFilterSheet({
         <h2 className="m-0 flex-1 font-nx-serif text-[30px] font-normal leading-none">
           What’s in your feed
         </h2>
-        {unseen !== null && <span className="text-[13px] text-nx-muted">{`${unseen} new`}</span>}
+        {unseen !== null && (
+          <span className="text-[13px] text-nx-ink-faint">{`${unseen} new`}</span>
+        )}
       </div>
       <div
         role="group"
         aria-label="What’s in your feed"
-        className="flex flex-col overflow-hidden rounded-[var(--nx-nest)] bg-[#262320]"
+        className="flex flex-col overflow-hidden rounded-[var(--nx-nest)] bg-nx-plate"
       >
         {FEED_KINDS.map((kind, i) => {
           const on = types.includes(kind)
@@ -724,18 +731,18 @@ export function FeedFilterSheet({
             >
               <Icon
                 aria-hidden
-                className={cn('h-5 w-5 shrink-0', on ? 'text-nx-accent' : 'text-nx-muted')}
+                className={cn('h-5 w-5 shrink-0', on ? 'text-nx-accent' : 'text-nx-ink-faint')}
               />
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="text-[15px] font-bold">{row.label}</span>
-                <span className="text-[13px] text-nx-muted">{row.hint}</span>
+                <span className="text-[13px] text-nx-ink-faint">{row.hint}</span>
               </span>
               <SwitchLook on={on} />
             </button>
           )
         })}
       </div>
-      <span className="px-1 pt-1 text-xs font-extrabold uppercase tracking-[0.08em] text-nx-muted">
+      <span className="px-1 pt-1 text-xs font-extrabold uppercase tracking-[0.08em] text-nx-ink-faint">
         Whose saves
       </span>
       <FeedSwitch
@@ -743,7 +750,7 @@ export function FeedFilterSheet({
         onChange={onMode}
         className="w-full [&>button]:h-11 [&>button]:flex-1"
       />
-      {waiting && <p className="m-0 px-1 text-[13px] text-nx-muted">{waiting}</p>}
+      {waiting && <p className="m-0 px-1 text-[13px] text-nx-ink-faint">{waiting}</p>}
       <button
         type="button"
         onClick={onClose}
@@ -842,11 +849,11 @@ export function ChannelChip({
       <Link
         href={href}
         aria-label={`Back to ${label === 'Channel' ? 'the channel' : label}`}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/[0.12] bg-black/50 text-white backdrop-blur-md"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/[0.12] bg-black/50 text-nx-ink backdrop-blur-md"
       >
         <ArrowLeft aria-hidden className="h-[18px] w-[18px]" />
       </Link>
-      <span className="flex h-11 min-w-0 items-center gap-2 rounded-full border border-white/[0.12] bg-black/50 pl-2 pr-4 text-sm text-white backdrop-blur-md">
+      <span className="flex h-11 min-w-0 items-center gap-2 rounded-full border border-white/[0.12] bg-black/50 pl-2 pr-4 text-sm text-nx-ink backdrop-blur-md">
         {tiles.length > 0 && (
           <span
             aria-hidden
@@ -868,16 +875,16 @@ export function ChannelChip({
           </span>
         )}
         <span className="shrink-0 font-extrabold">{label}</span>
-        <span aria-hidden className="text-nx-soft">
+        <span aria-hidden className="text-nx-ink-soft">
           ·
         </span>
         <span className="min-w-0 truncate font-semibold">{name}</span>
         {position && (
           <>
-            <span aria-hidden className="text-nx-soft">
+            <span aria-hidden className="text-nx-ink-soft">
               ·
             </span>
-            <span className="shrink-0 whitespace-nowrap text-nx-soft">{position}</span>
+            <span className="shrink-0 whitespace-nowrap text-nx-ink-soft">{position}</span>
           </>
         )}
       </span>
@@ -895,7 +902,7 @@ export function KeyHints() {
   return (
     <ul
       aria-label="Keys"
-      className="m-0 flex list-none flex-col gap-2 p-0 text-[13px] text-nx-muted"
+      className="m-0 flex list-none flex-col gap-2 p-0 text-[13px] text-nx-ink-faint"
     >
       {keys.map((k) => (
         <li key={k.key} className="flex items-center gap-2">
@@ -965,7 +972,7 @@ export function QuickWords({
             'h-11 rounded-full border px-[18px] text-[15px] font-extrabold text-nx-cream disabled:opacity-60',
             said === w
               ? 'border-[#6b8cff] bg-[#6b8cff]/[0.16]'
-              : 'border-white/[0.18] bg-nx-surface hover:bg-[#262320]',
+              : 'border-white/[0.18] bg-nx-surface hover:bg-nx-plate',
           )}
         >
           {w}
@@ -999,7 +1006,7 @@ export function ReactionStack({
         return (
           <li
             key={r.id}
-            className="flex h-10 items-center gap-[9px] rounded-full border border-white/[0.12] bg-black/55 pl-[5px] pr-3.5 text-[15px] font-extrabold text-white backdrop-blur-md"
+            className="flex h-10 items-center gap-[9px] rounded-full border border-white/[0.12] bg-black/55 pl-[5px] pr-3.5 text-[15px] font-extrabold text-nx-ink backdrop-blur-md"
             style={{ opacity: age === 0 ? 1 : age === 1 ? 0.8 : 0.55 }}
           >
             <NxAvatar
@@ -1034,7 +1041,7 @@ export function WatchersCard({ watchers }: { watchers: readonly Saver[] }) {
       className="mt-1.5 flex w-[220px] flex-col gap-2.5 rounded-[20px] border border-white/[0.12] bg-black/50 p-3.5 backdrop-blur-md"
     >
       <Faces people={others} size={38} live ring="#111" max={4} />
-      <span className="text-sm leading-[1.35] text-white">
+      <span className="text-sm leading-[1.35] text-nx-ink">
         <span className="font-extrabold">{line}</span>
         <span>{others.length === 1 ? ' is watching with you' : ' are watching with you'}</span>
       </span>

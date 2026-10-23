@@ -10,21 +10,21 @@ export const metadata: Metadata = {
 /** Privacy, in the new design. The canonical copy is PRIVACY.md in the repo; keep them in step. */
 export default function PrivacyPage() {
   return (
-    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
+    <div className="min-h-dvh bg-nx-bg font-nx-sans text-nx-cream">
       <NxHeader current={null} />
-      <article className="mx-auto flex max-w-[720px] flex-col gap-4 px-5 pb-20 pt-6 text-[17px] leading-[1.65] text-white/80 md:pt-10">
-        <h1 className="m-0 font-nx-serif text-[52px] font-normal leading-none text-white md:text-[64px]">
+      <article className="mx-auto flex max-w-[720px] flex-col gap-4 px-5 pb-20 pt-6 text-[17px] leading-[1.65] text-nx-ink/80 md:pt-10">
+        <h1 className="m-0 font-nx-serif text-[52px] font-normal leading-none text-nx-ink md:text-[64px]">
           Privacy
         </h1>
         <p className="m-0">
           Whoever runs this ADHX is the data controller for it. Every ADHX stores the same kinds of
           rows, on its own server.
         </p>
-        <p className="m-0 text-[14px] text-white/55">
+        <p className="m-0 text-[14px] text-nx-ink/55">
           <span>Last updated 20 October 2026. The canonical copy is </span>
           <a
             href="https://github.com/itsmemeworks/adhx/blob/main/PRIVACY.md"
-            className="text-white underline underline-offset-2"
+            className="text-nx-ink underline underline-offset-2"
           >
             PRIVACY.md
           </a>
@@ -194,13 +194,13 @@ export default function PrivacyPage() {
 
         <p className="m-0 mt-2">
           <span>Questions about this server: ask whoever runs it. About the software: </span>
-          <a href="mailto:security@adhx.com" className="text-white underline underline-offset-2">
+          <a href="mailto:security@adhx.com" className="text-nx-ink underline underline-offset-2">
             security@adhx.com
           </a>
           <span>. Vulnerabilities: see </span>
           <a
             href="https://github.com/itsmemeworks/adhx/security"
-            className="text-white underline underline-offset-2"
+            className="text-nx-ink underline underline-offset-2"
           >
             SECURITY.md
           </a>
@@ -214,7 +214,7 @@ export default function PrivacyPage() {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-6 flex flex-col gap-3">
-      <h2 className="m-0 font-nx-serif text-[30px] font-normal leading-tight text-white">
+      <h2 className="m-0 font-nx-serif text-[30px] font-normal leading-tight text-nx-ink">
         {title}
       </h2>
       <div className="m-0">{children}</div>

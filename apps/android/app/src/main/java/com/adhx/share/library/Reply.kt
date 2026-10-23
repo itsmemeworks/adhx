@@ -121,14 +121,14 @@ fun RepliedChip(reaction: LiveReaction, server: String) {
             .height(34.dp)
             .clip(RoundedCornerShape(50))
             .background(Color.Black.copy(alpha = 0.55f))
-            .border(1.dp, AdhxColors.White.copy(alpha = 0.14f), RoundedCornerShape(50))
+            .border(1.dp, AdhxColors.Ink.copy(alpha = 0.14f), RoundedCornerShape(50))
             .semantics(mergeDescendants = true) { contentDescription = line }
             .padding(start = 6.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         reaction.who?.let { Avatar(it, server, 24.dp) }
-        Text(line, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(line, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -181,13 +181,13 @@ fun ReplySheet(
                         fontFamily = SerifFamily,
                         fontSize = 30.sp,
                         lineHeight = 32.sp,
-                        color = AdhxColors.White,
+                        color = AdhxColors.Ink,
                         modifier = Modifier.semantics { heading() },
                     )
                     Text(
                         note?.let { "They said: $it" } ?: "$name sent you this",
                         fontSize = 13.sp,
-                        color = AdhxColors.Faint,
+                        color = AdhxColors.InkFaint,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -199,7 +199,7 @@ fun ReplySheet(
                         Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(AdhxColors.Card)
+                            .background(AdhxColors.Plate)
                             .clickable(enabled = !sending, onClickLabel = Reaction.names[emoji]) { go(emoji, null) }
                             .semantics { contentDescription = Reaction.names[emoji] ?: emoji },
                         contentAlignment = Alignment.Center,
@@ -211,19 +211,19 @@ fun ReplySheet(
                     .fillMaxWidth()
                     .height(52.dp)
                     .clip(RoundedCornerShape(50))
-                    .background(AdhxColors.Background)
-                    .border(1.dp, if (words.isNotEmpty()) AdhxColors.Accent.copy(alpha = 0.6f) else AdhxColors.White.copy(alpha = 0.12f), RoundedCornerShape(50))
+                    .background(AdhxColors.Bg)
+                    .border(1.dp, if (words.isNotEmpty()) AdhxColors.Accent.copy(alpha = 0.6f) else AdhxColors.Ink.copy(alpha = 0.12f), RoundedCornerShape(50))
                     .padding(start = 16.dp, end = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Box(Modifier.weight(1f)) {
-                    if (words.isEmpty()) Text("Say something back", fontSize = 16.sp, color = AdhxColors.Faint)
+                    if (words.isEmpty()) Text("Say something back", fontSize = 16.sp, color = AdhxColors.InkFaint)
                     BasicTextField(
                         value = words,
                         onValueChange = { words = Reaction.clip(it) },
                         singleLine = true,
-                        textStyle = TextStyle(fontFamily = SansFamily, fontSize = 16.sp, color = AdhxColors.White),
+                        textStyle = TextStyle(fontFamily = SansFamily, fontSize = 16.sp, color = AdhxColors.Ink),
                         cursorBrush = SolidColor(AdhxColors.Accent),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                         keyboardActions = KeyboardActions(onSend = { words.trim().takeIf { it.isNotEmpty() }?.let { go(null, it) } }),
@@ -240,7 +240,7 @@ fun ReplySheet(
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(if (sending) "Sending…" else "Send", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = if (canSend) Color.Black else AdhxColors.Faint)
+                    Text(if (sending) "Sending…" else "Send", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = if (canSend) Color.Black else AdhxColors.InkFaint)
                 }
             }
             if (problem != null) Text(problem!!, fontSize = 13.sp, color = AdhxColors.Warn)
@@ -248,7 +248,7 @@ fun ReplySheet(
                 "$name sees it on this post, and in Reactions. It floats up when they next watch it.",
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
-                color = AdhxColors.Faint,
+                color = AdhxColors.InkFaint,
             )
         }
     }

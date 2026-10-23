@@ -120,7 +120,7 @@ fun ConnectScreen(vm: MainViewModel) {
     Column(
         Modifier
             .fillMaxSize()
-            .background(AdhxColors.Background)
+            .background(AdhxColors.Bg)
             .systemBarsPadding()
             .imePadding()
             .padding(horizontal = 24.dp, vertical = 16.dp),
@@ -134,7 +134,7 @@ fun ConnectScreen(vm: MainViewModel) {
         ) {
             AdhxBrand(markSize = 34.dp)
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Connect to your ADHX", style = MaterialTheme.typography.displaySmall, color = AdhxColors.White)
+                Text("Connect to your ADHX", style = MaterialTheme.typography.displaySmall, color = AdhxColors.Ink)
                 Text(
                     when (mode) {
                         ConnectMode.Email -> if (email.step == SignInStep.Code) EmailSignIn.sentTo(email.email) else EmailSignIn.INTRO
@@ -143,7 +143,7 @@ fun ConnectScreen(vm: MainViewModel) {
                     },
                     fontSize = 15.sp,
                     lineHeight = 22.sp,
-                    color = AdhxColors.Muted,
+                    color = AdhxColors.InkSoft,
                 )
             }
             removedNote?.let { note ->
@@ -210,7 +210,7 @@ fun ConnectScreen(vm: MainViewModel) {
                     )
                 }
             }
-            Text(FOOTER, fontSize = 12.sp, color = AdhxColors.Faint, textAlign = TextAlign.Center)
+            Text(FOOTER, fontSize = 12.sp, color = AdhxColors.InkFaint, textAlign = TextAlign.Center)
         }
     }
 }
@@ -261,16 +261,16 @@ private fun TypeForm(vm: MainViewModel, busy: Boolean) {
     val submit = { if (!busy && address.isNotBlank() && codeReady) vm.pair(address, code) }
 
     val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedTextColor = AdhxColors.White,
-        unfocusedTextColor = AdhxColors.White,
+        focusedTextColor = AdhxColors.Ink,
+        unfocusedTextColor = AdhxColors.Ink,
         focusedContainerColor = AdhxColors.Surface,
         unfocusedContainerColor = AdhxColors.Surface,
         focusedBorderColor = AdhxColors.Accent,
-        unfocusedBorderColor = AdhxColors.Hairline,
+        unfocusedBorderColor = AdhxColors.Line,
         focusedLabelColor = AdhxColors.Accent,
-        unfocusedLabelColor = AdhxColors.Muted,
-        focusedPlaceholderColor = AdhxColors.Faint,
-        unfocusedPlaceholderColor = AdhxColors.Faint,
+        unfocusedLabelColor = AdhxColors.InkSoft,
+        focusedPlaceholderColor = AdhxColors.InkFaint,
+        unfocusedPlaceholderColor = AdhxColors.InkFaint,
         cursorColor = AdhxColors.Accent,
     )
 
@@ -383,7 +383,7 @@ private fun CodeForm(vm: MainViewModel, ui: EmailSignInUi) {
     }
     val submit = { if (!ui.busy && EmailSignIn.codeReady(code)) vm.verifyEmailCode(code) }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text(EmailSignIn.CHECK, fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White)
+        Text(EmailSignIn.CHECK, fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Ink)
         OutlinedTextField(
             value = code,
             onValueChange = { input ->
@@ -433,16 +433,16 @@ private fun CodeForm(vm: MainViewModel, ui: EmailSignInUi) {
 
 @Composable
 private fun fieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = AdhxColors.White,
-    unfocusedTextColor = AdhxColors.White,
+    focusedTextColor = AdhxColors.Ink,
+    unfocusedTextColor = AdhxColors.Ink,
     focusedContainerColor = AdhxColors.Surface,
     unfocusedContainerColor = AdhxColors.Surface,
     focusedBorderColor = AdhxColors.Accent,
-    unfocusedBorderColor = AdhxColors.Hairline,
+    unfocusedBorderColor = AdhxColors.Line,
     focusedLabelColor = AdhxColors.Accent,
-    unfocusedLabelColor = AdhxColors.Muted,
-    focusedPlaceholderColor = AdhxColors.Faint,
-    unfocusedPlaceholderColor = AdhxColors.Faint,
+    unfocusedLabelColor = AdhxColors.InkSoft,
+    focusedPlaceholderColor = AdhxColors.InkFaint,
+    unfocusedPlaceholderColor = AdhxColors.InkFaint,
     cursorColor = AdhxColors.Accent,
 )
 
@@ -456,7 +456,7 @@ private fun StatusLine(busy: Boolean, error: String?, label: String = "Connectin
         ) {
             Spinner()
             Box(Modifier.width(10.dp))
-            Text(label, fontSize = 14.sp, color = AdhxColors.Muted)
+            Text(label, fontSize = 14.sp, color = AdhxColors.InkSoft)
         }
         error != null -> Text(
             error,

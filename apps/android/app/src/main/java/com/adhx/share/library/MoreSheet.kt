@@ -125,7 +125,7 @@ fun MoreSheet(
         sheetState = state,
         containerColor = AdhxColors.Surface,
         shape = SquircleShape.top(28.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AdhxColors.Hairline) },
+        dragHandle = { BottomSheetDefaults.DragHandle(color = AdhxColors.Line) },
     ) {
         Column(
             Modifier
@@ -326,12 +326,12 @@ private fun Header(post: PhonePost, server: String, network: String, onClose: ()
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                NetworkMark(post.platform, size = 13.dp, tint = AdhxColors.Muted)
+                NetworkMark(post.platform, size = 13.dp, tint = AdhxColors.InkSoft)
                 Spacer(Modifier.width(6.dp))
                 Text(
                     network + (height?.let { " · ${it}p" } ?: ""),
                     fontSize = 13.sp,
-                    color = AdhxColors.Muted,
+                    color = AdhxColors.InkSoft,
                     maxLines = 1,
                 )
             }
@@ -339,7 +339,7 @@ private fun Header(post: PhonePost, server: String, network: String, onClose: ()
                 Copy.handle(post.author.handle) ?: post.author.name ?: network,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = AdhxColors.White,
+                color = AdhxColors.Ink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -353,7 +353,7 @@ private fun Header(post: PhonePost, server: String, network: String, onClose: ()
                 .semantics { contentDescription = "Close" },
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Filled.Close, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(18.dp))
+            Icon(Icons.Filled.Close, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -377,15 +377,15 @@ private fun MoreRow(icon: Painter?, title: String, subtitle: String, onClick: ()
             contentAlignment = Alignment.Center,
         ) {
             when {
-                busy -> CircularProgressIndicator(color = AdhxColors.Black, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                busy -> CircularProgressIndicator(color = AdhxColors.OnAccent, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
                 icon == null -> Image(painterResource(R.drawable.ic_gob), contentDescription = null, modifier = Modifier.size(26.dp))
-                else -> Icon(icon, contentDescription = null, tint = AdhxColors.Black, modifier = Modifier.size(21.dp))
+                else -> Icon(icon, contentDescription = null, tint = AdhxColors.OnAccent, modifier = Modifier.size(21.dp))
             }
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = AdhxColors.White)
-            Text(subtitle, fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Ink)
+            Text(subtitle, fontSize = 13.sp, color = AdhxColors.InkFaint, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

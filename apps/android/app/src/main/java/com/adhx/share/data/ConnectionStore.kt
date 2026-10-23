@@ -18,6 +18,7 @@ import javax.crypto.SecretKey
 /** AES-GCM record in noBackupFilesDir, with a non-exportable Android Keystore key. */
 class ConnectionStore private constructor(context: Context) {
     private val resumePrefs = context.applicationContext.getSharedPreferences("adhx.resume", Context.MODE_PRIVATE)
+    private val watchedPrefs = context.applicationContext.getSharedPreferences("adhx.watched", Context.MODE_PRIVATE)
     private val vault = ConnectionVault(
         AndroidVaultFile(File(context.noBackupFilesDir, "connection-v1.enc")),
         ::keystoreKey,
@@ -40,7 +41,10 @@ class ConnectionStore private constructor(context: Context) {
         return persist(vault.record.pairedWith(connection)).also {
             if (it) {
                 _removedNotice.value = false
-                if (changed) resumePrefs.edit().clear().apply()
+                if (changed) {
+                    resumePrefs.edit().clear().apply()
+                    watchedPrefs.edit().clear().apply()
+                }
             }
         }
     }
@@ -59,6 +63,7 @@ class ConnectionStore private constructor(context: Context) {
             if (it) {
                 _removedNotice.value = removedByServer
                 resumePrefs.edit().clear().apply()
+                watchedPrefs.edit().clear().apply()
             }
         }
     }

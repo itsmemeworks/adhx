@@ -273,6 +273,8 @@ fun PlayerScreen(
     // Picking up where you left off (board 14.2): the post the player has, and a spot it offers.
     val credential = ConnectionStore.get(context).current()
     val resume = remember(credential?.server, credential?.key) { ResumeStore.get(context) }
+    // Plays, finishes and seconds watched, on their way to your ADHX.
+    val watch = remember { WatchCounts.get(context) }
     var playingKey by remember { mutableStateOf<String?>(null) }
     var resumeOffer by remember { mutableStateOf<ResumeSpot?>(null) }
     // Try again: load the same file afresh, from where it was.
@@ -347,9 +349,14 @@ fun PlayerScreen(
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_START -> if (player == null) player = buildPlayer(context)
+                Lifecycle.Event.ON_START -> {
+                    if (player == null) player = buildPlayer(context)
+                    // Counts left from last time (or from before a restart).
+                    watch.flush()
+                }
                 Lifecycle.Event.ON_STOP -> {
                     rememberSpot()
+                    watch.flush()
                     player?.release()
                     player = null
                 }
@@ -535,6 +542,7 @@ fun PlayerScreen(
         val p = player ?: return@LaunchedEffect
         playingKey = key
         if (mediaUrl == null) {
+            watch.begin(null)
             resumeOffer = null
             p.stop()
             p.clearMediaItems()
@@ -554,6 +562,8 @@ fun PlayerScreen(
         p.prepare()
         val carryOn = from ?: wasAt.takeIf { samePost && resumeOffer == null }
         if (carryOn != null && carryOn > 1000) p.seekTo(carryOn)
+        // Carrying on part-way (Try again, back in the app) isn't a new play.
+        watch.begin(key, atMs = carryOn?.takeIf { it > 1000 })
         if (resumeOffer != null) {
             playback.paused = true
             p.playWhenReady = false
@@ -563,6 +573,7 @@ fun PlayerScreen(
         while (isActive) {
             playback.positionMs = p.currentPosition.coerceAtLeast(0L)
             playback.durationMs = p.duration.takeIf { it != C.TIME_UNSET }?.coerceAtLeast(0L) ?: 0L
+            watch.sample(playback.positionMs, playback.durationMs)
             delay(250)
         }
     }
@@ -627,6 +638,7 @@ fun PlayerScreen(
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) playback.ready = true
                 if (playbackState == Player.STATE_ENDED) {
+                    watch.ended()
                     // Watched to the end: nothing to pick up next time.
                     playingKey?.let { resume.forget(it) }
                     ended++
@@ -712,7 +724,7 @@ fun PlayerScreen(
     Box(
         Modifier
             .fillMaxSize()
-            .background(AdhxColors.Black),
+            .background(AdhxColors.Stage),
     ) {
         VerticalPager(
             state = pager,
@@ -824,6 +836,8 @@ fun PlayerScreen(
                     spot = offer,
                     onResume = {
                         resumeOffer = null
+                        // Picking up part-way isn't a new play.
+                        watch.begin(playingKey, atMs = offer.positionMs)
                         player?.seekTo(offer.positionMs)
                         player?.playWhenReady = true
                         playback.paused = false
@@ -831,6 +845,7 @@ fun PlayerScreen(
                     onStartOver = {
                         resumeOffer = null
                         playingKey?.let { resume.forget(it) }
+                        watch.begin(playingKey)
                         player?.seekTo(0)
                         player?.playWhenReady = true
                         playback.paused = false
@@ -1029,9 +1044,9 @@ private fun NewSavesPill(count: Int, onClick: () -> Unit, modifier: Modifier = M
             .padding(start = 12.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null, tint = AdhxColors.Black, modifier = Modifier.size(20.dp))
+        Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null, tint = AdhxColors.OnAccent, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(4.dp))
-        Text(label, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Black)
+        Text(label, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AdhxColors.OnAccent)
     }
 }
 
@@ -1056,7 +1071,7 @@ fun ToastPill(text: String, modifier: Modifier = Modifier) {
         text,
         fontSize = 14.sp,
         fontWeight = FontWeight.Bold,
-        color = AdhxColors.Black,
+        color = AdhxColors.OnCream,
         textAlign = TextAlign.Center,
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
@@ -1327,7 +1342,7 @@ private fun MediaPage(
                     problem,
                     fontSize = 15.sp,
                     lineHeight = 21.sp,
-                    color = AdhxColors.Cream,
+                    color = AdhxColors.Ink,
                     textAlign = TextAlign.Center,
                     // Centred in the space left of the right column, like the caption.
                     modifier = Modifier
@@ -1354,7 +1369,7 @@ private fun PausedMark(modifier: Modifier = Modifier) {
             .background(Color.Black.copy(alpha = 0.55f)),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(44.dp))
+        Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(44.dp))
     }
 }
 
@@ -1418,7 +1433,7 @@ private fun Album(photos: List<String>, state: PagerState, hidden: Boolean) {
                     onSuccess = { failed = false },
                     modifier = Modifier.fillMaxSize(),
                 )
-                if (failed) Text("This photo couldn’t load.", fontSize = 15.sp, color = AdhxColors.Muted)
+                if (failed) Text("This photo couldn’t load.", fontSize = 15.sp, color = AdhxColors.InkSoft)
             }
         }
         if (photos.size > 1 && !hidden) {
@@ -1426,7 +1441,7 @@ private fun Album(photos: List<String>, state: PagerState, hidden: Boolean) {
                 "${state.currentPage + 1} / ${photos.size}",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = AdhxColors.White,
+                color = AdhxColors.Ink,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
@@ -1450,7 +1465,7 @@ private fun Dots(count: Int, current: Int) {
                 Modifier
                     .size(if (i == current) 8.dp else 6.dp)
                     .clip(CircleShape)
-                    .background(if (i == current) AdhxColors.White else AdhxColors.White.copy(alpha = 0.4f))
+                    .background(if (i == current) AdhxColors.Ink else AdhxColors.Ink.copy(alpha = 0.4f))
                     .align(Alignment.CenterVertically),
             )
         }
@@ -1476,7 +1491,7 @@ private fun WordsCard(post: PhonePost, onRead: () -> Unit) {
     Box(
         Modifier
             .fillMaxSize()
-            .background(AdhxColors.Background)
+            .background(AdhxColors.Bg)
             .navigationBarsPadding()
             .padding(start = 24.dp, end = 24.dp, top = 110.dp, bottom = 280.dp),
         contentAlignment = Alignment.CenterStart,
@@ -1505,10 +1520,10 @@ private fun WordsCard(post: PhonePost, onRead: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             title?.let {
-                Text(it, fontFamily = SerifFamily, fontSize = type, lineHeight = line, color = AdhxColors.White)
+                Text(it, fontFamily = SerifFamily, fontSize = type, lineHeight = line, color = AdhxColors.Ink)
             }
             article?.url?.takeIf { it.isNotBlank() }?.let {
-                Text(Links.display(it), fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(Links.display(it), fontSize = 13.sp, color = AdhxColors.InkFaint, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (body.isNotEmpty()) {
                 ArticleBodyText(body, size = 20.sp, lineHeight = 29.sp)
@@ -1519,11 +1534,11 @@ private fun WordsCard(post: PhonePost, onRead: () -> Unit) {
                         fontFamily = SerifFamily,
                         fontSize = if (title != null) 22.sp else type,
                         lineHeight = if (title != null) 30.sp else line,
-                        color = if (title != null) AdhxColors.Cream else AdhxColors.White,
+                        color = AdhxColors.Ink,
                     )
                 }
                 article?.description?.takeIf { it.isNotBlank() && it != post.text }?.let {
-                    Text(it, fontSize = 16.sp, lineHeight = 24.sp, color = AdhxColors.Muted)
+                    Text(it, fontSize = 16.sp, lineHeight = 24.sp, color = AdhxColors.InkSoft)
                 }
             }
         }
@@ -1533,11 +1548,11 @@ private fun WordsCard(post: PhonePost, onRead: () -> Unit) {
                 "Read all",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = AdhxColors.White,
+                color = AdhxColors.OnCream,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(AdhxColors.Raised)
+                    .background(AdhxColors.Cream)
                     .clickable(onClickLabel = "Read all of it", onClick = onRead)
                     .padding(horizontal = 18.dp, vertical = 10.dp),
             )
@@ -1596,7 +1611,7 @@ private fun ActionColumn(
             enabled = onKeep != null,
             selected = yours,
         ) {
-            ActionIcon(rememberVectorPainter(if (yours) Glyphs.BookmarkFilled else Glyphs.Bookmark), tint = if (yours) AdhxColors.Accent else AdhxColors.White)
+            ActionIcon(rememberVectorPainter(if (yours) Glyphs.BookmarkFilled else Glyphs.Bookmark), tint = if (yours) AdhxColors.Accent else AdhxColors.Ink)
         }
         // Send it: the kept file itself (or the words), and straight to your people.
         ActionButton(
@@ -1617,7 +1632,7 @@ private fun ActionColumn(
                         progress = { fraction },
                         modifier = Modifier.size(22.dp),
                         color = AdhxColors.Accent,
-                        trackColor = AdhxColors.White.copy(alpha = 0.18f),
+                        trackColor = AdhxColors.Ink.copy(alpha = 0.18f),
                         strokeWidth = 2.5.dp,
                     )
                 }
@@ -1625,7 +1640,7 @@ private fun ActionColumn(
         }
         // The network's own mark: who posted it, all their words, and the way to the original.
         ActionButton(description = "The original post on ${Networks.name(post.platform) ?: "the web"}", onClick = onOriginal) {
-            NetworkMark(post.platform, size = 22.dp, tint = AdhxColors.Cream)
+            NetworkMark(post.platform, size = 22.dp, tint = AdhxColors.Ink)
         }
         ActionButton(description = "More options", onClick = onMore) {
             ActionIcon(rememberVectorPainter(Glyphs.More))
@@ -1634,7 +1649,7 @@ private fun ActionColumn(
 }
 
 @Composable
-private fun ActionIcon(painter: Painter, tint: Color = AdhxColors.White, size: Int = 22) {
+private fun ActionIcon(painter: Painter, tint: Color = AdhxColors.Ink, size: Int = 22) {
     Icon(painter, contentDescription = null, tint = tint, modifier = Modifier.size(size.dp))
 }
 
@@ -1712,7 +1727,7 @@ private fun BottomRow(
                     .graphicsLayer { alpha = chrome }
                     .width(1.dp)
                     .height(28.dp)
-                    .background(AdhxColors.White.copy(alpha = 0.2f)),
+                    .background(AdhxColors.Ink.copy(alpha = 0.2f)),
             )
             WhoRow(
                 faces = who?.let(Who::faces) ?: Who.faces(post.savers),
@@ -1778,7 +1793,7 @@ private fun FirstFace(saver: Saver, badge: String?, label: String, server: Strin
                 Modifier
                     .align(Alignment.BottomEnd)
                     .offset(x = 2.dp, y = 0.dp)
-                    .border(2.dp, AdhxColors.Black, RoundedCornerShape(50))
+                    .border(2.dp, AdhxColors.Stage, RoundedCornerShape(50))
                     .padding(2.dp)
                     .heightIn(min = 16.dp)
                     .widthIn(min = 16.dp)
@@ -1787,7 +1802,7 @@ private fun FirstFace(saver: Saver, badge: String?, label: String, server: Strin
                     .padding(horizontal = 4.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(badge, fontSize = 10.sp, lineHeight = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+                Text(badge, fontSize = 10.sp, lineHeight = 12.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.OnCream)
             }
         }
     }
@@ -1811,13 +1826,13 @@ private fun CountPill(spot: UpNextSpot, onClick: () -> Unit) {
                 .height(36.dp)
                 .clip(RoundedCornerShape(50))
                 .background(Color.Black.copy(alpha = 0.5f))
-                .border(1.dp, AdhxColors.White.copy(alpha = 0.14f), RoundedCornerShape(50))
+                .border(1.dp, AdhxColors.Ink.copy(alpha = 0.14f), RoundedCornerShape(50))
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Icon(Glyphs.Lines, contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(14.dp))
-            Text("${spot.position} of ${spot.count}", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Cream, maxLines = 1, softWrap = false)
+            Text("${spot.position} of ${spot.count}", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Ink, maxLines = 1, softWrap = false)
         }
     }
 }
@@ -1830,12 +1845,12 @@ private fun WhoClose(onClick: () -> Unit) {
             .size(44.dp)
             .clip(CircleShape)
             .background(Color.Black.copy(alpha = 0.5f))
-            .border(1.dp, AdhxColors.White.copy(alpha = 0.14f), CircleShape)
+            .border(1.dp, AdhxColors.Ink.copy(alpha = 0.14f), CircleShape)
             .clickable(onClickLabel = WHO_CLOSE, role = Role.Button, onClick = onClick)
             .semantics { contentDescription = WHO_CLOSE },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Glyphs.Close, contentDescription = null, tint = AdhxColors.Cream, modifier = Modifier.size(18.dp))
+        Icon(Glyphs.Close, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -1888,8 +1903,8 @@ private fun WhoRow(faces: List<WhoFace>, server: String, onSaver: ((Saver) -> Un
                         }
                     }
                     if (face.watched) {
-                        Sticker(WatchedGrey, Modifier.align(Alignment.BottomStart).offset(x = (-7).dp, y = 6.dp)) {
-                            Icon(Glyphs.Eye, contentDescription = null, tint = AdhxColors.Cream, modifier = Modifier.size(12.dp))
+                        Sticker(AdhxColors.Line, Modifier.align(Alignment.BottomStart).offset(x = (-7).dp, y = 6.dp)) {
+                            Icon(Glyphs.Eye, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(12.dp))
                         }
                     }
                 }
@@ -1907,8 +1922,6 @@ private fun WhoRow(faces: List<WhoFace>, server: String, onSaver: ((Saver) -> Un
         }
     }
 }
-
-private val WatchedGrey = Color(0xFF4A453E)
 
 /** A 20dp round sticker on a face, with a black gap round it. */
 @Composable
@@ -1938,7 +1951,7 @@ private fun ReasonChip(text: String, face: Saver?, server: String, onClick: (() 
             .height(34.dp)
             .clip(RoundedCornerShape(50))
             .background(Color.Black.copy(alpha = 0.5f))
-            .border(1.dp, AdhxColors.White.copy(alpha = 0.14f), RoundedCornerShape(50))
+            .border(1.dp, AdhxColors.Ink.copy(alpha = 0.14f), RoundedCornerShape(50))
             .then(if (onClick != null) Modifier.clickable(onClickLabel = Copy.WHY_TITLE, onClick = onClick) else Modifier)
             .padding(start = if (face != null) 5.dp else 10.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1949,7 +1962,7 @@ private fun ReasonChip(text: String, face: Saver?, server: String, onClick: (() 
         } else {
             Icon(Glyphs.Heart, contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(15.dp))
         }
-        Text(text, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -2006,12 +2019,12 @@ private fun ScrubLine(
         val y = size.height / 2
         val x = fraction.coerceIn(0f, 1f) * size.width
         drawLine(track, Offset(thickness / 2, y), Offset(size.width - thickness / 2, y), thickness, StrokeCap.Round)
-        if (x > 0f) drawLine(AdhxColors.Cream, Offset(thickness / 2, y), Offset(x.coerceAtLeast(thickness / 2), y), thickness, StrokeCap.Round)
+        if (x > 0f) drawLine(AdhxColors.Ink, Offset(thickness / 2, y), Offset(x.coerceAtLeast(thickness / 2), y), thickness, StrokeCap.Round)
         if (enabled) {
             val r = (if (dragging) 9.dp else 7.dp).toPx()
             val at = Offset(SeekTrack.thumbCenter(fraction, size.width, r), y)
             drawCircle(Color.Black.copy(alpha = 0.35f), r + 1.dp.toPx(), at + Offset(0f, 1.dp.toPx()))
-            drawCircle(AdhxColors.Cream, r, at)
+            drawCircle(AdhxColors.Ink, r, at)
         }
     }
 }
@@ -2035,7 +2048,7 @@ private fun Glyph(painter: Painter, label: String, onClick: () -> Unit) {
                 .offset(y = 1.dp)
                 .blur(3.dp, BlurredEdgeTreatment.Unbounded),
         )
-        Icon(painter, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(24.dp))
+        Icon(painter, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(24.dp))
     }
 }
 
@@ -2043,13 +2056,13 @@ private fun Glyph(painter: Painter, label: String, onClick: () -> Unit) {
 @Composable
 private fun ScrubTime(elapsedMs: Long, totalMs: Long, modifier: Modifier = Modifier) {
     Row(modifier, verticalAlignment = Alignment.Bottom) {
-        Text(clock(elapsedMs), style = OverMedia, fontSize = 34.sp, fontWeight = FontWeight.Bold, color = AdhxColors.White)
+        Text(clock(elapsedMs), style = OverMedia, fontSize = 34.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Ink)
         Spacer(Modifier.width(8.dp))
         Text(
             "/ ${clock(totalMs)}",
             style = OverMedia,
             fontSize = 17.sp,
-            color = AdhxColors.Cream,
+            color = AdhxColors.Ink,
             modifier = Modifier.padding(bottom = 5.dp),
         )
     }
@@ -2062,7 +2075,7 @@ private fun ProgressLine(fraction: () -> Float, modifier: Modifier = Modifier) {
         modifier
             .fillMaxWidth()
             .height(3.dp)
-            .background(AdhxColors.White.copy(alpha = 0.2f)),
+            .background(AdhxColors.Ink.copy(alpha = 0.2f)),
     ) {
         Box(
             Modifier
@@ -2094,7 +2107,7 @@ fun BarButton(painter: Painter, label: String, onClick: () -> Unit, background: 
             .semantics { contentDescription = label },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(painter, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(20.dp))
+        Icon(painter, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(20.dp))
     }
 }
 

@@ -18,13 +18,13 @@ struct PeopleListView: View {
                     .accessibilityAddTraits(.isHeader)
                 Text("Everyone here sees each other’s saves, except the ones kept just for them.")
                     .font(Theme.sans(14))
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
 
                 if settings.unsupported {
                     Text("Your ADHX needs an update to show this.")
                         .font(Theme.sans(15))
-                        .foregroundStyle(Theme.muted)
+                        .foregroundStyle(Theme.inkSoft)
                 } else if let error = settings.loadError, settings.people == nil {
                     Text(error)
                         .font(Theme.sans(15))
@@ -55,7 +55,7 @@ struct PeopleListView: View {
             .padding(.bottom, 24)
         }
         .refreshable { await settings.load() }
-        .background(Theme.app.ignoresSafeArea())
+        .background(Theme.bg.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .inviteSheet(isPresented: $inviting)
         .fullScreenCover(item: $friend) { saver in
@@ -86,23 +86,23 @@ struct PeopleListView: View {
                         if let chip = chip(person) {
                             Text(chip)
                                 .font(Theme.sans(11, .heavy))
-                                .foregroundStyle(person.banned ? Theme.warn : Theme.faint)
+                                .foregroundStyle(person.banned ? Theme.warn : Theme.inkFaint)
                                 .padding(.horizontal, 7)
                                 .frame(minHeight: 20)
-                                .overlay(Capsule(style: .continuous).strokeBorder(person.banned ? Theme.warn : Theme.hairline,
+                                .overlay(Capsule(style: .continuous).strokeBorder(person.banned ? Theme.warn : Theme.line,
                                                                 lineWidth: 1))
                         }
                     }
                     Text(detail(person))
                         .font(Theme.sans(13))
-                        .foregroundStyle(Theme.faint)
+                        .foregroundStyle(Theme.inkFaint)
                         .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if opens {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Theme.faint)
+                        .foregroundStyle(Theme.inkFaint)
                 }
             }
             .padding(.horizontal, 14)

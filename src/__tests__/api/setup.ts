@@ -7,6 +7,7 @@ import { BOARD_FEATURES_DDL } from '@/lib/sends/schema-sql'
 import { CHANNEL_VISUAL_DDL } from '@/lib/channels/visual-schema'
 import { ADMIN_COUNTS_DDL } from '@/lib/admin/schema-sql'
 import { POST_REACTIONS_DDL } from '@/lib/reactions/schema-sql'
+import { POST_WATCH_COUNTS_DDL } from '@/lib/watch/schema-sql'
 
 /**
  * Shared test database setup for API tests.
@@ -420,6 +421,7 @@ ${BOARD_FEATURES_DDL}
 ${CHANNEL_VISUAL_DDL}
 ${ADMIN_COUNTS_DDL}
 ${POST_REACTIONS_DDL}
+${POST_WATCH_COUNTS_DDL}
 `
 
 export interface TestDbInstance {

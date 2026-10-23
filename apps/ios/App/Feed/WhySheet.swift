@@ -71,7 +71,7 @@ struct WhySheet: View {
                 }
                 Text("No engagement bait. These are the only reasons.")
                     .font(Theme.sans(13))
-                    .foregroundStyle(Theme.faint)
+                    .foregroundStyle(Theme.inkFaint)
                     .frame(maxWidth: .infinity)
                     .multilineTextAlignment(.center)
                     .padding(.top, 2)
@@ -101,12 +101,12 @@ struct WhySheet: View {
                     .lineLimit(1)
                 Text(postLine)
                     .font(Theme.sans(12))
-                    .foregroundStyle(Theme.faint)
+                    .foregroundStyle(Theme.inkFaint)
             }
             Spacer(minLength: 0)
         }
         .padding(8)
-        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.app))
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.bg))
         .accessibilityElement(children: .combine)
     }
 
@@ -214,7 +214,7 @@ struct WhoseSaves: View {
             Text(caps ? "WHOSE SAVES" : "Whose saves")
                 .font(Theme.sans(13, caps ? .heavy : .semibold))
                 .tracking(caps ? 0.78 : 0)
-                .foregroundStyle(caps ? Theme.faint : Theme.muted)
+                .foregroundStyle(caps ? Theme.inkFaint : Theme.inkSoft)
             HStack(spacing: 4) {
                 option("Everyone", on: mode == .new || mode == .everyone) {
                     choose(mode == .everyone ? .everyone : .new)
@@ -223,7 +223,7 @@ struct WhoseSaves: View {
                 option("Mine", on: mode == .mine) { choose(.mine) }
             }
             .padding(4)
-            .background(Capsule(style: .continuous).fill(caps ? Theme.plate : Theme.app))
+            .background(Capsule(style: .continuous).fill(caps ? Theme.plate : Theme.bg))
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Whose saves")
         }
@@ -233,11 +233,11 @@ struct WhoseSaves: View {
         Button(action: action) {
             Text(title)
                 .font(Theme.sans(14, on ? .heavy : .semibold))
-                .foregroundStyle(on ? .black : Theme.ink)
+                .foregroundStyle(on ? Theme.onCream : Theme.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 .frame(maxWidth: .infinity, minHeight: caps ? 40 : 44)
-                .background(Capsule(style: .continuous).fill(on ? Theme.ink : .clear))
+                .background(Capsule(style: .continuous).fill(on ? Theme.cream : .clear))
                 .contentShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
@@ -283,7 +283,7 @@ struct FeedFilterSheet: View {
                     if let newCount {
                         Text("\(newCount) new")
                             .font(Theme.sans(13))
-                            .foregroundStyle(Theme.faint)
+                            .foregroundStyle(Theme.inkFaint)
                     }
                 }
                 VStack(spacing: 0) {
@@ -300,7 +300,7 @@ struct FeedFilterSheet: View {
                 if let waiting = waitingLine {
                     Text(waiting)
                         .font(Theme.sans(13))
-                        .foregroundStyle(Theme.faint)
+                        .foregroundStyle(Theme.inkFaint)
                         .lineSpacing(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -341,7 +341,7 @@ struct FeedFilterSheet: View {
             HStack(spacing: 14) {
                 Image(systemName: icon(type))
                     .font(.system(size: 19, weight: .regular))
-                    .foregroundStyle(on ? Theme.accent : Theme.muted)
+                    .foregroundStyle(on ? Theme.accent : Theme.inkSoft)
                     .frame(width: 24)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
@@ -350,7 +350,7 @@ struct FeedFilterSheet: View {
                         .foregroundStyle(Theme.ink)
                     Text(detail(type))
                         .font(Theme.sans(13))
-                        .foregroundStyle(Theme.faint)
+                        .foregroundStyle(Theme.inkFaint)
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
                 }
@@ -454,10 +454,10 @@ private struct WeightButton: View {
                 .lineLimit(2)
                 .minimumScaleFactor(0.85)
         }
-        .foregroundStyle(on ? .black : Theme.ink)
+        .foregroundStyle(on ? Theme.onCream : Theme.ink)
         .padding(.horizontal, 8)
         .frame(maxWidth: .infinity, minHeight: 48)
-        .background(Capsule(style: .continuous).fill(on ? Theme.ink : Theme.plate))
+        .background(Capsule(style: .continuous).fill(on ? Theme.cream : Theme.plate))
         .overlay(Capsule(style: .continuous).strokeBorder(.white.opacity(on ? 0 : 0.12)))
         .contentShape(Capsule(style: .continuous))
         .opacity(busy ? 0.6 : 1)
@@ -559,7 +559,7 @@ struct CaughtUpView: View {
                 Text("That’s everything your people saved since you last looked.")
                     .font(Theme.sans(16))
                     .lineSpacing(4)
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.inkSoft)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 300)
                     .padding(.top, 6)
@@ -607,7 +607,7 @@ struct CaughtUpView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             ZStack {
-                Theme.app
+                Theme.bg
                 RadialGradient(colors: [Theme.accent.opacity(0.12), .clear], center: UnitPoint(x: 0.5, y: 0.35),
                                startRadius: 0, endRadius: 260)
             }
@@ -649,7 +649,7 @@ struct CaughtUpView: View {
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Theme.faint)
+                    .foregroundStyle(Theme.inkFaint)
             }
             .padding(14)
             .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Theme.surface))

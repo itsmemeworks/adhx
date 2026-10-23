@@ -193,7 +193,7 @@ struct PlayerView: View {
         .scrollPosition(id: $current)
         .scrollIndicators(.hidden)
         .ignoresSafeArea()
-        .background(Color.black.ignoresSafeArea())
+        .background(Theme.stage.ignoresSafeArea())
         .onChange(of: current, initial: true) { _, key in showCurrent(key) }
         .onChange(of: posts.map(\.key)) { _, keys in
             // A reload that no longer has the post on screen starts at the top.
@@ -392,7 +392,7 @@ private struct PostPage: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            Color.black
+            Theme.stage
             stage
             if !clean {
                 let scrubbing = onScreen && playback.scrubTime != nil
@@ -623,7 +623,7 @@ private struct PostPage: View {
             VStack(alignment: .leading, spacing: 0) {
                 if let moment = extras.inMoment {
                     HStack(spacing: 6) {
-                        Text("In").foregroundStyle(Theme.muted)
+                        Text("In").foregroundStyle(Theme.inkSoft)
                         Text(moment).font(Theme.sans(12, .heavy))
                     }
                     .font(Theme.sans(12, .semibold))
@@ -704,7 +704,7 @@ private struct PostPage: View {
             RailButton(accessibility: "The original post on \(Network.name(post.platform))") {
                 original = true
             } icon: {
-                NetworkMark(platform: post.platform, size: 22, color: Color(hex: 0xF4F1EA))
+                NetworkMark(platform: post.platform, size: 22, color: Theme.ink)
             }
             .accessibilityHint("Who posted it, and everything they wrote")
             RailButton(accessibility: "More for this post") {
@@ -864,7 +864,7 @@ private struct MoreSheet: View {
                         NetworkMark(platform: post.platform, size: 14)
                         Text(networkLine)
                             .font(Theme.sans(13, .bold))
-                            .foregroundStyle(Theme.muted)
+                            .foregroundStyle(Theme.inkSoft)
                     }
                     Text(post.author.handle.hasPrefix("@") ? post.author.handle : "@\(post.author.handle)")
                         .font(Theme.sans(16, .heavy))
@@ -1002,7 +1002,7 @@ private struct MoreSheet: View {
                     .foregroundStyle(.white)
                 Text(detail)
                     .font(Theme.sans(13))
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.inkSoft)
                     .lineLimit(1)
             }
             Spacer(minLength: 0)
@@ -1052,12 +1052,12 @@ private struct SavedSheet: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Your note")
                     .font(Theme.sans(13, .semibold))
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.inkSoft)
                     .accessibilityHidden(true)
                 HStack(spacing: 8) {
                     TextField("", text: $note,
                               prompt: Text(privacy.isPrivate(post) ? "A note to future you" : "Say why they’ll like it")
-                                  .foregroundColor(Theme.faint))
+                                  .foregroundColor(Theme.inkFaint))
                         .font(Theme.sans(16))
                         .foregroundStyle(Theme.ink)
                         .tint(Theme.accent)
@@ -1067,7 +1067,7 @@ private struct SavedSheet: View {
                         .onChange(of: note) { _, text in if text.count > 140 { note = String(text.prefix(140)) } }
                         .padding(.horizontal, 16)
                         .frame(height: 48)
-                        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.app))
+                        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.bg))
                         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .strokeBorder(typing ? Theme.accent.opacity(0.6) : .white.opacity(0.12), lineWidth: 1))
                         .accessibilityLabel("Your note")
@@ -1203,10 +1203,10 @@ private struct WhyChip: View {
                     .lineLimit(1)
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.inkSoft)
             }
             .font(Theme.sans(14, .bold))
-            .foregroundStyle(Color(hex: 0xF4F1EA))
+            .foregroundStyle(Theme.ink)
             .padding(.leading, 10)
             .padding(.trailing, 14)
             .frame(height: 40)
@@ -1376,7 +1376,7 @@ private struct RailButton<Icon: View>: View {
     var body: some View {
         Button(action: action) {
             icon()
-                .foregroundStyle(on ? Theme.accent : Color(hex: 0xF4F1EA))
+                .foregroundStyle(on ? Theme.accent : Theme.ink)
                 .frame(width: 52, height: 52)
                 .frosted(Circle(), dim: on ? 0.6 : 0.45)
                 .overlay(Circle().strokeBorder(Theme.accent, lineWidth: on ? 2 : 0))
@@ -1395,13 +1395,13 @@ private struct Poster: View {
     var body: some View {
         // The picture fills a fixed box: a filled image would otherwise size
         // the whole page past the screen and push the caption off it.
-        Color.black
+        Theme.stage
             .overlay {
                 AsyncImage(url: url) { phase in
                     if let image = phase.image {
                         image.resizable().aspectRatio(contentMode: fill ? .fill : .fit)
                     } else {
-                        Color.black
+                        Theme.stage
                     }
                 }
             }
@@ -1440,7 +1440,7 @@ private struct Album: View {
             } else if phase.error != nil {
                 Text("This photo couldn’t load.")
                     .font(Theme.sans(14))
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.inkSoft)
             } else {
                 RingSpinner().frame(width: 30, height: 30)
             }
@@ -1492,7 +1492,7 @@ private struct WordsCard: View {
         .padding(.top, 110)
         .padding(.bottom, 150)
         .background(
-            LinearGradient(colors: [Theme.raised, Theme.app], startPoint: .top, endPoint: .bottom)
+            LinearGradient(colors: [Theme.raised, Theme.bg], startPoint: .top, endPoint: .bottom)
         )
         .clipped()
         .accessibilityElement(children: .contain)
@@ -1522,7 +1522,7 @@ private struct Words: View {
                 } else if let description = article.description, !description.isEmpty {
                     Text(description)
                         .font(Theme.sans(17))
-                        .foregroundStyle(Theme.muted)
+                        .foregroundStyle(Theme.inkSoft)
                 }
             }
             if !post.text.isEmpty, post.article?.body?.isEmpty ?? true {
@@ -1557,7 +1557,7 @@ struct ReaderView: View {
                         NetworkMark(platform: post.platform, size: 16)
                         Text(post.author.handle.hasPrefix("@") ? post.author.handle : "@\(post.author.handle)")
                             .font(Theme.sans(15, .heavy))
-                            .foregroundStyle(Theme.muted)
+                            .foregroundStyle(Theme.inkSoft)
                     }
                     Words(post: post, reading: true)
                 }
@@ -1574,10 +1574,10 @@ struct ReaderView: View {
             }
             .coordinateSpace(name: "reader")
         }
-        .background(Theme.app.ignoresSafeArea())
+        .background(Theme.bg.ignoresSafeArea())
         .overlay(alignment: .top) {
             // Words scroll away under a soft fade, not under the button.
-            LinearGradient(colors: [Theme.app, Theme.app.opacity(0)], startPoint: .top, endPoint: .bottom)
+            LinearGradient(colors: [Theme.bg, Theme.bg.opacity(0)], startPoint: .top, endPoint: .bottom)
                 .frame(height: 72)
                 .allowsHitTesting(false)
         }
@@ -1601,7 +1601,7 @@ struct ReaderView: View {
             .padding(.top, 14)
         }
         .presentationDragIndicator(.hidden)
-        .presentationBackground(Theme.app)
+        .presentationBackground(Theme.bg)
     }
 }
 
@@ -1740,11 +1740,11 @@ private struct OriginalSheet: View {
                         HStack(spacing: 6) {
                             // The network's mark shows once: here only when their picture leads.
                             if avatarURL != nil {
-                                NetworkMark(platform: post.platform, size: 13, color: Theme.muted)
+                                NetworkMark(platform: post.platform, size: 13, color: Theme.inkSoft)
                             }
                             Text([handle, posted.map { "Posted \($0)" } ?? network].compactMap { $0 }.joined(separator: " · "))
                                 .font(Theme.sans(13))
-                                .foregroundStyle(Theme.muted)
+                                .foregroundStyle(Theme.inkSoft)
                                 .lineLimit(1)
                         }
                     }
@@ -1766,7 +1766,7 @@ private struct OriginalSheet: View {
                 } else {
                     Text("No words with this one, just the \(post.kind == "photo" ? "picture" : post.kind == "audio" ? "sound" : "video").")
                         .font(Theme.sans(15))
-                        .foregroundStyle(Theme.muted)
+                        .foregroundStyle(Theme.inkSoft)
                 }
 
                 if let source = post.sourceUrl.flatMap(URL.init(string:)) {

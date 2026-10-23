@@ -126,10 +126,10 @@ fun CantPlayCard(
             fontFamily = SerifFamily,
             fontSize = 30.sp,
             lineHeight = 32.sp,
-            color = AdhxColors.White,
+            color = AdhxColors.Ink,
             modifier = Modifier.semantics { heading() },
         )
-        Text(CantPlay.message(trouble, platform, words), fontSize = 15.sp, lineHeight = 21.sp, color = AdhxColors.Cream)
+        Text(CantPlay.message(trouble, platform, words), fontSize = 15.sp, lineHeight = 21.sp, color = AdhxColors.Ink)
         if (trouble == Trouble.GONE && !sourceUrl.isNullOrBlank()) {
             Text(
                 "Open on $network",
@@ -147,7 +147,7 @@ fun CantPlayCard(
                 Text(
                     "Playing the next one in $left",
                     fontSize = 14.sp,
-                    color = AdhxColors.Muted,
+                    color = AdhxColors.InkSoft,
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
             }
@@ -191,7 +191,7 @@ private fun SmallPill(text: String, primary: Boolean, enabled: Boolean = true, o
                 if (primary) {
                     Modifier.background(AdhxColors.Accent)
                 } else {
-                    Modifier.border(1.dp, AdhxColors.White.copy(alpha = 0.3f), PillShape)
+                    Modifier.border(1.dp, AdhxColors.Ink.copy(alpha = 0.3f), PillShape)
                 },
             )
             .clickable(enabled = enabled, onClick = onClick)
@@ -202,7 +202,7 @@ private fun SmallPill(text: String, primary: Boolean, enabled: Boolean = true, o
             text,
             fontSize = 14.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = if (primary) Color.Black else AdhxColors.Cream,
+            color = if (primary) Color.Black else AdhxColors.Ink,
             maxLines = 1,
         )
     }

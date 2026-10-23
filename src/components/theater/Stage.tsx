@@ -125,7 +125,7 @@ export function Stage({
   if (!item) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-[#08070a]">
-        <p className="text-sm text-white/40">Nothing playing</p>
+        <p className="text-sm text-nx-ink/40">Nothing playing</p>
       </div>
     )
   }
@@ -241,7 +241,7 @@ function StagePoster({ item, poster }: { item: TheaterItem; poster: string | nul
       ) : null}
 
       <div className="relative flex max-w-xl flex-col items-center gap-4 px-6 text-center">
-        <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md">
+        <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-nx-ink backdrop-blur-md">
           <PlatformGlyph platform={item.platform} size={20} />
         </span>
         {title && <StageHeadline>{title}</StageHeadline>}

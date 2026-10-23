@@ -83,12 +83,6 @@ import com.adhx.share.ui.SettingsCopy
 import com.adhx.share.ui.SquircleShape
 import com.adhx.share.ui.faceColor
 
-/** The red of Remove and Decline. */
-private val Danger = Color(0xFFFF8F7A)
-
-/** Green: connected. */
-private val Online = Color(0xFF7FD1AE)
-
 /** What Settings can open. */
 class SettingsActions(
     val onBack: () -> Unit,
@@ -141,7 +135,7 @@ fun SettingsScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .background(AdhxColors.Background)
+            .background(AdhxColors.Bg)
             .systemBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
@@ -157,10 +151,10 @@ fun SettingsScreen(
                     .semantics { contentDescription = SettingsCopy.BACK },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Glyphs.Back, contentDescription = null, tint = AdhxColors.Cream, modifier = Modifier.size(20.dp))
+                Icon(Glyphs.Back, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.width(10.dp))
-            Text(SettingsCopy.TITLE, fontFamily = SerifFamily, fontSize = 32.sp, color = AdhxColors.White, modifier = Modifier.semantics { heading() })
+            Text(SettingsCopy.TITLE, fontFamily = SerifFamily, fontSize = 32.sp, color = AdhxColors.Ink, modifier = Modifier.semantics { heading() })
         }
 
         // You
@@ -196,7 +190,7 @@ fun SettingsScreen(
                             .clearAndSetSemantics { },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.Filled.Edit, contentDescription = null, tint = AdhxColors.Black, modifier = Modifier.size(11.dp))
+                        Icon(Icons.Filled.Edit, contentDescription = null, tint = AdhxColors.OnAccent, modifier = Modifier.size(11.dp))
                     }
                 }
                 Spacer(Modifier.width(14.dp))
@@ -205,14 +199,14 @@ fun SettingsScreen(
                         you?.label ?: username ?: "You",
                         fontSize = 19.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = AdhxColors.White,
+                        color = AdhxColors.Ink,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         SettingsCopy.youLine(username, you?.saves),
                         fontSize = 13.sp,
-                        color = AdhxColors.Faint,
+                        color = AdhxColors.InkFaint,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -295,9 +289,9 @@ fun SettingsScreen(
                         .clip(CircleShape)
                         .background(
                             when (reach) {
-                                Reach.Connected -> Online
+                                Reach.Connected -> AdhxColors.Good
                                 Reach.Unreachable -> AdhxColors.Warn
-                                Reach.Checking -> AdhxColors.Faint
+                                Reach.Checking -> AdhxColors.InkFaint
                             },
                         ),
                 )
@@ -308,7 +302,7 @@ fun SettingsScreen(
                         fontSize = 14.sp,
                         lineHeight = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = AdhxColors.White,
+                        color = AdhxColors.Ink,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -316,7 +310,7 @@ fun SettingsScreen(
                         Links.host(connection.server),
                         fontSize = 12.sp,
                         lineHeight = 16.sp,
-                        color = AdhxColors.Faint,
+                        color = AdhxColors.InkFaint,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -341,7 +335,7 @@ fun SettingsScreen(
                 minHeight = 44.dp,
                 modifier = Modifier.fillMaxWidth(),
             )
-            notice?.let { Text(it, fontSize = 13.sp, color = AdhxColors.Faint) }
+            notice?.let { Text(it, fontSize = 13.sp, color = AdhxColors.InkFaint) }
         }
 
         // Which release this phone runs, to match against the GitHub tags.
@@ -351,7 +345,7 @@ fun SettingsScreen(
                     "ADHX Share $it",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = AdhxColors.Muted,
+                    color = AdhxColors.InkSoft,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                 )
@@ -360,7 +354,7 @@ fun SettingsScreen(
         Text(
             SettingsCopy.TAGLINE,
             fontSize = 12.sp,
-            color = AdhxColors.Faint,
+            color = AdhxColors.InkFaint,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -395,8 +389,8 @@ fun SettingsScreen(
             onDismissRequest = { confirmRemove = false },
             shape = SquircleShape(28.dp),
             containerColor = AdhxColors.Surface,
-            titleContentColor = AdhxColors.White,
-            textContentColor = AdhxColors.Muted,
+            titleContentColor = AdhxColors.Ink,
+            textContentColor = AdhxColors.InkSoft,
             title = { Text(SettingsCopy.REMOVE_TITLE) },
             text = { Text(SettingsCopy.REMOVE_BODY) },
             confirmButton = {
@@ -404,12 +398,12 @@ fun SettingsScreen(
                     confirmRemove = false
                     vm.removeThisPhone(onForgotten = prefs::forgetAccount)
                 }) {
-                    Text(SettingsCopy.REMOVE, color = AdhxColors.Warn, fontWeight = FontWeight.ExtraBold)
+                    Text(SettingsCopy.REMOVE, color = AdhxColors.Danger, fontWeight = FontWeight.ExtraBold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmRemove = false }) {
-                    Text(SettingsCopy.CANCEL, color = AdhxColors.Cream, fontWeight = FontWeight.Bold)
+                    Text(SettingsCopy.CANCEL, color = AdhxColors.Ink, fontWeight = FontWeight.Bold)
                 }
             },
         )
@@ -449,7 +443,7 @@ private fun WaitingCard(
                     .padding(horizontal = 7.dp, vertical = 2.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(requests.size.toString(), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Black)
+                Text(requests.size.toString(), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.OnAccent)
             }
         }
         requests.forEachIndexed { i, request ->
@@ -459,8 +453,8 @@ private fun WaitingCard(
                 Avatar(request.username, request.label, null, server, 44.dp)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(SettingsCopy.wantsIn(request), fontSize = 15.sp, lineHeight = 19.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White)
-                    Text(SettingsCopy.requestLine(request), fontSize = 13.sp, lineHeight = 17.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(SettingsCopy.wantsIn(request), fontSize = 15.sp, lineHeight = 19.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Ink)
+                    Text(SettingsCopy.requestLine(request), fontSize = 13.sp, lineHeight = 17.sp, color = AdhxColors.InkFaint, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 if (busy) {
                     CircularProgressIndicator(Modifier.size(20.dp), color = AdhxColors.Accent, strokeWidth = 2.dp)
@@ -505,7 +499,7 @@ private fun QuietButton(text: String, enabled: Boolean = true, onClick: () -> Un
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Danger, maxLines = 1)
+        Text(text, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Danger, maxLines = 1)
     }
 }
 
@@ -524,7 +518,7 @@ private fun PillButton(
         modifier
             .height(height.dp)
             .clip(shape)
-            .then(if (filled) Modifier.background(AdhxColors.Accent) else Modifier.border(1.dp, AdhxColors.Hairline, shape))
+            .then(if (filled) Modifier.background(AdhxColors.Accent) else Modifier.border(1.dp, AdhxColors.Line, shape))
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -532,7 +526,7 @@ private fun PillButton(
             text,
             fontSize = fontSize.sp,
             fontWeight = if (filled) FontWeight.ExtraBold else FontWeight.Bold,
-            color = if (filled) AdhxColors.Black else AdhxColors.Cream,
+            color = if (filled) AdhxColors.OnAccent else AdhxColors.Ink,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 14.dp),
@@ -556,7 +550,7 @@ private fun Divider() = HorizontalDivider(thickness = 1.dp, color = Color.White.
 
 @Composable
 private fun Value(text: String) {
-    Text(text, fontSize = 14.sp, color = AdhxColors.Faint, maxLines = 1)
+    Text(text, fontSize = 14.sp, color = AdhxColors.InkFaint, maxLines = 1)
 }
 
 /** A row that opens something: the title (and a line), what it's set to, and a chevron. */
@@ -577,14 +571,14 @@ private fun NavRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Cream)
-            note?.let { Text(it, fontSize = 12.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Ink)
+            note?.let { Text(it, fontSize = 12.sp, color = AdhxColors.InkFaint, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         }
         trailing()
         Icon(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
-            tint = AdhxColors.Faint,
+            tint = AdhxColors.InkFaint,
             modifier = Modifier.size(18.dp),
         )
     }
@@ -604,8 +598,8 @@ private fun SwitchRow(title: String, on: Boolean, onChange: (Boolean) -> Unit, n
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Cream)
-            note?.let { Text(it, fontSize = 12.sp, color = AdhxColors.Faint) }
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Ink)
+            note?.let { Text(it, fontSize = 12.sp, color = AdhxColors.InkFaint) }
         }
         AdhxSwitch(on)
     }

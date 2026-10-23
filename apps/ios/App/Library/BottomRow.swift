@@ -140,7 +140,7 @@ private struct StickeredFace: View {
             }
             .overlay(alignment: .bottomLeading) {
                 if person.watched {
-                    sticker(Color(hex: 0x4A453E)) {
+                    sticker(Theme.line) {
                         Image(systemName: "eye").font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.ink)
                     }
                     .offset(x: -7, y: 6)

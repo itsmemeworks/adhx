@@ -39,11 +39,11 @@ export function SharedSavesNotice() {
   return (
     <div
       role="note"
-      className="mb-5 flex items-center gap-3.5 rounded-[22px] bg-[#e4dac8] py-2.5 pl-[18px] pr-2.5 text-[#141414] md:min-h-16"
+      className="mb-5 flex items-center gap-3.5 rounded-[22px] bg-nx-paper py-2.5 pl-[18px] pr-2.5 text-nx-paper-ink md:min-h-16"
     >
       <span
         aria-hidden
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#141414]/[0.08]"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-nx-paper-ink/[0.08]"
       >
         <Users className="h-5 w-5" strokeWidth={2} />
       </span>
@@ -55,7 +55,7 @@ export function SharedSavesNotice() {
         type="button"
         onClick={close}
         // 22 px corners, 10 px in: 12 px.
-        className="flex h-11 shrink-0 items-center whitespace-nowrap rounded-[12px] bg-[#141414] px-[22px] text-[15px] font-extrabold text-nx-cream"
+        className="flex h-11 shrink-0 items-center whitespace-nowrap rounded-[12px] bg-nx-paper-ink px-[22px] text-[15px] font-extrabold text-nx-cream"
       >
         Got it
       </button>

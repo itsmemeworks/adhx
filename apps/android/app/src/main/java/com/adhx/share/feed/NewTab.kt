@@ -182,11 +182,11 @@ fun NewTab(
     }
 
     when {
-        ui.items.isEmpty() && (!ui.loadedOnce || ui.loading) -> Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
+        ui.items.isEmpty() && (!ui.loadedOnce || ui.loading) -> Box(Modifier.fillMaxSize().background(AdhxColors.Bg)) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Spinner(size = 34.dp, stroke = 3.dp) }
             header(null, true, null)
         }
-        ui.items.isEmpty() && ui.error != null -> Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
+        ui.items.isEmpty() && ui.error != null -> Box(Modifier.fillMaxSize().background(AdhxColors.Bg)) {
             Column(
                 Modifier
                     .fillMaxSize()
@@ -194,7 +194,7 @@ fun NewTab(
                     .padding(start = 20.dp, end = 20.dp, top = 100.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Text(ui.error ?: Copy.FEED_CANT_LOAD, fontSize = 15.sp, lineHeight = 22.sp, color = AdhxColors.Muted)
+                Text(ui.error ?: Copy.FEED_CANT_LOAD, fontSize = 15.sp, lineHeight = 22.sp, color = AdhxColors.InkSoft)
                 OutlineButton("Try again", onClick = feed::reloadFeed, minHeight = 44.dp)
             }
             header(null, true, null)
@@ -370,19 +370,19 @@ private fun WhySheet(
                     fontFamily = SerifFamily,
                     fontSize = 40.sp,
                     lineHeight = 40.sp,
-                    color = AdhxColors.White,
+                    color = AdhxColors.Ink,
                     modifier = Modifier.weight(1f).semantics { heading() },
                 )
                 Box(
                     Modifier
                         .size(44.dp)
                         .clip(CircleShape)
-                        .background(AdhxColors.Card)
+                        .background(AdhxColors.Plate)
                         .clickable(onClickLabel = "Close") { scope.launch { state.hide() }.invokeOnCompletion { onDismiss() } }
                         .semantics { contentDescription = "Close" },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Glyphs.Close, contentDescription = null, tint = AdhxColors.Muted, modifier = Modifier.size(18.dp))
+                    Icon(Glyphs.Close, contentDescription = null, tint = AdhxColors.InkSoft, modifier = Modifier.size(18.dp))
                 }
             }
             PostSummary(post, server)
@@ -405,17 +405,17 @@ private fun WhySheet(
                             Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(if (i == 0) AdhxColors.Accent else AdhxColors.Card),
+                                .background(if (i == 0) AdhxColors.Accent else AdhxColors.Plate),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(whyIcon(reason.kind), contentDescription = null, tint = if (i == 0) Color.Black else AdhxColors.White, modifier = Modifier.size(20.dp))
+                            Icon(whyIcon(reason.kind), contentDescription = null, tint = if (i == 0) Color.Black else AdhxColors.Ink, modifier = Modifier.size(20.dp))
                         }
                         Text(
                             reason.text,
                             fontSize = 16.sp,
                             lineHeight = 21.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = AdhxColors.White,
+                            color = AdhxColors.Ink,
                             modifier = Modifier.weight(1f),
                         )
                         val like = reason.post?.takeIf { reason.kind == WhyKind.LIKE }
@@ -430,14 +430,14 @@ private fun WhySheet(
                 }
             }
             Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(Copy.WHOSE_SAVES, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Muted)
+                Text(Copy.WHOSE_SAVES, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.InkSoft)
                 Segmented(
                     options = Copy.WHOSE,
                     selected = whoseIndex(mode),
                     onSelect = { i ->
                         scope.launch { state.hide() }.invokeOnCompletion { onMode(WHOSE_MODES[i]) }
                     },
-                    background = AdhxColors.Background,
+                    background = AdhxColors.Bg,
                     fontSize = 14,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -467,20 +467,20 @@ private fun WhySheet(
                     .fillMaxWidth()
                     .height(48.dp)
                     .clip(RoundedCornerShape(50))
-                    .background(AdhxColors.Card)
+                    .background(AdhxColors.Plate)
                     .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(50))
                     .clickable { scope.launch { state.hide() }.invokeOnCompletion { onFilter() } },
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Glyphs.Sliders, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(18.dp))
+                Icon(Glyphs.Sliders, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(Copy.FILTER_TITLE, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White)
+                Text(Copy.FILTER_TITLE, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Ink)
             }
             Text(
                 Copy.WHY_NOTE,
                 fontSize = 13.sp,
-                color = AdhxColors.Faint,
+                color = AdhxColors.InkFaint,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
             )
@@ -529,7 +529,7 @@ private fun WeightButton(label: String, icon: androidx.compose.ui.graphics.vecto
         modifier
             .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(50))
-            .background(if (on) AdhxColors.Cream else AdhxColors.Button)
+            .background(if (on) AdhxColors.Cream else AdhxColors.Plate)
             .border(1.dp, Color.White.copy(alpha = if (on) 0f else 0.12f), RoundedCornerShape(50))
             .clickable(enabled = enabled, onClick = onClick)
             .semantics { selected = on }
@@ -537,14 +537,14 @@ private fun WeightButton(label: String, icon: androidx.compose.ui.graphics.vecto
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, contentDescription = null, tint = if (on) Color.Black else AdhxColors.Cream, modifier = Modifier.size(16.dp))
+        Icon(icon, contentDescription = null, tint = if (on) AdhxColors.OnCream else AdhxColors.Ink, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(8.dp))
         Text(
             label,
             fontSize = 14.sp,
             lineHeight = 18.sp,
             fontWeight = FontWeight.SemiBold,
-            color = if (on) Color.Black else AdhxColors.Cream,
+            color = if (on) AdhxColors.OnCream else AdhxColors.Ink,
             textAlign = TextAlign.Center,
         )
     }
@@ -559,7 +559,7 @@ private fun PostSummary(post: PhonePost, server: String) {
         Modifier
             .fillMaxWidth()
             .clip(SquircleShape(16.dp))
-            .background(AdhxColors.Background)
+            .background(AdhxColors.Bg)
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -579,7 +579,7 @@ private fun PostSummary(post: PhonePost, server: String) {
                 fontSize = 14.sp,
                 lineHeight = 18.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = AdhxColors.White,
+                color = AdhxColors.Ink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -587,7 +587,7 @@ private fun PostSummary(post: PhonePost, server: String) {
                 listOfNotNull(Networks.name(post.platform), Copy.shortAgoIso(post.savers.firstOrNull()?.savedAt ?: post.savedAt)).joinToString(" · "),
                 fontSize = 12.sp,
                 lineHeight = 16.sp,
-                color = AdhxColors.Faint,
+                color = AdhxColors.InkFaint,
             )
         }
     }
@@ -614,7 +614,7 @@ fun CaughtUp(
     Box(
         Modifier
             .fillMaxSize()
-            .background(AdhxColors.Background)
+            .background(AdhxColors.Bg)
             .drawBehind {
                 // A soft yellow glow behind Gob: 520×420 around a point 326dp down (under home's one-row header).
                 val center = androidx.compose.ui.geometry.Offset(size.width / 2, 326.dp.toPx())
@@ -699,7 +699,7 @@ fun CaughtUp(
                     fontFamily = SerifFamily,
                     fontSize = 50.sp,
                     lineHeight = 48.sp,
-                    color = AdhxColors.White,
+                    color = AdhxColors.Ink,
                     textAlign = TextAlign.Center,
                     // The note sits 14dp under the last line's CSS box, as on the boards.
                     modifier = Modifier.serifLineBox(50.sp, 48.sp, top = false),
@@ -714,7 +714,7 @@ fun CaughtUp(
                 },
                 fontSize = 16.sp,
                 lineHeight = 23.sp,
-                color = AdhxColors.Muted,
+                color = AdhxColors.InkSoft,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 14.dp).width(300.dp),
             )
@@ -752,9 +752,9 @@ private fun AgainButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Glyphs.Again, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(18.dp))
+        Icon(Glyphs.Again, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(8.dp))
-        Text(Copy.WATCH_AGAIN, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White, maxLines = 1)
+        Text(Copy.WATCH_AGAIN, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Ink, maxLines = 1)
     }
 }
 
@@ -765,7 +765,7 @@ private fun LiveButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
         modifier
             .height(48.dp)
             .clip(RoundedCornerShape(50))
-            .background(AdhxColors.Button)
+            .background(AdhxColors.Plate)
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp),
         horizontalArrangement = Arrangement.Center,
@@ -773,7 +773,7 @@ private fun LiveButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     ) {
         Box(Modifier.size(8.dp).clip(CircleShape).background(AdhxColors.Live))
         Spacer(Modifier.width(8.dp))
-        Text(Copy.SEE_LIVE, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Cream, maxLines = 1)
+        Text(Copy.SEE_LIVE, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Ink, maxLines = 1)
     }
 }
 
@@ -791,7 +791,7 @@ private fun WatchedCard(watched: List<PhonePost>, server: String, modifier: Modi
             .fillMaxWidth()
             .clip(SquircleShape(22.dp))
             .background(AdhxColors.Surface)
-            .border(1.dp, AdhxColors.White.copy(alpha = 0.08f), SquircleShape(22.dp))
+            .border(1.dp, AdhxColors.Ink.copy(alpha = 0.08f), SquircleShape(22.dp))
             .padding(14.dp)
             .semantics(mergeDescendants = true) { },
         verticalAlignment = Alignment.CenterVertically,
@@ -818,9 +818,9 @@ private fun WatchedCard(watched: List<PhonePost>, server: String, modifier: Modi
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (people.isNotEmpty()) Faces(people, server, size = 22.dp, ring = AdhxColors.Surface)
-            Text(line, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White)
+            Text(line, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Ink)
         }
-        Icon(Glyphs.Chevron, contentDescription = null, tint = AdhxColors.Faint, modifier = Modifier.size(16.dp))
+        Icon(Glyphs.Chevron, contentDescription = null, tint = AdhxColors.InkFaint, modifier = Modifier.size(16.dp))
     }
 }
 
@@ -832,14 +832,14 @@ private fun HiddenRow(line: String, onShow: () -> Unit, modifier: Modifier = Mod
             .fillMaxWidth()
             .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(50))
-            .border(1.dp, AdhxColors.White.copy(alpha = 0.14f), RoundedCornerShape(50))
+            .border(1.dp, AdhxColors.Ink.copy(alpha = 0.14f), RoundedCornerShape(50))
             .clickable(onClickLabel = Copy.SHOW_THEM, onClick = onShow)
             .padding(horizontal = 18.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(line, fontSize = 14.sp, color = AdhxColors.Muted)
-        Text(" · ", fontSize = 14.sp, color = AdhxColors.Faint)
+        Text(line, fontSize = 14.sp, color = AdhxColors.InkSoft)
+        Text(" · ", fontSize = 14.sp, color = AdhxColors.InkFaint)
         Text(Copy.SHOW_THEM, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Accent)
     }
 }

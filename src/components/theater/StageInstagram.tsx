@@ -242,14 +242,14 @@ export function StageInstagram({
     return (
       <div className="relative flex h-full w-full items-center justify-center bg-[#08070a]">
         <div className="relative flex h-full w-full max-w-[480px] flex-col items-center justify-center gap-4 px-4 pb-6 pt-24 lg:pt-6">
-          <p className="flex-none text-center text-sm text-white/70">
+          <p className="flex-none text-center text-sm text-nx-ink/70">
             We couldn’t load this video. Try the original post on Instagram.
           </p>
           <a
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-[44px] flex-none items-center gap-1.5 rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
+            className="inline-flex min-h-[44px] flex-none items-center gap-1.5 rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-nx-ink shadow-glow transition-opacity hover:opacity-90"
           >
             Open Instagram
             <ArrowRight size={15} />
@@ -286,7 +286,7 @@ export function StageInstagram({
         {phase === 'spinner' ? (
           <PostLoader variant="dark" size={48} decorative />
         ) : (
-          <span className="inline-flex min-h-[44px] items-center rounded-full bg-black/50 px-4 py-2 text-sm font-medium text-white/80 backdrop-blur-md">
+          <span className="inline-flex min-h-[44px] items-center rounded-full bg-black/50 px-4 py-2 text-sm font-medium text-nx-ink/80 backdrop-blur-md">
             starting…
           </span>
         )}

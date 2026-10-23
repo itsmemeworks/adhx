@@ -87,7 +87,7 @@ export function EveryoneBadge({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        'nx-plate pointer-events-none absolute flex h-6 items-center gap-1 rounded-full px-2 text-[11px] font-bold text-white',
+        'nx-plate pointer-events-none absolute flex h-6 items-center gap-1 rounded-full px-2 text-[11px] font-bold text-nx-ink',
         className,
       )}
     >
@@ -164,7 +164,7 @@ export function StrengthMeter({
       title={label}
       className={cn(
         'pointer-events-auto flex h-6 shrink-0 items-end gap-[3px] rounded-full px-[9px] pb-[6px] pt-1',
-        tone === 'plate' ? 'nx-plate' : 'bg-nx-ink/10',
+        tone === 'plate' ? 'nx-plate' : 'bg-nx-bg/10',
         className,
       )}
     >
@@ -178,10 +178,10 @@ export function StrengthMeter({
             i < bars
               ? tone === 'plate'
                 ? 'bg-nx-accent'
-                : 'bg-nx-ink'
+                : 'bg-nx-bg'
               : tone === 'plate'
                 ? 'bg-white/30'
-                : 'bg-nx-ink/25',
+                : 'bg-nx-bg/25',
           )}
         />
       ))}
@@ -190,7 +190,7 @@ export function StrengthMeter({
           aria-hidden
           className={cn(
             'ml-1 self-center text-[11px] font-bold leading-none',
-            tone === 'plate' ? 'text-white' : 'text-nx-ink',
+            tone === 'plate' ? 'text-nx-ink' : 'text-nx-bg',
           )}
         >
           {withLabel && where
@@ -207,7 +207,7 @@ export function WordsOnlyBadge({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        'nx-plate pointer-events-none absolute flex h-6 items-center rounded-full px-2 text-[11px] font-bold text-white',
+        'nx-plate pointer-events-none absolute flex h-6 items-center rounded-full px-2 text-[11px] font-bold text-nx-ink',
         className,
       )}
     >
@@ -257,7 +257,7 @@ export function tileWhere(item: SearchResultItem): string {
 }
 
 const CHIP =
-  'pointer-events-none absolute flex h-6 max-w-[calc(100%-16px)] items-center gap-1 whitespace-nowrap rounded-full bg-black/55 px-[9px] text-[11px] font-extrabold text-white backdrop-blur-md'
+  'pointer-events-none absolute flex h-6 max-w-[calc(100%-16px)] items-center gap-1 whitespace-nowrap rounded-full bg-black/55 px-[9px] text-[11px] font-extrabold text-nx-ink backdrop-blur-md'
 
 /**
  * One result in a grid of tiles: the picture, a chip in each top corner, and
@@ -360,7 +360,7 @@ export function ResultTile({
           <span>Everyone</span>
         </span>
       ) : (
-        <span className="truncate text-[12px] text-nx-soft">{metaLine}</span>
+        <span className="truncate text-[12px] text-nx-ink-soft">{metaLine}</span>
       )}
       {post.isPrivate && <PrivateLock tone="scrim" className="ml-auto" />}
     </span>
@@ -387,7 +387,7 @@ export function ResultTile({
     (badge || isNew) && (
       <span className="pointer-events-none absolute right-2.5 top-2.5 flex gap-1.5">
         {badge && (
-          <span className="flex h-6 items-center whitespace-nowrap rounded-full bg-black/55 px-[9px] text-[11px] font-extrabold tabular-nums text-white backdrop-blur-md">
+          <span className="flex h-6 items-center whitespace-nowrap rounded-full bg-black/55 px-[9px] text-[11px] font-extrabold tabular-nums text-nx-ink backdrop-blur-md">
             {badge}
           </span>
         )}
@@ -404,7 +404,7 @@ export function ResultTile({
   if (onCream) {
     const text = kind === 'article' ? articleHeadline(post) : postText(post)
     body = (
-      <span className={cn('flex flex-col gap-2 bg-nx-cream p-4 text-nx-ink', fill && 'h-full')}>
+      <span className={cn('flex flex-col gap-2 bg-nx-cream p-4 text-nx-bg', fill && 'h-full')}>
         <span className="flex items-center gap-2">
           <span className="min-w-0 flex-1 truncate text-[11px] font-bold">
             {author.handle || author.name}
@@ -444,7 +444,7 @@ export function ResultTile({
           )}
           {post.isPrivate && <PrivateLock tone="cream" />}
           {item.learning && (
-            <span className="flex h-6 items-center whitespace-nowrap rounded-full bg-nx-ink/10 px-2 text-[11px] font-bold">
+            <span className="flex h-6 items-center whitespace-nowrap rounded-full bg-nx-bg/10 px-2 text-[11px] font-bold">
               Words only
             </span>
           )}
@@ -484,7 +484,7 @@ export function ResultTile({
             )}
           />
         )}
-        <span className="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 bg-gradient-to-b from-transparent to-black/90 px-3 pb-3 pt-12 text-white">
+        <span className="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 bg-gradient-to-b from-transparent to-black/90 px-3 pb-3 pt-12 text-nx-ink">
           <span className="line-clamp-2 text-[14px] font-extrabold leading-[1.25] [text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">
             {tileTitle(item)}
           </span>

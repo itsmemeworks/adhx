@@ -16,6 +16,7 @@ import { BOARD_FEATURES_DDL } from '../sends/schema-sql'
 import { CHANNEL_VISUAL_DDL } from '../channels/visual-schema'
 import { ADMIN_COUNTS_DDL } from '../admin/schema-sql'
 import { POST_REACTIONS_DDL } from '../reactions/schema-sql'
+import { POST_WATCH_COUNTS_DDL } from '../watch/schema-sql'
 
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
 const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH || './drizzle'
@@ -1249,6 +1250,17 @@ try {
     '[migrate] FAILED creating reaction_counts / moment_log / post_reactions tables',
     error,
   )
+  db.close()
+  process.exit(1)
+}
+
+// Watch counts (plays, finishes, seconds per member, post and year). Never
+// pruned. User-linked, so it exists before the account guards below.
+try {
+  db.exec(POST_WATCH_COUNTS_DDL)
+  console.log('[migrate] Ensured post_watch_counts table')
+} catch (error) {
+  console.log('[migrate] FAILED creating post_watch_counts table', error)
   db.close()
   process.exit(1)
 }

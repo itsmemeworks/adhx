@@ -81,7 +81,7 @@ export function StageArticleVideoFade() {
  * only these are actually used across the 4 call sites.
  */
 const STAGE_ICON_BUTTON_CLASS =
-  'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 text-white disabled:opacity-70'
+  'inline-flex min-h-[44px] min-w-[44px] flex-none items-center justify-center rounded-full border border-white/25 text-nx-ink disabled:opacity-70'
 
 export interface StageIconButtonProps {
   href?: string
@@ -149,7 +149,7 @@ export function StageIconButton({
  * title). Always an `<h2>` with this exact class string.
  */
 export function StageHeadline({ children }: { children: ReactNode }) {
-  return <h2 className="font-serif text-2xl leading-tight text-white sm:text-3xl">{children}</h2>
+  return <h2 className="font-serif text-2xl leading-tight text-nx-ink sm:text-3xl">{children}</h2>
 }
 
 /**
@@ -165,7 +165,7 @@ export function StageCTA({ href }: { href: string }) {
   return (
     <a
       href={href}
-      className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
+      className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-nx-ink shadow-glow transition-opacity hover:opacity-90"
     >
       Open preview
       <ArrowRight size={15} />
@@ -200,8 +200,8 @@ export function StageAuthorRow({ item }: { item: TheaterItem }) {
     <>
       <AuthorAvatar src={item.authorAvatarUrl ?? undefined} author={item.author ?? ''} size="md" />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-base font-bold text-white">{authorName}</div>
-        {handle ? <div className="truncate font-mono text-sm text-white/50">@{handle}</div> : null}
+        <div className="truncate text-base font-bold text-nx-ink">{authorName}</div>
+        {handle ? <div className="truncate font-mono text-sm text-nx-ink/50">@{handle}</div> : null}
       </div>
     </>
   )

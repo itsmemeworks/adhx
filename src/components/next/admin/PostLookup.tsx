@@ -84,10 +84,10 @@ export function PostLookup({
           Look up
         </button>
       </form>
-      {loading && <span className="text-xs text-[#a39b8b]">Looking…</span>}
-      {notFound && <span className="text-xs text-[#ffb59a]">{notFound}</span>}
+      {loading && <span className="text-xs text-nx-ink-faint">Looking…</span>}
+      {notFound && <span className="text-xs text-nx-warn">{notFound}</span>}
       {post && (
-        <div className="flex items-center gap-3 rounded-2xl bg-[#262320] p-2.5">
+        <div className="flex items-center gap-3 rounded-2xl bg-nx-plate p-2.5">
           <Thumb
             src={post.listable ? (post.card?.thumbnail ?? post.thumbnailUrl) : null}
             size={52}
@@ -96,18 +96,18 @@ export function PostLookup({
             {post.listable ? (
               <Link
                 href={post.previewPath}
-                className="truncate text-sm font-extrabold text-[#f4f1ea] hover:underline"
+                className="truncate text-sm font-extrabold text-nx-ink hover:underline"
               >
                 {title?.split('\n')[0] || `A post on ${post.platform}`}
               </Link>
             ) : (
               <span className="text-sm font-extrabold">Only kept Just for me</span>
             )}
-            <span className="flex min-w-0 items-center gap-2 text-xs text-[#c9bfab]">
+            <span className="flex min-w-0 items-center gap-2 text-xs text-nx-ink-soft">
               <FaceStack faces={post.savers.slice(0, 3)} size={20} />
               <span className="truncate">{summary(post)}</span>
             </span>
-            {error && <span className="text-xs text-[#ff8a7a]">{error}</span>}
+            {error && <span className="text-xs text-nx-danger">{error}</span>}
           </span>
           <button
             type="button"
@@ -119,7 +119,7 @@ export function PostLookup({
           </button>
         </div>
       )}
-      {hint && !post && <span className="text-xs text-[#a39b8b]">{hint}</span>}
+      {hint && !post && <span className="text-xs text-nx-ink-faint">{hint}</span>}
     </div>
   )
 }

@@ -114,10 +114,10 @@ export function MomentAlerts() {
       role="status"
       className="pointer-events-none fixed inset-x-0 bottom-[84px] z-[80] flex justify-center px-4 md:bottom-6"
     >
-      <div className="pointer-events-auto flex max-w-full items-center gap-3 rounded-full border border-white/10 bg-[#1c1b19]/[0.97] py-2 pl-3 pr-2 font-nx-sans text-white shadow-[0_18px_50px_rgba(0,0,0,0.55)] backdrop-blur-md animate-nx-slide-in">
+      <div className="pointer-events-auto flex max-w-full items-center gap-3 rounded-full border border-white/10 bg-nx-sheet/[0.97] py-2 pl-3 pr-2 font-nx-sans text-nx-ink shadow-[0_18px_50px_rgba(0,0,0,0.55)] backdrop-blur-md animate-nx-slide-in">
         <span
           aria-hidden
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ff4d3d]/20 text-[#ff6b5c]"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-nx-live/20 text-nx-live"
         >
           <Radio className="h-4 w-4" strokeWidth={2.4} />
         </span>
@@ -133,7 +133,7 @@ export function MomentAlerts() {
           type="button"
           aria-label="Dismiss"
           onClick={() => done(shown)}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/70 hover:bg-white/10"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-nx-ink/70 hover:bg-white/10"
         >
           <X aria-hidden className="h-4 w-4" />
         </button>

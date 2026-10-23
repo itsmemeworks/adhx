@@ -123,7 +123,7 @@ export function LikeThumb({
       aria-label="Open the post you kept"
       className="shrink-0"
     >
-      <GobShape size={size} className="bg-[#2a2620]">
+      <GobShape size={size} className="bg-nx-raised">
         <NxImage src={post.posterUrl} alt="" className="h-full w-full object-cover" />
       </GobShape>
     </Link>
@@ -154,7 +154,7 @@ export function FeedSwitch({
     <div
       role="radiogroup"
       aria-label="Whose saves"
-      className={cn('flex shrink-0 gap-0.5 rounded-full bg-[#1c1b19] p-1', className)}
+      className={cn('flex shrink-0 gap-0.5 rounded-full bg-nx-sheet p-1', className)}
     >
       {SWITCH.map((option) => {
         const on = lit === option.mode
@@ -169,7 +169,7 @@ export function FeedSwitch({
             }}
             className={cn(
               'h-8 whitespace-nowrap rounded-full px-3 text-[13px] md:h-9 md:px-3.5',
-              on ? 'bg-nx-cream font-extrabold text-black' : 'font-semibold text-white/80',
+              on ? 'bg-nx-cream font-extrabold text-black' : 'font-semibold text-nx-ink/80',
             )}
           >
             {option.label}
@@ -226,7 +226,7 @@ export function FeedTypesControl({
         onClick={() => setOpen((o) => !o)}
         title={compact ? `What’s in your feed: ${summary}` : undefined}
         className={cn(
-          'flex h-10 min-w-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-[#1c1b19] px-3 text-[13px] font-bold text-white',
+          'flex h-10 min-w-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-nx-sheet px-3 text-[13px] font-bold text-nx-ink',
           compact ? 'h-12 w-12 bg-nx-surface px-0' : 'sm:px-3.5',
         )}
       >
@@ -239,11 +239,11 @@ export function FeedTypesControl({
           role="group"
           aria-label="What’s in your feed"
           className={cn(
-            'absolute right-0 top-full z-50 mt-2 flex w-[260px] flex-col gap-2 rounded-2xl bg-[#1c1b19] p-3 shadow-[0_10px_40px_rgba(0,0,0,0.5)]',
+            'absolute right-0 top-full z-50 mt-2 flex w-[260px] flex-col gap-2 rounded-2xl bg-nx-sheet p-3 shadow-[0_10px_40px_rgba(0,0,0,0.5)]',
             !compact && 'sm:left-0 sm:right-auto',
           )}
         >
-          <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-white/60">
+          <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-nx-ink/60">
             What’s in your feed
           </span>
           <div className="flex flex-wrap gap-1.5">
@@ -266,7 +266,7 @@ export function FeedTypesControl({
                   }
                   className={cn(
                     'flex h-9 items-center gap-1 rounded-full px-3 text-[13px] font-bold disabled:cursor-not-allowed',
-                    on ? 'bg-nx-cream text-black' : 'bg-white/10 text-white',
+                    on ? 'bg-nx-cream text-black' : 'bg-white/10 text-nx-ink',
                   )}
                 >
                   {on && <Check aria-hidden className="h-3.5 w-3.5" strokeWidth={3} />}
@@ -308,7 +308,7 @@ export function WhyChip({
     >
       <WhyLead post={post} size={22} className="h-4 w-4 shrink-0 text-nx-accent" />
       <span className="truncate">{label}</span>
-      {chevron && <ChevronRight aria-hidden className="h-3.5 w-3.5 shrink-0 text-white/70" />}
+      {chevron && <ChevronRight aria-hidden className="h-3.5 w-3.5 shrink-0 text-nx-ink/70" />}
     </button>
   )
 }
@@ -333,7 +333,7 @@ function RecapThumbs({ covers, tall = false }: { covers: readonly string[]; tall
         <span
           key={`${i}:${src}`}
           className={cn(
-            'relative block overflow-hidden border-2 border-nx-surface bg-[#262320]',
+            'relative block overflow-hidden border-2 border-nx-surface bg-nx-plate',
             tall ? 'h-[58px] w-[42px] rounded-[10px]' : 'h-[34px] w-[26px] rounded-md',
             i > 0 && (tall ? '-ml-3' : '-ml-2'),
           )}
@@ -476,7 +476,7 @@ function TonightRow({ recap }: { recap?: CaughtUpRecap | null }) {
               )}
               <span className="absolute left-3 top-3 flex h-7 items-center gap-1.5 rounded-full bg-black/55 px-2.5 text-xs font-extrabold backdrop-blur-md">
                 {card.badge === 'live' && (
-                  <span aria-hidden className="block h-[7px] w-[7px] rounded-full bg-[#ff5a3c]" />
+                  <span aria-hidden className="block h-[7px] w-[7px] rounded-full bg-nx-live" />
                 )}
                 <span className={card.badge === 'live' ? 'tracking-[0.06em]' : 'font-bold'}>
                   {card.badge === 'live' ? 'LIVE' : 'Channel'}
@@ -485,7 +485,7 @@ function TonightRow({ recap }: { recap?: CaughtUpRecap | null }) {
               <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2.5 bg-gradient-to-b from-transparent to-black/90 px-4 pb-3.5 pt-12">
                 <span className="flex min-w-0 flex-col gap-[3px]">
                   <span className="truncate text-[17px] font-extrabold">{card.title}</span>
-                  <span className="truncate text-[13px] text-nx-soft">{card.sub}</span>
+                  <span className="truncate text-[13px] text-nx-ink-soft">{card.sub}</span>
                 </span>
                 {card.savers.length > 0 && <SaverDots savers={card.savers} />}
               </span>
@@ -568,11 +568,11 @@ export function CaughtUpStage({
         <span className="block">You’re all caught up.</span>
         <span className="block text-nx-accent">Go touch grass.</span>
       </h1>
-      <p className="relative m-0 mt-3.5 max-w-[300px] text-base leading-[1.45] text-nx-soft md:mt-4 md:max-w-[480px] md:text-lg">
+      <p className="relative m-0 mt-3.5 max-w-[300px] text-base leading-[1.45] text-nx-ink-soft md:mt-4 md:max-w-[480px] md:text-lg">
         That’s everything your people saved since you last looked.
       </p>
       {waits && onShowWaiting && (
-        <p className="relative m-0 mt-2 text-[15px] text-nx-soft">
+        <p className="relative m-0 mt-2 text-[15px] text-nx-ink-soft">
           <span>{`${waits} · `}</span>
           <button
             type="button"
@@ -594,7 +594,7 @@ export function CaughtUpStage({
             <SaverDots savers={recap.savers.filter((s) => !s.isYou).slice(0, 3)} />
             <span className="text-[15px] font-bold leading-snug">{recapLine(recap)}</span>
           </span>
-          <ChevronRight aria-hidden className="h-5 w-5 shrink-0 text-white/60" />
+          <ChevronRight aria-hidden className="h-5 w-5 shrink-0 text-nx-ink/60" />
         </button>
       )}
       <div className="relative mt-6 grid w-full max-w-[420px] grid-cols-2 gap-3 md:flex md:w-auto md:max-w-none md:flex-wrap md:justify-center">
@@ -606,9 +606,9 @@ export function CaughtUpStage({
         </Link>
         <Link
           href="/now"
-          className="flex h-[52px] items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[#262320] px-5 text-[15px] font-semibold text-nx-cream md:px-6 md:text-base"
+          className="flex h-[52px] items-center justify-center gap-2 whitespace-nowrap rounded-full bg-nx-plate px-5 text-[15px] font-semibold text-nx-cream md:px-6 md:text-base"
         >
-          <span aria-hidden className="block h-2 w-2 rounded-full bg-[#ff5a3c]" />
+          <span aria-hidden className="block h-2 w-2 rounded-full bg-nx-live" />
           <span>See what’s live</span>
         </Link>
         <button

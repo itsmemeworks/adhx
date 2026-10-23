@@ -29,11 +29,11 @@ import com.adhx.share.net.Saver
  * blue everywhere).
  */
 private val FaceColors = listOf(
-    Color(0xFF7FD1AE),
-    Color(0xFFFF8FA3),
-    Color(0xFF6B8CFF),
-    Color(0xFFC4A7FF),
-    Color(0xFFFFB35C),
+    AdhxColors.Person1,
+    AdhxColors.Person2,
+    AdhxColors.Person3,
+    AdhxColors.Person4,
+    AdhxColors.Person5,
 )
 
 /**
@@ -86,7 +86,7 @@ fun Avatar(
             initial(label),
             color = Color.Black,
             fontWeight = FontWeight.ExtraBold,
-            fontSize = (size.value * 0.44f).sp,
+            fontSize = (size.value * 0.42f).sp,
             modifier = Modifier.clearAndSetSemantics { },
         )
         if (url != null) {

@@ -6,6 +6,20 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-23 — Refresh feature-review fixes for release
+
+- Merge current main, preserving the shared design tokens, watch counts and CI improvements alongside the nine review fixes.
+- Resolve the append-only worklog conflict by retaining both sets of entries; application/native changes merge together.
+- Revalidate the integrated head before the requested release; no deployment in this commit.
+
+## 2026-10-23 — Design system, phase 1: one set of tokens on web, iOS and Android
+
+- Owner asked for one design system for web and phones; the design system artifact (tokens, guide, components) is the reference. Phase 1 moves the foundations.
+- Colour tokens now have the same names and values everywhere: web `--nx-<name>` / Tailwind `nx-<name>`, iOS `Theme.<name>`, Android `AdhxColors.<Name>`. Web renames: `nx-ink` → `nx-bg`, `nx-soft` → `nx-ink-soft`, `nx-muted` → `nx-ink-faint`, `nx-skeleton` → `nx-placeholder`, `nx-on-cream` → `nx-on-cream-soft`; `nx-ink` is now the words (#f4f1ea, replacing `text-white`). Added sheet, raised, plate, line, good, warn, live, danger, watching, paper, people, moments; bracketed hex literals with a token value became the token.
+- Value fixes: Android cream #f2ead9 and faint #a89f8d, the web's #a39b8b faint, the iOS hairline split into `hairline` (#2a2620, dividers) and `line` (#4a453e, controls). Browser theme colour is `bg`.
+- Small decided items shipped: selected tabs, segments and chips in cream (never yellow); one 48×28 switch on the web (`SwitchLook`), Android's large switch gone; 28-corner sheets on the web; serif floating words (20, three lines); reactions float 3.6s; Android shimmer and pulse stop under reduced motion.
+- Larger migrations listed for the owner in the PR (web theater to layout C, tab renames, the cream words card, bottom nav, toasts, Gob moods, empty states).
+
 ## 2026-10-22 — Review new player, channel and downloader features
 
 - Record exactly which tags a group keep inserted, with their generation time; leave never guesses from a matching/generated name, and duplicate keeps are idempotent. Re-saved copies stay. Older unrecorded keeps are preserved.
@@ -13,6 +27,27 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Preserve temporary yt-dlp failures for retry; never keep a private/missing post's login-page image. Keep ordinary picture fallback.
 - Index watchers by post for bounded reads; test an existing library's upgrade twice. Clamp narrow Android seek tracks and expose the screen-reader seek action.
 - Regression and native/server/browser checks accompany the PR. No live deployment or physical-phone verification.
+
+## 2026-10-22 — Watch counts: who sees what
+
+- Owner decided: members see only their own exact counts ("watched 14×", their Wrapped); totals across everyone, without names, are fine. Written into CLAUDE.md, ARCHITECTURE, the phone spec and `src/lib/people/watch-counts.ts`. No UI yet.
+
+## 2026-10-22 — Watch counts: the data for "watched 14×" and Wrapped
+
+- Owner wants playful counters and a year-end ADHX Wrapped; counting only starts the day this ships, so the data layer goes first, with no UI.
+- New `post_watch_counts` (plays, finishes, seconds, first/last time) per member, post and **UTC year** (the year is in the key so Wrapped reads one year; one member's count sums the years). Never pruned; account guard; cleared with the account and by Clear.
+- `POST /api/app/watched` (phone key) and `POST /api/watched` (web) add batches, capped, only for posts the member can see. Read helpers in `src/lib/people/watch-counts.ts`: `watchCountFor`, `postPlays` (total without names, members who can see it, banned left out, hidden posts none), `watchYear` (posts, hours, most rewatched still visible).
+- One counting rule set on web (`src/lib/watch/tally.ts`), iOS (`WatchTally.swift`) and Android (`WatchTally.kt`): a play is a pass from the top that plays 1 s; resume, seeks and scrubbing back aren't plays; native loops count by wrapping round. Unsent tallies persist per server+key across restarts.
+- Open question for the owner before any UI: may members see each other's exact counts, or only their own? Totals are fine either way.
+- Checked: API/helper/hook tests, Swift tally suite, Android unit test + debug build, iOS simulator build. Not run on a device: counts from real playback.
+
+## 2026-10-22 — Bound media installs and reuse CI build caches
+
+- A reported slow test job spent over 20 minutes fetching Ubuntu FFmpeg dependencies before tests started. Use a bounded HTTPS Ubuntu install with reusable signed package downloads and fresh APT metadata.
+- Native AMD64/ARM64 PR images now reuse scoped BuildKit layers and the trusted release cache; website compiler and Android Gradle caches avoid repeated setup/compilation. Android tests explicitly rerun.
+- Cancel superseded PR checks; bound media/browser setup and overall test/browser jobs. Keep image scans, native smoke tests, audits and test execution on every relevant commit.
+- Release triggers/publication and deployed services are unchanged. Cache scope, cold-build limits and validation policy are documented in `docs/releasing.md`.
+- In flight: installer regressions and workflow lint locally; hosted cold/warm cache checks required on this PR before merge.
 
 ## 2026-10-22 — yt-dlp fallbacks, and X's copyright takedowns say so
 

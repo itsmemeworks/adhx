@@ -64,7 +64,7 @@ struct PreparingCard: View {
                     .foregroundStyle(.white)
                 Text(detail)
                     .font(Theme.sans(14))
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.inkSoft)
                     .multilineTextAlignment(.center)
                     // Clear of the player's buttons down the right.
                     .frame(maxWidth: 230)
@@ -245,7 +245,7 @@ struct CantPlayCard: View {
                     ProgressRing(fraction: Double(3 - countdown) / 3, size: 28)
                     Text("Playing the next one in \(countdown)")
                         .font(Theme.sans(14))
-                        .foregroundStyle(Theme.muted)
+                        .foregroundStyle(Theme.inkSoft)
                         .accessibilityAddTraits(.updatesFrequently)
                 }
             }

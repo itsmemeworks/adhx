@@ -36,7 +36,10 @@ struct ADHXShareApp: App {
                     await model.refresh()
                 }
                 AlertCenter.shared.startPolling()
+                // Watch counts left from last time (or from before a restart).
+                Task { await WatchCounts.shared.flush() }
             case .background:
+                Task { await WatchCounts.shared.flush() }
                 BackgroundFlush.schedule()
                 AlertCenter.shared.stopPolling()
                 LiveAlertRefresh.schedule()
@@ -82,7 +85,7 @@ struct DebugSharePreview: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            Theme.stage.ignoresSafeArea()
             CoverImage(url: poster)
                 .blur(radius: 7)
                 .brightness(-0.35)

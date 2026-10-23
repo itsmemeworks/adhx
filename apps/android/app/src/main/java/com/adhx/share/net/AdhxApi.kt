@@ -340,6 +340,13 @@ class AdhxApi(private val server: String, private val key: String?) {
         return send(authed(url).post(body.toRequestBody(JSON)).build()) { _, _ -> }
     }
 
+    /** Add plays, finishes and seconds watched to your counts (204). At most 50 posts. */
+    suspend fun watched(posts: List<WatchedPost>): ApiResult<Unit> {
+        val url = url("api/app/watched") ?: return badAddress
+        val body = json.encodeToString(WatchedRequest.serializer(), WatchedRequest(posts.take(50)))
+        return send(authed(url).post(body.toRequestBody(JSON)).build()) { _, _ -> }
+    }
+
     suspend fun channels(): ApiResult<ChannelsResponse> {
         val url = url("api/app/channels") ?: return badAddress
         return send(authed(url).get().build(), ChannelsResponse.serializer())

@@ -124,7 +124,7 @@ fun SavesHome(
         return
     }
 
-    Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
+    Box(Modifier.fillMaxSize().background(AdhxColors.Bg)) {
         Column(
             Modifier
                 .fillMaxSize()
@@ -134,14 +134,14 @@ fun SavesHome(
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             ConnectedPill(host = Links.host(connection.server), reach = reach)
-            Text("My saves", style = MaterialTheme.typography.displaySmall, color = AdhxColors.White)
+            Text("My saves", style = MaterialTheme.typography.displaySmall, color = AdhxColors.Ink)
             val error = ui.error
             when {
                 !ui.loadedOnce || ui.loading -> Box(Modifier.fillMaxWidth().padding(top = 30.dp), contentAlignment = Alignment.Center) {
                     Spinner(size = 34.dp, stroke = 3.dp)
                 }
                 error != null -> {
-                    Text(error, fontSize = 15.sp, lineHeight = 22.sp, color = AdhxColors.Muted)
+                    Text(error, fontSize = 15.sp, lineHeight = 22.sp, color = AdhxColors.InkSoft)
                     OutlineButton("Try again", onClick = vm::reloadSaves, minHeight = 44.dp)
                 }
                 ui.preparing > 0 -> PreparingCard(
@@ -152,7 +152,7 @@ fun SavesHome(
                     "Nothing yet. In any app, tap Share on a post and pick ADHX.",
                     fontSize = 15.sp,
                     lineHeight = 22.sp,
-                    color = AdhxColors.Faint,
+                    color = AdhxColors.InkFaint,
                 )
             }
             Spacer(Modifier.weight(1f))
@@ -167,7 +167,7 @@ fun BackTitleRow(title: String, onBack: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         BarButton(com.adhx.share.ui.Glyphs.Back, "Back", onBack)
         Spacer(Modifier.width(12.dp))
-        Text(title, fontFamily = SerifFamily, fontSize = 26.sp, color = AdhxColors.White, maxLines = 1)
+        Text(title, fontFamily = SerifFamily, fontSize = 26.sp, color = AdhxColors.Ink, maxLines = 1)
     }
 }
 

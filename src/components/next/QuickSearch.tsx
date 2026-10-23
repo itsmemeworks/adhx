@@ -84,7 +84,7 @@ export function QuickSearch() {
       aria-label="Search"
       aria-hidden={!open}
       className={cn(
-        'fixed inset-0 z-[70] flex flex-col bg-nx-ink font-nx-sans text-nx-cream transition-opacity duration-150',
+        'fixed inset-0 z-[70] flex flex-col bg-nx-bg font-nx-sans text-nx-cream transition-opacity duration-150',
         open ? 'opacity-100' : 'pointer-events-none opacity-0',
       )}
     >
@@ -97,7 +97,7 @@ export function QuickSearch() {
         className="flex items-center gap-2 border-b border-nx-hairline px-3 pb-3 pt-[max(12px,env(safe-area-inset-top))]"
       >
         <span className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-nx-surface pl-3 pr-1">
-          <Search aria-hidden className="h-[18px] w-[18px] shrink-0 text-nx-soft" />
+          <Search aria-hidden className="h-[18px] w-[18px] shrink-0 text-nx-ink-soft" />
           <label htmlFor="nx-quick-search" className="sr-only">
             Describe what you’re looking for
           </label>
@@ -113,7 +113,7 @@ export function QuickSearch() {
             placeholder="Describe it…"
             onFocus={() => setOpen(true)}
             onChange={(e) => setQ(e.target.value)}
-            className="h-11 min-w-0 flex-1 appearance-none bg-transparent text-base text-nx-cream outline-none placeholder:text-nx-muted [&::-webkit-search-cancel-button]:hidden"
+            className="h-11 min-w-0 flex-1 appearance-none bg-transparent text-base text-nx-cream outline-none placeholder:text-nx-ink-faint [&::-webkit-search-cancel-button]:hidden"
           />
         </span>
         <button
@@ -128,7 +128,7 @@ export function QuickSearch() {
       <div className="flex flex-col gap-6 overflow-y-auto px-4 py-5">
         {recent.length > 0 && (
           <section aria-label="Recent searches" className="flex flex-col gap-1">
-            <span className="text-xs font-extrabold uppercase tracking-[1.2px] text-nx-muted">
+            <span className="text-xs font-extrabold uppercase tracking-[1.2px] text-nx-ink-faint">
               Recent
             </span>
             {recent.map((r) => (
@@ -139,14 +139,14 @@ export function QuickSearch() {
                 onClick={() => go(r)}
                 className="flex min-h-11 items-center gap-3 text-left text-[15px]"
               >
-                <Clock aria-hidden className="h-4 w-4 shrink-0 text-nx-muted" />
+                <Clock aria-hidden className="h-4 w-4 shrink-0 text-nx-ink-faint" />
                 <span className="truncate">{r}</span>
               </button>
             ))}
           </section>
         )}
         <section aria-label="Try" className="flex flex-col gap-2">
-          <span className="text-xs font-extrabold uppercase tracking-[1.2px] text-nx-muted">
+          <span className="text-xs font-extrabold uppercase tracking-[1.2px] text-nx-ink-faint">
             Try describing
           </span>
           <span className="flex flex-wrap gap-2">
@@ -156,7 +156,7 @@ export function QuickSearch() {
                 type="button"
                 tabIndex={open ? 0 : -1}
                 onClick={() => go(s)}
-                className="rounded-full border border-nx-hairline px-3.5 py-2 text-left text-sm text-nx-soft"
+                className="rounded-full border border-nx-hairline px-3.5 py-2 text-left text-sm text-nx-ink-soft"
               >
                 {s}
               </button>
@@ -230,7 +230,7 @@ export function HeaderSearch({
           router.push(searchUrl(q))
         }}
         className={cn(
-          'hidden h-11 w-[340px] min-w-[140px] shrink items-center gap-2.5 rounded-full border border-white/[0.08] bg-nx-surface pl-4 pr-2 text-nx-muted focus-within:border-nx-accent md:flex',
+          'hidden h-11 w-[340px] min-w-[140px] shrink items-center gap-2.5 rounded-full border border-white/[0.08] bg-nx-surface pl-4 pr-2 text-nx-ink-faint focus-within:border-nx-accent md:flex',
           className,
         )}
       >
@@ -255,12 +255,12 @@ export function HeaderSearch({
               e.currentTarget.blur()
             }
           }}
-          className="h-full min-w-0 flex-1 appearance-none bg-transparent text-[15px] text-nx-cream outline-none placeholder:text-nx-muted [&::-webkit-search-cancel-button]:hidden"
+          className="h-full min-w-0 flex-1 appearance-none bg-transparent text-[15px] text-nx-cream outline-none placeholder:text-nx-ink-faint [&::-webkit-search-cancel-button]:hidden"
         />
         {!hasText && (
           <span
             aria-hidden
-            className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg bg-[#262320] text-[13px] font-semibold text-nx-soft"
+            className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg bg-nx-plate text-[13px] font-semibold text-nx-ink-soft"
           >
             /
           </span>

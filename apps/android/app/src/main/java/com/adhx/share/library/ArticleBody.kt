@@ -169,7 +169,7 @@ private fun rememberRuns(runs: List<ArticleBody.Run>): AnnotatedString {
  * marks, quotes with a bar. [size] is the paragraphs' type.
  */
 @Composable
-fun ArticleBodyText(blocks: List<ArticleBody.Block>, size: TextUnit = 22.sp, lineHeight: TextUnit = 32.sp, color: androidx.compose.ui.graphics.Color = AdhxColors.Cream) {
+fun ArticleBodyText(blocks: List<ArticleBody.Block>, size: TextUnit = 22.sp, lineHeight: TextUnit = 32.sp, color: androidx.compose.ui.graphics.Color = AdhxColors.Ink) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         for (block in blocks) {
             when (block) {
@@ -184,7 +184,7 @@ fun ArticleBodyText(blocks: List<ArticleBody.Block>, size: TextUnit = 22.sp, lin
                         fontFamily = SerifFamily,
                         fontSize = s,
                         lineHeight = l,
-                        color = AdhxColors.White,
+                        color = AdhxColors.Ink,
                         modifier = Modifier.padding(top = 6.dp).semantics { heading() },
                     )
                 }
@@ -194,7 +194,7 @@ fun ArticleBodyText(blocks: List<ArticleBody.Block>, size: TextUnit = 22.sp, lin
                 is ArticleBody.Quote -> Row(Modifier.height(IntrinsicSize.Min)) {
                     Box(Modifier.width(3.dp).fillMaxHeight().background(AdhxColors.Accent))
                     Spacer(Modifier.width(12.dp))
-                    Text(rememberRuns(block.runs), fontFamily = SerifFamily, fontStyle = FontStyle.Italic, fontSize = size, lineHeight = lineHeight, color = AdhxColors.Muted)
+                    Text(rememberRuns(block.runs), fontFamily = SerifFamily, fontStyle = FontStyle.Italic, fontSize = size, lineHeight = lineHeight, color = AdhxColors.InkSoft)
                 }
                 ArticleBody.Rule -> Box(Modifier.fillMaxWidth().padding(vertical = 6.dp).height(1.dp).background(AdhxColors.Hairline))
             }

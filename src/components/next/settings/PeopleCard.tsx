@@ -159,7 +159,7 @@ export function JoinQueue({
         <span className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-nx-accent px-[7px] text-xs font-extrabold text-black">
           {requests.length}
         </span>
-        <span className="ml-auto text-[13px] font-normal text-white/55">
+        <span className="ml-auto text-[13px] font-normal text-nx-ink/55">
           Nobody gets in until you say yes.
         </span>
       </h3>
@@ -189,7 +189,7 @@ export function JoinQueue({
               </span>
               <span className="flex min-w-0 flex-col gap-0.5">
                 <span className="truncate text-[15px] font-extrabold">{shownName(r)}</span>
-                <span className="truncate text-[13px] text-[#c9bfab]">
+                <span className="truncate text-[13px] text-nx-ink-soft">
                   {`${r.invitedBy ? `invited by ${shownName(r.invitedBy)} · ` : ''}${agoLabel(r.askedAt)}`}
                 </span>
               </span>
@@ -219,7 +219,7 @@ export function JoinQueue({
                 onClick={() => void decide(r, 'decline')}
                 aria-label={`Decline ${shownName(r)}`}
                 title="Decline"
-                className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-nx-muted hover:bg-white/10 hover:text-nx-cream disabled:opacity-50"
+                className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-nx-ink-faint hover:bg-white/10 hover:text-nx-cream disabled:opacity-50"
               >
                 <X aria-hidden className="h-4 w-4" />
               </button>
@@ -228,7 +228,7 @@ export function JoinQueue({
         ))}
       </ul>
       {error && (
-        <p role="alert" className="m-0 text-[13px] text-[#ff8a7a]">
+        <p role="alert" className="m-0 text-[13px] text-nx-danger">
           {error}
         </p>
       )}
@@ -285,7 +285,7 @@ function MemberMenu({ person, onChanged }: { person: PersonRow; onChanged: () =>
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-11 w-11 items-center justify-center rounded-full text-[#c9bfab] hover:bg-white/10"
+        className="flex h-11 w-11 items-center justify-center rounded-full text-nx-ink-soft hover:bg-white/10"
       >
         <MoreHorizontal aria-hidden className="h-5 w-5" />
       </button>
@@ -293,7 +293,7 @@ function MemberMenu({ person, onChanged }: { person: PersonRow; onChanged: () =>
         <div
           role="menu"
           // Its rows curve at 16 − 6 = 10 px.
-          className="absolute right-0 top-12 z-30 flex min-w-[180px] flex-col rounded-2xl bg-[#262320] p-1.5 shadow-xl"
+          className="absolute right-0 top-12 z-30 flex min-w-[180px] flex-col rounded-2xl bg-nx-plate p-1.5 shadow-xl"
         >
           <button
             type="button"
@@ -301,7 +301,7 @@ function MemberMenu({ person, onChanged }: { person: PersonRow; onChanged: () =>
             onClick={() => void setBanned(!person.banned)}
             className={cn(
               'flex min-h-[44px] items-center rounded-[10px] px-3 text-left text-sm font-bold hover:bg-white/10',
-              !person.banned && 'text-[#ff8a7a]',
+              !person.banned && 'text-nx-danger',
             )}
           >
             {person.banned ? `Unban ${shownName(person)}` : `Ban ${shownName(person)}`}
@@ -311,7 +311,7 @@ function MemberMenu({ person, onChanged }: { person: PersonRow; onChanged: () =>
       {error && (
         <p
           role="alert"
-          className="absolute right-0 top-12 m-0 w-56 text-right text-xs text-[#ff8a7a]"
+          className="absolute right-0 top-12 m-0 w-56 text-right text-xs text-nx-danger"
         >
           {error}
         </p>
@@ -338,7 +338,7 @@ function InviteRow({
         aria-hidden
         className={cn(
           'flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full',
-          invite.mine ? 'bg-nx-accent/15 text-nx-accent' : 'bg-[#262320] text-[#c9bfab]',
+          invite.mine ? 'bg-nx-accent/15 text-nx-accent' : 'bg-nx-plate text-nx-ink-soft',
         )}
       >
         <Link2 className="h-4 w-4" />
@@ -347,12 +347,12 @@ function InviteRow({
         <span className="font-mono text-base font-extrabold tracking-[0.08em]">
           <span>{code}</span>
           {invite.nameHint && (
-            <span className="ml-2 font-nx-sans text-[13px] font-semibold tracking-normal text-white/60">
+            <span className="ml-2 font-nx-sans text-[13px] font-semibold tracking-normal text-nx-ink/60">
               {`for ${invite.nameHint}`}
             </span>
           )}
         </span>
-        <span className="text-[13px] text-[#a39b8b]">
+        <span className="text-[13px] text-nx-ink-faint">
           {copied === 'renewed'
             ? 'New link copied. The old one stops working.'
             : `Made by ${maker} ${agoLabel(invite.createdAt)} · ${expiresLabel(invite.expiresAt)}`}
@@ -465,17 +465,17 @@ export function PeopleCard({
               <span className="flex min-w-0 flex-1 flex-col gap-px">
                 <span className="truncate text-[15px] font-extrabold">
                   <span>{shownName(p)}</span>
-                  {p.isYou && <span className="font-normal text-white/55"> (you)</span>}
+                  {p.isYou && <span className="font-normal text-nx-ink/55"> (you)</span>}
                 </span>
-                <span className="truncate text-[13px] text-white/55">{savesLine(p)}</span>
+                <span className="truncate text-[13px] text-nx-ink/55">{savesLine(p)}</span>
               </span>
               <span
                 className={cn(
                   'inline-flex h-[26px] shrink-0 items-center rounded-full px-2.5 text-xs font-extrabold',
                   p.banned
-                    ? 'bg-[#ff8a7a]/15 text-[#ff8a7a]'
+                    ? 'bg-nx-danger/15 text-nx-danger'
                     : p.role === 'member'
-                      ? 'bg-[#262320] text-[#c9bfab]'
+                      ? 'bg-nx-plate text-nx-ink-soft'
                       : 'bg-nx-accent/15 text-nx-accent',
                 )}
               >
@@ -498,7 +498,7 @@ export function PeopleCard({
             className="m-0 mb-1 flex items-center gap-2 text-[15px] font-extrabold"
           >
             <span>Pending invites</span>
-            <span className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-[#262320] px-[7px] text-xs text-[#c9bfab]">
+            <span className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-nx-plate px-[7px] text-xs text-nx-ink-soft">
               {inv.invites.length}
             </span>
             {inv.canInvite && (
@@ -506,7 +506,7 @@ export function PeopleCard({
                 type="button"
                 disabled={inv.busy}
                 onClick={() => void inv.create('')}
-                className="ml-auto min-h-[44px] text-[13px] font-semibold text-nx-accent hover:text-white"
+                className="ml-auto min-h-[44px] text-[13px] font-semibold text-nx-accent hover:text-nx-ink"
               >
                 {inv.busy ? 'Making…' : 'Make a link'}
               </button>
@@ -514,7 +514,7 @@ export function PeopleCard({
           </h3>
           {inv.made && !invites && <NewInviteCard inv={inv} />}
           {inv.invites.length === 0 ? (
-            <p className="m-0 border-t border-white/[0.08] py-3 text-[13px] text-white/55">
+            <p className="m-0 border-t border-white/[0.08] py-3 text-[13px] text-nx-ink/55">
               No links waiting. Make one and send it to a friend.
             </p>
           ) : (
@@ -530,7 +530,7 @@ export function PeopleCard({
             </ul>
           )}
           {inv.error && (
-            <p role="alert" className="m-0 text-[13px] text-[#ff8a7a]">
+            <p role="alert" className="m-0 text-[13px] text-nx-danger">
               {inv.error}
             </p>
           )}
@@ -547,9 +547,9 @@ export function PeopleCard({
             <span id="who-title" className="text-[15px] font-extrabold">
               Who can invite
             </span>
-            <span className="text-[13px] text-white/55">{modeHint}</span>
+            <span className="text-[13px] text-nx-ink/55">{modeHint}</span>
           </span>
-          <div className="flex gap-0.5 self-start rounded-full border border-white/[0.08] bg-[#0f0e0c] p-1">
+          <div className="flex gap-0.5 self-start rounded-full border border-white/[0.08] bg-nx-bg p-1">
             {MODES.map((m) => (
               <button
                 key={m.id}
@@ -561,7 +561,7 @@ export function PeopleCard({
                   'h-11 whitespace-nowrap rounded-full px-3 text-[13px] sm:px-4 sm:text-sm',
                   data.inviteMode === m.id
                     ? 'bg-nx-accent font-extrabold text-black'
-                    : 'font-semibold text-[#c9bfab] hover:text-white',
+                    : 'font-semibold text-nx-ink-soft hover:text-nx-ink',
                 )}
               >
                 {m.label}
@@ -569,7 +569,7 @@ export function PeopleCard({
             ))}
           </div>
           {modeError && (
-            <p role="alert" className="m-0 text-[13px] text-[#ff8a7a]">
+            <p role="alert" className="m-0 text-[13px] text-nx-danger">
               {modeError}
             </p>
           )}
@@ -616,17 +616,17 @@ export function NewInviteCard({ inv, className }: { inv: Invites; className?: st
           >
             {made.nameHint ? `Invite ${made.nameHint}` : 'Invite someone'}
           </h2>
-          <p className="m-0 text-[15px] leading-snug text-nx-soft md:text-base">
+          <p className="m-0 text-[15px] leading-snug text-nx-ink-soft md:text-base">
             One link signs them in and puts ADHX on their phone. Works once, for 7 days.
           </p>
         </div>
         <Gob size={64} className="-m-1 hidden shrink-0 sm:block" />
       </div>
       <div className="flex flex-col gap-2">
-        <span className="text-[13px] font-semibold text-nx-soft">New invite link</span>
+        <span className="text-[13px] font-semibold text-nx-ink-soft">New invite link</span>
         <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-          <span className="flex h-14 min-w-0 flex-1 items-center gap-2.5 rounded-[var(--nx-nest)] border-[1.5px] border-[#4a453e] bg-nx-ink pl-4 pr-2">
-            <Link2 aria-hidden className="h-4 w-4 shrink-0 text-nx-muted" />
+          <span className="flex h-14 min-w-0 flex-1 items-center gap-2.5 rounded-[var(--nx-nest)] border-[1.5px] border-nx-line bg-nx-bg pl-4 pr-2">
+            <Link2 aria-hidden className="h-4 w-4 shrink-0 text-nx-ink-faint" />
             <code className="min-w-0 flex-1 select-all truncate rounded-lg bg-nx-accent/10 px-1.5 py-1 font-nx-sans text-[15px] font-bold text-nx-cream">
               {made.url}
             </code>
@@ -664,7 +664,7 @@ export function NewInviteCard({ inv, className }: { inv: Invites; className?: st
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <span className="flex-1 text-[13px] text-nx-muted">
+          <span className="flex-1 text-[13px] text-nx-ink-faint">
             Anyone with this link can join once. You can revoke it below.
           </span>
           <button
@@ -678,7 +678,7 @@ export function NewInviteCard({ inv, className }: { inv: Invites; className?: st
           <button
             type="button"
             onClick={inv.dismiss}
-            className="min-h-11 whitespace-nowrap text-[13px] font-semibold text-nx-soft hover:text-nx-cream"
+            className="min-h-11 whitespace-nowrap text-[13px] font-semibold text-nx-ink-soft hover:text-nx-cream"
           >
             Done
           </button>
@@ -687,7 +687,7 @@ export function NewInviteCard({ inv, className }: { inv: Invites; className?: st
       {toast && (
         <div
           role="status"
-          className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 whitespace-nowrap rounded-full bg-[#262320] py-2.5 pl-2.5 pr-5 text-[15px] font-semibold text-nx-cream shadow-nx-toast md:bottom-8"
+          className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 whitespace-nowrap rounded-full bg-nx-plate py-2.5 pl-2.5 pr-5 text-[15px] font-semibold text-nx-cream shadow-nx-toast md:bottom-8"
         >
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-nx-accent text-black">
             <Check aria-hidden className="h-4 w-4" strokeWidth={3} />

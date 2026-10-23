@@ -10,6 +10,7 @@ import {
   userPreferences,
   phoneSaveQueue,
   postViews,
+  postWatchCounts,
   postSends,
   momentAlertSubs,
   momentAlerts,
@@ -50,6 +51,7 @@ export const POST = withAuth(async (_req, userId) => {
       db.delete(phoneSaveQueue).where(eq(phoneSaveQueue.userId, userId)).run()
       // What you've seen in the feed starts over too.
       db.delete(postViews).where(eq(postViews.userId, userId)).run()
+      db.delete(postWatchCounts).where(eq(postWatchCounts.userId, userId)).run()
       // Posts sent to or by you, and your live bells and alerts.
       db.delete(postSends)
         .where(or(eq(postSends.fromUserId, userId), eq(postSends.toUserId, userId)))

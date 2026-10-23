@@ -64,7 +64,7 @@ export function VideoTile({ item, playing = false, layout = 'auto', ...frame }: 
         {duration && <MediaChip className="right-2.5 top-2.5">{duration}</MediaChip>}
         {!playing && <PlayGlyph />}
         <Scrim className="gap-1.5 px-3 pb-3 pt-10">
-          <AuthorLine author={author} className="text-white/85" />
+          <AuthorLine author={author} className="text-nx-ink/85" />
           {caption && <span className="line-clamp-2 text-[12.5px] leading-[1.35]">{caption}</span>}
         </Scrim>
       </TileFrame>
@@ -89,7 +89,7 @@ export function VideoTile({ item, playing = false, layout = 'auto', ...frame }: 
         {!playing && <PlayGlyph />}
       </span>
       <span className="flex min-h-0 flex-1 flex-col gap-2 px-3.5 py-3 text-nx-cream">
-        <AuthorLine author={author} className="text-nx-soft" />
+        <AuthorLine author={author} className="text-nx-ink-soft" />
         {caption && <span className="line-clamp-5 text-[14px] leading-[1.4]">{caption}</span>}
       </span>
     </TileFrame>

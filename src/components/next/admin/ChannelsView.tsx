@@ -30,7 +30,7 @@ export function ReactionBars({ data, gap = 7 }: { data: ReactionsSummary; gap?: 
           <span className="text-xl leading-none" role="img" aria-label={r.kind}>
             {r.emoji}
           </span>
-          <span aria-hidden className="h-2.5 overflow-hidden rounded-full bg-[#262320]">
+          <span aria-hidden className="h-2.5 overflow-hidden rounded-full bg-nx-plate">
             <span
               className="block h-2.5 rounded-full bg-nx-accent"
               style={{ width: `${r.count ? Math.max(2, (r.count / max) * 100) : 0}%` }}
@@ -123,13 +123,13 @@ export function ChannelsView({ data, rangeWords }: { data: ChannelsBoard; rangeW
                     <td className={cn(TD, 'h-[54px] pl-4')}>
                       <Link
                         href={c.href}
-                        className="flex items-center gap-2.5 text-[#f4f1ea] hover:underline"
+                        className="flex items-center gap-2.5 text-nx-ink hover:underline"
                       >
                         <Thumb src={c.thumbnail} size={36} radius={10} />
                         <span className="font-extrabold">{c.name}</span>
                       </Link>
                     </td>
-                    <td className={cn(TD, 'h-[54px] text-[#c9bfab]')}>{KIND_LABEL[c.kind]}</td>
+                    <td className={cn(TD, 'h-[54px] text-nx-ink-soft')}>{KIND_LABEL[c.kind]}</td>
                     <td className={cn(TD, 'h-[54px]')}>
                       {c.owner ? (
                         <span className="inline-flex items-center gap-2">
@@ -137,7 +137,7 @@ export function ChannelsView({ data, rangeWords }: { data: ChannelsBoard; rangeW
                           <span>{displayName(c.owner)}</span>
                         </span>
                       ) : (
-                        <span className="text-[#c9bfab]">Everyone</span>
+                        <span className="text-nx-ink-soft">Everyone</span>
                       )}
                     </td>
                     <td className={cn(TD, 'h-[54px] text-right')}>{fmt(c.posts)}</td>
@@ -147,7 +147,7 @@ export function ChannelsView({ data, rangeWords }: { data: ChannelsBoard; rangeW
                 ))}
                 {!data.top.length && (
                   <tr>
-                    <td colSpan={6} className={cn(TD, 'pl-4 text-[#a39b8b]')}>
+                    <td colSpan={6} className={cn(TD, 'pl-4 text-nx-ink-faint')}>
                       No shared channels yet.
                     </td>
                   </tr>
@@ -172,7 +172,7 @@ export function ChannelsView({ data, rangeWords }: { data: ChannelsBoard; rangeW
               highlightFrom={days.length - 7}
               label="Moments tuned into each day, last 14 days"
             />
-            <span className="text-xs text-[#a39b8b]">Moments tuned into, last 14 days</span>
+            <span className="text-xs text-nx-ink-faint">Moments tuned into, last 14 days</span>
           </Card>
         </div>
       </div>
