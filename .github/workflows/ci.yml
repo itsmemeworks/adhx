@@ -358,7 +358,13 @@ jobs:
 
       - name: Install Playwright browsers
         timeout-minutes: 8
-        run: pnpm exec playwright install --with-deps chromium webkit
+        run: |
+          # The hosted runner's Azure mirror can stall large browser dependency downloads.
+          # Keep Ubuntu's signed packages, using the primary archive for this job only.
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            printf '%s\n' 'https://archive.ubuntu.com/ubuntu' | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+          fi
+          pnpm exec playwright install --with-deps chromium webkit
 
       - name: Run browser tests
         env:

@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-23 — Recover browser CI from stalled package downloads
+
+- The hosted Ubuntu Azure mirror exhausted the browser-install timeout before tests ran; a fresh runner was also slow.
+- Use Ubuntu's primary archive for this job's mirror list, retaining signature verification, the bounded setup step and all Chromium/WebKit tests.
+- No application, deployment or household configuration changes in this CI adjustment.
+
 ## 2026-10-23 — Combine realtime, query and review fixes for release
 
 - Integrate the native/web streams with current design tokens, watcher/query indexes and the nine review fixes.
