@@ -789,8 +789,12 @@ freeBytes, processing, remoteConnected } }`. `thumbnail` (like Shared lately's
   not made public; posts you haven't saved are saved for you).
   `GET /api/app/channels/group/{slug}` adds `"kept": { "tag", "url" } | null`.
   `DELETE` on the same address leaves it → `{ "removed": 12 }`: the tag comes
-  off your saves, and the saves keeping it added (and nothing else tagged)
-  go; 404 `not_found` for a channel you never kept.
+  off only the posts that keep actually tagged, and untouched copies it added
+  (with no other tags) go. Pre-existing same-name tags, re-added tags and
+  explicitly re-saved posts stay. The recorded tag survives a generated rename
+  or disappearance. Repeated keeps are idempotent. Keeps from older versions
+  have no ownership record and are preserved; keeping again records only new
+  additions. 404 `not_found` for an unrecorded keep.
 - `GET /api/app/who?platform&id` → who's on a post, for the bottom row's
   faces (board 15.9): `{ "savers": [Saver], "reactions": [{ id, emoji, text,
 at, saver }], "watched": [{ username, name, avatarUrl, at, isYou }] }`.
@@ -860,7 +864,8 @@ at, saver }], "watched": [{ username, name, avatarUrl, at, isYou }] }`.
   - Tapping the face swaps the row for ✕ and everyone on the post
     (`/api/app/who`), scrolling sideways, one face each, with a sticker in a
     fixed corner: saved bottom-right, their reaction top-right, watched
-    bottom-left. Tapping someone opens their channel; ✕ or the next post
+    bottom-left (someone can have all three). Late/cancelled people responses
+    cannot replace a newer post or cross a server/credential session. Tapping someone opens their channel; ✕ or the next post
     puts the line back.
   - Notes float up first, like any words said on the post: the serif, in a
     rounded bubble of their colour beside their face. No byline, note bubble

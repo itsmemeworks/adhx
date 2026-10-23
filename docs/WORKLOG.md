@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-23 — Refresh feature-review fixes for release
+
+- Merge current main, preserving the shared design tokens, watch counts and CI improvements alongside the nine review fixes.
+- Resolve the append-only worklog conflict by retaining both sets of entries; application/native changes merge together.
+- Revalidate the integrated head before the requested release; no deployment in this commit.
+
 ## 2026-10-23 — Design system, phase 1: one set of tokens on web, iOS and Android
 
 - Owner asked for one design system for web and phones; the design system artifact (tokens, guide, components) is the reference. Phase 1 moves the foundations.
@@ -13,6 +19,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Value fixes: Android cream #f2ead9 and faint #a89f8d, the web's #a39b8b faint, the iOS hairline split into `hairline` (#2a2620, dividers) and `line` (#4a453e, controls). Browser theme colour is `bg`.
 - Small decided items shipped: selected tabs, segments and chips in cream (never yellow); one 48×28 switch on the web (`SwitchLook`), Android's large switch gone; 28-corner sheets on the web; serif floating words (20, three lines); reactions float 3.6s; Android shimmer and pulse stop under reduced motion.
 - Larger migrations listed for the owner in the PR (web theater to layout C, tab renames, the cream words card, bottom nav, toasts, Gob moods, empty states).
+
+## 2026-10-22 — Review new player, channel and downloader features
+
+- Record exactly which tags a group keep inserted, with their generation time; leave never guesses from a matching/generated name, and duplicate keeps are idempotent. Re-saved copies stay. Older unrecorded keeps are preserved.
+- Reject late/cancelled iOS people-row replies across posts and connection sessions; test the production model in native CI. Android combines saved/watched stickers and clears stale reply identities on refresh.
+- Preserve temporary yt-dlp failures for retry; never keep a private/missing post's login-page image. Keep ordinary picture fallback.
+- Index watchers by post for bounded reads; test an existing library's upgrade twice. Clamp narrow Android seek tracks and expose the screen-reader seek action.
+- Regression and native/server/browser checks accompany the PR. No live deployment or physical-phone verification.
 
 ## 2026-10-22 — Watch counts: who sees what
 

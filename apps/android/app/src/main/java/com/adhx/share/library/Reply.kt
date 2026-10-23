@@ -62,6 +62,12 @@ import java.time.Instant
  * Reactions, so it needs nothing new on the server.
  */
 object Replies {
+    /** Replace the label, including an authoritative empty/failed refresh. */
+    fun replaceAnswer(answers: MutableMap<String, LiveReaction>, key: String, reactions: List<LiveReaction>?, nowMs: Long = System.currentTimeMillis()) {
+        val next = reactions?.let { answer(it, nowMs) }
+        if (next == null) answers.remove(key) else answers[key] = next
+    }
+
     /** "Pete replied · 2m" shows for answers from the last week. */
     const val ANSWER_FOR_MS = 7L * 86_400_000L
 
