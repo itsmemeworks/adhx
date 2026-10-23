@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.8.0](https://github.com/itsmemeworks/adhx/compare/v2.7.0...v2.8.0) (2026-10-23)
+
+
+### Features
+
+* count plays, finishes and seconds watched for counters and wrapped ([#627](https://github.com/itsmemeworks/adhx/issues/627)) ([9545b5d](https://github.com/itsmemeworks/adhx/commit/9545b5d6905df73f73e73c342d43ba3562a7d91e))
+* fall back to yt-dlp and say why media can't be kept ([#626](https://github.com/itsmemeworks/adhx/issues/626)) ([1e91500](https://github.com/itsmemeworks/adhx/commit/1e91500b8d5b248f6c7e1fec02c14b6d52fb551b))
+* nest corners inside their containers, squircles on the phones ([#628](https://github.com/itsmemeworks/adhx/issues/628)) ([9868a76](https://github.com/itsmemeworks/adhx/commit/9868a766ea12ff70cb5d03ea706a2f63732a39fc))
+* one set of design system colour tokens on web, ios and android ([#633](https://github.com/itsmemeworks/adhx/issues/633)) ([649d223](https://github.com/itsmemeworks/adhx/commit/649d223dbe9ec9c37b54bebb2c27415ada4b1a27))
+
+
+### Bug Fixes
+
+* preserve channel saves and harden people and media recovery ([#629](https://github.com/itsmemeworks/adhx/issues/629)) ([53eaa7a](https://github.com/itsmemeworks/adhx/commit/53eaa7a8367bdc484d7288f0d5283315a726486f))
+* save and keep tiktoks only signed-in accounts see ([#624](https://github.com/itsmemeworks/adhx/issues/624)) ([0f43724](https://github.com/itsmemeworks/adhx/commit/0f4372420174fe859ca7b8ba7f8f2a198171c084))
+
+
+### Performance Improvements
+
+* index shared queries and batch feed hydration ([#631](https://github.com/itsmemeworks/adhx/issues/631)) ([ae052ed](https://github.com/itsmemeworks/adhx/commit/ae052edd8865105ee7db5e3129ebef2457b584b3))
+* stream foreground live updates and bound presence recovery ([#632](https://github.com/itsmemeworks/adhx/issues/632)) ([43813f3](https://github.com/itsmemeworks/adhx/commit/43813f33e4fba079df38eaf77b59c4dcb0e03d7c))
+
 ## [2.7.0](https://github.com/itsmemeworks/adhx/compare/v2.6.0...v2.7.0) (2026-10-22)
 
 
