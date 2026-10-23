@@ -43,6 +43,14 @@ class AdhxApi(private val server: String, private val key: String?) {
 
     constructor(connection: Connection) : this(connection.server, connection.key)
 
+    fun liveChanges(slug: String? = null): kotlinx.coroutines.flow.Flow<Unit> {
+        require(slug == null || Regex("^[a-z0-9-]{1,64}$").matches(slug))
+        val builder = requireNotNull(url("api/app/live")).newBuilder()
+        if (slug != null) builder.addPathSegment(slug)
+        val address = builder.addPathSegment("stream").addQueryParameter("notify", "1").build()
+        return openLiveChanges(authed(address).header("Accept", "text/event-stream").get().build())
+    }
+
     suspend fun pair(code: String, name: String?): ApiResult<PairResponse> {
         val url = url("api/app/pair") ?: return badAddress
         val body = json.encodeToString(PairRequest.serializer(), PairRequest(code, name))
@@ -708,7 +716,7 @@ class AdhxApi(private val server: String, private val key: String?) {
 private suspend fun Call.await(): Response = suspendCancellableCoroutine { cont ->
     enqueue(object : Callback {
         override fun onResponse(call: Call, response: Response) {
-            cont.resume(response)
+            cont.resume(response, onCancellation = { _, abandoned, _ -> abandoned.close() })
         }
 
         override fun onFailure(call: Call, e: IOException) {

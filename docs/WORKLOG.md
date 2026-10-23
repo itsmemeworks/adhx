@@ -6,6 +6,18 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-23 — Recover browser CI from stalled package downloads
+
+- The hosted Ubuntu Azure mirror exhausted the browser-install timeout before tests ran; a fresh runner was also slow.
+- Use Ubuntu's primary archive for this job's mirror list, retaining signature verification, the bounded setup step and all Chromium/WebKit tests.
+- No application, deployment or household configuration changes in this CI adjustment.
+
+## 2026-10-23 — Combine realtime, query and review fixes for release
+
+- Integrate the native/web streams with current design tokens, watcher/query indexes and the nine review fixes.
+- Preserve all worklog entries and both native CI regression groups; revalidate this combined release candidate.
+- Release and NAS installation remain separate from this integration commit.
+
 ## 2026-10-23 — Integrate query indexes with the review fixes
 
 - Preserve the post watcher lookup and the user/recent-view index while merging the shared design system and feature-review fixes.
@@ -25,6 +37,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Value fixes: Android cream #f2ead9 and faint #a89f8d, the web's #a39b8b faint, the iOS hairline split into `hairline` (#2a2620, dividers) and `line` (#4a453e, controls). Browser theme colour is `bg`.
 - Small decided items shipped: selected tabs, segments and chips in cream (never yellow); one 48×28 switch on the web (`SwitchLook`), Android's large switch gone; 28-corner sheets on the web; serif floating words (20, three lines); reactions float 3.6s; Android shimmer and pulse stop under reduced motion.
 - Larger migrations listed for the owner in the PR (web theater to layout C, tab renames, the cream words card, bottom nav, toasts, Gob moods, empty states).
+
+## 2026-10-22 — Stream foreground Live across web and phones
+
+- Replace native 5-second room polling with Foundation/official OkHttp SSE invalidations, coalesced serial snapshots, reconnect resync and legacy REST fallback.
+- Web reconnects recover missed snapshots/posts; hidden tabs close streams, startup buffers are bounded and expired animation timers are removed.
+- Bound server output and stream lifetimes, fail closed on mapping/visibility failures, and bridge planned reconnects with short credential-scoped presence grace.
+- One shared durable-revision check catches worker-side changes for all phone subscriptions; retain existing progress, pairing, alert and worker polling.
+- Added transport/lifecycle/privacy/backpressure regressions and native CI coverage. Simulator/JVM builds are not physical-phone network verification.
+- In flight for review only; no deployment. Protocol, package choices and real-device follow-ups: `docs/realtime.md`.
 
 ## 2026-10-22 — Indexed shared queries and bounded feed hydration
 

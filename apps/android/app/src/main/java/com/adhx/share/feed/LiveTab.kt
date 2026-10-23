@@ -83,7 +83,6 @@ import com.adhx.share.ui.SquircleShape
 import com.adhx.share.ui.rememberReducedMotion
 import com.adhx.share.ui.sansLineBox
 import com.adhx.share.ui.serifLineBox
-import kotlinx.coroutines.delay
 import java.util.Calendar
 
 /**
@@ -97,10 +96,7 @@ fun LiveTab(feed: FeedViewModel, server: String, actions: HomeActions, header: @
     val resumed = lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
     // Fresh while it's on screen.
     LaunchedEffect(resumed) {
-        while (resumed) {
-            feed.loadLive()
-            delay(LIST_POLL_MS)
-        }
+        if (resumed) feed.followLive()
     }
     val tuneIn: (LiveMoment) -> Unit = { actions.open(Route.TunedIn(it.slug)) }
     val context = LocalContext.current
@@ -151,7 +147,6 @@ fun LiveTab(feed: FeedViewModel, server: String, actions: HomeActions, header: @
     }
 }
 
-private const val LIST_POLL_MS = 20_000L
 
 @Composable
 private fun NothingLive() {

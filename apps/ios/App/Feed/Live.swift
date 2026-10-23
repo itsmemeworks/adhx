@@ -61,10 +61,15 @@ final class LiveModel: ObservableObject {
         forming[index].alert = on
     }
 
+    private var reloading = false
     func reload() async {
-        guard let client = Store.client() else { return }
+        guard !reloading, let client = Store.client() else { return }
+        reloading = true
+        defer { reloading = false }
+        func isCurrent() -> Bool { !Task.isCancelled && Store.client()?.server == client.server && Store.client()?.key == client.key }
         do {
             let snapshot = try await client.live()
+            guard isCurrent() else { return }
             moments = snapshot.moments
             // A bell being rung keeps its state until the answer comes.
             forming = snapshot.forming.map { group in
@@ -79,26 +84,29 @@ final class LiveModel: ObservableObject {
             unsupported = false
             KnownPeople.remember(moments.flatMap(\.savers))
         } catch APIError.badKey {
+            guard isCurrent() else { return }
             onBadKey()
         } catch is CancellationError {
             return
         } catch let error as APIError where error.isMissing {
+            guard isCurrent() else { return }
             unsupported = true
         } catch let error as APIError {
+            guard isCurrent() else { return }
             loadError = error.message
         } catch {
+            guard isCurrent() else { return }
             loadError = APIError.offline.message
         }
         loadedOnce = true
     }
 
-    /// Looks again every 20 s while the list is on screen.
+    /// Foreground SSE invalidations, with reconciliation and an older-server fallback.
     func follow() async {
-        while !Task.isCancelled {
-            try? await Task.sleep(nanoseconds: 20_000_000_000)
-            guard !Task.isCancelled else { return }
-            await reload()
-        }
+        guard let client = Store.client() else { return }
+        await LiveUpdates.follow(client: client, fallback: 20_000_000_000,
+            active: { !self.unsupported && Store.client()?.server == client.server && Store.client()?.key == client.key },
+            refresh: { await self.reload() })
     }
 
 }
@@ -495,7 +503,7 @@ private struct FormingRow: View {
 
 // MARK: - Tuned in
 
-/// One moment, tuned in (`/api/app/live/{slug}`, every 5 s): who else is
+/// One moment, tuned in (`/api/app/live/{slug}`, refreshed by SSE): who else is
 /// watching, new saves slotted in up next, and reactions floating up.
 @MainActor
 final class TunedInModel: ObservableObject {
@@ -511,7 +519,7 @@ final class TunedInModel: ObservableObject {
     /// The poster of the save that just landed, beside "Jo just saved one".
     @Published private(set) var arrivalPoster: String?
     @Published var currentIndex = 0
-    /// Reactions on their way up the screen (yours after acknowledgement, others from the poll).
+    /// Reactions on their way up the screen (yours after acknowledgement, others from live refreshes).
     @Published private(set) var floating: [FloatingReaction] = []
     private var arrivalTask: Task<Void, Never>?
     /// Reactions already shown (or already old when you tuned in).
@@ -532,21 +540,23 @@ final class TunedInModel: ObservableObject {
         guard let client = Store.client() else { return }
         let session = UUID().uuidString
         defer {
-            // A separate task can send leave even though the screen's poll task was cancelled.
+            // A separate task can send leave even though the screen's stream task was cancelled.
             Task { try? await client.leaveLive(slug: slug, session: session) }
         }
-        while !Task.isCancelled {
-            await refresh(watching: session)
-            if gone { return }
-            try? await Task.sleep(nanoseconds: 5_000_000_000)
-        }
+        await LiveUpdates.follow(client: client, slug: slug,
+            active: { !self.gone && Store.client()?.server == client.server && Store.client()?.key == client.key },
+            refresh: { await self.refresh(watching: session) })
     }
 
+    private var refreshing = false
     func refresh(watching session: String? = nil) async {
-        guard let client = Store.client() else { return }
+        guard !refreshing, let client = Store.client() else { return }
+        refreshing = true
+        defer { refreshing = false }
+        func isCurrent() -> Bool { !Task.isCancelled && Store.client()?.server == client.server && Store.client()?.key == client.key }
         do {
             let detail = try await client.live(slug: slug, watching: session, known: items.map(\.key))
-            guard !Task.isCancelled else { return }
+            guard isCurrent() else { return }
             if let moment = detail.moment { self.moment = moment }
             watchers = detail.watchers
             let first = !loadedOnce
@@ -556,14 +566,17 @@ final class TunedInModel: ObservableObject {
             loadError = nil
         } catch is CancellationError { return
         } catch let error as APIError where error.isMissing {
+            guard isCurrent() else { return }
             gone = true
             items = []
             watchers = []
         } catch APIError.badKey {
+            guard isCurrent() else { return }
             items = []
             watchers = []
             gone = true
         } catch {
+            guard isCurrent() else { return }
             loadError = (error as? APIError)?.message ?? APIError.offline.message
         }
         loadedOnce = true
@@ -590,7 +603,7 @@ final class TunedInModel: ObservableObject {
         }
     }
 
-    /// Others' reactions from the poll float up; the ones already there when
+    /// Others' reactions from live refreshes float up; the ones already there when
     /// you tuned in don't. Yours floated when you sent them.
     private func take(_ reactions: [LiveReactionEvent], quietly: Bool) {
         if shownReactions.count > 1000 { shownReactions = Set(reactions.map(\.id).filter { shownReactions.contains($0) }) }

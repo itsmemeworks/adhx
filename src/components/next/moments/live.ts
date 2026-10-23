@@ -134,29 +134,58 @@ export function useMomentStream(
   onEvent: (event: MomentEvent) => void,
   watch?: string | null,
   enabled = true,
+  onReady?: () => void,
 ): boolean {
   const handler = useRef(onEvent)
+  const ready = useRef(onReady)
   handler.current = onEvent
+  ready.current = onReady
   const [connected, setConnected] = useState(false)
   useEffect(() => {
     if (!enabled || typeof EventSource === 'undefined') return
     const url = watch
       ? `/api/moments/stream?watch=${encodeURIComponent(watch)}`
       : '/api/moments/stream'
-    const source = new EventSource(url)
-    const on = (e: MessageEvent<string>) => {
-      try {
-        handler.current(JSON.parse(e.data) as MomentEvent)
-      } catch {
-        // ignore a malformed event
+    let source: EventSource | null = null
+    const close = () => {
+      source?.close()
+      source = null
+      setConnected(false)
+    }
+    const connect = () => {
+      if (source || document.hidden) return
+      const next = new EventSource(url)
+      source = next
+      const on = (e: MessageEvent<string>) => {
+        if (source !== next) return
+        try {
+          handler.current(JSON.parse(e.data) as MomentEvent)
+        } catch {
+          /* Ignore malformed frames. */
+        }
+      }
+      for (const type of ['snapshot', 'save', 'formed', 'stats', 'watching', 'reaction'])
+        next.addEventListener(type, on as EventListener)
+      next.onopen = () => {
+        if (source === next) {
+          setConnected(true)
+          ready.current?.()
+        }
+      }
+      next.onerror = () => {
+        if (source === next) setConnected(false)
       }
     }
-    for (const type of ['snapshot', 'save', 'formed', 'stats', 'watching', 'reaction']) {
-      source.addEventListener(type, on as EventListener)
+    const visibility = () => {
+      if (document.hidden) close()
+      else connect()
     }
-    source.onopen = () => setConnected(true)
-    source.onerror = () => setConnected(false)
-    return () => source.close()
+    connect()
+    document.addEventListener('visibilitychange', visibility)
+    return () => {
+      document.removeEventListener('visibilitychange', visibility)
+      close()
+    }
   }, [watch, enabled])
   return connected
 }
@@ -172,82 +201,158 @@ export function useMoments(): {
   const [flashes, setFlashes] = useState<Map<string, Flash>>(new Map())
   const [popped, setPopped] = useState<Set<string>>(new Set())
   const queued = useRef<MomentEvent[]>([])
-  const timers = useRef<number[]>([])
+  const [revision, setRevision] = useState(0)
+  const loading = useRef(true)
+  const overflow = useRef(false)
+  const timers = useRef(new Set<number>())
+  const failures = useRef(0)
 
   useEffect(() => {
     let alive = true
-    fetch('/api/moments', { credentials: 'same-origin' })
-      .then((r) => (r.ok ? (r.json() as Promise<MomentsSnapshot>) : null))
+    const controller = new AbortController()
+    loading.current = true
+    queued.current = []
+    overflow.current = false
+    fetch('/api/moments', { credentials: 'same-origin', signal: controller.signal })
+      .then((r) => {
+        if (!r.ok) throw new Error('snapshot unavailable')
+        return r.json() as Promise<MomentsSnapshot>
+      })
       .then((data) => {
         if (!alive || !data) return
-        // Events that arrived before the snapshot still apply.
+        if (overflow.current) {
+          setRevision((n) => n + 1)
+          return
+        }
+        // Include events received while this authoritative snapshot was loading.
         setSnapshot(queued.current.reduce(applyEvent, data))
+        loading.current = false
+        failures.current = 0
         queued.current = []
       })
-      .catch(() => {})
-    const pending = timers.current
+      .catch(() => {
+        if (alive)
+          retry = window.setTimeout(
+            () => setRevision((n) => n + 1),
+            Math.min(30_000, 1000 * 2 ** Math.min(failures.current++, 5)),
+          )
+      })
+    let retry: number | undefined
     return () => {
       alive = false
-      pending.forEach((t) => window.clearTimeout(t))
+      controller.abort()
+      window.clearTimeout(retry)
+    }
+  }, [revision])
+
+  useEffect(() => {
+    const pending = timers.current
+    return () => {
+      pending.forEach((timer) => window.clearTimeout(timer))
+      pending.clear()
     }
   }, [])
-
   const later = useCallback((fn: () => void, ms: number) => {
-    timers.current.push(window.setTimeout(fn, ms))
+    const timer = window.setTimeout(() => {
+      timers.current.delete(timer)
+      fn()
+    }, ms)
+    timers.current.add(timer)
   }, [])
 
-  const connected = useMomentStream((event) => {
-    setSnapshot((s) => {
-      if (!s) {
-        queued.current.push(event)
-        return s
+  const connected = useMomentStream(
+    (event) => {
+      if (loading.current) {
+        if (queued.current.length < 256) queued.current.push(event)
+        else overflow.current = true
       }
-      return applyEvent(s, event)
-    })
-    const flashKey =
-      event.type === 'save' && event.item.to
-        ? event.item.to.kind === 'moment'
-          ? event.item.to.slug
-          : event.item.to.id
-        : null
-    if (event.type === 'save' && flashKey) {
-      setFlashes((f) => new Map(f).set(flashKey, { item: event.item }))
-      later(
-        () =>
-          setFlashes((f) => {
-            if (f.get(flashKey)?.item.id !== event.item.id) return f
-            const next = new Map(f)
-            next.delete(flashKey)
-            return next
-          }),
-        FLASH_MS,
-      )
-    }
-    if (event.type === 'formed') {
-      const slug = event.moment.slug
-      setPopped((p) => new Set(p).add(slug))
-      later(
-        () =>
-          setPopped((p) => {
-            const next = new Set(p)
-            next.delete(slug)
-            return next
-          }),
-        POP_MS,
-      )
-    }
-  })
+      setSnapshot((s) => (s ? applyEvent(s, event) : s))
+      const flashKey =
+        event.type === 'save' && event.item.to
+          ? event.item.to.kind === 'moment'
+            ? event.item.to.slug
+            : event.item.to.id
+          : null
+      if (event.type === 'save' && flashKey) {
+        setFlashes((f) => new Map(f).set(flashKey, { item: event.item }))
+        later(
+          () =>
+            setFlashes((f) => {
+              if (f.get(flashKey)?.item.id !== event.item.id) return f
+              const next = new Map(f)
+              next.delete(flashKey)
+              return next
+            }),
+          FLASH_MS,
+        )
+      }
+      if (event.type === 'formed') {
+        const slug = event.moment.slug
+        setPopped((p) => new Set(p).add(slug))
+        later(
+          () =>
+            setPopped((p) => {
+              const next = new Set(p)
+              next.delete(slug)
+              return next
+            }),
+          POP_MS,
+        )
+      }
+    },
+    undefined,
+    true,
+    () => setRevision((n) => n + 1),
+  )
 
   return { snapshot, flashes, popped, connected }
 }
 
-/** One moment, live: its posts newest first, with new saves dropping in. */
+/** Replay a live detail event after a REST snapshot without double-counting a save. */
+export function applyDetailEvent(
+  detail: MomentDetail,
+  event: MomentEvent,
+  slug: string,
+): MomentDetail {
+  if (event.type === 'watching' && event.slug === slug)
+    return {
+      ...detail,
+      moment: { ...detail.moment, watching: event.watching },
+      ...(event.watchers ? { watchers: event.watchers } : {}),
+    }
+  if (event.type !== 'save' || event.item.to?.kind !== 'moment' || event.item.to.slug !== slug)
+    return detail
+  const item = event.item
+  const previous = detail.items.find(
+    (x) => `${x.post.platform ?? 'twitter'}:${x.post.id}` === item.key,
+  )
+  const savers = event.saver
+    ? [event.saver, ...(previous?.savers ?? []).filter((s) => s.username !== event.saver!.username)]
+    : previous?.savers
+  const bars = detail.bars.slice()
+  if (!previous) bars[bars.length - 1] = (bars[bars.length - 1] ?? 0) + 1
+  return {
+    ...detail,
+    bars,
+    moment: event.moment ? keepPeople(event.moment, detail.moment) : detail.moment,
+    items: [
+      {
+        post: item.post,
+        savedAt: item.at,
+        people: Math.max(previous?.people ?? 1, savers?.length ?? 1),
+        ...(savers ? { savers } : {}),
+      },
+      ...detail.items.filter((x) => `${x.post.platform ?? 'twitter'}:${x.post.id}` !== item.key),
+    ].slice(0, 120),
+  }
+}
+
+/** One moment, live: resynchronise after every transport reconnect. */
 export function useMoment(slug: string): {
   detail: MomentDetail | null
   missing: boolean
   fresh: string | null
   watching: number
-  /** Members tuned in now (signed in only; empty for strangers). */
   watchers: Saver[]
 } {
   const [detail, setDetail] = useState<MomentDetail | null>(null)
@@ -255,10 +360,20 @@ export function useMoment(slug: string): {
   const [fresh, setFresh] = useState<string | null>(null)
   const [watching, setWatching] = useState(0)
   const [watchers, setWatchers] = useState<Saver[]>([])
-
+  const [revision, setRevision] = useState(0)
+  const loading = useRef(true)
+  const pending = useRef<MomentEvent[]>([])
+  const overflow = useRef(false)
   useEffect(() => {
     let alive = true
-    fetch(`/api/moments/${encodeURIComponent(slug)}?limit=60`, { credentials: 'same-origin' })
+    const controller = new AbortController()
+    loading.current = true
+    pending.current = []
+    overflow.current = false
+    fetch(`/api/moments/${encodeURIComponent(slug)}?limit=60`, {
+      credentials: 'same-origin',
+      signal: controller.signal,
+    })
       .then((r) => {
         if (r.status === 404) {
           if (alive) setMissing(true)
@@ -267,43 +382,42 @@ export function useMoment(slug: string): {
         return r.ok ? (r.json() as Promise<MomentDetail>) : null
       })
       .then((data) => {
-        if (alive && data) {
-          setDetail(data)
-          setWatching(data.moment.watching)
-          setWatchers(data.watchers ?? [])
+        if (!alive || !data) return
+        if (overflow.current) {
+          setRevision((n) => n + 1)
+          return
         }
+        const next = pending.current.reduce((d, e) => applyDetailEvent(d, e, slug), data)
+        setDetail(next)
+        setMissing(false)
+        setWatching(next.moment.watching)
+        setWatchers(next.watchers ?? [])
+        loading.current = false
+        pending.current = []
       })
       .catch(() => {})
     return () => {
       alive = false
+      controller.abort()
     }
-  }, [slug])
-
-  useMomentStream((event) => {
-    if (event.type === 'watching' && event.slug === slug) {
-      setWatching(event.watching)
-      if (event.watchers) setWatchers(event.watchers)
-    }
-    if (event.type === 'save' && event.item.to?.kind === 'moment' && event.item.to.slug === slug) {
-      const item = event.item
-      setDetail((d) => {
-        if (!d) return d
-        const bars = d.bars.slice()
-        bars[bars.length - 1] = (bars[bars.length - 1] ?? 0) + 1
-        const saver = event.saver
-        return {
-          ...d,
-          moment: event.moment ? keepPeople(event.moment, d.moment) : d.moment,
-          bars,
-          items: [
-            { post: item.post, savedAt: item.at, people: 1, ...(saver ? { savers: [saver] } : {}) },
-            ...d.items.filter((x) => `${x.post.platform ?? 'twitter'}:${x.post.id}` !== item.key),
-          ].slice(0, 120),
-        }
-      })
-      setFresh(item.id)
-    }
-  }, slug)
-
+  }, [slug, revision])
+  useMomentStream(
+    (event) => {
+      if (loading.current) {
+        if (pending.current.length < 256) pending.current.push(event)
+        else overflow.current = true
+      }
+      if (event.type === 'watching' && event.slug === slug) {
+        setWatching(event.watching)
+        if (event.watchers) setWatchers(event.watchers)
+      }
+      setDetail((d) => (d ? applyDetailEvent(d, event, slug) : d))
+      if (event.type === 'save' && event.item.to?.kind === 'moment' && event.item.to.slug === slug)
+        setFresh(event.item.id)
+    },
+    slug,
+    true,
+    () => setRevision((n) => n + 1),
+  )
   return { detail, missing, fresh, watching, watchers }
 }

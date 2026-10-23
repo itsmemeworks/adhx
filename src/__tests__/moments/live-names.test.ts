@@ -34,7 +34,13 @@ import { saveEmbedding } from '@/lib/semantic/store'
 import { normalize } from '@/lib/moments/group'
 import { __resetVectorIndex } from '@/lib/semantic/vector-index'
 import { __moments, __resetMoments, getMomentsSnapshot } from '@/lib/moments/engine'
-import { __resetPresence } from '@/lib/moments/presence'
+import {
+  __resetPresence,
+  joinWatch,
+  holdWebWatch,
+  renewWatch,
+  watcherIds,
+} from '@/lib/moments/presence'
 import { __resetRateLimitState } from '@/lib/rate-limit'
 import { createAccessKey } from '@/lib/auth/access-keys'
 import { GET as snapshotGET } from '@/app/api/moments/route'
@@ -42,6 +48,7 @@ import { GET as detailGET } from '@/app/api/moments/[slug]/route'
 import { GET as streamGET } from '@/app/api/moments/stream/route'
 import { POST as reactPOST } from '@/app/api/moments/[slug]/react/route'
 import { GET as appLiveGET } from '@/app/api/app/live/route'
+import { GET as appLiveStreamGET } from '@/app/api/app/live/stream/route'
 import {
   GET as appMomentGET,
   POST as appMomentPOST,
@@ -220,9 +227,58 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.restoreAllMocks()
   vi.unstubAllEnvs()
   __resetMoments()
   __resetPresence()
+})
+
+describe('planned stream reconnection presence', () => {
+  it('bridges a browser reconnect briefly and keeps another open tab present', () => {
+    let now = Date.now()
+    vi.spyOn(Date, 'now').mockImplementation(() => now)
+    const leave = joinWatch('room', USER_A)
+    holdWebWatch('room', USER_A)
+    leave()
+    now += 4_999
+    expect(watcherIds('room').map((w) => w.userId)).toEqual([USER_A])
+    const leaveOther = joinWatch('room', USER_A)
+    now += 1
+    expect(watcherIds('room')).toHaveLength(1)
+    leaveOther()
+    expect(watcherIds('room')).toEqual([])
+  })
+
+  it('expires phone reconnect grace and checks its exact key for revocation', () => {
+    let now = Date.now()
+    vi.spyOn(Date, 'now').mockImplementation(() => now)
+    renewWatch('room', USER_A, 'phone-a', 'rotation', 3_000)
+    now += 2_999
+    expect(watcherIds('room', (key) => key === 'phone-a')).toHaveLength(1)
+    now += 1
+    expect(watcherIds('room')).toEqual([])
+    renewWatch('room', USER_A, 'phone-a', 'rotation', 3_000)
+    expect(watcherIds('room', () => false)).toEqual([])
+  })
+
+  it('authenticates the list notification stream without exposing post payloads', async () => {
+    await seedFrogs()
+    await frogSlug()
+    const key = createAccessKey(USER_A, 'phone', 'phone')!.key
+    const controller = new AbortController()
+    const response = await appLiveStreamGET(
+      new Request(`${BASE}/api/app/live/stream`, {
+        headers: { authorization: `Bearer ${key}` },
+        signal: controller.signal,
+      }),
+    )
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toBe('text/event-stream')
+    const reader = response.body!.getReader()
+    expect(new TextDecoder().decode((await reader.read()).value)).toBe('retry: 3000\n\n')
+    controller.abort()
+    await reader.cancel()
+  })
 })
 
 describe('moments signed out', () => {
@@ -476,6 +532,7 @@ describe('the phone, live', () => {
     expect(
       (await appStreamGET(phoneReq(`/api/app/live/${slug}/stream`), params(slug))).status,
     ).toBe(401)
+    expect((await appLiveStreamGET(phoneReq('/api/app/live/stream'))).status).toBe(401)
   })
 
   it('shows moments with names, covers as paths, and posts the phone plays', async () => {

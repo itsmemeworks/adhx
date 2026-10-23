@@ -43,8 +43,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.withContext
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,7 +77,7 @@ import kotlinx.coroutines.delay
  * Tuned in to a moment: its posts in the player, LIVE and who's watching
  * with you at the top (instead of home's row), and React in the button column (six emoji, or a few
  * words for everyone watching). Reactions float up the screen with the face
- * of who sent them. Asks `/api/app/live/{slug}` again every ~5 s while it's
+ * of who sent them. Follows live changes and reconciles `/api/app/live/{slug}` while it's
  * on screen.
  */
 @Composable
@@ -97,14 +95,7 @@ fun TunedInScreen(
     LaunchedEffect(slug, resumed) {
         if (resumed) {
             val session = java.util.UUID.randomUUID().toString()
-            try {
-                while (true) {
-                    feed.pollTuned(session)
-                    delay(POLL_MS)
-                }
-            } finally {
-                withContext(NonCancellable) { feed.leaveTuned(slug, session) }
-            }
+            feed.followTuned(session)
         }
     }
     // "A new one, up next" shows for a few seconds.
@@ -247,7 +238,6 @@ fun TunedInScreen(
     }
 }
 
-private const val POLL_MS = 5_000L
 
 /** "Jo just saved one · up next": the new post's picture with their face on its corner. */
 @Composable
