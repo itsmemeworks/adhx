@@ -15,7 +15,7 @@ struct ResumeCard: View {
                 .accessibilityAddTraits(.isHeader)
             Text("You were \(ResumeStore.clock(spot.seconds)) into this, \(ResumeStore.when(spot.at)).")
                 .font(Theme.sans(14))
-                .foregroundStyle(Theme.muted)
+                .foregroundStyle(Theme.inkSoft)
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule(style: .continuous).fill(.white.opacity(0.18))

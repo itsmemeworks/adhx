@@ -172,7 +172,7 @@ import { onItsWay, useKeepStatus } from './useKeepStatus'
 import { useReactionReplay } from './useReactionReplay'
 
 /** How long a reaction floats on screen. */
-const REACTION_MS = 4_400
+const REACTION_MS = 3_600
 /** How long a short player message (“Link copied”) stays up, as on the phones. */
 export const PLAYER_TOAST_MS = 3_000
 /** At most this many float at once (a replay sends up to 12). */
@@ -371,7 +371,7 @@ function ControlButton({
       aria-pressed={pressed}
       onClick={onClick}
       className={cn(
-        'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/10',
+        'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-nx-ink hover:bg-white/10',
         className,
       )}
     >
@@ -1840,13 +1840,13 @@ export function TheaterV2({
           ) : (
             <>
               <span className="font-nx-serif text-[34px] leading-tight">{empty.title}</span>
-              <span className="max-w-[440px] text-[15px] text-white/70">{empty.body}</span>
+              <span className="max-w-[440px] text-[15px] text-nx-ink/70">{empty.body}</span>
               <span className="flex flex-wrap justify-center gap-2.5">
                 {empty.retry && (
                   <button
                     type="button"
                     onClick={() => window.location.reload()}
-                    className="rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-ink"
+                    className="rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-bg"
                   >
                     Try again
                   </button>
@@ -1861,8 +1861,8 @@ export function TheaterV2({
                     href={empty.href}
                     className={
                       empty.retry
-                        ? 'rounded-full border border-white/30 px-5 py-3 text-sm font-bold text-white'
-                        : 'rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-ink'
+                        ? 'rounded-full border border-white/30 px-5 py-3 text-sm font-bold text-nx-ink'
+                        : 'rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-bg'
                     }
                   >
                     {empty.action}
@@ -2054,14 +2054,14 @@ export function TheaterV2({
       <ControlButton
         label="Previous"
         onClick={prev}
-        className="-my-2.5 h-8 w-8 text-white/90 hover:bg-white/10"
+        className="-my-2.5 h-8 w-8 text-nx-ink/90 hover:bg-white/10"
       >
         <SkipBack aria-hidden className="h-4 w-4" fill="currentColor" />
       </ControlButton>
       <ControlButton
         label="Next"
         onClick={() => void next()}
-        className="-my-2.5 h-8 w-8 text-white/90 hover:bg-white/10"
+        className="-my-2.5 h-8 w-8 text-nx-ink/90 hover:bg-white/10"
       >
         <SkipForward aria-hidden className="h-4 w-4" fill="currentColor" />
       </ControlButton>
@@ -2087,7 +2087,7 @@ export function TheaterV2({
       <Sparkles aria-hidden className="h-4 w-4 shrink-0 text-nx-accent" fill="currentColor" />
       <span className="flex min-w-0 flex-col">
         <span className="truncate text-sm font-bold">{viaLabel(position.via)}</span>
-        <span className="truncate text-xs text-white/65">
+        <span className="truncate text-xs text-nx-ink/65">
           {`${viaReason(position.via, source.shared ? 'post' : isChannelSource(source) ? 'channel' : source.recent ? 'saves' : 'search')} · ${position.n} of ${position.of}`}
         </span>
       </span>
@@ -2095,14 +2095,14 @@ export function TheaterV2({
   )
 
   const liveChip = source.moment && (
-    <span className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-[#ff5a3c]/50 bg-black/55 pl-3 pr-3.5 text-[13px] font-extrabold tracking-[0.08em] backdrop-blur-md">
+    <span className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-nx-live/50 bg-black/55 pl-3 pr-3.5 text-[13px] font-extrabold tracking-[0.08em] backdrop-blur-md">
       <span
         aria-hidden
-        className="block h-[9px] w-[9px] rounded-full bg-[#ff5a3c] shadow-[0_0_0_4px_rgba(255,90,60,0.28),0_0_0_8px_rgba(255,90,60,0.1)]"
+        className="block h-[9px] w-[9px] rounded-full bg-nx-live shadow-[0_0_0_4px_rgba(255,90,60,0.28),0_0_0_8px_rgba(255,90,60,0.1)]"
       />
       <span>LIVE</span>
       {!wide && watching > 0 && (
-        <span className="font-semibold tracking-normal text-white/80">{`${watching} watching`}</span>
+        <span className="font-semibold tracking-normal text-nx-ink/80">{`${watching} watching`}</span>
       )}
     </span>
   )
@@ -2114,12 +2114,12 @@ export function TheaterV2({
       aria-pressed={wander}
       className="pointer-events-auto flex h-9 items-center gap-[7px] whitespace-nowrap rounded-full border border-white/[0.12] bg-black/55 pl-2.5 pr-3.5 text-[13px] backdrop-blur-md"
     >
-      <Check aria-hidden className="h-3.5 w-3.5 text-[#5ee38a]" strokeWidth={3} />
+      <Check aria-hidden className="h-3.5 w-3.5 text-nx-watching" strokeWidth={3} />
       <span className="font-extrabold">Tuned in</span>
-      <span aria-hidden className="text-nx-soft">
+      <span aria-hidden className="text-nx-ink-soft">
         ·
       </span>
-      <span className="text-nx-soft">{wander ? 'Wandering' : 'Staying close'}</span>
+      <span className="text-nx-ink-soft">{wander ? 'Wandering' : 'Staying close'}</span>
     </button>
   )
 
@@ -2139,20 +2139,20 @@ export function TheaterV2({
       wide && layout !== 'panel'
         ? on
           ? 'bg-nx-accent text-black'
-          : 'bg-[#262320] text-nx-cream hover:bg-[#2f2b27]'
+          : 'bg-nx-plate text-nx-cream hover:bg-nx-plate-hover'
         : wide
           ? cn(
               'border border-white/[0.14] bg-white/10 backdrop-blur-md hover:bg-white/[0.16]',
-              on ? 'text-nx-accent' : 'text-white',
+              on ? 'text-nx-accent' : 'text-nx-ink',
             )
-          : cn('bg-black/45 backdrop-blur-md', on ? 'text-nx-accent' : 'text-white'),
+          : cn('bg-black/45 backdrop-blur-md', on ? 'text-nx-accent' : 'text-nx-ink'),
       ring && 'ring-2 ring-inset ring-nx-accent',
     )
   const railItem = (button: ReactNode, label: string) =>
     wide && layout === 'panel' ? (
       <span className="flex flex-col items-center gap-[5px]">
         {button}
-        <span className="text-xs text-nx-soft">{label}</span>
+        <span className="text-xs text-nx-ink-soft">{label}</span>
       </span>
     ) : (
       button
@@ -2164,7 +2164,7 @@ export function TheaterV2({
       <div
         ref={rootRef}
         className={cn(
-          'fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] top-0 z-40 overflow-hidden bg-nx-stage font-nx-sans text-white md:bottom-0 md:top-[72px]',
+          'fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] top-0 z-40 overflow-hidden bg-nx-stage font-nx-sans text-nx-ink md:bottom-0 md:top-[72px]',
           wide && 'flex',
           wide && layout !== 'panel' && 'gap-8 px-8 py-6',
         )}
@@ -2180,7 +2180,7 @@ export function TheaterV2({
               <h1 className="m-0 flex-1 font-nx-serif text-[40px] font-normal leading-[0.95]">
                 {FEED_TITLES[source.feed]}
               </h1>
-              <span className="whitespace-nowrap text-[13px] font-semibold text-nx-soft">
+              <span className="whitespace-nowrap text-[13px] font-semibold text-nx-ink-soft">
                 {countLine}
               </span>
               <FeedTypesControl
@@ -2195,14 +2195,14 @@ export function TheaterV2({
               onChange={switchFeed}
               className="gap-1 bg-nx-surface [&>button]:h-10 [&>button]:flex-1"
             />
-            <h2 className="m-0 mt-2 text-xs font-extrabold uppercase tracking-[0.08em] text-nx-muted">
+            <h2 className="m-0 mt-2 text-xs font-extrabold uppercase tracking-[0.08em] text-nx-ink-faint">
               Up next
             </h2>
             <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 [scrollbar-width:none]">
               <UpNextList items={items} index={index} variant="feed" onPlay={goTo} />
             </div>
             {source.feed === 'new' && items.length - index > 6 && (
-              <span className="px-2.5 text-[13px] text-nx-muted">
+              <span className="px-2.5 text-[13px] text-nx-ink-faint">
                 {`${Math.max(0, (unseen ?? 0) - 6)} more after these. Then you’re caught up.`}
               </span>
             )}
@@ -2250,7 +2250,7 @@ export function TheaterV2({
                   type="button"
                   aria-label="Previous"
                   onClick={prev}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.12] bg-black/50 text-white"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.12] bg-black/50 text-nx-ink"
                 >
                   <ChevronUp aria-hidden className="h-5 w-5" />
                 </button>
@@ -2405,7 +2405,7 @@ export function TheaterV2({
                         // The whole article, right on the stage: scroll to read, Next or Skip to move on.
                         <div
                           className={cn(
-                            'absolute inset-0 bg-nx-ink',
+                            'absolute inset-0 bg-nx-bg',
                             wide
                               ? 'px-2 pb-20 pt-16'
                               : 'pb-24 pr-[68px] pt-14 md:pb-20 md:pr-24 md:pt-16',
@@ -2422,7 +2422,7 @@ export function TheaterV2({
                       ) : (
                         <div
                           className={cn(
-                            'absolute inset-0 bg-nx-ink',
+                            'absolute inset-0 bg-nx-bg',
                             wide
                               ? 'px-2 pb-20 pt-16'
                               : 'pb-28 pr-[68px] pt-14 md:pb-24 md:pr-24 md:pt-16',
@@ -2456,7 +2456,7 @@ export function TheaterV2({
                         : 'inset-x-3 top-[max(68px,calc(env(safe-area-inset-top)+60px))] pr-14',
                       // On a cream page see-through chips turn muddy grey: make them solid.
                       overlay &&
-                        '[&>[role=note]]:!bg-[#1c1b19] [&>a]:!bg-[#1c1b19] [&>button]:!bg-[#1c1b19] [&_.nx-plate]:!bg-[#1c1b19] [&_.nx-plate]:![backdrop-filter:none] [&_.nx-plate]:![text-shadow:none] [&_.nx-plate]:!shadow-none',
+                        '[&>[role=note]]:!bg-nx-sheet [&>a]:!bg-nx-sheet [&>button]:!bg-nx-sheet [&_.nx-plate]:!bg-nx-sheet [&_.nx-plate]:![backdrop-filter:none] [&_.nx-plate]:![text-shadow:none] [&_.nx-plate]:!shadow-none',
                     )}
                   >
                     {!wide && source.moment && (
@@ -2509,7 +2509,7 @@ export function TheaterV2({
                           />
                           <span>Tuned in</span>
                         </span>
-                        <span className="text-[13px] leading-[1.4] text-white/75">
+                        <span className="text-[13px] leading-[1.4] text-nx-ink/75">
                           Playing what people are saving like this, newest first. It keeps going as
                           new saves land.
                         </span>
@@ -2530,14 +2530,14 @@ export function TheaterV2({
                               onClick={b.pick}
                               className={cn(
                                 'h-8 flex-1 rounded-[8px] text-[13px] font-bold',
-                                b.on ? 'bg-white text-black' : 'text-white',
+                                b.on ? 'bg-nx-cream text-nx-on-cream' : 'text-nx-ink',
                               )}
                             >
                               {b.label}
                             </button>
                           ))}
                         </div>
-                        <span className="text-xs text-white/60">
+                        <span className="text-xs text-nx-ink/60">
                           {wander
                             ? 'This moment first, then drifting to posts near it.'
                             : 'Only this moment. New saves play as they land.'}
@@ -2577,7 +2577,7 @@ export function TheaterV2({
                       >
                         {!wide && source.moment && title && (
                           <span className="flex h-[26px] items-center gap-1.5 self-start whitespace-nowrap rounded-full bg-black/45 px-2.5 text-xs font-semibold backdrop-blur-md [text-shadow:none]">
-                            <span className="text-nx-soft">In</span>
+                            <span className="text-nx-ink-soft">In</span>
                             <span className="min-w-0 truncate font-extrabold">{title}</span>
                           </span>
                         )}
@@ -2635,7 +2635,7 @@ export function TheaterV2({
                               return when && savers && savers.length > 0 ? (
                                 <span
                                   className={cn(
-                                    'shrink-0 whitespace-nowrap text-nx-soft',
+                                    'shrink-0 whitespace-nowrap text-nx-ink-soft',
                                     wide && layout === 'feed' ? 'text-sm' : 'text-[13px]',
                                   )}
                                 >
@@ -2684,7 +2684,7 @@ export function TheaterV2({
                           onSeek={seekTo}
                           disabled={kind === 'article' && !reading}
                         />
-                        <span className="whitespace-nowrap text-[13px] font-semibold tabular-nums text-nx-soft">
+                        <span className="whitespace-nowrap text-[13px] font-semibold tabular-nums text-nx-ink-soft">
                           {timeAll ?? timeLabel}
                         </span>
                         {isVideo && (
@@ -2739,7 +2739,7 @@ export function TheaterV2({
                           onSeek={seekTo}
                           disabled={kind === 'article' && !reading}
                         />
-                        <span className="whitespace-nowrap text-xs font-semibold tabular-nums text-nx-soft">
+                        <span className="whitespace-nowrap text-xs font-semibold tabular-nums text-nx-ink-soft">
                           {timeLabel}
                         </span>
                       </div>
@@ -2750,7 +2750,7 @@ export function TheaterV2({
                         <ControlButton
                           label={paused ? 'Play' : 'Pause'}
                           onClick={togglePlay}
-                          className="-my-2.5 -ml-2 h-8 w-8 text-white/90 hover:bg-white/10"
+                          className="-my-2.5 -ml-2 h-8 w-8 text-nx-ink/90 hover:bg-white/10"
                         >
                           {paused ? (
                             <Play
@@ -2776,7 +2776,7 @@ export function TheaterV2({
                           thin
                         />
                         {overlay && timeLabel && (
-                          <span className="whitespace-nowrap text-[11px] font-semibold tabular-nums text-white/85">
+                          <span className="whitespace-nowrap text-[11px] font-semibold tabular-nums text-nx-ink/85">
                             {timeLabel}
                           </span>
                         )}
@@ -2804,7 +2804,7 @@ export function TheaterV2({
                       <span className="font-nx-serif text-[28px] leading-tight">
                         You’re all caught up. Go touch grass.
                       </span>
-                      <span className="text-sm text-white/75">
+                      <span className="text-sm text-nx-ink/75">
                         New saves play here as they land.
                       </span>
                     </div>
@@ -2820,7 +2820,7 @@ export function TheaterV2({
                               if (added) goTo(index + 1)
                             })
                           }
-                          className="rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-ink"
+                          className="rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-bg"
                         >
                           Keep going with more like this
                         </button>
@@ -3031,7 +3031,7 @@ export function TheaterV2({
                               'h-8 shrink-0 whitespace-nowrap rounded-full border px-3 text-[13px] font-semibold disabled:opacity-50',
                               weight === w
                                 ? 'border-nx-cream bg-nx-cream text-black'
-                                : 'border-white/[0.08] text-nx-muted',
+                                : 'border-white/[0.08] text-nx-ink-faint',
                             )}
                           >
                             {w === 1 ? 'Show more' : 'Show less'}
@@ -3050,7 +3050,7 @@ export function TheaterV2({
           <aside aria-label="Up next" className="flex min-h-0 w-[320px] shrink-0 flex-col gap-1.5">
             <div className="flex items-baseline justify-between gap-3 px-2 pb-2">
               <h2 className="m-0 font-nx-serif text-[32px] font-normal leading-none">Up next</h2>
-              <span className="truncate whitespace-nowrap text-[13px] text-nx-muted">
+              <span className="truncate whitespace-nowrap text-[13px] text-nx-ink-faint">
                 {source.recent ? 'From My saves' : source.shared ? 'More like this' : countLine}
               </span>
             </div>
@@ -3063,12 +3063,12 @@ export function TheaterV2({
         {wide && layout === 'panel' && (
           <aside
             aria-label={source.moment ? 'This moment' : 'Channel'}
-            className="relative z-10 flex min-h-0 w-[400px] shrink-0 flex-col gap-3.5 overflow-y-auto border-l border-white/[0.08] bg-nx-ink px-7 py-6 [scrollbar-width:none]"
+            className="relative z-10 flex min-h-0 w-[400px] shrink-0 flex-col gap-3.5 overflow-y-auto border-l border-white/[0.08] bg-nx-bg px-7 py-6 [scrollbar-width:none]"
           >
             {source.moment ? (
               <>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold uppercase tracking-[0.1em] text-nx-muted">
+                  <span className="text-xs font-extrabold uppercase tracking-[0.1em] text-nx-ink-faint">
                     Right now
                   </span>
                   <Link
@@ -3081,8 +3081,8 @@ export function TheaterV2({
                 <h1 className="m-0 -mt-1.5 font-nx-serif text-[44px] font-normal leading-[0.95]">
                   {title ?? 'Right now'}
                 </h1>
-                <span className="flex items-center gap-2 text-sm text-nx-soft">
-                  <span aria-hidden className="block h-2 w-2 rounded-full bg-[#ff5a3c]" />
+                <span className="flex items-center gap-2 text-sm text-nx-ink-soft">
+                  <span aria-hidden className="block h-2 w-2 rounded-full bg-nx-live" />
                   <span className="font-extrabold text-nx-cream">LIVE</span>
                   <span aria-hidden>·</span>
                   <span>{momentPace(items)}</span>
@@ -3109,28 +3109,28 @@ export function TheaterV2({
                     <h2 className="m-0 text-[15px] font-extrabold">Say something</h2>
                     <QuickWords onSay={sayWord} disabled={reacting} said={said} />
                     {reactionError && (
-                      <p role="status" className="m-0 text-sm text-[#ffb891]">
+                      <p role="status" className="m-0 text-sm text-nx-warn">
                         {reactionError}
                       </p>
                     )}
                   </>
                 )}
-                <p className="m-0 text-[13px] leading-[1.45] text-nx-muted">
-                  <span className="font-extrabold text-nx-soft">Stay close</span>
+                <p className="m-0 text-[13px] leading-[1.45] text-nx-ink-faint">
+                  <span className="font-extrabold text-nx-ink-soft">Stay close</span>
                   <span> keeps you on this moment. </span>
-                  <span className="font-extrabold text-nx-soft">Wander</span>
+                  <span className="font-extrabold text-nx-ink-soft">Wander</span>
                   <span> drifts into nearby saves when it runs out.</span>
                 </p>
               </>
             ) : (
               <>
-                <span className="text-xs font-extrabold uppercase tracking-[0.1em] text-nx-muted">
+                <span className="text-xs font-extrabold uppercase tracking-[0.1em] text-nx-ink-faint">
                   {channelKind}
                 </span>
                 <h1 className="m-0 font-nx-serif text-[42px] font-normal leading-[0.95]">
                   {title ?? 'Channel'}
                 </h1>
-                <div className="flex items-center gap-2.5 text-sm text-nx-soft">
+                <div className="flex items-center gap-2.5 text-sm text-nx-ink-soft">
                   {inQueue.length > 0 && (
                     <FaceStack savers={inQueue} size={26} ring="#0f0e0c" max={3} />
                   )}
@@ -3198,7 +3198,7 @@ export function TheaterV2({
                 <PanelDivider />
                 <div className="flex items-baseline justify-between">
                   <h2 className="m-0 text-[15px] font-extrabold">Up next</h2>
-                  <span className="text-[13px] text-nx-muted">
+                  <span className="text-[13px] text-nx-ink-faint">
                     {`${Math.max(0, Math.max(position.of, feedTotal) - position.n)} to go`}
                   </span>
                 </div>
@@ -3242,7 +3242,7 @@ export function TheaterV2({
         {!toast && source.moment && arrivals > 0 && !(arrivals === 1 && arrival) && (
           <div
             role="status"
-            className="absolute left-1/2 top-[max(76px,calc(env(safe-area-inset-top)+64px))] z-30 flex -translate-x-1/2 items-center gap-3 whitespace-nowrap rounded-full bg-[#1c1b19]/95 py-2 pl-4 pr-2 text-sm shadow-nx-toast animate-nx-slide-in md:top-4"
+            className="absolute left-1/2 top-[max(76px,calc(env(safe-area-inset-top)+64px))] z-30 flex -translate-x-1/2 items-center gap-3 whitespace-nowrap rounded-full bg-nx-sheet/95 py-2 pl-4 pr-2 text-sm shadow-nx-toast animate-nx-slide-in md:top-4"
           >
             <span
               aria-hidden
@@ -3389,7 +3389,7 @@ export function TheaterV2({
           </div>
         )}
       </div>
-      <header className="pointer-events-none fixed inset-x-0 top-0 z-[41] flex items-center gap-2.5 bg-gradient-to-b from-black/60 to-transparent px-4 pb-6 pt-[max(12px,env(safe-area-inset-top))] md:h-[72px] md:gap-4 md:border-b md:border-white/[0.08] md:bg-nx-ink md:bg-none md:px-8 md:py-0 lg:gap-7">
+      <header className="pointer-events-none fixed inset-x-0 top-0 z-[41] flex items-center gap-2.5 bg-gradient-to-b from-black/60 to-transparent px-4 pb-6 pt-[max(12px,env(safe-area-inset-top))] md:h-[72px] md:gap-4 md:border-b md:border-white/[0.08] md:bg-nx-bg md:bg-none md:px-8 md:py-0 lg:gap-7">
         {/* Phones: Gob, New · Channels · Live, and one tool. */}
         <PhoneGob className="pointer-events-auto md:hidden" />
         <PhoneTabs

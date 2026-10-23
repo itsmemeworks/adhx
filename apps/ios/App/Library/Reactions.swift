@@ -43,7 +43,7 @@ struct ReactPicker: View {
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Quick reactions")
             HStack(spacing: 8) {
-                TextField("", text: $words, prompt: Text(prompt).foregroundColor(Theme.faint))
+                TextField("", text: $words, prompt: Text(prompt).foregroundColor(Theme.inkFaint))
                     .font(Theme.sans(15, .medium))
                     .foregroundStyle(Theme.ink)
                     .focused(typing)
@@ -55,9 +55,9 @@ struct ReactPicker: View {
                     .padding(.horizontal, 16)
                     .frame(height: 44)
                     // 26 − 12 inset − 1 border: follows the picker's curve.
-                    .background(RoundedRectangle(cornerRadius: 13, style: .continuous).fill(Theme.app))
+                    .background(RoundedRectangle(cornerRadius: 13, style: .continuous).fill(Theme.bg))
                     .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous)
-                        .strokeBorder(Color(hex: 0x4A453E), lineWidth: 1))
+                        .strokeBorder(Theme.line, lineWidth: 1))
                     .accessibilityLabel("Say something")
                     .accessibilityHint(hint)
                 Button(sending ? "Sending…" : (retrying ? "Retry" : "Send"), action: onWords)
@@ -74,7 +74,7 @@ struct ReactPicker: View {
             } else if let footnote {
                 Text(footnote)
                     .font(Theme.sans(12))
-                    .foregroundStyle(Theme.faint)
+                    .foregroundStyle(Theme.inkFaint)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }

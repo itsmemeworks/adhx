@@ -33,7 +33,10 @@ export function TheaterCaption({
   className,
   onOpenRead,
 }: TheaterCaptionProps) {
-  const classes = cn('line-clamp-2 text-white/90 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]', className)
+  const classes = cn(
+    'line-clamp-2 text-nx-ink/90 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]',
+    className,
+  )
   const linkedText = (
     <TheaterLinkedText
       platform={platform}

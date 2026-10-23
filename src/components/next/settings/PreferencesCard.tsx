@@ -58,7 +58,7 @@ export function PreferencesCard() {
           <span>
             {BIONIC_SAMPLE.map(([bold, rest]) => (
               <span key={bold + rest}>
-                <strong className="font-bold text-white/85">{bold}</strong>
+                <strong className="font-bold text-nx-ink/85">{bold}</strong>
                 <span>{rest}</span>
               </span>
             ))}
@@ -75,7 +75,7 @@ export function PreferencesCard() {
       <div className="flex flex-col gap-2.5">
         <span
           id="nx-font-label"
-          className="text-xs font-bold uppercase tracking-[0.08em] text-white/45"
+          className="text-xs font-bold uppercase tracking-[0.08em] text-nx-ink/45"
         >
           Reading font
         </span>
@@ -117,7 +117,7 @@ export function PreferencesCard() {
                   <span className="text-[15px] font-bold" style={{ fontFamily: fontVar }}>
                     {name}
                   </span>
-                  <span className="text-xs text-white/55" style={{ fontFamily: fontVar }}>
+                  <span className="text-xs text-nx-ink/55" style={{ fontFamily: fontVar }}>
                     {`The quick brown fox · ${description}`}
                   </span>
                 </span>

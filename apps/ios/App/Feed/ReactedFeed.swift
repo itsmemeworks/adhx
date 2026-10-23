@@ -120,7 +120,7 @@ private struct ReactedTile: View {
                 if item.post.posterUrl == nil {
                     Text(item.post.text)
                         .font(Theme.sans(12, .semibold))
-                        .foregroundStyle(Theme.muted)
+                        .foregroundStyle(Theme.inkSoft)
                         .lineLimit(6)
                         .padding(10)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

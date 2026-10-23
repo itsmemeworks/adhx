@@ -16,7 +16,7 @@ import org.junit.Test
 class BoardsCopyTest {
     @Test
     fun facesUseTheFiveBoardColours() {
-        val five = setOf(Color(0xFFFF8FA3), Color(0xFF7FD1AE), Color(0xFFFFB35C), Color(0xFFC4A7FF), Color(0xFF6B8CFF))
+        val five = setOf(AdhxColors.Person2, AdhxColors.Person1, AdhxColors.Person5, AdhxColors.Person4, AdhxColors.Person3)
         listOf("ana", "ben", "mum", "jo", "pete", "benji", "", "Zoë").forEach { assertTrue(faceColor(it) in five) }
         assertEquals(faceColor("jo"), faceColor("JO"))
         assertEquals(faceColor("jo"), faceColor("@jo"))
@@ -24,11 +24,61 @@ class BoardsCopyTest {
 
     @Test
     fun theBoardsPeopleGetTheirBoardColours() {
-        assertEquals(Color(0xFFFF8FA3), faceColor("ana"))
-        assertEquals(Color(0xFF7FD1AE), faceColor("ben"))
-        assertEquals(Color(0xFFFFB35C), faceColor("mum"))
-        assertEquals(Color(0xFFC4A7FF), faceColor("jo"))
-        assertEquals(Color(0xFF6B8CFF), faceColor("pete"))
+        assertEquals(AdhxColors.Person2, faceColor("ana"))
+        assertEquals(AdhxColors.Person1, faceColor("ben"))
+        assertEquals(AdhxColors.Person5, faceColor("mum"))
+        assertEquals(AdhxColors.Person4, faceColor("jo"))
+        assertEquals(AdhxColors.Person3, faceColor("pete"))
+    }
+
+    /** The design system's tokens.json, value for value (cream #f2ead9, ink-faint #a89f8d, danger #ff8a7a). */
+    @Test
+    fun theColoursAreTheDesignSystemsTokens() {
+        listOf(
+            "Bg" to (AdhxColors.Bg to Color(0xFF0F0E0C)),
+            "Stage" to (AdhxColors.Stage to Color(0xFF000000)),
+            "Deep" to (AdhxColors.Deep to Color(0xFF12110F)),
+            "Surface" to (AdhxColors.Surface to Color(0xFF1A1814)),
+            "Sheet" to (AdhxColors.Sheet to Color(0xFF1C1B19)),
+            "Raised" to (AdhxColors.Raised to Color(0xFF2A2620)),
+            "Plate" to (AdhxColors.Plate to Color(0xFF262320)),
+            "PlateHover" to (AdhxColors.PlateHover to Color(0xFF2F2B27)),
+            "Placeholder" to (AdhxColors.Placeholder to Color(0xFF2A2825)),
+            "Hairline" to (AdhxColors.Hairline to Color(0xFF2A2620)),
+            "Line" to (AdhxColors.Line to Color(0xFF4A453E)),
+            "Accent" to (AdhxColors.Accent to Color(0xFFFFD23F)),
+            "OnAccent" to (AdhxColors.OnAccent to Color(0xFF000000)),
+            "Cream" to (AdhxColors.Cream to Color(0xFFF2EAD9)),
+            "OnCream" to (AdhxColors.OnCream to Color(0xFF141414)),
+            "OnCreamSoft" to (AdhxColors.OnCreamSoft to Color(0xFF5C5446)),
+            "Bone" to (AdhxColors.Bone to Color(0xFFB8AB92)),
+            "Ink" to (AdhxColors.Ink to Color(0xFFF4F1EA)),
+            "InkSoft" to (AdhxColors.InkSoft to Color(0xFFC9BFAB)),
+            "InkFaint" to (AdhxColors.InkFaint to Color(0xFFA89F8D)),
+            "Good" to (AdhxColors.Good to Color(0xFF7DDC8A)),
+            "Warn" to (AdhxColors.Warn to Color(0xFFFFB59A)),
+            "Live" to (AdhxColors.Live to Color(0xFFFF5A3C)),
+            "Danger" to (AdhxColors.Danger to Color(0xFFFF8A7A)),
+            "DangerFill" to (AdhxColors.DangerFill to Color(0xFFE5484D)),
+            "Watching" to (AdhxColors.Watching to Color(0xFF5EE38A)),
+            "Paper" to (AdhxColors.Paper to Color(0xFFE4DAC8)),
+            "PaperInk" to (AdhxColors.PaperInk to Color(0xFF141414)),
+            "PaperInkSoft" to (AdhxColors.PaperInkSoft to Color(0xFF3A352D)),
+            "Person1" to (AdhxColors.Person1 to Color(0xFF7FD1AE)),
+            "Person2" to (AdhxColors.Person2 to Color(0xFFFF8FA3)),
+            "Person3" to (AdhxColors.Person3 to Color(0xFF6B8CFF)),
+            "Person4" to (AdhxColors.Person4 to Color(0xFFC4A7FF)),
+            "Person5" to (AdhxColors.Person5 to Color(0xFFFFB35C)),
+            "Moment1" to (AdhxColors.Moment1 to Color(0xFF7EE08A)),
+            "Moment2" to (AdhxColors.Moment2 to Color(0xFFFF9A62)),
+            "Moment3" to (AdhxColors.Moment3 to Color(0xFFFF9EC7)),
+            "Moment4" to (AdhxColors.Moment4 to Color(0xFFF6C35C)),
+            "Moment5" to (AdhxColors.Moment5 to Color(0xFF86C2FF)),
+            "Moment6" to (AdhxColors.Moment6 to Color(0xFFC3A6FF)),
+            "Moment7" to (AdhxColors.Moment7 to Color(0xFF7FE3D6)),
+            "Moment8" to (AdhxColors.Moment8 to Color(0xFFFF8A8A)),
+            "Moment9" to (AdhxColors.Moment9 to Color(0xFFD6E36B)),
+        ).forEach { (name, pair) -> assertEquals(name, pair.second, pair.first) }
     }
 
     @Test

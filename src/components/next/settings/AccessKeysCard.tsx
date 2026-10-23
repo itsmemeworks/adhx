@@ -135,7 +135,7 @@ export function AccessKeysCard() {
             )}
             <span>{copied ? 'Copied' : 'Copy key'}</span>
           </button>
-          <span className="text-[13px] leading-relaxed text-white/65">
+          <span className="text-[13px] leading-relaxed text-nx-ink/65">
             In Claude, add the adhx skill and set this key as ADHX_API_KEY. Then ask things like
             “find my saved videos with a frog in them”.
           </span>
@@ -152,10 +152,10 @@ export function AccessKeysCard() {
                 key={key.id}
                 className={`flex items-center gap-3 bg-black/40 px-4 py-3 text-sm ${IN_CARD}`}
               >
-                <KeyRound aria-hidden className="h-4 w-4 shrink-0 text-white/55" />
+                <KeyRound aria-hidden className="h-4 w-4 shrink-0 text-nx-ink/55" />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate font-bold">{`${key.name} · …${key.hint}`}</span>
-                  <span className="text-xs text-white/55">
+                  <span className="text-xs text-nx-ink/55">
                     {`Made ${timeSince(key.createdAt)} · ${key.lastUsedAt ? `used ${timeSince(key.lastUsedAt)}` : 'not used yet'}`}
                   </span>
                 </span>
@@ -201,7 +201,7 @@ export function AccessKeysCard() {
       )}
 
       {error && (
-        <p role="alert" className="m-0 text-[13px] text-[#ff8a7a]">
+        <p role="alert" className="m-0 text-[13px] text-nx-danger">
           {error}
         </p>
       )}

@@ -25,13 +25,13 @@ export function WelcomeClient({ suggestedUsername, returnTo }: WelcomeClientProp
   }
 
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto bg-black font-nx-sans text-white">
+    <div className="fixed inset-0 z-[60] overflow-y-auto bg-black font-nx-sans text-nx-ink">
       <div className="flex min-h-full items-center justify-center p-4 py-6">
         <div
           role="dialog"
           aria-modal="true"
           aria-label="Choose your username"
-          className="flex w-full max-w-[480px] flex-col gap-5 rounded-[26px] bg-[#1c1b19] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.6)] md:p-[30px]"
+          className="flex w-full max-w-[480px] flex-col gap-5 rounded-[26px] bg-nx-sheet p-6 shadow-[0_30px_80px_rgba(0,0,0,0.6)] md:p-[30px]"
         >
           <span className="flex items-center gap-3.5">
             <span
@@ -45,7 +45,7 @@ export function WelcomeClient({ suggestedUsername, returnTo }: WelcomeClientProp
               Pick your name
             </h1>
           </span>
-          <p className="m-0 text-[15px] leading-snug text-white/70">
+          <p className="m-0 text-[15px] leading-snug text-nx-ink/70">
             {`Channels you make public live at ${host}/t/${sanitized || 'username'}. You can change it ${MAX_USERNAME_CHANGES} times later in Settings.`}
           </p>
           <UsernameChooser

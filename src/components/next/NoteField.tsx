@@ -67,14 +67,14 @@ export function NoteField({
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
       <span className="flex items-baseline justify-between gap-2">
-        <label htmlFor={field} className="text-[13px] font-bold text-white/70">
+        <label htmlFor={field} className="text-[13px] font-bold text-nx-ink/70">
           Add a note
         </label>
-        <span aria-live="polite" className="text-xs text-white/55">
+        <span aria-live="polite" className="text-xs text-nx-ink/55">
           {state === 'saving' && <span>Saving…</span>}
           {state === 'saved' && <span>Saved</span>}
           {state === 'failed' && (
-            <span className="text-[#ff8f8f]">Couldn’t save that. Try again.</span>
+            <span className="text-nx-warn">Couldn’t save that. Try again.</span>
           )}
         </span>
       </span>
@@ -101,7 +101,7 @@ export function NoteField({
             }
           }}
           className={cn(
-            'h-12 w-full rounded-[var(--nx-nest,12px)] border border-white/10 bg-black/40 px-3.5 text-[15px] text-white outline-none placeholder:text-white/40 focus:border-nx-accent',
+            'h-12 w-full rounded-[var(--nx-nest,12px)] border border-white/10 bg-black/40 px-3.5 text-[15px] text-nx-ink outline-none placeholder:text-nx-ink/40 focus:border-nx-accent',
             used >= COUNT_FROM && 'pr-16',
           )}
         />
@@ -110,7 +110,7 @@ export function NoteField({
             id={`${field}-count`}
             className={cn(
               'pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold tabular-nums',
-              used >= NOTE_MAX ? 'text-nx-accent' : 'text-white/55',
+              used >= NOTE_MAX ? 'text-nx-accent' : 'text-nx-ink/55',
             )}
           >
             <span className="sr-only">Characters used: </span>

@@ -211,7 +211,7 @@ export default function DevFixturesPage() {
         {/* Header */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <h1 className="text-lg font-bold text-gray-900 dark:text-nx-ink flex items-center gap-2">
               🧪 Fixtures
             </h1>
             <Link
@@ -249,7 +249,7 @@ export default function DevFixturesPage() {
                     {fixture.type}
                   </span>
                 </div>
-                <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                <div className="text-sm font-medium text-gray-900 dark:text-nx-ink truncate">
                   @{fixture.author}
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
@@ -278,7 +278,7 @@ export default function DevFixturesPage() {
           {selectedFixture ? (
             <>
               <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                <span className="text-sm font-medium text-gray-900 dark:text-nx-ink">
                   @{selectedFixture.author}
                 </span>
                 <span
@@ -294,8 +294,8 @@ export default function DevFixturesPage() {
                     onClick={() => setViewMode('devices')}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                       viewMode === 'devices'
-                        ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                        ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-nx-ink shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-nx-ink'
                     }`}
                   >
                     <Eye className="w-3.5 h-3.5" />
@@ -305,8 +305,8 @@ export default function DevFixturesPage() {
                     onClick={() => setViewMode('og')}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                       viewMode === 'og'
-                        ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                        ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-nx-ink shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-nx-ink'
                     }`}
                   >
                     <Share2 className="w-3.5 h-3.5" />
@@ -493,7 +493,7 @@ function OgPreview({
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                 {new URL(url, 'http://localhost:3000').hostname}
               </div>
-              <div className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2">
+              <div className="font-medium text-gray-900 dark:text-nx-ink text-sm line-clamp-2">
                 {ogTags.twitterTitle || ogTags.title || 'No title'}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">

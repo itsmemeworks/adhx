@@ -12,24 +12,24 @@ import { GobShape } from '../GobShape'
  * you. Translation-safe: every run of text sits in its own element.
  */
 
-export const CARD = 'rounded-[22px] border border-white/[0.06] bg-[#1a1814]'
-export const LABEL = 'text-xs font-extrabold uppercase tracking-[0.08em] text-[#a39b8b]'
+export const CARD = 'rounded-[22px] border border-white/[0.06] bg-nx-surface'
+export const LABEL = 'text-xs font-extrabold uppercase tracking-[0.08em] text-nx-ink-faint'
 export const TH =
-  'h-10 whitespace-nowrap px-2.5 text-left text-xs font-extrabold uppercase tracking-[0.06em] text-[#a39b8b]'
+  'h-10 whitespace-nowrap px-2.5 text-left text-xs font-extrabold uppercase tracking-[0.06em] text-nx-ink-faint'
 export const TD = 'h-[52px] whitespace-nowrap border-t border-white/[0.06] px-2.5 text-sm'
 
 export const BTN =
-  'inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-white/[0.18] bg-transparent px-4 text-sm font-extrabold text-[#f4f1ea] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50'
+  'inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-white/[0.18] bg-transparent px-4 text-sm font-extrabold text-nx-ink transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50'
 export const BTN_SM =
-  'inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-white/[0.18] bg-transparent px-4 text-[13px] font-extrabold text-[#f4f1ea] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50'
+  'inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-white/[0.18] bg-transparent px-4 text-[13px] font-extrabold text-nx-ink transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50'
 export const PRIMARY_BTN =
   'inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-nx-accent px-5 text-sm font-extrabold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50'
 export const PRIMARY_SM =
   'inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-nx-accent px-[18px] text-[13px] font-extrabold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50'
 export const FIELD =
-  'flex h-11 items-center gap-2.5 rounded-full bg-[#262320] px-4 focus-within:ring-2 focus-within:ring-nx-accent/60'
+  'flex h-11 items-center gap-2.5 rounded-full bg-nx-plate px-4 focus-within:ring-2 focus-within:ring-nx-accent/60'
 export const FIELD_INPUT =
-  'min-w-0 flex-1 border-0 bg-transparent text-base text-[#f4f1ea] outline-none placeholder:text-[#a39b8b] sm:text-sm'
+  'min-w-0 flex-1 border-0 bg-transparent text-base text-nx-ink outline-none placeholder:text-nx-ink-faint sm:text-sm'
 
 export interface FaceData {
   username: string
@@ -121,7 +121,7 @@ export function CardHead({ title, note, id }: { title: string; note?: ReactNode;
         {title}
       </h3>
       {note !== undefined && note !== null && note !== '' && (
-        <span className="ml-auto whitespace-nowrap text-[13px] text-[#a39b8b]">{note}</span>
+        <span className="ml-auto whitespace-nowrap text-[13px] text-nx-ink-faint">{note}</span>
       )}
     </div>
   )
@@ -146,13 +146,13 @@ export function Kpi({
       <span
         className={cn(
           'font-nx-serif text-[40px] leading-none',
-          accent ? 'text-nx-accent' : 'text-[#f4f1ea]',
+          accent ? 'text-nx-accent' : 'text-nx-ink',
         )}
       >
         {value}
       </span>
       <span
-        className={cn('truncate text-[13px]', footAccent ? 'text-nx-accent' : 'text-[#a39b8b]')}
+        className={cn('truncate text-[13px]', footAccent ? 'text-nx-accent' : 'text-nx-ink-faint')}
       >
         {foot ?? '\u00a0'}
       </span>
@@ -180,7 +180,7 @@ export function PageTitle({
         <h2 className="m-0 font-nx-serif text-[34px] font-normal leading-none md:text-[40px]">
           {title}
         </h2>
-        <p className="m-0 text-sm text-[#a39b8b]">{sub}</p>
+        <p className="m-0 text-sm text-nx-ink-faint">{sub}</p>
       </div>
       {right && <div className="md:ml-auto">{right}</div>}
     </div>
@@ -202,7 +202,7 @@ export function RangeSwitch({ path, active }: { path: string; active: RangeId })
     <div
       role="group"
       aria-label="Time range"
-      className="flex w-max max-w-full gap-0.5 overflow-x-auto rounded-full bg-[#1a1814] p-1"
+      className="flex w-max max-w-full gap-0.5 overflow-x-auto rounded-full bg-nx-surface p-1"
     >
       {RANGES.map((r) => (
         <Link
@@ -213,8 +213,8 @@ export function RangeSwitch({ path, active }: { path: string; active: RangeId })
           className={cn(
             'flex h-9 items-center whitespace-nowrap rounded-full px-3.5 text-sm',
             r.id === active
-              ? 'bg-[#f4f1ea] font-extrabold text-black'
-              : 'font-semibold text-[#c9bfab] hover:text-white',
+              ? 'bg-nx-ink font-extrabold text-black'
+              : 'font-semibold text-nx-ink-soft hover:text-nx-ink',
           )}
         >
           <span>{r.label}</span>
@@ -265,7 +265,7 @@ export function Bars({
               style={{
                 height: Math.max(h - h2, total ? 0 : 3),
                 borderRadius: h2 ? '4px 4px 0 0' : 4,
-                background: lit ? colour : '#4a453e',
+                background: lit ? colour : 'rgb(var(--nx-line))',
               }}
             />
             {h2 > 0 && (
@@ -304,8 +304,8 @@ export function MeterRow({
       className="grid items-center gap-2.5 text-[13px]"
       style={{ gridTemplateColumns: `${labelWidth}px minmax(0,1fr) 44px` }}
     >
-      <span className="truncate text-[#c9bfab]">{label}</span>
-      <span aria-hidden className="overflow-hidden rounded-full bg-[#262320]" style={{ height }}>
+      <span className="truncate text-nx-ink-soft">{label}</span>
+      <span aria-hidden className="overflow-hidden rounded-full bg-nx-plate" style={{ height }}>
         <span
           className="block rounded-full"
           style={{
@@ -333,9 +333,9 @@ export function Chip({
     <span
       className={cn(
         'inline-flex h-6 items-center whitespace-nowrap rounded-full px-2.5 text-xs font-extrabold',
-        tone === 'plain' && 'bg-[#262320] text-[#c9bfab]',
+        tone === 'plain' && 'bg-nx-plate text-nx-ink-soft',
         tone === 'accent' && 'bg-nx-accent text-black',
-        tone === 'warn' && 'bg-[#262320] text-[#ffb59a]',
+        tone === 'warn' && 'bg-nx-plate text-nx-warn',
         tone === 'admin' && 'bg-nx-accent/[0.14] text-nx-accent',
       )}
     >
@@ -373,13 +373,13 @@ export function Thumb({
       height={size}
       referrerPolicy="no-referrer"
       onError={() => setBroken(true)}
-      className="shrink-0 bg-[#262320] object-cover"
+      className="shrink-0 bg-nx-plate object-cover"
       style={{ width: size, height: size, borderRadius: radius }}
     />
   ) : (
     <span
       aria-hidden
-      className="block shrink-0 bg-[#262320]"
+      className="block shrink-0 bg-nx-plate"
       style={{ width: size, height: size, borderRadius: radius }}
     />
   )

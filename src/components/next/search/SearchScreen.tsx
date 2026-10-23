@@ -79,8 +79,8 @@ function Pill({
       className={cn(
         'flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-[13px] transition-colors',
         on
-          ? 'border-nx-cream bg-nx-cream font-bold text-nx-ink'
-          : 'border-nx-hairline bg-transparent text-nx-cream hover:border-nx-muted',
+          ? 'border-nx-cream bg-nx-cream font-bold text-nx-bg'
+          : 'border-nx-hairline bg-transparent text-nx-cream hover:border-nx-ink-faint',
         className,
       )}
     >
@@ -108,7 +108,7 @@ function Segment<T extends string>({
     <div
       role="group"
       aria-label={label}
-      className={cn('flex gap-0.5 rounded-xl bg-nx-ink p-1', className)}
+      className={cn('flex gap-0.5 rounded-xl bg-nx-bg p-1', className)}
     >
       {options.map((o) => {
         const Icon = o.icon
@@ -123,7 +123,9 @@ function Segment<T extends string>({
             className={cn(
               // 12 px corners − 4 px padding.
               'flex min-h-[38px] min-w-[38px] items-center justify-center gap-1.5 rounded-[8px] px-3 text-[13px] transition-colors',
-              on ? 'bg-nx-accent font-bold text-nx-ink' : 'text-nx-soft hover:text-nx-cream',
+              on
+                ? 'bg-nx-cream font-bold text-nx-on-cream'
+                : 'text-nx-ink-soft hover:text-nx-cream',
             )}
           >
             {Icon && iconOnly && <Icon aria-hidden className="h-4 w-4" />}
@@ -190,7 +192,7 @@ function LookedIn({ items, className }: { items: SearchResultItem[]; className?:
     items.filter((i) => strengthOfItem(i) !== 'related').flatMap((i) => i.matched.slice(0, 1)),
   )
   return (
-    <p className={cn('m-0 items-center gap-3.5 text-[13px] text-nx-muted', className)}>
+    <p className={cn('m-0 items-center gap-3.5 text-[13px] text-nx-ink-faint', className)}>
       <span>Looked in</span>
       {LOOKED_IN.map(({ signals, label, icon: Icon }) => {
         const lit = signals.some((s) => found.has(s))
@@ -278,12 +280,12 @@ function HowFound({
           <div
             key={id}
             // Edge to edge in the panel: 26 − 24 − 1 leaves the 8 px floor.
-            className={cn('flex gap-3.5 rounded-[8px] p-3.5', leads && 'bg-[#262320]')}
+            className={cn('flex gap-3.5 rounded-[8px] p-3.5', leads && 'bg-nx-plate')}
           >
             <span
               className={cn(
                 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
-                leads ? 'bg-nx-accent text-black' : 'bg-[#262320] text-nx-soft',
+                leads ? 'bg-nx-accent text-black' : 'bg-nx-plate text-nx-ink-soft',
               )}
             >
               <Icon aria-hidden className="h-[18px] w-[18px]" strokeWidth={2.2} />
@@ -298,7 +300,7 @@ function HowFound({
                     strokeWidth={2.5}
                   />
                 ) : (
-                  <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-nx-muted">
+                  <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-nx-ink-faint">
                     No match
                   </span>
                 )}
@@ -306,7 +308,7 @@ function HowFound({
               <span
                 className={cn(
                   'text-[13px] leading-[1.45]',
-                  found > 0 ? 'text-nx-soft' : 'text-nx-muted',
+                  found > 0 ? 'text-nx-ink-soft' : 'text-nx-ink-faint',
                 )}
               >
                 {desc}
@@ -322,7 +324,7 @@ function HowFound({
             All on your server. Nothing sent anywhere.
           </span>
         </span>
-        <span className="text-[13px] leading-normal text-nx-muted">
+        <span className="text-[13px] leading-normal text-nx-ink-faint">
           No cloud, no ad tech, nobody else’s computer.
         </span>
         {ready !== null && total !== null && total > 0 && (
@@ -333,7 +335,7 @@ function HowFound({
                 style={{ width: `${Math.min(100, Math.round((ready / total) * 100))}%` }}
               />
             </span>
-            <span className="text-xs font-semibold text-nx-muted">
+            <span className="text-xs font-semibold text-nx-ink-faint">
               {`${ready.toLocaleString('en-GB')} of ${total.toLocaleString('en-GB')} saves searchable`}
             </span>
           </>
@@ -351,7 +353,7 @@ function NotIt({ suggestions, onPick }: { suggestions: string[]; onPick: (q: str
       <span className="font-nx-serif text-[30px] leading-[0.95]">
         Not it? Describe what you saw.
       </span>
-      <span className="text-[13px] leading-normal text-nx-muted">
+      <span className="text-[13px] leading-normal text-nx-ink-faint">
         Faces, places, the bit that made you laugh. It doesn’t need the right words.
       </span>
       <span className="mt-auto flex flex-col items-start gap-2">
@@ -361,7 +363,7 @@ function NotIt({ suggestions, onPick }: { suggestions: string[]; onPick: (q: str
             type="button"
             onClick={() => onPick(x)}
             // Along the card's edge: 22 − 20 − 1 leaves the 8 px floor.
-            className="min-h-11 rounded-[8px] bg-[#262320] px-3.5 text-left text-[13px] font-semibold text-nx-cream"
+            className="min-h-11 rounded-[8px] bg-nx-plate px-3.5 text-left text-[13px] font-semibold text-nx-cream"
           >
             {x}
           </button>
@@ -458,8 +460,8 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
   const sparse = !!data && !stale && closeCount > 0 && closeCount <= 2
 
   return (
-    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
-      <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-white/[0.08] bg-nx-ink/95 px-3 backdrop-blur md:h-[72px] md:gap-7 md:px-8">
+    <div className="min-h-dvh bg-nx-bg font-nx-sans text-nx-cream">
+      <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-white/[0.08] bg-nx-bg/95 px-3 backdrop-blur md:h-[72px] md:gap-7 md:px-8">
         <NxLogo className="hidden md:flex" busy={results.status === 'loading'} />
         <PrimaryNav current="search" className="hidden lg:flex" />
         <span className="hidden flex-1 md:block" />
@@ -493,7 +495,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
                 set({ q: '' })
               }
             }}
-            className="h-10 min-w-0 flex-1 appearance-none bg-transparent text-[15px] font-semibold text-nx-cream caret-nx-accent outline-none placeholder:font-normal placeholder:text-nx-muted [&::-webkit-search-cancel-button]:hidden"
+            className="h-10 min-w-0 flex-1 appearance-none bg-transparent text-[15px] font-semibold text-nx-cream caret-nx-accent outline-none placeholder:font-normal placeholder:text-nx-ink-faint [&::-webkit-search-cancel-button]:hidden"
           />
           {state.q && (
             <button
@@ -503,7 +505,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
                 set({ q: '' })
                 inputRef.current?.focus()
               }}
-              className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-[#262320] text-nx-soft hover:text-nx-cream"
+              className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-nx-plate text-nx-ink-soft hover:text-nx-cream"
             >
               <X aria-hidden className="h-3.5 w-3.5" strokeWidth={2.5} />
             </button>
@@ -572,7 +574,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
             <h1 className="m-0 font-nx-serif text-[34px] font-normal leading-[1.05] md:text-[48px]">
               Find it by what you remember.
             </h1>
-            <p className="-mt-4 m-0 text-[15px] text-nx-soft">
+            <p className="-mt-4 m-0 text-[15px] text-nx-ink-soft">
               A scene, a feeling, a few words. Videos and pictures count too.
             </p>
             {recent.length > 0 && (
@@ -587,7 +589,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
                     onClick={() => set({ q: r })}
                     className="flex min-h-12 items-center gap-3 text-left text-[15px] text-nx-cream"
                   >
-                    <Clock aria-hidden className="h-[18px] w-[18px] shrink-0 text-nx-muted" />
+                    <Clock aria-hidden className="h-[18px] w-[18px] shrink-0 text-nx-ink-faint" />
                     <span className="flex-1 truncate">{r}</span>
                   </button>
                 ))}
@@ -603,7 +605,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
               className="flex min-h-12 items-center justify-between rounded-2xl bg-nx-surface px-4 text-[15px]"
             >
               <span className="font-bold">Your channels</span>
-              <span className="text-[13px] text-nx-muted">Made for you, yours and top</span>
+              <span className="text-[13px] text-nx-ink-faint">Made for you, yours and top</span>
             </Link>
             <section aria-labelledby="nx-try" className="flex flex-col gap-2.5">
               <h2 id="nx-try" className="m-0 text-[15px] font-bold">
@@ -617,7 +619,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
                 ))}
               </div>
             </section>
-            <p className="m-0 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-nx-muted">
+            <p className="m-0 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-nx-ink-faint">
               <Link href="/settings" className="underline hover:text-nx-cream">
                 Settings
               </Link>
@@ -637,7 +639,9 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
                     {data && !stale ? heading.title : 'Searching…'}
                   </h1>
                   {data && !stale && heading.sub && (
-                    <span className="text-[13px] text-nx-muted md:text-[15px]">{heading.sub}</span>
+                    <span className="text-[13px] text-nx-ink-faint md:text-[15px]">
+                      {heading.sub}
+                    </span>
                   )}
                 </div>
                 <span className="flex shrink-0 items-center gap-3">
@@ -653,7 +657,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
                     <button
                       type="button"
                       onClick={() => play()}
-                      className="hidden h-11 items-center gap-2 whitespace-nowrap rounded-full bg-nx-accent px-[18px] text-sm font-extrabold text-nx-ink md:flex"
+                      className="hidden h-11 items-center gap-2 whitespace-nowrap rounded-full bg-nx-accent px-[18px] text-sm font-extrabold text-nx-bg md:flex"
                     >
                       <Play
                         aria-hidden
@@ -668,7 +672,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
               </div>
 
               {results.status === 'error' && !data && (
-                <p className="py-16 text-center text-[15px] text-nx-soft">
+                <p className="py-16 text-center text-[15px] text-nx-ink-soft">
                   Search isn’t answering right now. Try again in a moment.
                 </p>
               )}

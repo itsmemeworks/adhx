@@ -30,11 +30,11 @@ struct SearchView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(focused || !library.query.isEmpty ? Theme.accent : Theme.faint)
+                        .foregroundStyle(focused || !library.query.isEmpty ? Theme.accent : Theme.inkFaint)
                     TextField(
                         "",
                         text: $library.query,
-                        prompt: Text("Describe what you’re looking for").foregroundColor(Theme.faint)
+                        prompt: Text("Describe what you’re looking for").foregroundColor(Theme.inkFaint)
                     )
                     .font(Theme.sans(16, .semibold))
                     .foregroundStyle(Theme.ink)
@@ -50,7 +50,7 @@ struct SearchView: View {
                         } label: {
                             Image(systemName: "xmark")
                                 .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(Theme.muted)
+                                .foregroundStyle(Theme.inkSoft)
                                 .frame(width: 34, height: 34)
                                 .background(Circle().fill(Theme.plate))
                         }
@@ -74,7 +74,7 @@ struct SearchView: View {
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
-        .background(Theme.app.ignoresSafeArea())
+        .background(Theme.bg.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .onAppear { focused = library.query.isEmpty }
         .fullScreenCover(item: $playing) { start in
@@ -95,7 +95,7 @@ struct SearchView: View {
             Text("TRY DESCRIBING")
                 .font(Theme.sans(12, .heavy))
                 .tracking(0.72)
-                .foregroundStyle(Theme.faint)
+                .foregroundStyle(Theme.inkFaint)
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
                     ForEach(Self.prompts, id: \.self) { prompt in
@@ -161,7 +161,7 @@ struct SearchView: View {
                         Spacer(minLength: 8)
                         Text(library.resultTotal == 1 ? "1 save" : "\(max(library.resultTotal, library.results.count)) saves")
                             .font(Theme.sans(12))
-                            .foregroundStyle(Theme.faint)
+                            .foregroundStyle(Theme.inkFaint)
                     }
                     .padding(.top, 4)
                     if !library.understood {
@@ -464,9 +464,9 @@ private struct ScopeSwitch: View {
         return Button { scope = value } label: {
             Text(title)
                 .font(Theme.sans(14, on ? .heavy : .semibold))
-                .foregroundStyle(on ? .black : Theme.ink)
+                .foregroundStyle(on ? Theme.onCream : Theme.ink)
                 .frame(maxWidth: .infinity, minHeight: 44)
-                .background(Capsule(style: .continuous).fill(on ? Theme.ink : .clear))
+                .background(Capsule(style: .continuous).fill(on ? Theme.cream : .clear))
                 .contentShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
@@ -562,7 +562,7 @@ struct PostTile: View {
                             .foregroundStyle(Theme.cream)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(Capsule(style: .continuous).fill(Self.creamInk))
+                            .background(Capsule(style: .continuous).fill(Theme.onCream))
                             .fixedSize()
                         Spacer(minLength: 0)
                         if privacy.isPrivate(post) {
@@ -580,7 +580,7 @@ struct PostTile: View {
                     }
                     Text(post.article?.title ?? post.text)
                         .font(Theme.serif(wordsSize))
-                        .foregroundStyle(Self.creamInk)
+                        .foregroundStyle(Theme.onCream)
                         .lineSpacing(1)
                         .lineLimit(7)
                         .multilineTextAlignment(.leading)
@@ -592,7 +592,7 @@ struct PostTile: View {
                         }
                         Text(saversLine ?? authorLine)
                             .font(Theme.sans(11, .bold))
-                            .foregroundStyle(Self.creamInk)
+                            .foregroundStyle(Theme.onCream)
                             .lineLimit(1)
                     }
                 }
@@ -608,9 +608,6 @@ struct PostTile: View {
             .accessibilityLabel(accessibilityText)
             .accessibilityAddTraits(.isButton)
     }
-
-    /// Dark words on the cream card.
-    fileprivate static let creamInk = Color(hex: 0x0F0E0C)
 
     /// Short posts big, long ones smaller (the web's sizes).
     private var wordsSize: CGFloat {
@@ -730,15 +727,15 @@ private struct MatchMeter: View {
         HStack(alignment: .bottom, spacing: 2) {
             ForEach(0..<3) { index in
                 RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(index < level ? (onCream ? PostTile.creamInk : Theme.accent)
-                          : (onCream ? PostTile.creamInk.opacity(0.2) : .white.opacity(0.3)))
+                    .fill(index < level ? (onCream ? Theme.onCream : Theme.accent)
+                          : (onCream ? Theme.onCream.opacity(0.2) : .white.opacity(0.3)))
                     .frame(width: 3, height: CGFloat(6 + index * 3))
             }
         }
         .padding(.horizontal, 7)
         .padding(.vertical, 5)
         .background {
-            if onCream { Capsule(style: .continuous).fill(PostTile.creamInk.opacity(0.08)) } else { Color.clear.frosted(Capsule(style: .continuous), dim: 0.55) }
+            if onCream { Capsule(style: .continuous).fill(Theme.onCream.opacity(0.08)) } else { Color.clear.frosted(Capsule(style: .continuous), dim: 0.55) }
         }
         .accessibilityHidden(true)
     }
@@ -771,7 +768,7 @@ private struct Note: View {
     var body: some View {
         Text(text)
             .font(Theme.sans(14))
-            .foregroundStyle(Theme.muted)
+            .foregroundStyle(Theme.inkSoft)
             .fixedSize(horizontal: false, vertical: true)
     }
 }

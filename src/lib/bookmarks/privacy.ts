@@ -135,7 +135,23 @@ export function applyRepeatSave<
     note?: string | null
   },
 >(row: T | undefined, options: SaveOptions): T | undefined {
-  return applyRepeatNote(applyRepeatPrivacy(row, options), options)
+  const updated = applyRepeatNote(applyRepeatPrivacy(row, options), options)
+  if (!updated) return updated
+  // An explicit save adopts a copy previously added by keeping a channel.
+  // Leaving that channel must no longer be allowed to remove it.
+  const promoted = db
+    .update(bookmarks)
+    .set({ source: 'manual' })
+    .where(
+      and(
+        eq(bookmarks.userId, updated.userId),
+        eq(bookmarks.platform, updated.platform),
+        eq(bookmarks.id, updated.id),
+        eq(bookmarks.source, 'channel_keep'),
+      ),
+    )
+    .run()
+  return promoted.changes ? { ...updated, source: 'manual' } : updated
 }
 
 /** A DB-backed fingerprint for public caches, including across web processes.

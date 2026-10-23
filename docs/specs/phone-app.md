@@ -789,8 +789,12 @@ freeBytes, processing, remoteConnected } }`. `thumbnail` (like Shared lately's
   not made public; posts you haven't saved are saved for you).
   `GET /api/app/channels/group/{slug}` adds `"kept": { "tag", "url" } | null`.
   `DELETE` on the same address leaves it → `{ "removed": 12 }`: the tag comes
-  off your saves, and the saves keeping it added (and nothing else tagged)
-  go; 404 `not_found` for a channel you never kept.
+  off only the posts that keep actually tagged, and untouched copies it added
+  (with no other tags) go. Pre-existing same-name tags, re-added tags and
+  explicitly re-saved posts stay. The recorded tag survives a generated rename
+  or disappearance. Repeated keeps are idempotent. Keeps from older versions
+  have no ownership record and are preserved; keeping again records only new
+  additions. 404 `not_found` for an unrecorded keep.
 - `GET /api/app/who?platform&id` → who's on a post, for the bottom row's
   faces (board 15.9): `{ "savers": [Saver], "reactions": [{ id, emoji, text,
 at, saver }], "watched": [{ username, name, avatarUrl, at, isYou }] }`.
@@ -860,7 +864,8 @@ at, saver }], "watched": [{ username, name, avatarUrl, at, isYou }] }`.
   - Tapping the face swaps the row for ✕ and everyone on the post
     (`/api/app/who`), scrolling sideways, one face each, with a sticker in a
     fixed corner: saved bottom-right, their reaction top-right, watched
-    bottom-left. Tapping someone opens their channel; ✕ or the next post
+    bottom-left (someone can have all three). Late/cancelled people responses
+    cannot replace a newer post or cross a server/credential session. Tapping someone opens their channel; ✕ or the next post
     puts the line back.
   - Notes float up first, like any words said on the post: the serif, in a
     rounded bubble of their colour beside their face. No byline, note bubble
@@ -1067,10 +1072,17 @@ Adding to a channel and saving for offline are not in this version.
 
 ## Colours and type
 
-Background `#0f0e0c` (app) / `#000000` (behind sheets), surface `#1a1814`,
-raised `#2a2620`, placeholder `#2a2825`, hairline `#4a453c`, accent `#ffd23f`,
-cream `#f2ead9`, muted `#c9bfab`, faint `#a89f8d`, good `#7ddc8a`, warn
-`#ffb59a`. Headings are Instrument Serif, everything else Hanken Grotesk
+Colours are the design system's tokens, with the same names and values on
+every platform: web `--nx-<name>` / Tailwind `nx-<name>` (`src/app/globals.css`),
+iOS `Theme.<name>` (`Shared/Theme.swift`), Android `AdhxColors.<Name>`
+(`ui/Theme.kt`). The main ones: `bg` #0f0e0c (the app ground), `stage` #000000
+(behind media and sheets), `surface` #1a1814, `sheet` #1c1b19, `raised`
+#2a2620, `plate` #262320, `placeholder` #2a2825, `hairline` #2a2620 (quiet
+dividers), `line` #4a453e (control borders), `accent` #ffd23f, `cream`
+#f2ead9 (selected and toasts, never yellow), `ink` #f4f1ea, `ink-soft`
+#c9bfab, `ink-faint` #a89f8d, `good` #7ddc8a, `warn` #ffb59a, `live` #ff5a3c,
+`danger` #ff8a7a, `danger-fill` #e5484d, `watching` #5ee38a, and the paper,
+person and moment sets. Name tokens, never hex values. Headings are Instrument Serif, everything else Hanken Grotesk
 (system font is fine where bundling isn't). The mark is Gob
 (`src/components/next/Gob.tsx`): a yellow body tilted −4°, mismatched eyes
 (r7, and r11 with a highlight) and a mouth tilted −7°. App icons come from

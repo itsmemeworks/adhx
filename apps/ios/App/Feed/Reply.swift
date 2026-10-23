@@ -47,7 +47,7 @@ struct ReplySheet: View {
                         .accessibilityAddTraits(.isHeader)
                     Text(note.map { "They said: \($0)" } ?? "\(name) sent you this")
                         .font(Theme.sans(13))
-                        .foregroundStyle(Theme.faint)
+                        .foregroundStyle(Theme.inkFaint)
                         .lineLimit(1)
                 }
             }
@@ -68,7 +68,7 @@ struct ReplySheet: View {
                 }
             }
             HStack(spacing: 8) {
-                TextField("", text: $words, prompt: Text("Say something back").foregroundColor(Theme.faint))
+                TextField("", text: $words, prompt: Text("Say something back").foregroundColor(Theme.inkFaint))
                     .font(Theme.sans(16))
                     .foregroundStyle(Theme.ink)
                     .tint(Theme.accent)
@@ -91,14 +91,14 @@ struct ReplySheet: View {
             .padding(.leading, 16)
             .padding(.trailing, 6)
             .frame(height: 52)
-            .background(Capsule(style: .continuous).fill(Theme.app))
+            .background(Capsule(style: .continuous).fill(Theme.bg))
             .overlay(Capsule(style: .continuous).strokeBorder(typing || !words.isEmpty ? Theme.accent.opacity(0.6) : .white.opacity(0.12), lineWidth: 1))
             if let problem {
                 Text(problem).font(Theme.sans(13)).foregroundStyle(Theme.warn)
             }
             Text("\(name) sees it on this post, and in Reactions. It floats up when they next watch it.")
                 .font(Theme.sans(13))
-                .foregroundStyle(Theme.faint)
+                .foregroundStyle(Theme.inkFaint)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 20)

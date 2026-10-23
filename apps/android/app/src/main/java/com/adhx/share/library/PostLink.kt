@@ -97,7 +97,7 @@ fun PostLinkScreen(
                 startRepeating = true,
             )
         } else {
-            Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
+            Box(Modifier.fillMaxSize().background(AdhxColors.Bg)) {
                 val error = problem
                 if (error != null) {
                     Column(
@@ -105,7 +105,7 @@ fun PostLinkScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        Text(error, fontSize = 15.sp, lineHeight = 22.sp, color = AdhxColors.Muted, textAlign = TextAlign.Center)
+                        Text(error, fontSize = 15.sp, lineHeight = 22.sp, color = AdhxColors.InkSoft, textAlign = TextAlign.Center)
                         OutlineButton("Try again", onClick = { tries++ })
                     }
                 } else {

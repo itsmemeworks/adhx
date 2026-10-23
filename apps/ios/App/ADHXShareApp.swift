@@ -85,7 +85,7 @@ struct DebugSharePreview: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            Theme.stage.ignoresSafeArea()
             CoverImage(url: poster)
                 .blur(radius: 7)
                 .brightness(-0.35)

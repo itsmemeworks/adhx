@@ -254,6 +254,10 @@ signed-in accounts" until the server can see them. To let it:
    and set `YTDLP_COOKIES=/data/yt-dlp-cookies.txt` in `.env`.
 4. Recreate the container, then tap **Retry** on the post.
 
+Downloader retries distinguish a temporary network failure from a missing post.
+A sign-in page or a private/deleted post's preview image is never archived as
+its media. Picture-only posts can still fall back to their preview images.
+
 The file is a sign-in: anyone who reads it can act as that account. ADHX hands
 yt-dlp a private copy for each run and never logs or serves it. Cookies
 expire; when these posts start failing again, export a fresh file.

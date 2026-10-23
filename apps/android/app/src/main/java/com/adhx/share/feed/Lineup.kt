@@ -141,7 +141,7 @@ fun LineupStrip(ui: FeedUi, playingKey: String?, modifier: Modifier = Modifier) 
                     style = OverMedia,
                     fontSize = 12.sp,
                     fontWeight = if (current) FontWeight.ExtraBold else FontWeight.SemiBold,
-                    color = if (current) AdhxColors.White else Color(0xFFE8E0CF),
+                    color = if (current) AdhxColors.Ink else Color(0xFFE8E0CF),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -187,20 +187,20 @@ fun UpNextSheet(
                     fontFamily = SerifFamily,
                     fontSize = 34.sp,
                     lineHeight = 36.sp,
-                    color = AdhxColors.White,
+                    color = AdhxColors.Ink,
                     modifier = Modifier.weight(1f).semantics { heading() },
                 )
                 Text(
                     when (left) { 0 -> "Nothing new to see"; 1 -> "1 not seen yet"; else -> "$left not seen yet" },
                     fontSize = 13.sp,
-                    color = AdhxColors.Faint,
+                    color = AdhxColors.InkFaint,
                     modifier = Modifier.padding(bottom = 6.dp),
                 )
             }
             Text(
                 "Always in this order. Tap any post to start there.",
                 fontSize = 14.sp,
-                color = AdhxColors.Muted,
+                color = AdhxColors.InkSoft,
                 modifier = Modifier.padding(top = 6.dp, bottom = 6.dp),
             )
             LazyColumn(state = list, modifier = Modifier.heightIn(max = 560.dp)) {
@@ -242,7 +242,7 @@ fun UpNextSheet(
                                 if (part == Lineup.FOR_YOU) "from what you keep" else "${ui.sections?.get(part) ?: 0}",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = AdhxColors.Faint,
+                                color = AdhxColors.InkFaint,
                             )
                         }
                     }
@@ -292,12 +292,12 @@ fun QueueSheet(
                     fontFamily = SerifFamily,
                     fontSize = 34.sp,
                     lineHeight = 36.sp,
-                    color = AdhxColors.White,
+                    color = AdhxColors.Ink,
                     modifier = Modifier.weight(1f).semantics { heading() },
                 )
-                Text("$name · ${posts.size}", fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, modifier = Modifier.padding(bottom = 6.dp))
+                Text("$name · ${posts.size}", fontSize = 13.sp, color = AdhxColors.InkFaint, maxLines = 1, modifier = Modifier.padding(bottom = 6.dp))
             }
-            Text(note, fontSize = 14.sp, color = AdhxColors.Muted, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
+            Text(note, fontSize = 14.sp, color = AdhxColors.InkSoft, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
             LazyColumn(state = list, modifier = Modifier.heightIn(max = 560.dp)) {
                 itemsIndexed(posts, key = { _, post -> post.key }) { index, post ->
                     val playing = index == current
@@ -369,18 +369,18 @@ internal fun UpNextRow(post: PhonePost, server: String, playing: Boolean, watche
             if (playing) {
                 Text("NOW PLAYING", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.6.sp, color = AdhxColors.Accent)
             }
-            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 val saver = post.savers.firstOrNull { it.isYou } ?: post.savers.firstOrNull()
                 if (saver != null) Avatar(saver, server, 18.dp)
-                Text(meta, fontSize = 13.sp, color = AdhxColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(meta, fontSize = 13.sp, color = AdhxColors.InkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (why != null) {
                 Text(
                     why,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = AdhxColors.Cream,
+                    color = AdhxColors.Ink,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier

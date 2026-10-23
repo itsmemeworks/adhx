@@ -26,12 +26,12 @@ export function PublicHome() {
     )
   }, [])
   return (
-    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
+    <div className="min-h-dvh bg-nx-bg font-nx-sans text-nx-cream">
       <NxHeader current="now" />
       {notice && (
         <p
           role="alert"
-          className="mx-4 mt-2 rounded-2xl bg-[#2a1d14] px-4 py-3 text-[15px] text-[#ffb59a] md:mx-7"
+          className="mx-4 mt-2 rounded-2xl bg-nx-warn/[0.12] px-4 py-3 text-[15px] text-nx-warn md:mx-7"
         >
           {notice}
         </p>
@@ -39,7 +39,7 @@ export function PublicHome() {
       <main className="mx-auto flex max-w-[1600px] flex-col gap-10 px-4 pb-16 pt-4 md:px-7 md:pt-8">
         <section
           aria-labelledby="nx-home-title"
-          className="flex flex-col gap-5 rounded-[28px] bg-[#12110f] px-5 py-8 md:flex-row md:items-end md:justify-between md:px-10 md:py-12"
+          className="flex flex-col gap-5 rounded-[28px] bg-nx-deep px-5 py-8 md:flex-row md:items-end md:justify-between md:px-10 md:py-12"
         >
           <div className="flex max-w-[760px] flex-col gap-4">
             <h1
@@ -49,7 +49,7 @@ export function PublicHome() {
               <span>Your friends have better taste than </span>
               <span className="text-nx-accent">the algorithm.</span>
             </h1>
-            <p className="m-0 max-w-[600px] text-[17px] leading-snug text-white/75 md:text-[19px]">
+            <p className="m-0 max-w-[600px] text-[17px] leading-snug text-nx-ink/75 md:text-[19px]">
               Every app wants your attention. ADHX just wants your friends’ opinions. Keep the best
               posts from X, Instagram, TikTok, YouTube, Reddit and more on a server you run, and
               find them by describing what you remember. Below, what everyone here is saving, live.
@@ -97,7 +97,7 @@ function WatchALink() {
       className="mt-2 flex max-w-[560px] flex-col gap-2"
     >
       <span className="flex h-[52px] items-center gap-2 rounded-full bg-black pl-4 pr-1.5 ring-1 ring-white/15 focus-within:ring-2 focus-within:ring-nx-accent">
-        <ClipboardPaste aria-hidden className="h-[18px] w-[18px] shrink-0 text-white/60" />
+        <ClipboardPaste aria-hidden className="h-[18px] w-[18px] shrink-0 text-nx-ink/60" />
         <label htmlFor="nx-watch-link" className="sr-only">
           Paste a link to watch it
         </label>
@@ -110,7 +110,7 @@ function WatchALink() {
           autoComplete="off"
           placeholder="Paste a link to a post"
           onInput={() => setBad(false)}
-          className="h-full min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-white/45"
+          className="h-full min-w-0 flex-1 bg-transparent text-base text-nx-ink outline-none placeholder:text-nx-ink/45"
         />
         <button
           type="submit"
@@ -120,7 +120,7 @@ function WatchALink() {
         </button>
       </span>
       {bad && (
-        <span role="alert" className="pl-4 text-sm text-[#ff8a7a]">
+        <span role="alert" className="pl-4 text-sm text-nx-danger">
           That isn’t a post link we can play yet.
         </span>
       )}

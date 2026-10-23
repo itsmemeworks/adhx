@@ -87,10 +87,10 @@ export function InvitesView({ data }: { data: InvitesBoard }) {
       {(made || error) && (
         <Card accent className="flex flex-wrap items-center gap-3 px-4 py-3 text-sm">
           {error ? (
-            <span className="text-[#ff8a7a]">{error}</span>
+            <span className="text-nx-danger">{error}</span>
           ) : (
             <>
-              <span className="text-[#c9bfab]">New link, works once:</span>
+              <span className="text-nx-ink-soft">New link, works once:</span>
               <span className="min-w-0 flex-1 truncate font-mono text-[13px]">{made}</span>
               <button
                 type="button"
@@ -118,7 +118,7 @@ export function InvitesView({ data }: { data: InvitesBoard }) {
                 <label
                   key={m.id}
                   className={cn(
-                    'flex cursor-pointer flex-col gap-1 rounded-2xl border-[1.5px] bg-[#262320] px-3.5 py-3',
+                    'flex cursor-pointer flex-col gap-1 rounded-2xl border-[1.5px] bg-nx-plate px-3.5 py-3',
                     on ? 'border-nx-accent' : 'border-transparent',
                   )}
                 >
@@ -138,7 +138,7 @@ export function InvitesView({ data }: { data: InvitesBoard }) {
                     />
                     <span className="text-sm font-extrabold">{m.label}</span>
                   </span>
-                  <span className="text-xs text-[#a39b8b]">{m.hint(admins)}</span>
+                  <span className="text-xs text-nx-ink-faint">{m.hint(admins)}</span>
                 </label>
               )
             })}
@@ -153,7 +153,7 @@ export function InvitesView({ data }: { data: InvitesBoard }) {
                   <WaitingFace />
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="text-sm font-extrabold">{r.username}</span>
-                    <span className="text-xs text-[#a39b8b]" suppressHydrationWarning>
+                    <span className="text-xs text-nx-ink-faint" suppressHydrationWarning>
                       {[
                         r.invitedBy
                           ? `Invited by ${r.invitedBy.name || r.invitedBy.username}`
@@ -194,7 +194,7 @@ export function InvitesView({ data }: { data: InvitesBoard }) {
               </div>
             ))
           ) : (
-            <p className="m-0 text-sm text-[#a39b8b]">Nobody’s waiting.</p>
+            <p className="m-0 text-sm text-nx-ink-faint">Nobody’s waiting.</p>
           )}
         </Card>
       </div>
@@ -235,7 +235,7 @@ export function InvitesView({ data }: { data: InvitesBoard }) {
                       <span
                         className={cn(
                           'font-mono text-base font-extrabold tracking-[0.08em]',
-                          l.state !== 'waiting' && 'text-[#a39b8b]',
+                          l.state !== 'waiting' && 'text-nx-ink-faint',
                         )}
                       >
                         {l.code}
@@ -248,13 +248,13 @@ export function InvitesView({ data }: { data: InvitesBoard }) {
                           <span>{displayName(l.by)}</span>
                         </span>
                       ) : (
-                        <span className="text-[#a39b8b]">Someone who left</span>
+                        <span className="text-nx-ink-faint">Someone who left</span>
                       )}
                     </td>
-                    <td className={cn(TD, 'text-[#c9bfab]')} suppressHydrationWarning>
+                    <td className={cn(TD, 'text-nx-ink-soft')} suppressHydrationWarning>
                       {agoShort(l.createdAt)}
                     </td>
-                    <td className={cn(TD, 'text-[#c9bfab]')} suppressHydrationWarning>
+                    <td className={cn(TD, 'text-nx-ink-soft')} suppressHydrationWarning>
                       {l.state === 'waiting'
                         ? expiresIn(l.expiresAt)
                         : l.state === 'used'
@@ -309,7 +309,7 @@ export function InvitesView({ data }: { data: InvitesBoard }) {
                 ))}
                 {!data.links.length && (
                   <tr>
-                    <td colSpan={6} className={cn(TD, 'pl-4 text-[#a39b8b]')}>
+                    <td colSpan={6} className={cn(TD, 'pl-4 text-nx-ink-faint')}>
                       No invite links yet.
                     </td>
                   </tr>
@@ -320,7 +320,7 @@ export function InvitesView({ data }: { data: InvitesBoard }) {
         </Card>
         <Card className="flex flex-col gap-2.5 px-[18px] py-4">
           <CardHead title="Sign-in links" note="held for an admin" />
-          <span className="text-[13px] text-[#a39b8b]">
+          <span className="text-[13px] text-nx-ink-faint">
             {data.signIn.delivery === 'admin'
               ? 'This server has no email set up, so sign-in links wait here for you to pass on. Anyone holding one can sign in as that person.'
               : data.signIn.delivery === 'email'
@@ -330,14 +330,14 @@ export function InvitesView({ data }: { data: InvitesBoard }) {
           {data.signIn.links.map((s) => (
             <div
               key={s.tokenHash}
-              className="flex items-center gap-2.5 rounded-[14px] bg-[#262320] p-2.5"
+              className="flex items-center gap-2.5 rounded-[14px] bg-nx-plate p-2.5"
             >
               {s.face ? <Face who={s.face} size={32} /> : <WaitingFace size={32} />}
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="truncate text-sm font-extrabold">
                   {`${s.face ? displayName(s.face) : s.email} asked to sign in`}
                 </span>
-                <span className="text-xs text-[#a39b8b]" suppressHydrationWarning>
+                <span className="text-xs text-nx-ink-faint" suppressHydrationWarning>
                   {`${agoShort(s.createdAt)} · ${lastsFor(s.expiresAt)}`}
                 </span>
               </span>

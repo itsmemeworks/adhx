@@ -17,31 +17,124 @@ import androidx.compose.ui.text.font.FontWeight
 import com.adhx.share.R
 import androidx.compose.ui.unit.sp
 
-/** The ADHX colours (docs/specs/phone-app.md → Colours and type). */
+/**
+ * The ADHX colours: the shared design system's colour tokens (one dark theme),
+ * named as in its tokens.json (`ink-soft` is [InkSoft]). Network, Gob and
+ * extra tokens aren't here until something on the phone draws them.
+ */
 object AdhxColors {
-    val Background = Color(0xFF0F0E0C)
-    val Black = Color(0xFF000000)
+    /** The app ground (warm black) behind every page, header and tab. */
+    val Bg = Color(0xFF0F0E0C)
+
+    /** Behind media: the player, sheets over it, the gap ring round faces on it. */
+    val Stage = Color(0xFF000000)
+
+    /** The deep hero and strip ground (the web's signed-out hero, Just saved). */
+    val Deep = Color(0xFF12110F)
+
+    /** Raised cards on [Bg]: settings cards, rows, the search field, sheets here. */
     val Surface = Color(0xFF1A1814)
+
+    /** Menus, popovers and sheet panels. */
+    val Sheet = Color(0xFF1C1B19)
+
+    /** A card on a card: thumbnail and cover backgrounds. */
     val Raised = Color(0xFF2A2620)
+
+    /** Quiet filled controls: raised buttons, icon plates in sheets, the current row. */
+    val Plate = Color(0xFF262320)
+
+    /** [Plate] under a pointer (the web's hover; phones have none). */
+    val PlateHover = Color(0xFF2F2B27)
+
+    /** Skeleton bars and pictures before they load. */
     val Placeholder = Color(0xFF2A2825)
-    val Hairline = Color(0xFF4A453E)
+
+    /** Quiet dividers only (decorative, 1.28:1 on [Bg]): never a control's edge. */
+    val Hairline = Color(0xFF2A2620)
+
+    /** Control borders: fields at rest, the switch-off track, spinner tracks, page dots. */
+    val Line = Color(0xFF4A453E)
+
+    /** The yellow: the one thing to press, on-states, focus, progress, count badges. */
     val Accent = Color(0xFFFFD23F)
-    val Cream = Color(0xFFF4F1EA)
-    val Muted = Color(0xFFC9BFAB)
-    val Faint = Color(0xFFA39B8B)
+
+    /** Words and icons on [Accent] (and on [DangerFill]). */
+    val OnAccent = Color(0xFF000000)
+
+    /** Selected: the chosen tab, segment and chip; toasts, Read all, Retry, the off knob. */
+    val Cream = Color(0xFFF2EAD9)
+
+    /** Words and icons on [Cream]. */
+    val OnCream = Color(0xFF141414)
+
+    /** Second lines on [Cream]. */
+    val OnCreamSoft = Color(0xFF5C5446)
+
+    /** Outlines and rules on [Cream] only (decorative). */
+    val Bone = Color(0xFFB8AB92)
+
+    /** Primary words and icons on every dark ground (a warm off-white). */
+    val Ink = Color(0xFFF4F1EA)
+
+    /** Second lines on dark: sub lines, captions, pending steps. */
+    val InkSoft = Color(0xFFC9BFAB)
+
+    /** Third lines on dark: placeholders, meta, footnotes, counts. */
+    val InkFaint = Color(0xFFA89F8D)
+
+    /** Success, done, connected, ready (always with a word or a tick). */
     val Good = Color(0xFF7DDC8A)
+
+    /** Soft errors and "can't reach it". */
     val Warn = Color(0xFFFFB59A)
-    /** The designs' "white" for words and icons is a warm off-white (#f4f1ea). */
-    val White = Color(0xFFF4F1EA)
 
-    /** A card on a card (the share card's people row, the why sheet's post). */
-    val Card = Color(0xFF262320)
-
-    /** The red dot of Live. */
+    /** The red of Live and of needs-you. */
     val Live = Color(0xFFFF5A3C)
 
-    /** Buttons that sit on a surface (Open in ADHX, See what's live). */
-    val Button = Color(0xFF262320)
+    /** Destructive words and borders: Remove, Decline, error lines. */
+    val Danger = Color(0xFFFF8A7A)
+
+    /** The one solid destructive button, with [OnAccent] words. */
+    val DangerFill = Color(0xFFE5484D)
+
+    /** The ring round people watching live, and the "Tuned in" tick. */
+    val Watching = Color(0xFF5EE38A)
+
+    /** Notes from friends on paper. */
+    val Paper = Color(0xFFE4DAC8)
+
+    /** Words on [Paper]. */
+    val PaperInk = Color(0xFF141414)
+
+    /** Footer and meta words on [Paper]; also the send sheet's tiles and track. */
+    val PaperInkSoft = Color(0xFF3A352D)
+
+    /** Face colour 0 (Ben, green); see [faceColor]. */
+    val Person1 = Color(0xFF7FD1AE)
+
+    /** Face colour 1 (Ana, pink); also the Live big card's ring. */
+    val Person2 = Color(0xFFFF8FA3)
+
+    /** Face colour 2 (Pete, blue). */
+    val Person3 = Color(0xFF6B8CFF)
+
+    /** Face colour 3 (Jo, purple). */
+    val Person4 = Color(0xFFC4A7FF)
+
+    /** Face colour 4 (Mum, orange). */
+    val Person5 = Color(0xFFFFB35C)
+
+    /** Live moment hues 1–9, in the server's order (src/lib/moments/config.ts HUES). */
+    val Moment1 = Color(0xFF7EE08A)
+    val Moment2 = Color(0xFFFF9A62)
+    val Moment3 = Color(0xFFFF9EC7)
+    val Moment4 = Color(0xFFF6C35C)
+    val Moment5 = Color(0xFF86C2FF)
+    val Moment6 = Color(0xFFC3A6FF)
+    val Moment7 = Color(0xFF7FE3D6)
+    val Moment8 = Color(0xFFFF8A8A)
+    val Moment9 = Color(0xFFD6E36B)
 }
 
 /**
@@ -97,20 +190,20 @@ val SansFamily: FontFamily = FontFamily(
 
 private val colors = darkColorScheme(
     primary = AdhxColors.Accent,
-    onPrimary = AdhxColors.Black,
+    onPrimary = AdhxColors.OnAccent,
     secondary = AdhxColors.Cream,
-    onSecondary = AdhxColors.Black,
-    background = AdhxColors.Background,
-    onBackground = AdhxColors.White,
+    onSecondary = AdhxColors.OnCream,
+    background = AdhxColors.Bg,
+    onBackground = AdhxColors.Ink,
     surface = AdhxColors.Surface,
-    onSurface = AdhxColors.White,
+    onSurface = AdhxColors.Ink,
     surfaceVariant = AdhxColors.Raised,
-    onSurfaceVariant = AdhxColors.Muted,
+    onSurfaceVariant = AdhxColors.InkSoft,
     surfaceContainerHigh = AdhxColors.Surface,
-    outline = AdhxColors.Hairline,
+    outline = AdhxColors.Line,
     outlineVariant = AdhxColors.Hairline,
     error = AdhxColors.Warn,
-    onError = AdhxColors.Black,
+    onError = AdhxColors.OnAccent,
 )
 
 private val sans = Typography().let { base ->

@@ -40,7 +40,7 @@ export function PersonView({ data }: { data: PersonBoard }) {
       <div className="flex flex-wrap items-center gap-[18px]">
         <Link
           href="/admin/people"
-          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[#1a1814] pl-2.5 pr-3.5 text-sm font-extrabold text-[#f4f1ea] hover:bg-[#262320]"
+          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-nx-surface pl-2.5 pr-3.5 text-sm font-extrabold text-nx-ink hover:bg-nx-plate"
         >
           <svg
             aria-hidden
@@ -60,7 +60,7 @@ export function PersonView({ data }: { data: PersonBoard }) {
         <Face who={m} size={72} />
         <div className="flex min-w-0 flex-col gap-1">
           <h2 className="m-0 font-nx-serif text-[44px] font-normal leading-none">{name}</h2>
-          <span className="text-sm text-[#a39b8b]" suppressHydrationWarning>
+          <span className="text-sm text-nx-ink-faint" suppressHydrationWarning>
             {[
               `@${m.username}`,
               role,
@@ -71,7 +71,7 @@ export function PersonView({ data }: { data: PersonBoard }) {
               .filter(Boolean)
               .join(' · ')}
           </span>
-          {error && <span className="text-sm text-[#ff8a7a]">{error}</span>}
+          {error && <span className="text-sm text-nx-danger">{error}</span>}
         </div>
         <span className="flex gap-2.5 md:ml-auto">
           {m.role === 'admin' ? (
@@ -156,7 +156,7 @@ export function PersonView({ data }: { data: PersonBoard }) {
             highlightFrom={days.length - 7}
             label={`${name}'s saves per day, last 30 days`}
           />
-          {data.habits && <span className="text-[13px] text-[#a39b8b]">{data.habits}</span>}
+          {data.habits && <span className="text-[13px] text-nx-ink-faint">{data.habits}</span>}
         </Card>
         <Card className="flex flex-col gap-3 px-[18px] py-4">
           <CardHead title={pronounSaves} note="newest first" />
@@ -168,11 +168,11 @@ export function PersonView({ data }: { data: PersonBoard }) {
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <Link
                       href={s.openPath}
-                      className="truncate text-sm font-extrabold text-[#f4f1ea] hover:underline"
+                      className="truncate text-sm font-extrabold text-nx-ink hover:underline"
                     >
                       {s.title}
                     </Link>
-                    <span className="truncate text-xs text-[#a39b8b]" suppressHydrationWarning>
+                    <span className="truncate text-xs text-nx-ink-faint" suppressHydrationWarning>
                       {`${s.network} · ${s.note ? `“${s.note}”` : agoShort(s.savedAt)}`}
                     </span>
                   </span>
@@ -182,9 +182,9 @@ export function PersonView({ data }: { data: PersonBoard }) {
               ))}
             </ol>
           ) : (
-            <p className="m-0 text-sm text-[#a39b8b]">No shared saves.</p>
+            <p className="m-0 text-sm text-nx-ink-faint">No shared saves.</p>
           )}
-          <span className="text-xs text-[#a39b8b]">
+          <span className="text-xs text-nx-ink-faint">
             Just for me saves are counted above, never listed.
           </span>
         </Card>
@@ -210,7 +210,7 @@ export function PersonView({ data }: { data: PersonBoard }) {
                   </svg>
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="truncate text-sm font-extrabold">{`${phoneKind(p)} · ends ${p.hint}`}</span>
-                    <span className="text-xs text-[#a39b8b]" suppressHydrationWarning>
+                    <span className="text-xs text-nx-ink-faint" suppressHydrationWarning>
                       {`Paired ${shortDate(p.createdAt)}${p.lastUsedAt ? ` · used ${agoShort(p.lastUsedAt)}` : ''}`}
                     </span>
                   </span>
@@ -237,7 +237,7 @@ export function PersonView({ data }: { data: PersonBoard }) {
                 </div>
               ))
             ) : (
-              <p className="m-0 text-sm text-[#a39b8b]">No phones connected.</p>
+              <p className="m-0 text-sm text-nx-ink-faint">No phones connected.</p>
             )}
           </Card>
           <Card className="flex flex-col gap-2.5 px-[18px] py-4">
@@ -252,9 +252,9 @@ export function PersonView({ data }: { data: PersonBoard }) {
                 </span>
               </span>
             ) : (
-              <p className="m-0 text-sm text-[#a39b8b]">Nobody yet.</p>
+              <p className="m-0 text-sm text-nx-ink-faint">Nobody yet.</p>
             )}
-            <span className="text-xs text-[#a39b8b]">
+            <span className="text-xs text-nx-ink-faint">
               {data.waitingInvites.length
                 ? `${plural(data.waitingInvites.length, 'invite link')} waiting (${data.waitingInvites.join(', ')})`
                 : 'No invite links waiting'}

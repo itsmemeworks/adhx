@@ -67,13 +67,13 @@ struct OnTheirWaySheet: View {
                         if doing.moving > 0 && doing.needsYou > 0 {
                             Text(doing.needsYou == 1 ? "1 needs you" : "\(doing.needsYou) need you")
                                 .font(Theme.sans(13))
-                                .foregroundStyle(Theme.faint)
+                                .foregroundStyle(Theme.inkFaint)
                         }
                     }
                     if doing.active.isEmpty {
                         Text(doing.loadedOnce ? "Everything’s landed. Nothing on its way right now." : "Asking your ADHX…")
                             .font(Theme.sans(15))
-                            .foregroundStyle(Theme.muted)
+                            .foregroundStyle(Theme.inkSoft)
                             .padding(.vertical, 8)
                     } else {
                         VStack(spacing: 10) {
@@ -84,7 +84,7 @@ struct OnTheirWaySheet: View {
                         if doing.active.count > Self.shown {
                             Text("And \(doing.active.count - Self.shown) more")
                                 .font(Theme.sans(13))
-                                .foregroundStyle(Theme.faint)
+                                .foregroundStyle(Theme.inkFaint)
                         }
                     }
                     Button("See everything your ADHX is doing", action: seeAll)
@@ -92,7 +92,7 @@ struct OnTheirWaySheet: View {
                     .padding(.top, 2)
                     Text("All on your server. Nothing sent anywhere.")
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.faint)
+                        .foregroundStyle(Theme.inkFaint)
                         .frame(maxWidth: .infinity)
                 }
                 .padding(.horizontal, 20)
@@ -138,7 +138,7 @@ struct DoingRow: View {
                     }
                     Text(detail)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.muted)
+                        .foregroundStyle(Theme.inkSoft)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -200,7 +200,7 @@ struct DoingRow: View {
                     Theme.placeholder.overlay(
                         Image(systemName: "photo")
                             .font(.system(size: 16))
-                            .foregroundStyle(Theme.faint))
+                            .foregroundStyle(Theme.inkFaint))
                 }
             }
         }
@@ -257,7 +257,7 @@ private struct ThinBar: View {
     var body: some View {
         GeometryReader { box in
             ZStack(alignment: .leading) {
-                Capsule(style: .continuous).fill(Theme.hairline)
+                Capsule(style: .continuous).fill(Theme.line)
                 Capsule(style: .continuous).fill(colour)
                     .frame(width: max(4, box.size.width * min(1, max(0, fraction))))
                     .animation(.easeOut(duration: 0.4), value: fraction)
@@ -296,7 +296,7 @@ struct DoingScreen: View {
                 if let line = summaryLine {
                     Text(line)
                         .font(Theme.sans(14))
-                        .foregroundStyle(Theme.muted)
+                        .foregroundStyle(Theme.inkSoft)
                 }
                 if doing.summary.processing == "remote", doing.summary.remoteConnected == false {
                     note("The Mac helper isn’t connected, so learning and converting wait for it.")
@@ -311,7 +311,7 @@ struct DoingScreen: View {
                 } else if doing.items.isEmpty {
                     Text("Nothing on the go. Everything you and your people saved is ready.")
                         .font(Theme.sans(15))
-                        .foregroundStyle(Theme.muted)
+                        .foregroundStyle(Theme.inkSoft)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 section("Needs you", doing.items.filter(\.needsYou))
@@ -320,18 +320,18 @@ struct DoingScreen: View {
                 if let free = doing.summary.freeBytes {
                     Text("\(ByteCountFormatter.string(fromByteCount: Int64(free), countStyle: .file)) free on your ADHX")
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.faint)
+                        .foregroundStyle(Theme.inkFaint)
                 }
                 Text("All on your server. Nothing sent anywhere.")
                     .font(Theme.sans(12))
-                    .foregroundStyle(Theme.faint)
+                    .foregroundStyle(Theme.inkFaint)
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)
             .padding(.bottom, 24)
         }
         .refreshable { await doing.refresh() }
-        .background(Theme.app.ignoresSafeArea())
+        .background(Theme.bg.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .onAppear { doing.watch("list") }
         .onDisappear { doing.unwatch("list") }
@@ -351,7 +351,7 @@ struct DoingScreen: View {
                 Text(title.uppercased())
                     .font(Theme.sans(12, .heavy))
                     .tracking(0.8)
-                    .foregroundStyle(title == "Needs you" ? Theme.live : Theme.faint)
+                    .foregroundStyle(title == "Needs you" ? Theme.live : Theme.inkFaint)
                     .accessibilityAddTraits(.isHeader)
                 ForEach(items) { item in
                     DoingRow(item: item, server: server, doing: doing)

@@ -143,7 +143,7 @@ fun OriginalSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, o
         sheetState = state,
         containerColor = AdhxColors.Surface,
         shape = SquircleShape.top(28.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AdhxColors.Hairline) },
+        dragHandle = { BottomSheetDefaults.DragHandle(color = AdhxColors.Line) },
     ) {
         Column(
             Modifier
@@ -169,14 +169,14 @@ fun OriginalSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, o
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(originalHeading(post), fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(originalHeading(post), fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         // The network's mark shows once: here only when their picture leads.
                         if (lineShowsMark(picture != null)) {
-                            NetworkMark(post.platform, size = 13.dp, tint = AdhxColors.Muted)
+                            NetworkMark(post.platform, size = 13.dp, tint = AdhxColors.InkSoft)
                             Spacer(Modifier.width(6.dp))
                         }
-                        Text(originalLine(post), fontSize = 13.sp, color = AdhxColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(originalLine(post), fontSize = 13.sp, color = AdhxColors.InkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 Spacer(Modifier.width(8.dp))
@@ -189,14 +189,14 @@ fun OriginalSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, o
                         .semantics { contentDescription = "Close" },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Filled.Close, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Filled.Close, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(18.dp))
                 }
             }
 
             if (hasOriginalWords(post)) {
                 SelectionContainer { OriginalWords(post) }
             } else {
-                Text(noWordsLine(post.kind), fontSize = 15.sp, color = AdhxColors.Muted)
+                Text(noWordsLine(post.kind), fontSize = 15.sp, color = AdhxColors.InkSoft)
             }
 
             if (source != null) {
@@ -216,16 +216,16 @@ fun OriginalSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, o
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        NetworkMark(post.platform, size = 18.dp, tint = AdhxColors.Black)
+                        NetworkMark(post.platform, size = 18.dp, tint = AdhxColors.OnAccent)
                         Spacer(Modifier.width(8.dp))
-                        Text("Open on $network", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Black)
+                        Text("Open on $network", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.OnAccent)
                     }
                     Box(
                         Modifier
                             .fillMaxWidth()
                             .defaultMinSize(minHeight = 52.dp)
                             .clip(RoundedCornerShape(26.dp))
-                            .border(1.5.dp, AdhxColors.Cream.copy(alpha = 0.6f), RoundedCornerShape(26.dp))
+                            .border(1.5.dp, AdhxColors.Ink.copy(alpha = 0.6f), RoundedCornerShape(26.dp))
                             .clickable {
                                 context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Link", source))
                                 onNotice("Link copied")
@@ -234,7 +234,7 @@ fun OriginalSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, o
                             .semantics { role = Role.Button },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text("Copy link", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Cream)
+                        Text("Copy link", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Ink)
                     }
                 }
             }
@@ -246,7 +246,7 @@ fun OriginalSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, o
 @Composable
 private fun MarkTile(platform: String?) {
     Box(Modifier.size(48.dp).clip(CircleShape).background(AdhxColors.Raised), contentAlignment = Alignment.Center) {
-        NetworkMark(platform, size = 22.dp, tint = AdhxColors.Cream)
+        NetworkMark(platform, size = 22.dp, tint = AdhxColors.Ink)
     }
 }
 
@@ -257,16 +257,16 @@ private fun OriginalWords(post: PhonePost) {
     val body = remember(article?.body) { ArticleBody.parse(article?.body) }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         article?.title?.takeIf { it.isNotBlank() }?.let {
-            Text(it, fontFamily = SerifFamily, fontSize = 28.sp, lineHeight = 33.sp, color = AdhxColors.White)
+            Text(it, fontFamily = SerifFamily, fontSize = 28.sp, lineHeight = 33.sp, color = AdhxColors.Ink)
         }
         if (body.isNotEmpty()) {
             ArticleBodyText(body, size = 20.sp, lineHeight = 29.sp)
         } else {
             article?.description?.takeIf { it.isNotBlank() && it != post.text }?.let {
-                Text(it, fontSize = 16.sp, lineHeight = 24.sp, color = AdhxColors.Muted)
+                Text(it, fontSize = 16.sp, lineHeight = 24.sp, color = AdhxColors.InkSoft)
             }
             if (post.text.isNotBlank()) {
-                Text(rememberLinked(post.text), fontFamily = SerifFamily, fontSize = 22.sp, lineHeight = 32.sp, color = AdhxColors.Cream)
+                Text(rememberLinked(post.text), fontFamily = SerifFamily, fontSize = 22.sp, lineHeight = 32.sp, color = AdhxColors.Ink)
             }
         }
     }

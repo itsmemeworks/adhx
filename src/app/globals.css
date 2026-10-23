@@ -204,23 +204,69 @@
 }
 
 /* ============================================================
-   next_ui — the redesign's tokens (phase 0). Lives ALONGSIDE Matter;
-   nothing here changes the current UI. RGB channels so Tailwind's
-   `bg-nx-ink/80`-style alpha modifiers work. See src/components/next.
+   The ADHX design system's colour tokens: the same names and values as the
+   design system's tokens.json, iOS `Theme` and Android `AdhxColors`. Name
+   tokens, never hex values. RGB channels so Tailwind's `bg-nx-bg/80`-style
+   alpha modifiers work; Tailwind exposes each as `nx-<name>`.
    ============================================================ */
 @layer base {
   :root {
-    --nx-ink: 15 14 12; /* #0f0e0c warm black */
-    --nx-stage: 0 0 0; /* #000 pure black stage */
-    --nx-surface: 26 24 20; /* #1a1814 raised card */
-    --nx-cream: 242 234 217; /* #f2ead9 */
-    --nx-soft: 201 191 171; /* #c9bfab secondary text on dark */
-    --nx-muted: 168 159 141; /* #a89f8d */
-    --nx-hairline: 42 38 32; /* #2a2620 */
-    --nx-accent: 255 210 63; /* #ffd23f */
-    --nx-on-cream: 92 84 70; /* #5c5446 secondary text on cream */
+    /* Grounds */
+    --nx-bg: 15 14 12; /* #0f0e0c the app ground behind every page */
+    --nx-stage: 0 0 0; /* #000000 behind media, the player, sheets, words */
+    --nx-deep: 18 17 15; /* #12110f deep hero and strip ground */
+    --nx-surface: 26 24 20; /* #1a1814 a card on bg */
+    --nx-sheet: 28 27 25; /* #1c1b19 menus, popovers, sheet panels */
+    --nx-raised: 42 38 32; /* #2a2620 a card on a card, thumb backgrounds */
+    --nx-plate: 38 35 32; /* #262320 quiet filled controls, the current row */
+    --nx-plate-hover: 47 43 39; /* #2f2b27 plate on hover */
+    --nx-placeholder: 42 40 37; /* #2a2825 skeletons, images before load */
+    /* Lines */
+    --nx-hairline: 42 38 32; /* #2a2620 quiet dividers only */
+    --nx-line: 74 69 62; /* #4a453e control borders, the switch-off track */
+    /* Accent and cream */
+    --nx-accent: 255 210 63; /* #ffd23f the one thing to press */
+    --nx-on-accent: 0 0 0; /* #000000 */
+    --nx-cream: 242 234 217; /* #f2ead9 selected tabs, chips, the toast */
+    --nx-on-cream: 20 20 20; /* #141414 */
+    --nx-on-cream-soft: 92 84 70; /* #5c5446 secondary text on cream */
     --nx-bone: 184 171 146; /* #b8ab92 outlines on cream */
-    --nx-skeleton: 42 40 37; /* #2a2825 */
+    /* Text on dark */
+    --nx-ink: 244 241 234; /* #f4f1ea primary words and icons */
+    --nx-ink-soft: 201 191 171; /* #c9bfab second lines */
+    --nx-ink-faint: 168 159 141; /* #a89f8d placeholders, meta, footnotes */
+    /* States: each also carries a word or an icon */
+    --nx-good: 125 220 138; /* #7ddc8a success, done, ready */
+    --nx-warn: 255 181 154; /* #ffb59a soft errors, can't reach it */
+    --nx-live: 255 90 60; /* #ff5a3c LIVE and needs-you */
+    --nx-danger: 255 138 122; /* #ff8a7a destructive words and borders */
+    --nx-danger-fill: 229 72 77; /* #e5484d the solid destructive button (black label) */
+    --nx-watching: 94 227 138; /* #5ee38a the ring round people watching live */
+    /* Paper: notes from friends */
+    --nx-paper: 228 218 200; /* #e4dac8 */
+    --nx-paper-ink: 20 20 20; /* #141414 */
+    --nx-paper-ink-soft: 58 53 45; /* #3a352d */
+    /* People (FNV-1a of the username, mod 5) */
+    --nx-person-1: 127 209 174; /* #7fd1ae */
+    --nx-person-2: 255 143 163; /* #ff8fa3 */
+    --nx-person-3: 107 140 255; /* #6b8cff */
+    --nx-person-4: 196 167 255; /* #c4a7ff */
+    --nx-person-5: 255 179 92; /* #ffb35c */
+    /* Moments (assigned by the server) */
+    --nx-moment-1: 126 224 138; /* #7ee08a */
+    --nx-moment-2: 255 154 98; /* #ff9a62 */
+    --nx-moment-3: 255 158 199; /* #ff9ec7 */
+    --nx-moment-4: 246 195 92; /* #f6c35c */
+    --nx-moment-5: 134 194 255; /* #86c2ff */
+    --nx-moment-6: 195 166 255; /* #c3a6ff */
+    --nx-moment-7: 127 227 214; /* #7fe3d6 */
+    --nx-moment-8: 255 138 138; /* #ff8a8a */
+    --nx-moment-9: 214 227 107; /* #d6e36b */
+    /* "Be a Gob" picture colours */
+    --nx-gob-1: 107 140 255; /* #6b8cff */
+    --nx-gob-2: 95 208 200; /* #5fd0c8 */
+    --nx-gob-3: 255 122 89; /* #ff7a59 */
+    --nx-gob-4: 182 227 90; /* #b6e35a */
   }
 }
 
@@ -444,7 +490,7 @@
   animation: nx-float-up 1.2s ease-out forwards;
 }
 .animate-nx-react-float {
-  animation: nx-react-float 4.2s ease-out forwards;
+  animation: nx-react-float 3.6s ease-out forwards;
 }
 .animate-nx-pop-in {
   animation: nx-pop-in 0.6s ease-out;
@@ -540,7 +586,7 @@
   }
   /* No rising: a reaction fades in and out where it is. */
   .animate-nx-react-float {
-    animation: nx-react-fade 4.2s ease-in-out forwards !important;
+    animation: nx-react-fade 3.6s ease-in-out forwards !important;
   }
   .gob * {
     animation: none !important;

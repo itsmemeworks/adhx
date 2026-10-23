@@ -119,7 +119,7 @@ export function PhoneAppCard() {
             <Step n={2} />
             <div className="flex flex-col gap-1">
               <span className="text-[15px] font-bold">Open it and scan this code</span>
-              <span className="text-[13px] leading-relaxed text-white/65">
+              <span className="text-[13px] leading-relaxed text-nx-ink/65">
                 The code connects the app to this ADHX. It works once, for 10 minutes.
               </span>
               {localOnly && <LocalOnlyWarning />}
@@ -133,7 +133,7 @@ export function PhoneAppCard() {
       {connected && (
         <div
           role="status"
-          className={`flex items-center gap-3 bg-[#7ddc8a]/12 px-4 py-3 text-[15px] font-semibold text-[#7ddc8a] ${IN_CARD}`}
+          className={`flex items-center gap-3 bg-nx-good/12 px-4 py-3 text-[15px] font-semibold text-nx-good ${IN_CARD}`}
         >
           <Check aria-hidden className="h-5 w-5 shrink-0" strokeWidth={3} />
           <span>{`${connected} is connected. Share a post to try it.`}</span>
@@ -141,13 +141,13 @@ export function PhoneAppCard() {
       )}
 
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-bold uppercase tracking-[0.08em] text-white/55">
+        <span className="text-xs font-bold uppercase tracking-[0.08em] text-nx-ink/55">
           Connected phones
         </span>
         {phones === null ? (
           <span aria-hidden className={`nx-shimmer animate-nx-shimmer block h-14 ${IN_CARD}`} />
         ) : phones.length === 0 ? (
-          <span className="text-[13px] text-white/55">None yet.</span>
+          <span className="text-[13px] text-nx-ink/55">None yet.</span>
         ) : (
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
             {phones.map((phone) => (
@@ -155,10 +155,10 @@ export function PhoneAppCard() {
                 key={phone.id}
                 className={`flex items-center gap-3 bg-black/40 px-4 py-3 text-sm ${IN_CARD}`}
               >
-                <Smartphone aria-hidden className="h-4 w-4 shrink-0 text-white/55" />
+                <Smartphone aria-hidden className="h-4 w-4 shrink-0 text-nx-ink/55" />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate font-bold">{phone.name}</span>
-                  <span className="text-xs text-white/55">
+                  <span className="text-xs text-nx-ink/55">
                     {`Connected ${timeSince(phone.createdAt)} · ${phone.lastUsedAt ? `last used ${timeSince(phone.lastUsedAt)}` : 'not used yet'}`}
                   </span>
                 </span>
@@ -178,7 +178,7 @@ export function PhoneAppCard() {
       </div>
 
       {(error ?? pair.error) && (
-        <p role="alert" className="m-0 text-[13px] text-[#ff8a7a]">
+        <p role="alert" className="m-0 text-[13px] text-nx-danger">
           {error ?? pair.error}
         </p>
       )}

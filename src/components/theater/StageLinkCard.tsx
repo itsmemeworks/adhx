@@ -35,17 +35,17 @@ export function StageLinkCard({ preview }: { preview: TheaterLinkPreview }) {
       ) : null}
       <div className="px-4 py-3">
         {title ? (
-          <p className="font-serif text-lg leading-snug text-white">
+          <p className="font-serif text-lg leading-snug text-nx-ink">
             <span>{title}</span>
           </p>
         ) : null}
         {description ? (
-          <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-white/55">
+          <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-nx-ink/55">
             <span>{description}</span>
           </p>
         ) : null}
         {domain ? (
-          <p className="mt-2 truncate font-mono text-[11px] uppercase tracking-wide text-white/40">
+          <p className="mt-2 truncate font-mono text-[11px] uppercase tracking-wide text-nx-ink/40">
             <span>{domain}</span>
           </p>
         ) : null}

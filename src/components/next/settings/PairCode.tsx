@@ -151,7 +151,7 @@ export function PairCodeBox({
           <span className="font-mono text-[17px] font-bold tracking-[0.12em] text-nx-cream">
             {spacedPairCode(pairing.code)}
           </span>
-          <span className="text-xs text-white/55" role="status">
+          <span className="text-xs text-nx-ink/55" role="status">
             {left === 1 ? '1 minute left' : `${left} minutes left`}
           </span>
         </>
@@ -160,7 +160,7 @@ export function PairCodeBox({
           className={`flex h-[196px] w-full flex-col items-center justify-center gap-3 bg-black/40 p-4 text-center sm:w-[196px] ${IN_CARD}`}
         >
           {pairing && expired && (
-            <span className="text-[13px] text-white/65">That code ran out.</span>
+            <span className="text-[13px] text-nx-ink/65">That code ran out.</span>
           )}
           <button
             type="button"
@@ -184,7 +184,7 @@ export function PairCodeBox({
 /** The "can't reach this address" warning under the scan step. */
 export function LocalOnlyWarning() {
   return (
-    <span className="text-[13px] leading-relaxed text-[#ffb59a]">
+    <span className="text-[13px] leading-relaxed text-nx-warn">
       Your phone can’t reach this address. Open ADHX at one it can reach (your computer’s network
       address, or your ADHX’s web address) and make the code there.
     </span>

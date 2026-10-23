@@ -113,7 +113,7 @@ fun ChannelScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .background(AdhxColors.Background)
+            .background(AdhxColors.Bg)
             .then(if (header == null) Modifier.systemBarsPadding() else Modifier.navigationBarsPadding()),
     ) {
         if (header != null) header() else Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp)) { BackTitleRow("", onBack) }
@@ -146,7 +146,7 @@ fun ChannelScreen(
                                 fontFamily = SerifFamily,
                                 fontSize = 40.sp,
                                 lineHeight = 38.sp,
-                                color = AdhxColors.White,
+                                color = AdhxColors.Ink,
                                 modifier = Modifier.semantics { heading() },
                             )
                             val size = ui.size.takeIf { it > 0 } ?: ui.items.size
@@ -161,7 +161,7 @@ fun ChannelScreen(
                                     },
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = AdhxColors.Muted,
+                                    color = AdhxColors.InkSoft,
                                 )
                             }
                         }
@@ -193,12 +193,12 @@ fun ChannelScreen(
                 }
                 ui.items.isEmpty() && ui.error != null -> item(span = StaggeredGridItemSpan.FullLine, key = "error") {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(ui.error ?: Copy.CHANNEL_EMPTY, fontSize = 15.sp, color = AdhxColors.Muted)
+                        Text(ui.error ?: Copy.CHANNEL_EMPTY, fontSize = 15.sp, color = AdhxColors.InkSoft)
                         if (ui.error != Copy.CHANNEL_EMPTY) OutlineButton("Try again", onClick = feed::loadChannel, minHeight = 44.dp)
                     }
                 }
                 ui.items.isEmpty() -> item(span = StaggeredGridItemSpan.FullLine, key = "empty") {
-                    Text(Copy.CHANNEL_EMPTY, fontSize = 15.sp, color = AdhxColors.Muted)
+                    Text(Copy.CHANNEL_EMPTY, fontSize = 15.sp, color = AdhxColors.InkSoft)
                 }
             }
             // The friend's note sits among their posts, a few tiles in.
@@ -235,11 +235,6 @@ internal fun tileHeight(post: PhonePost): Dp {
     return (174 * (h / w)).toFloat().coerceIn(180f, 290f).dp
 }
 
-/** The note tile's paper and ink (the boards' #e4dac8, #141414, #3a352d). */
-private val NotePaper = Color(0xFFE4DAC8)
-private val NoteInk = Color(0xFF141414)
-private val NoteInkSoft = Color(0xFF3A352D)
-
 /** How many tiles come before the note. */
 private const val NOTE_AFTER = 3
 
@@ -260,7 +255,7 @@ private fun NoteTile(note: FriendNote, person: Saver?, title: String?, server: S
         Modifier
             .fillMaxWidth()
             .clip(SquircleShape(18.dp))
-            .background(NotePaper)
+            .background(AdhxColors.Paper)
             .clickable(onClickLabel = Copy.PLAY, onClick = onClick)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -268,17 +263,17 @@ private fun NoteTile(note: FriendNote, person: Saver?, title: String?, server: S
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (person != null) Avatar(person, server, size = 22.dp)
             Spacer(Modifier.width(8.dp))
-            Text(Copy.notesOf(who), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = NoteInk)
+            Text(Copy.notesOf(who), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.PaperInk)
         }
         Text(
             "“${note.text}”",
             fontFamily = SerifFamily,
             fontSize = 24.sp,
             lineHeight = 23.sp,
-            color = NoteInk,
+            color = AdhxColors.PaperInk,
         )
         val on = Copy.noteOn(title, Copy.agoIso(note.savedAt))
-        if (on.isNotBlank()) Text(on, fontSize = 12.sp, lineHeight = 16.sp, color = NoteInkSoft)
+        if (on.isNotBlank()) Text(on, fontSize = 12.sp, lineHeight = 16.sp, color = AdhxColors.PaperInkSoft)
     }
 }
 
@@ -289,14 +284,14 @@ private fun PlayNewButton(count: Int, onClick: () -> Unit) {
         Modifier
             .height(48.dp)
             .clip(RoundedCornerShape(50))
-            .background(AdhxColors.Button)
+            .background(AdhxColors.Plate)
             .clickable(onClick = onClick)
             .padding(horizontal = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(7.dp).clip(CircleShape).background(AdhxColors.Accent))
         Spacer(Modifier.width(8.dp))
-        Text(Copy.playNew(count), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Cream)
+        Text(Copy.playNew(count), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Ink)
     }
 }
 
@@ -307,7 +302,7 @@ private fun KeepButton(kept: Boolean, busy: Boolean, onClick: () -> Unit) {
         Modifier
             .height(48.dp)
             .clip(RoundedCornerShape(50))
-            .background(AdhxColors.Button)
+            .background(AdhxColors.Plate)
             .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(50))
             .clickable(enabled = !busy, role = Role.Button, onClick = onClick)
             .padding(horizontal = 18.dp),
@@ -316,10 +311,10 @@ private fun KeepButton(kept: Boolean, busy: Boolean, onClick: () -> Unit) {
         if (busy) {
             Spinner(size = 16.dp, stroke = 2.dp)
         } else {
-            Icon(if (kept) Glyphs.Check else Glyphs.Plus, contentDescription = null, tint = if (kept) AdhxColors.Accent else AdhxColors.Cream, modifier = Modifier.size(16.dp))
+            Icon(if (kept) Glyphs.Check else Glyphs.Plus, contentDescription = null, tint = if (kept) AdhxColors.Accent else AdhxColors.Ink, modifier = Modifier.size(16.dp))
         }
         Spacer(Modifier.width(8.dp))
-        Text(if (kept) Copy.KEPT_OPEN else Copy.KEEP_CHANNEL, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Cream)
+        Text(if (kept) Copy.KEPT_OPEN else Copy.KEEP_CHANNEL, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Ink)
     }
 }
 
@@ -366,7 +361,7 @@ fun BoxScope.GroupChannelBar(title: String, kept: Boolean, busy: Boolean, toast:
                     .semantics { contentDescription = "Close" },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Glyphs.Chevron, contentDescription = null, tint = AdhxColors.Cream, modifier = Modifier.size(18.dp).rotate(90f))
+                Icon(Glyphs.Chevron, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(18.dp).rotate(90f))
             }
             val label = if (kept) Copy.LEAVE_THIS_CHANNEL else Copy.KEEP_CHANNEL
             Row(
@@ -391,7 +386,7 @@ fun BoxScope.GroupChannelBar(title: String, kept: Boolean, busy: Boolean, toast:
                 } else {
                     Icon(if (kept) Glyphs.Check else Glyphs.Plus, contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(16.dp))
                 }
-                Text(title, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Cream, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(title, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         if (toast != null) {

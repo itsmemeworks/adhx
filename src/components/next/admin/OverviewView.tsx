@@ -38,7 +38,7 @@ export const RANGE_END: Record<OverviewBoard['range'], string> = {
 
 function Legend({ colour, label }: { colour: string; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-[#c9bfab]">
+    <span className="inline-flex items-center gap-1.5 text-xs text-nx-ink-soft">
       <span
         aria-hidden
         className="block h-2.5 w-2.5 rounded-[3px]"
@@ -112,7 +112,7 @@ export function OverviewView({ data, server }: { data: OverviewBoard; server: st
               <Legend colour="#ffd23f" label="Shared" />
               <Legend colour="#c4a7ff" label="Just for me" />
               {data.busiestDay && (
-                <span className="text-[13px] text-[#a39b8b] sm:ml-auto">
+                <span className="text-[13px] text-nx-ink-faint sm:ml-auto">
                   {`Busiest: ${dayName(data.busiestDay.day)}, ${plural(data.busiestDay.saves, 'save')}`}
                 </span>
               )}
@@ -124,7 +124,7 @@ export function OverviewView({ data, server }: { data: OverviewBoard; server: st
               highlightFrom={highlightFrom(data.range, days.length)}
               label={`${plural(totalSaves, 'save')} in the last 30 days, shared and Just for me`}
             />
-            <div className="flex justify-between text-[11px] text-[#a39b8b]">
+            <div className="flex justify-between text-[11px] text-nx-ink-faint">
               <span>{shortDate(days[0]?.day)}</span>
               <span>{shortDate(days[Math.floor(days.length / 2)]?.day)}</span>
               <span>{RANGE_END[data.range]}</span>
@@ -169,24 +169,24 @@ export function OverviewView({ data, server }: { data: OverviewBoard; server: st
           </div>
 
           <Card className="flex flex-wrap items-center gap-x-4 gap-y-2 overflow-hidden px-[18px] py-3.5 xl:flex-nowrap">
-            <Dot colour={h.dbOk ? '#7ddc8a' : '#ff8a7a'} size={10} />
+            <Dot colour={h.dbOk ? 'rgb(var(--nx-good))' : 'rgb(var(--nx-danger))'} size={10} />
             <span className="whitespace-nowrap text-sm font-extrabold">
               {h.dbOk ? 'Server is healthy' : 'The database isn’t answering'}
             </span>
-            <span className="whitespace-nowrap text-[13px] text-[#c9bfab]">
+            <span className="whitespace-nowrap text-[13px] text-nx-ink-soft">
               {h.diskTotal
                 ? `Disk ${bytesLabel(h.keptBytes)} of ${bytesLabel(h.diskTotal)}`
                 : `Kept ${bytesLabel(h.keptBytes)}`}
             </span>
-            <span className="whitespace-nowrap text-[13px] text-[#c9bfab]">{helper}</span>
+            <span className="whitespace-nowrap text-[13px] text-nx-ink-soft">{helper}</span>
             {h.understoodPct !== null && (
-              <span className="whitespace-nowrap text-[13px] text-[#c9bfab]">
+              <span className="whitespace-nowrap text-[13px] text-nx-ink-soft">
                 {`Understood ${h.understoodPct}%`}
               </span>
             )}
             <Link
               href="/admin/processing"
-              className="whitespace-nowrap text-sm font-extrabold text-nx-accent underline hover:text-white sm:ml-auto xl:shrink-0"
+              className="whitespace-nowrap text-sm font-extrabold text-nx-accent underline hover:text-nx-ink sm:ml-auto xl:shrink-0"
             >
               Processing
             </Link>
@@ -207,11 +207,11 @@ export function OverviewView({ data, server }: { data: OverviewBoard; server: st
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <Link
                         href={m.post.openPath}
-                        className="truncate text-sm font-extrabold text-[#f4f1ea] hover:underline"
+                        className="truncate text-sm font-extrabold text-nx-ink hover:underline"
                       >
                         {m.post.title}
                       </Link>
-                      <span className="truncate text-xs text-[#a39b8b]">{m.detail}</span>
+                      <span className="truncate text-xs text-nx-ink-faint">{m.detail}</span>
                     </span>
                     <FaceStack faces={m.savers.slice(0, 3)} size={22} />
                     <span className="w-7 text-right text-sm font-extrabold">{m.saves}</span>
@@ -219,7 +219,7 @@ export function OverviewView({ data, server }: { data: OverviewBoard; server: st
                 ))}
               </ol>
             ) : (
-              <p className="m-0 text-sm text-[#a39b8b]">Nothing shared yet in this range.</p>
+              <p className="m-0 text-sm text-nx-ink-faint">Nothing shared yet in this range.</p>
             )}
           </Card>
           <Card className="flex flex-col gap-3 px-[18px] py-4">
@@ -234,21 +234,21 @@ export function OverviewView({ data, server }: { data: OverviewBoard; server: st
                     </span>
                     <span
                       aria-hidden
-                      className="h-2 flex-1 overflow-hidden rounded-full bg-[#262320]"
+                      className="h-2 flex-1 overflow-hidden rounded-full bg-nx-plate"
                     >
                       <span
                         className="block h-2 rounded-full"
                         style={{ width: `${b.pct}%`, background: faceColour(b.face.username) }}
                       />
                     </span>
-                    <span className="w-[120px] whitespace-nowrap text-right text-[13px] text-[#c9bfab]">
+                    <span className="w-[120px] whitespace-nowrap text-right text-[13px] text-nx-ink-soft">
                       {`${plural(b.saves, 'save')} · ${plural(b.reactions, 'react')}`}
                     </span>
                   </li>
                 ))}
               </ol>
             ) : (
-              <p className="m-0 text-sm text-[#a39b8b]">Quiet in this range.</p>
+              <p className="m-0 text-sm text-nx-ink-faint">Quiet in this range.</p>
             )}
           </Card>
         </div>

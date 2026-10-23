@@ -9,10 +9,8 @@ import {
 } from 'drizzle-orm/sqlite-core'
 import { relations, sql } from 'drizzle-orm'
 
-// ===========================================
-// MULTI-USER SCHEMA - Composite Primary Keys
-// ===========================================
-
+// ====================================// MULTI-USER SCHEMA - Composite Primary Keys
+// ====================================
 // Main bookmarks table - PK: (userId, platform, id)
 // `platform` is 'twitter' | 'instagram' | 'tiktok' or one of the link networks
 // in src/lib/platform/networks.ts — so a TikTok video id (numeric, 19 digits)
@@ -944,10 +942,8 @@ export const adminAudit = sqliteTable(
   }),
 )
 
-// ===========================================
-// ACCOUNTS - users + linked sign-in identities
-// ===========================================
-
+// ====================================// ACCOUNTS - users + linked sign-in identities
+// ====================================
 // First-class account row. `id` is either the X user id (X-first signups —
 // matches the historical convention that `userId` == the X id everywhere
 // else, e.g. bookmarks.userId) or a generated `u_<hex>` id (email-first
@@ -1043,10 +1039,8 @@ export const loginTokens = sqliteTable('login_tokens', {
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 })
 
-// ===========================================
-// Relations
-// ===========================================
-
+// ====================================// Relations
+// ====================================
 export const bookmarksRelations = relations(bookmarks, ({ many, one }) => ({
   links: many(bookmarkLinks),
   tags: many(bookmarkTags),
@@ -1082,10 +1076,8 @@ export const archivedPostsRelations = relations(archivedPosts, ({ one }) => ({
   }),
 }))
 
-// ===========================================
-// Type exports
-// ===========================================
-
+// ====================================// Type exports
+// ====================================
 export type Bookmark = typeof bookmarks.$inferSelect
 export type NewBookmark = typeof bookmarks.$inferInsert
 export type BookmarkLink = typeof bookmarkLinks.$inferSelect

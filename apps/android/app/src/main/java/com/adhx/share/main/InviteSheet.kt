@@ -193,7 +193,7 @@ fun InviteSheet(connection: Connection, onClose: () -> Unit) {
         sheetState = state,
         containerColor = AdhxColors.Surface,
         shape = SquircleShape.top(28.dp),
-        dragHandle = { SheetHandle(AdhxColors.Hairline) },
+        dragHandle = { SheetHandle(AdhxColors.Line) },
     ) {
         Column(
             Modifier
@@ -207,10 +207,10 @@ fun InviteSheet(connection: Connection, onClose: () -> Unit) {
                 fontFamily = SerifFamily,
                 fontSize = 32.sp,
                 lineHeight = 32.sp,
-                color = AdhxColors.White,
+                color = AdhxColors.Ink,
                 modifier = Modifier.semantics { heading() },
             )
-            Text(InviteCopy.NOTE, fontSize = 15.sp, lineHeight = 21.sp, color = AdhxColors.Muted)
+            Text(InviteCopy.NOTE, fontSize = 15.sp, lineHeight = 21.sp, color = AdhxColors.InkSoft)
             if (canInvite) {
                 PrimaryButton(
                     if (making) "Making a link…" else InviteCopy.MAKE,
@@ -240,7 +240,7 @@ fun InviteSheet(connection: Connection, onClose: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                 )
             } else {
-                Text(InviteCopy.ADMIN_ONLY, fontSize = 14.sp, lineHeight = 19.sp, color = AdhxColors.Faint)
+                Text(InviteCopy.ADMIN_ONLY, fontSize = 14.sp, lineHeight = 19.sp, color = AdhxColors.InkFaint)
             }
             error?.let { Text(it, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Warn) }
 
@@ -249,17 +249,17 @@ fun InviteSheet(connection: Connection, onClose: () -> Unit) {
                 fontSize = 13.sp,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 0.8.sp,
-                color = AdhxColors.Faint,
+                color = AdhxColors.InkFaint,
                 modifier = Modifier.padding(top = 6.dp),
             )
             when {
                 loading -> Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) { Spinner(size = 24.dp, stroke = 2.5.dp) }
-                listError != null -> Text(listError.orEmpty(), fontSize = 14.sp, color = AdhxColors.Faint)
-                invites.isEmpty() -> Text(InviteCopy.NONE, fontSize = 14.sp, color = AdhxColors.Faint)
+                listError != null -> Text(listError.orEmpty(), fontSize = 14.sp, color = AdhxColors.InkFaint)
+                invites.isEmpty() -> Text(InviteCopy.NONE, fontSize = 14.sp, color = AdhxColors.InkFaint)
                 else -> Column(
                     Modifier
                         .clip(SquircleShape(20.dp))
-                        .background(AdhxColors.Card),
+                        .background(AdhxColors.Plate),
                 ) {
                     val now = Instant.now()
                     invites.forEachIndexed { i, invite ->
@@ -310,7 +310,7 @@ fun InviteSheet(connection: Connection, onClose: () -> Unit) {
                     }
                 }
             }
-            if (invites.isNotEmpty()) Text(InviteCopy.SHARE_NOTE, fontSize = 12.sp, lineHeight = 16.sp, color = AdhxColors.Faint)
+            if (invites.isNotEmpty()) Text(InviteCopy.SHARE_NOTE, fontSize = 12.sp, lineHeight = 16.sp, color = AdhxColors.InkFaint)
         }
     }
 }
@@ -331,11 +331,11 @@ private fun InviteRow(invite: Invite, line: String, busy: Boolean, onShare: () -
                 InviteCopy.title(invite),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
-                color = AdhxColors.Cream,
+                color = AdhxColors.Ink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (line.isNotEmpty()) Text(line, fontSize = 12.sp, lineHeight = 16.sp, color = AdhxColors.Faint, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (line.isNotEmpty()) Text(line, fontSize = 12.sp, lineHeight = 16.sp, color = AdhxColors.InkFaint, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         if (busy) {
             Spinner(size = 18.dp)

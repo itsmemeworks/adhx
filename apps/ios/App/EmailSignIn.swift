@@ -40,7 +40,7 @@ struct EmailSignInForm: View {
     private var emailStep: some View {
         Group {
             field(label: "Your ADHX address") {
-                TextField("", text: $address, prompt: Text("adhx.example.com").foregroundColor(Theme.faint))
+                TextField("", text: $address, prompt: Text("adhx.example.com").foregroundColor(Theme.inkFaint))
                     .keyboardType(.URL)
                     .textContentType(.URL)
                     .textInputAutocapitalization(.never)
@@ -50,7 +50,7 @@ struct EmailSignInForm: View {
                     .onSubmit { focus = .email }
             }
             field(label: "Your email") {
-                TextField("", text: $email, prompt: Text("you@example.com").foregroundColor(Theme.faint))
+                TextField("", text: $email, prompt: Text("you@example.com").foregroundColor(Theme.inkFaint))
                     .keyboardType(.emailAddress)
                     .textContentType(.emailAddress)
                     .textInputAutocapitalization(.never)
@@ -84,11 +84,11 @@ struct EmailSignInForm: View {
                     .accessibilityAddTraits(.isHeader)
                 Text("We sent it to \(sent.email), if it has an account on \(Links.displayHost(sent.server)). It works for 15 minutes.")
                     .font(Theme.sans(14))
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
             }
             field(label: "Code") {
-                TextField("", text: $code, prompt: Text("123456").foregroundColor(Theme.faint.opacity(0.55)))
+                TextField("", text: $code, prompt: Text("123456").foregroundColor(Theme.inkFaint.opacity(0.55)))
                     .keyboardType(.numberPad)
                     .textContentType(.oneTimeCode)
                     .font(Theme.sans(22, .bold).monospaced())
@@ -117,7 +117,7 @@ struct EmailSignInForm: View {
                 HStack(spacing: 16) {
                     Button(wait > 0 ? "Send another in \(wait)s" : "Send another code") { resend(sent) }
                         .disabled(wait > 0 || model.pairing)
-                        .foregroundStyle(wait > 0 ? Theme.faint : Theme.accent)
+                        .foregroundStyle(wait > 0 ? Theme.inkFaint : Theme.accent)
                     Button("Use another email") {
                         model.pairError = nil
                         code = ""
@@ -150,7 +150,7 @@ struct EmailSignInForm: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(Theme.sans(13, .bold))
-                .foregroundStyle(Theme.muted)
+                .foregroundStyle(Theme.inkSoft)
             content()
                 .font(Theme.sans(17))
                 .foregroundStyle(Theme.cream)
@@ -158,7 +158,7 @@ struct EmailSignInForm: View {
                 .frame(height: 52)
                 .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.surface))
                 .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Theme.hairline, lineWidth: 1))
+                    .strokeBorder(Theme.line, lineWidth: 1))
         }
     }
 

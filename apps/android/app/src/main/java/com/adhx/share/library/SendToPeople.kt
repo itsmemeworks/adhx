@@ -132,9 +132,9 @@ fun SendToPeople(post: PhonePost, server: String, onShown: () -> Unit = {}) {
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(Copy.STRAIGHT_TO_PEOPLE, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.7.sp, color = AdhxColors.Faint)
+        Text(Copy.STRAIGHT_TO_PEOPLE, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.7.sp, color = AdhxColors.InkFaint)
         if (!now.sendable) {
-            Text(Copy.SEND_PRIVATE, fontSize = 14.sp, lineHeight = 20.sp, color = AdhxColors.Muted)
+            Text(Copy.SEND_PRIVATE, fontSize = 14.sp, lineHeight = 20.sp, color = AdhxColors.InkSoft)
             return@Column
         }
         val already = now.alreadyLine
@@ -143,14 +143,14 @@ fun SendToPeople(post: PhonePost, server: String, onShown: () -> Unit = {}) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
                 now.people.forEach { SendFace(it, server, sending = now.sending == it.username) { send(it) } }
                 if (already != null) {
-                    Text(already, fontSize = 12.sp, lineHeight = 17.sp, color = AdhxColors.Faint, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                    Text(already, fontSize = 12.sp, lineHeight = 17.sp, color = AdhxColors.InkFaint, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
                 }
             }
         } else {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                 now.people.forEach { SendFace(it, server, sending = now.sending == it.username) { send(it) } }
             }
-            if (already != null) Text(already, fontSize = 12.sp, lineHeight = 17.sp, color = AdhxColors.Faint)
+            if (already != null) Text(already, fontSize = 12.sp, lineHeight = 17.sp, color = AdhxColors.InkFaint)
         }
         now.problem?.let { Text(it, fontSize = 13.sp, color = AdhxColors.Warn) }
     }
@@ -201,7 +201,7 @@ private fun SendFace(person: SendPerson, server: String, sending: Boolean, onCli
             person.label,
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
-            color = AdhxColors.White.copy(alpha = if (person.has && !person.sent) DIMMED else 1f),
+            color = AdhxColors.Ink.copy(alpha = if (person.has && !person.sent) DIMMED else 1f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.clearAndSetSemantics { },

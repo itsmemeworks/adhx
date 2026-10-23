@@ -34,8 +34,8 @@ export function StageQuoteCard({
   const inner = (
     <>
       <AuthorAvatar src={quote.authorAvatarUrl ?? undefined} author={handle} size="sm" />
-      <span className="min-w-0 truncate text-[13px] font-semibold text-white">{name}</span>
-      {handle ? <span className="truncate font-mono text-xs text-white/50">@{handle}</span> : null}
+      <span className="min-w-0 truncate text-[13px] font-semibold text-nx-ink">{name}</span>
+      {handle ? <span className="truncate font-mono text-xs text-nx-ink/50">@{handle}</span> : null}
     </>
   )
 
@@ -59,7 +59,7 @@ export function StageQuoteCard({
         )}
       </div>
       {text ? (
-        <p className="text-[15px] leading-relaxed text-white/90">
+        <p className="text-[15px] leading-relaxed text-nx-ink/90">
           <TheaterLinkedText
             text={text}
             platform="twitter"

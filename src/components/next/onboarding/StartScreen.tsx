@@ -38,7 +38,7 @@ function Card({ label, children }: { label: string; children: React.ReactNode })
     <div
       role="dialog"
       aria-label={label}
-      className="fixed inset-x-0 bottom-0 z-10 flex max-h-[92dvh] flex-col gap-4 overflow-y-auto rounded-t-[24px] bg-[#1c1b19] px-[18px] pb-[max(28px,env(safe-area-inset-bottom))] pt-3 md:absolute md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:w-[480px] md:-translate-x-1/2 md:-translate-y-1/2 md:gap-[18px] md:rounded-[26px] md:p-[30px] md:shadow-[0_30px_80px_rgba(0,0,0,0.6)]"
+      className="fixed inset-x-0 bottom-0 z-10 flex max-h-[92dvh] flex-col gap-4 overflow-y-auto rounded-t-[28px] bg-nx-sheet px-[18px] pb-[max(28px,env(safe-area-inset-bottom))] pt-3 md:absolute md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:w-[480px] md:-translate-x-1/2 md:-translate-y-1/2 md:gap-[18px] md:rounded-[26px] md:p-[30px] md:shadow-[0_30px_80px_rgba(0,0,0,0.6)]"
     >
       <span aria-hidden className="mx-auto h-1 w-9 shrink-0 rounded-full bg-[#555] md:hidden" />
       {children}
@@ -93,13 +93,13 @@ function EmailStep({
           <h1 className="m-0 font-nx-serif text-[28px] font-normal leading-none md:text-[34px]">
             Keep this forever
           </h1>
-          <span className="text-sm text-white/65">
+          <span className="text-sm text-nx-ink/65">
             Your friends have better taste than the algorithm.
           </span>
         </span>
       </div>
       <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-3">
-        <label htmlFor="nx-email" className="text-sm text-white/65">
+        <label htmlFor="nx-email" className="text-sm text-nx-ink/65">
           Your email. Sign in with a link, no password.
         </label>
         <input
@@ -110,10 +110,10 @@ function EmailStep({
           inputMode="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="h-[54px] rounded-[8px] border-[1.5px] border-nx-accent bg-black px-4 text-[17px] text-white outline-none"
+          className="h-[54px] rounded-[8px] border-[1.5px] border-nx-accent bg-black px-4 text-[17px] text-nx-ink outline-none"
         />
         {error && (
-          <p role="alert" className="m-0 text-sm text-[#ff8a7a]">
+          <p role="alert" className="m-0 text-sm text-nx-danger">
             {error}
           </p>
         )}
@@ -125,7 +125,7 @@ function EmailStep({
           {busy ? 'Getting your link…' : 'Get a sign-in link'}
         </button>
       </form>
-      <span className="text-center text-xs text-white/50">
+      <span className="text-center text-xs text-nx-ink/50">
         Already have an account? Same box, same link.
       </span>
     </Card>
@@ -163,9 +163,9 @@ function SentStep({
           {handed ? 'Ask for your link' : 'Check your inbox'}
         </span>
         {delivery === 'setup' ? (
-          <span className="text-[15px] leading-[1.45] text-white/80">
+          <span className="text-[15px] leading-[1.45] text-nx-ink/80">
             <span>Nobody runs this ADHX yet. If it’s yours, the link for </span>
-            <span className="font-bold text-white">{email}</span>
+            <span className="font-bold text-nx-ink">{email}</span>
             <span>
               {' '}
               is in the server log, on the line starting “[sign-in]”. Open it and press Sign in to
@@ -173,17 +173,17 @@ function SentStep({
             </span>
           </span>
         ) : handed ? (
-          <span className="text-[15px] leading-[1.45] text-white/80">
+          <span className="text-[15px] leading-[1.45] text-nx-ink/80">
             <span>This ADHX doesn’t send email. Ask whoever runs it for the sign-in link for </span>
-            <span className="font-bold text-white">{email}</span>
+            <span className="font-bold text-nx-ink">{email}</span>
             <span>
               . The link lasts 60 minutes. Open it in your normal browser and press Sign in.
             </span>
           </span>
         ) : (
-          <span className="text-[15px] leading-[1.45] text-white/80">
+          <span className="text-[15px] leading-[1.45] text-nx-ink/80">
             <span>We sent a link to </span>
-            <span className="font-bold text-white">{email}</span>
+            <span className="font-bold text-nx-ink">{email}</span>
             <span>. Open it in this browser and this page signs you in.</span>
           </span>
         )}
@@ -198,8 +198,8 @@ function SentStep({
         />
         <span>Waiting for you to finish signing in…</span>
       </span>
-      <div className="flex items-center justify-between text-[13px] text-white/55">
-        <button type="button" onClick={onChange} className="py-2 text-white/80 underline">
+      <div className="flex items-center justify-between text-[13px] text-nx-ink/55">
+        <button type="button" onClick={onChange} className="py-2 text-nx-ink/80 underline">
           Use a different email
         </button>
         {left > 0 ? (
@@ -211,7 +211,7 @@ function SentStep({
               setLeft(RESEND_SECONDS)
               onResend()
             }}
-            className="py-2 text-white/80 underline"
+            className="py-2 text-nx-ink/80 underline"
           >
             {handed ? 'Make a new link' : 'Send it again'}
           </button>
@@ -273,7 +273,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
         {noX && (
           <>
             <span className="font-nx-serif text-[28px] leading-[1.05]">Save your first post</span>
-            <span className="text-sm leading-[1.45] text-white/65">
+            <span className="text-sm leading-[1.45] text-nx-ink/65">
               Paste a link from X, Instagram, TikTok, YouTube or another network anywhere in ADHX.
               On your phone, share it to the ADHX Share app: Settings has a code to pair it.
             </span>
@@ -283,7 +283,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
         {!noX && sync.status === 'idle' && (
           <>
             <span className="font-nx-serif text-[28px] leading-[1.05]">Bring your X bookmarks</span>
-            <span className="text-sm leading-[1.45] text-white/65">
+            <span className="text-sm leading-[1.45] text-nx-ink/65">
               Every bookmark X gives us, made watchable and searchable by what’s in it. Read-only.
               We never post for you.
             </span>
@@ -314,14 +314,14 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
               <span className="font-nx-serif text-[56px] leading-[0.9] tabular-nums md:text-[64px]">
                 {String(imported)}
               </span>
-              <span className="text-sm text-white/65">
+              <span className="text-sm text-nx-ink/65">
                 {sync.status === 'done' ? 'bookmarks in' : 'bookmarks in so far'}
               </span>
             </div>
             <div className="flex flex-col gap-1.5">
               <span className="flex justify-between text-[13px]">
                 <span className="font-bold">Importing from X</span>
-                <span className="text-white/65">
+                <span className="text-nx-ink/65">
                   {sync.status === 'done'
                     ? 'done'
                     : sync.total
@@ -339,7 +339,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
             <div className="flex flex-col gap-1.5">
               <span className="flex justify-between text-[13px]">
                 <span className="font-bold">Making them searchable</span>
-                <span className="text-white/65">
+                <span className="text-nx-ink/65">
                   {words ? `${searchable} / ${words.total}` : '…'}
                 </span>
               </span>
@@ -355,7 +355,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
                 {sync.thumbs.map((t) => (
                   <span
                     key={t.id}
-                    className="relative block h-12 animate-nx-pop overflow-hidden rounded-[8px] bg-[#1c1b19]"
+                    className="relative block h-12 animate-nx-pop overflow-hidden rounded-[8px] bg-nx-sheet"
                   >
                     {t.img && (
                       <NxImage
@@ -370,7 +370,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
             )}
             {sync.status === 'done' && channels && channels.length > 0 && (
               <div className="flex flex-col gap-2">
-                <span className="text-sm text-white/65">
+                <span className="text-sm text-nx-ink/65">
                   We grouped them into channels for you.
                 </span>
                 <div className="flex gap-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -383,7 +383,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
                         className="flex w-[70px] shrink-0 flex-col items-center gap-1.5"
                       >
                         <span className="relative block h-[70px] w-[70px] rounded-full bg-nx-accent p-[3px]">
-                          <span className="relative block h-full w-full overflow-hidden rounded-full border-2 border-black bg-[#1c1b19]">
+                          <span className="relative block h-full w-full overflow-hidden rounded-full border-2 border-black bg-nx-sheet">
                             {img && (
                               <NxImage
                                 src={img}
@@ -408,7 +408,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
             <span className="font-nx-serif text-[26px] leading-[1.05]">
               That sync didn’t finish
             </span>
-            <span className="text-sm text-white/70">{sync.error}</span>
+            <span className="text-sm text-nx-ink/70">{sync.error}</span>
             {sync.errorCode === 'reauth' ? (
               <a
                 href={`/api/auth/twitter?returnUrl=${encodeURIComponent('/start?sync=1')}`}
@@ -431,7 +431,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
       </div>
 
       {sync.status === 'running' && (
-        <span className="text-center text-sm text-white/75">
+        <span className="text-center text-sm text-nx-ink/75">
           Keep watching. We’ll finish in the background.
         </span>
       )}
@@ -441,8 +441,8 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
           'flex h-12 items-center justify-center rounded-[8px] text-[15px]',
           sync.status === 'done' || noX
             ? 'bg-nx-accent font-extrabold text-black'
-            : 'text-white/80',
-          sync.status === 'running' && 'border border-[#555] font-bold text-white',
+            : 'text-nx-ink/80',
+          sync.status === 'running' && 'border border-[#555] font-bold text-nx-ink',
         )}
       >
         {sync.status === 'done'
@@ -454,7 +454,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
               : 'Maybe later'}
       </Link>
       {sync.status === 'done' && (
-        <span className="text-center text-xs text-white/45">
+        <span className="text-center text-xs text-nx-ink/45">
           New X bookmarks come in when you sync again.
         </span>
       )}
@@ -509,7 +509,7 @@ export function StartScreen({ returnTo, autoSync }: { returnTo: string; autoSync
     }).catch(() => {})
 
   return (
-    <div className="relative min-h-dvh overflow-hidden bg-black font-nx-sans text-white">
+    <div className="relative min-h-dvh overflow-hidden bg-black font-nx-sans text-nx-ink">
       <div
         aria-hidden
         className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(255,210,63,0.12),transparent_55%),radial-gradient(ellipse_at_80%_70%,rgba(242,234,217,0.08),transparent_50%)]"

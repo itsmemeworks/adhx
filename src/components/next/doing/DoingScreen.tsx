@@ -91,9 +91,9 @@ function statusLabel(item: DoingItem): {
 
 const TONE = {
   accent: 'text-nx-accent',
-  green: 'text-[#7fd1ae]',
-  muted: 'text-[#c9bfab]',
-  red: 'text-[#ff5a3c]',
+  green: 'text-nx-good',
+  muted: 'text-nx-ink-soft',
+  red: 'text-nx-live',
 }
 
 function Steps({ item }: { item: DoingItem }) {
@@ -113,8 +113,8 @@ function Steps({ item }: { item: DoingItem }) {
                 fill >= 100
                   ? colour
                   : fill <= 0
-                    ? '#4a453e'
-                    : `linear-gradient(90deg, ${colour} ${fill}%, #4a453e ${fill}%)`,
+                    ? 'rgb(var(--nx-line))'
+                    : `linear-gradient(90deg, ${colour} ${fill}%, rgb(var(--nx-line)) ${fill}%)`,
             }}
           />
         )
@@ -144,9 +144,9 @@ function Row({
       data-status={item.status}
       className={cn(
         'grid grid-cols-[52px_minmax(0,1fr)] items-center gap-x-4 gap-y-1.5 rounded-[18px] p-2.5 pr-4 lg:grid-cols-[52px_minmax(0,1fr)_minmax(0,420px)_150px] lg:gap-y-2',
-        item.status === 'ready' ? 'bg-[#151310]' : 'bg-[#1a1814]',
-        item.status === 'needs_you' && 'border border-[#ff5a3c]/45',
-        item.status === 'waiting' && 'border border-[#ff5a3c]/25',
+        item.status === 'ready' ? 'bg-[#151310]' : 'bg-nx-surface',
+        item.status === 'needs_you' && 'border border-nx-live/45',
+        item.status === 'waiting' && 'border border-nx-live/25',
       )}
     >
       {item.thumbnail && !broken && !problem ? (
@@ -164,14 +164,14 @@ function Row({
       ) : (
         <span
           aria-hidden
-          className="row-span-2 flex h-[52px] w-[52px] items-center justify-center rounded-[8px] bg-[#262320] text-[#c9bfab] lg:row-span-1"
+          className="row-span-2 flex h-[52px] w-[52px] items-center justify-center rounded-[8px] bg-nx-plate text-nx-ink-soft lg:row-span-1"
         >
           {problem ? <CloudOff className="h-5 w-5" /> : <ImageOff className="h-5 w-5" />}
         </span>
       )}
       <a href={item.openPath} className="flex min-w-0 flex-col gap-1 hover:opacity-90">
         <span className="truncate text-[15px] font-extrabold">{headline(item)}</span>
-        <span className="truncate text-[13px] text-[#a39b8b]">{meta}</span>
+        <span className="truncate text-[13px] text-nx-ink-faint">{meta}</span>
       </a>
       <span
         className={cn(
@@ -200,18 +200,18 @@ function Row({
                 type="button"
                 disabled={busy}
                 onClick={() => onLinkOnly(item)}
-                className="inline-flex h-10 items-center whitespace-nowrap rounded-[8px] border border-[#4a453e] px-4 text-sm font-bold text-nx-cream disabled:opacity-50"
+                className="inline-flex h-10 items-center whitespace-nowrap rounded-[8px] border border-nx-line px-4 text-sm font-bold text-nx-cream disabled:opacity-50"
               >
                 Keep the link only
               </button>
             )}
           </span>
         ) : item.status === 'needs_you' ? (
-          <span className="text-[13px] text-[#c9bfab]">Whoever saved it can retry.</span>
+          <span className="text-[13px] text-nx-ink-soft">Whoever saved it can retry.</span>
         ) : (
           <>
             {item.status !== 'waiting' && <Steps item={item} />}
-            <span className="truncate text-[13px] text-[#c9bfab]">{progressLine(item)}</span>
+            <span className="truncate text-[13px] text-nx-ink-soft">{progressLine(item)}</span>
           </>
         )}
       </span>
@@ -220,29 +220,29 @@ function Row({
 }
 
 function Tiles({ summary }: { summary: DoingSummary }) {
-  const tile = 'flex flex-col gap-1 rounded-[18px] bg-[#1a1814] px-4 py-3.5'
+  const tile = 'flex flex-col gap-1 rounded-[18px] bg-nx-surface px-4 py-3.5'
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-3.5">
       <div className={tile}>
         <span className="text-[22px] font-extrabold md:text-[26px]">{`${summary.keeping} keeping`}</span>
-        <span className="text-[13px] text-[#a39b8b]">copies on their way</span>
+        <span className="text-[13px] text-nx-ink-faint">copies on their way</span>
       </div>
       <div className={tile}>
         <span className="text-[22px] font-extrabold md:text-[26px]">{`${summary.learning} learning`}</span>
-        <span className="text-[13px] text-[#a39b8b]">what it’s about</span>
+        <span className="text-[13px] text-nx-ink-faint">what it’s about</span>
       </div>
       <div className={tile}>
         <span className="text-[22px] font-extrabold md:text-[26px]">
           {freeLabel(summary.freeBytes)}
         </span>
-        <span className="text-[13px] text-[#a39b8b]">on your server</span>
+        <span className="text-[13px] text-nx-ink-faint">on your server</span>
       </div>
       {summary.processing === 'remote' ? (
         <div
           className={cn(
             tile,
             'border',
-            summary.remoteConnected ? 'border-[#7fd1ae]/35' : 'border-[#ff5a3c]/35',
+            summary.remoteConnected ? 'border-nx-good/35' : 'border-nx-live/35',
           )}
         >
           <span className="flex items-center gap-2 text-[16px] font-extrabold md:text-[18px]">
@@ -250,22 +250,22 @@ function Tiles({ summary }: { summary: DoingSummary }) {
               aria-hidden
               className={cn(
                 'h-[9px] w-[9px] shrink-0 rounded-full',
-                summary.remoteConnected ? 'bg-[#7fd1ae]' : 'bg-[#ff5a3c]',
+                summary.remoteConnected ? 'bg-nx-good' : 'bg-nx-live',
               )}
             />
             <span>{summary.remoteConnected ? 'Mac helper connected' : 'Mac helper away'}</span>
           </span>
-          <span className="text-[13px] text-[#a39b8b]">
+          <span className="text-[13px] text-nx-ink-faint">
             {summary.remoteConnected ? 'learning and converting' : 'learning waits for it'}
           </span>
         </div>
       ) : (
         <div className={tile}>
           <span className="flex items-center gap-2 text-[16px] font-extrabold md:text-[18px]">
-            <CheckCircle aria-hidden className="h-[18px] w-[18px] text-[#7fd1ae]" />
+            <CheckCircle aria-hidden className="h-[18px] w-[18px] text-nx-good" />
             <span>{`${summary.ready} ready`}</span>
           </span>
-          <span className="text-[13px] text-[#a39b8b]">in the last half hour</span>
+          <span className="text-[13px] text-nx-ink-faint">in the last half hour</span>
         </div>
       )}
     </div>
@@ -314,7 +314,7 @@ export function DoingScreen() {
   const remote = summary?.processing === 'remote'
 
   return (
-    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
+    <div className="min-h-dvh bg-nx-bg font-nx-sans text-nx-cream">
       <NxHeader />
       <main className="mx-auto flex w-full max-w-[1280px] flex-col gap-5 px-4 pb-16 pt-4 md:px-10 md:pt-7">
         <div className="flex flex-col gap-4 md:flex-row md:items-end">
@@ -322,7 +322,7 @@ export function DoingScreen() {
             <h1 className="m-0 font-nx-serif text-[38px] font-normal leading-[0.95] md:text-[44px]">
               What your ADHX is doing
             </h1>
-            <p className="m-0 text-[15px] text-[#a39b8b]">
+            <p className="m-0 text-[15px] text-nx-ink-faint">
               {remote
                 ? 'Keeping, converting and learning happen on your server and your Mac. Nothing goes anywhere else.'
                 : 'Everything happens on your server. Nothing is sent anywhere.'}
@@ -332,7 +332,7 @@ export function DoingScreen() {
           <div
             role="group"
             aria-label="Show"
-            className="flex gap-1 self-start rounded-full bg-[#1a1814] p-1"
+            className="flex gap-1 self-start rounded-full bg-nx-surface p-1"
           >
             {SCOPES.map((s) => (
               <button
@@ -349,7 +349,7 @@ export function DoingScreen() {
               >
                 <span>{s.label}</span>
                 {s.id === 'needs' && !!summary?.needsYou && (
-                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ff5a3c] px-1.5 text-[11px] font-extrabold text-black">
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-nx-live px-1.5 text-[11px] font-extrabold text-black">
                     {summary.needsYou}
                   </span>
                 )}
@@ -361,7 +361,7 @@ export function DoingScreen() {
         {summary && <Tiles summary={summary} />}
 
         {error && (
-          <p role="alert" className="m-0 text-[14px] font-semibold text-[#ff8a7a]">
+          <p role="alert" className="m-0 text-[14px] font-semibold text-nx-danger">
             {error}
           </p>
         )}
@@ -369,7 +369,7 @@ export function DoingScreen() {
         {progressError && (
           <div
             role="status"
-            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#29231a] px-4 py-3 text-sm text-nx-cream"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-nx-warn/[0.12] px-4 py-3 text-sm text-nx-cream"
           >
             <span>{progressError}</span>
             <button
@@ -392,12 +392,12 @@ export function DoingScreen() {
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-[22px] bg-[#1a1814] px-6 py-12 text-center">
-            <Check aria-hidden className="h-8 w-8 text-[#7fd1ae]" strokeWidth={3} />
+          <div className="flex flex-col items-center gap-2 rounded-[22px] bg-nx-surface px-6 py-12 text-center">
+            <Check aria-hidden className="h-8 w-8 text-nx-good" strokeWidth={3} />
             <p className="m-0 font-nx-serif text-[30px] leading-none">
               {scope === 'needs' ? 'Nothing needs you.' : 'All kept, all learned.'}
             </p>
-            <p className="m-0 text-[15px] text-[#a39b8b]">
+            <p className="m-0 text-[15px] text-nx-ink-faint">
               {scope === 'needs'
                 ? 'Your ADHX sorted everything on its own.'
                 : 'Your ADHX is having a little nap. Save something to wake it up.'}

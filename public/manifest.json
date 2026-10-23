@@ -4,8 +4,8 @@
   "description": "Keep the best posts from X, Instagram, TikTok, YouTube, Reddit and more on a server you run, with your friends and family. Find any of them by describing what you remember.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#08070a",
-  "theme_color": "#08070a",
+  "background_color": "#0f0e0c",
+  "theme_color": "#0f0e0c",
   "orientation": "portrait-primary",
   "categories": ["productivity", "social"],
   "icons": [

@@ -45,14 +45,14 @@ export function ArticleTile({ item, ...frame }: TileProps) {
         {lede && (
           <span
             className={cn(
-              'text-[12.5px] leading-[1.4] text-nx-soft',
+              'text-[12.5px] leading-[1.4] text-nx-ink-soft',
               cover ? 'line-clamp-3' : 'line-clamp-6',
             )}
           >
             {lede}
           </span>
         )}
-        <AuthorLine author={postAuthor(item)} className="mt-auto text-nx-muted" />
+        <AuthorLine author={postAuthor(item)} className="mt-auto text-nx-ink-faint" />
       </span>
     </TileFrame>
   )

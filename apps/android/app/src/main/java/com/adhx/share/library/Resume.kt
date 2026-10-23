@@ -169,10 +169,10 @@ fun ResumeCard(spot: ResumeSpot, onResume: () -> Unit, onStartOver: () -> Unit, 
             fontFamily = SerifFamily,
             fontSize = 30.sp,
             lineHeight = 32.sp,
-            color = AdhxColors.White,
+            color = AdhxColors.Ink,
             modifier = Modifier.semantics { heading() },
         )
-        Text(Resume.line(spot, now), fontSize = 14.sp, lineHeight = 20.sp, color = AdhxColors.Muted)
+        Text(Resume.line(spot, now), fontSize = 14.sp, lineHeight = 20.sp, color = AdhxColors.InkSoft)
         Box(
             Modifier
                 .fillMaxWidth()

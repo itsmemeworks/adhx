@@ -111,7 +111,7 @@ fun SearchScreen(vm: LibraryViewModel, server: String, onBack: () -> Unit, onOpe
     Column(
         Modifier
             .fillMaxSize()
-            .background(AdhxColors.Background)
+            .background(AdhxColors.Bg)
             .systemBarsPadding()
             .imePadding()
             .padding(top = 8.dp),
@@ -128,7 +128,7 @@ fun SearchScreen(vm: LibraryViewModel, server: String, onBack: () -> Unit, onOpe
                     .clickable(onClickLabel = "Back", onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Glyphs.Back, contentDescription = "Back", tint = AdhxColors.White, modifier = Modifier.size(22.dp))
+                Icon(Glyphs.Back, contentDescription = "Back", tint = AdhxColors.Ink, modifier = Modifier.size(22.dp))
             }
             var focused by remember { mutableStateOf(false) }
             // A 48dp pill; focused, a yellow ring with a soft glow.
@@ -148,13 +148,13 @@ fun SearchScreen(vm: LibraryViewModel, server: String, onBack: () -> Unit, onOpe
                 Icon(Glyphs.Search, contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(18.dp))
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                     if (ui.query.isEmpty()) {
-                        Text("Describe what you’re looking for", fontSize = 16.sp, color = AdhxColors.Faint, maxLines = 1, modifier = Modifier.clearAndSetSemantics { })
+                        Text("Describe what you’re looking for", fontSize = 16.sp, color = AdhxColors.InkFaint, maxLines = 1, modifier = Modifier.clearAndSetSemantics { })
                     }
                     BasicTextField(
                         value = ui.query,
                         onValueChange = vm::setQuery,
                         singleLine = true,
-                        textStyle = TextStyle(fontFamily = SansFamily, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White),
+                        textStyle = TextStyle(fontFamily = SansFamily, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Ink),
                         cursorBrush = SolidColor(AdhxColors.Accent),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
@@ -172,11 +172,11 @@ fun SearchScreen(vm: LibraryViewModel, server: String, onBack: () -> Unit, onOpe
                         Modifier
                             .size(34.dp)
                             .clip(CircleShape)
-                            .background(AdhxColors.Card)
+                            .background(AdhxColors.Plate)
                             .clickable(onClickLabel = "Clear search") { vm.setQuery("") },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Glyphs.Close, contentDescription = "Clear search", tint = AdhxColors.Muted, modifier = Modifier.size(14.dp))
+                        Icon(Glyphs.Close, contentDescription = "Clear search", tint = AdhxColors.InkSoft, modifier = Modifier.size(14.dp))
                     }
                 }
             }
@@ -221,7 +221,7 @@ private fun TryDescribing(onPick: (String) -> Unit) {
             fontSize = 12.sp,
             fontWeight = FontWeight.ExtraBold,
             letterSpacing = 0.7.sp,
-            color = AdhxColors.Faint,
+            color = AdhxColors.InkFaint,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
         Row(
@@ -241,7 +241,7 @@ private fun TryDescribing(onPick: (String) -> Unit) {
                         .padding(horizontal = 14.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(prompt, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White, maxLines = 1)
+                    Text(prompt, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Ink, maxLines = 1)
                 }
             }
         }
@@ -254,7 +254,7 @@ private fun Note(text: String) {
         text,
         fontSize = 15.sp,
         lineHeight = 22.sp,
-        color = AdhxColors.Muted,
+        color = AdhxColors.InkSoft,
         modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
     )
 }
@@ -280,15 +280,15 @@ private fun Results(ui: SearchUi, server: String, onPage: (Int) -> Unit, onOpen:
                     fontFamily = SerifFamily,
                     fontSize = 28.sp,
                     lineHeight = 28.sp,
-                    color = AdhxColors.White,
+                    color = AdhxColors.Ink,
                     modifier = Modifier.weight(1f).semantics { heading() },
                 )
-                if (ui.total > 0) Text(Copy.found(ui.total), fontSize = 12.sp, color = AdhxColors.Faint, modifier = Modifier.padding(bottom = 3.dp))
+                if (ui.total > 0) Text(Copy.found(ui.total), fontSize = 12.sp, color = AdhxColors.InkFaint, modifier = Modifier.padding(bottom = 3.dp))
             }
         }
         ui.note?.let { note ->
             item(span = { GridItemSpan(maxLineSpan) }, key = "note") {
-                Text(note, fontSize = 13.sp, color = AdhxColors.Faint, modifier = Modifier.padding(bottom = 2.dp))
+                Text(note, fontSize = 13.sp, color = AdhxColors.InkFaint, modifier = Modifier.padding(bottom = 2.dp))
             }
         }
         itemsIndexed(ui.items, key = { _, post -> post.key }) { index, post ->
@@ -443,23 +443,23 @@ private fun WordsTile(post: PhonePost, server: String, others: List<com.adhx.sha
             fontFamily = SerifFamily,
             fontSize = size.fontSize.sp,
             lineHeight = size.lineHeight.sp,
-            color = AdhxColors.White,
+            color = AdhxColors.Ink,
             maxLines = size.maxLines,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = true),
         )
         if (author != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                NetworkMark(post.platform, size = 12.dp, tint = AdhxColors.Muted)
+                NetworkMark(post.platform, size = 12.dp, tint = AdhxColors.InkSoft)
                 Spacer(Modifier.width(6.dp))
-                Text(author, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(author, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AdhxColors.InkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         if (line != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Faces(others, server, size = 18.dp, description = line)
                 Spacer(Modifier.width(6.dp))
-                Text(line, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Cream, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(line, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }

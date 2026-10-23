@@ -359,6 +359,7 @@ export const FULL_SCHEMA_SQL = `
     PRIMARY KEY (user_id, platform, post_id)
   );
   CREATE INDEX post_views_seen_at_idx ON post_views(seen_at);
+  CREATE INDEX post_views_post_seen_idx ON post_views(platform, post_id, seen_at);
   CREATE TABLE keep_settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL

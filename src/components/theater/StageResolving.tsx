@@ -39,13 +39,13 @@ export function StageResolving({
       />
       {failed && onRetry ? (
         <>
-          <p className="max-w-sm text-sm text-white/55">
+          <p className="max-w-sm text-sm text-nx-ink/55">
             <span>The post was saved, but its display data could not be loaded.</span>
           </p>
           <button
             type="button"
             onClick={onRetry}
-            className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/15"
+            className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-nx-ink transition-colors hover:bg-white/15"
           >
             <span>Retry loading</span>
           </button>
