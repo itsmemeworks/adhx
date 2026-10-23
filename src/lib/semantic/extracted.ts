@@ -1,4 +1,5 @@
-import { and, eq, inArray, isNotNull } from 'drizzle-orm'
+import { postKeyBatches, postKeyWhere } from '@/lib/db/post-keys'
+import { and, eq, isNotNull } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { postExtractedText, type PostExtractedText } from '@/lib/db/schema'
 import { extractVersion, type ExtractKind } from './config'
@@ -77,8 +78,7 @@ export function extractedWords(platform: string, postId: string): ExtractedWords
 export function extractedWordsFor(keys: string[]): Map<string, ExtractedWords> {
   const out = new Map<string, ExtractedWords>()
   const wanted = new Set(keys)
-  const ids = [...new Set(keys.map((k) => k.slice(k.indexOf(':') + 1)))]
-  for (let i = 0; i < ids.length; i += 400) {
+  for (const part of postKeyBatches(keys)) {
     const rows = db
       .select({
         platform: postExtractedText.platform,
@@ -90,7 +90,7 @@ export function extractedWordsFor(keys: string[]): Map<string, ExtractedWords> {
       .from(postExtractedText)
       .where(
         and(
-          inArray(postExtractedText.postId, ids.slice(i, i + 400)),
+          postKeyWhere(postExtractedText.platform, postExtractedText.postId, part),
           isNotNull(postExtractedText.text),
         ),
       )

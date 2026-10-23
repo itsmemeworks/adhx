@@ -1,3 +1,4 @@
+import { postKeyBatches, postKeyWhere } from '@/lib/db/post-keys'
 import { asc, sql } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
 import { groupChannels, type GroupChannel } from '@/lib/db/schema'
@@ -29,7 +30,6 @@ const MAX_CHANNELS = 8
 const STALE_MS = 12 * 60 * 60_000
 const NEW_SAVES = 10
 const RETRY_EMPTY_MS = 10 * 60_000
-const CHUNK = 400
 const FACES = 3
 const SEED = seedFrom('adhx:everyone')
 /** Search-group words `/play?group=` already means; a channel never takes one as its slug. */
@@ -90,15 +90,10 @@ function parseSavers(row: GroupChannel): Record<string, number> {
 function visibleSavesOf(keys: string[]): Map<string, { userId: string; savedAt: string }[]> {
   const out = new Map<string, { userId: string; savedAt: string }[]>()
   const wanted = new Set(keys)
-  const ids = [...new Set(keys.map((k) => k.slice(k.indexOf(':') + 1)))]
-  for (let i = 0; i < ids.length; i += CHUNK) {
-    const chunk = ids.slice(i, i + CHUNK)
+  for (const part of postKeyBatches(keys)) {
     const rows = db.all<{ platform: string; id: string; user_id: string; processed_at: string }>(
       sql`SELECT b.platform, b.id, b.user_id, b.processed_at FROM bookmarks b
-          WHERE ${visibleSave('b')} AND b.id IN (${sql.join(
-            chunk.map((id) => sql`${id}`),
-            sql`, `,
-          )})
+          WHERE ${visibleSave('b')} AND ${postKeyWhere(sql`b.platform`, sql`b.id`, part)}
           ORDER BY b.processed_at DESC`,
     )
     for (const r of rows) {
@@ -320,16 +315,11 @@ export async function groupChannelsFor(
 function newKeys(viewerId: string, keys: string[]): Set<string> {
   const out = new Set<string>()
   const wanted = new Set(keys)
-  const ids = [...new Set(keys.map((k) => k.slice(k.indexOf(':') + 1)))]
-  for (let i = 0; i < ids.length; i += CHUNK) {
-    const chunk = ids.slice(i, i + CHUNK)
+  for (const part of postKeyBatches(keys)) {
     const rows = db.all<{ platform: string; id: string }>(
       sql`SELECT DISTINCT b.platform, b.id FROM bookmarks b
           WHERE ${visibleSave('b')} AND ${newTo(viewerId, 'b')}
-          AND b.id IN (${sql.join(
-            chunk.map((id) => sql`${id}`),
-            sql`, `,
-          )})`,
+          AND ${postKeyWhere(sql`b.platform`, sql`b.id`, part)}`,
     )
     for (const r of rows) {
       const key = `${r.platform}:${r.id}`

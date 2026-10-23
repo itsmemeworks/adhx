@@ -1,7 +1,8 @@
-import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm'
+import { postKeyBatches, postKeyWhere } from '@/lib/db/post-keys'
+import { and, desc, eq, sql, type SQL } from 'drizzle-orm'
 import { POST_ID_PATTERN } from '@/lib/platform/networks'
 import { db, runInTransaction } from '@/lib/db'
-import { postViews, userPreferences } from '@/lib/db/schema'
+import { bookmarks, postViews, userPreferences } from '@/lib/db/schema'
 import { markSendsSeen } from '@/lib/sends/sends'
 
 /**
@@ -130,12 +131,13 @@ export function seenKeys(userId: string, keys: string[]): Set<string> {
   const out = new Set<string>()
   if (!userId || keys.length === 0) return out
   const wanted = new Set(keys)
-  const ids = [...new Set(keys.map((k) => k.slice(k.indexOf(':') + 1)))]
-  for (let i = 0; i < ids.length; i += 400) {
+  for (const part of postKeyBatches(keys)) {
     const rows = db
       .select({ platform: postViews.platform, postId: postViews.postId })
       .from(postViews)
-      .where(and(eq(postViews.userId, userId), inArray(postViews.postId, ids.slice(i, i + 400))))
+      .where(
+        and(eq(postViews.userId, userId), postKeyWhere(postViews.platform, postViews.postId, part)),
+      )
       .all()
     for (const r of rows) {
       const key = `${r.platform}:${r.postId}`
@@ -179,14 +181,10 @@ export function newKeysFor(viewerId: string, keys: string[]): Set<string> {
   if (!viewerId || keys.length === 0) return out
   const seen = seenKeys(viewerId, keys)
   const saved = new Set<string>()
-  const ids = [...new Set(keys.map((k) => k.slice(k.indexOf(':') + 1)))]
-  for (let i = 0; i < ids.length; i += 400) {
+  for (const part of postKeyBatches(keys)) {
     const rows = db.all<{ platform: string; id: string }>(
       sql`SELECT platform, id FROM bookmarks
-          WHERE user_id = ${viewerId} AND id IN (${sql.join(
-            ids.slice(i, i + 400).map((id) => sql`${id}`),
-            sql`, `,
-          )})`,
+          WHERE user_id = ${viewerId} AND ${postKeyWhere(bookmarks.platform, bookmarks.id, part)}`,
     )
     for (const r of rows) saved.add(`${r.platform}:${r.id}`)
   }

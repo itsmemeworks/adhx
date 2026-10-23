@@ -1,3 +1,4 @@
+import { scheduleStatistics } from './statistics'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from './schema'
@@ -76,6 +77,7 @@ function openSqlite(dbPath: string, fileMustExist: boolean): Database.Database {
 function getSqlite(): Database.Database {
   const dbPath = resolveDbPath()
   if (globalForDb.__adhxSqlite && globalForDb.__adhxSqlitePath === dbPath) {
+    scheduleStatistics(globalForDb.__adhxSqlite)
     return globalForDb.__adhxSqlite
   }
   if (globalForDb.__adhxSqlite) {

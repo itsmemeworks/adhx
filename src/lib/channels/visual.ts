@@ -1,3 +1,4 @@
+import { postKeyBatches, postKeyWhere } from '@/lib/db/post-keys'
 import { createHash, randomUUID } from 'node:crypto'
 import { constants } from 'node:fs'
 import { open, realpath } from 'node:fs/promises'
@@ -64,40 +65,37 @@ function sourcesFor(channel: VisualChannel, userId: string | null): Source[] {
   )
     return []
   const keys = new Set(channel.keys)
-  const ids = [...new Set(channel.keys.map((key) => key.slice(key.indexOf(':') + 1)))]
-  const rows = db.all<{ platform: string; id: string; text: string }>(sql`
+  const rows = postKeyBatches(channel.keys).flatMap((part) =>
+    db.all<{ platform: string; id: string; text: string }>(sql`
     SELECT b.platform, b.id, b.text FROM bookmarks b WHERE ${visibleSave('b')}
       AND EXISTS (SELECT 1 FROM users u WHERE u.id = b.user_id)
-      AND b.id IN (${sql.join(
-        ids.map((id) => sql`${id}`),
-        sql`, `,
-      )})
+      AND ${postKeyWhere(sql`b.platform`, sql`b.id`, part)}
       AND NOT EXISTS (SELECT 1 FROM moderated_posts m WHERE m.platform = b.platform AND m.bookmark_id = b.id AND m.hidden = 1)
-      ORDER BY b.processed_at DESC`)
+      ORDER BY b.processed_at DESC`),
+  )
   const texts = new Map<string, string>()
   for (const row of rows) {
     const key = `${row.platform}:${row.id}`
     if (keys.has(key) && !texts.has(key)) texts.set(key, row.text)
   }
-  const files = db.all<{
-    platform: string
-    post_id: string
-    path: string
-    bytes: number
-    created_at: string
-    slot: string
-    moving: number
-  }>(sql`
+  const files = postKeyBatches(channel.keys).flatMap((part) =>
+    db.all<{
+      platform: string
+      post_id: string
+      path: string
+      bytes: number
+      created_at: string
+      slot: string
+      moving: number
+    }>(sql`
     SELECT platform, post_id, path, bytes, created_at, slot,
       EXISTS(SELECT 1 FROM kept_files v WHERE v.platform = kept_files.platform AND v.post_id = kept_files.post_id
         AND (v.slot LIKE 'video-%' OR v.slot LIKE 'audio-%')) AS moving
     FROM kept_files
-    WHERE post_id IN (${sql.join(
-      ids.map((id) => sql`${id}`),
-      sql`, `,
-    )})
+    WHERE ${postKeyWhere(sql`platform`, sql`post_id`, part)}
       AND (slot = 'poster' OR slot LIKE 'photo-%') AND bytes <= ${8 * 1024 * 1024}
-    ORDER BY CASE WHEN slot = 'poster' THEN 0 ELSE 1 END, slot`)
+    ORDER BY CASE WHEN slot = 'poster' THEN 0 ELSE 1 END, slot`),
+  )
   const found = new Map<string, Source>()
   for (const file of files) {
     const key = `${file.platform}:${file.post_id}`

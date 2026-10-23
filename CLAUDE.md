@@ -387,6 +387,17 @@ Short notes on what is easy to get wrong. Each links to the full description.
   everyone, with no names, are fine for members who can see the post
   (`postPlays`).
 
+### Database query performance
+
+- Use bounded `postKeyBatches` / `postKeyWhere` for shared post lookups;
+  include owner keys for related personal rows. Do not query IDs across
+  platforms and filter the unwanted rows in JavaScript.
+- Keep startup `QUERY_INDEX_DDL`, Drizzle declarations and test setup aligned.
+  Keyword writes must update FTS and `post_text_keys` in one transaction.
+- Run `src/__tests__/db/query-performance.test.ts` after changing hot queries.
+  [Database performance](docs/database-performance.md) records the audit,
+  benchmark controls, statistics upkeep and limits of ordinary indexes.
+
 ### Kept media
 
 - `keep_jobs` has one row per post, not per saver. X downloads through

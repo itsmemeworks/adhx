@@ -34,6 +34,7 @@ Every doc in the repository, sorted by what you're trying to do. New here? Start
 | [CONTRIBUTING.md](../CONTRIBUTING.md)                   | Setup, tests, commit and pull request conventions                          |
 | [ARCHITECTURE.md](../ARCHITECTURE.md)                   | How the pieces fit together, with diagrams                                 |
 | [AGENTS.md](../AGENTS.md) and [CLAUDE.md](../CLAUDE.md) | The rules and the map for coding agents (humans welcome too)               |
+| [Database performance](database-performance.md)         | Query families, indexes, synthetic growth audit and scaling limits         |
 | [WORKLOG.md](WORKLOG.md)                                | What changed recently and why, newest first                                |
 | [Releasing](releasing.md)                               | Release Please, container images, the Android APK and TestFlight           |
 | [Design parity harness](../e2e/parity/README.md)        | Sample friends and posts for screenshots, design checks and the phone apps |

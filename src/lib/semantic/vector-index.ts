@@ -1,4 +1,5 @@
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { postKeyBatches, postKeyWhere } from '@/lib/db/post-keys'
+import { and, eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { postEmbeddings } from '@/lib/db/schema'
 import { segmentScores, type SegmentScore } from '@/lib/processing/segment-search'
@@ -101,6 +102,9 @@ function put(index: KindIndex, key: string, vector: Float32Array | null): void {
 
 async function load(s: IndexState): Promise<void> {
   for (;;) {
+    // Bound each side of the watermark before merging. One OR predicate can
+    // sort the entire remaining history on every page; a row-value comparison
+    // can instead rescan an entire tied timestamp because rowid is implicit.
     const rows = db.all<{
       rowid: number
       platform: string
@@ -110,10 +114,21 @@ async function load(s: IndexState): Promise<void> {
       vector: Buffer | null
       created_at: string
     }>(sql`
-      SELECT rowid, platform, post_id, kind, status, vector, created_at
-      FROM post_embeddings
-      WHERE model = ${s.model}
-        AND (created_at > ${s.watermark.at} OR (created_at = ${s.watermark.at} AND rowid > ${s.watermark.rowid}))
+      SELECT * FROM (
+        SELECT * FROM (
+          SELECT rowid, platform, post_id, kind, status, vector, created_at
+          FROM post_embeddings
+          WHERE model = ${s.model} AND created_at = ${s.watermark.at} AND rowid > ${s.watermark.rowid}
+          ORDER BY rowid LIMIT ${PAGE}
+        )
+        UNION ALL
+        SELECT * FROM (
+          SELECT rowid, platform, post_id, kind, status, vector, created_at
+          FROM post_embeddings
+          WHERE model = ${s.model} AND created_at > ${s.watermark.at}
+          ORDER BY created_at, rowid LIMIT ${PAGE}
+        )
+      )
       ORDER BY created_at, rowid
       LIMIT ${PAGE}
     `)
@@ -272,15 +287,8 @@ async function rescore(
   segments?: ReadonlyMap<string, SegmentScore>,
 ): Promise<VectorHit[]> {
   if (hits.length === 0) return hits
-  const byId = new Map<string, string[]>()
-  for (const h of hits) {
-    const [platform, ...rest] = h.key.split(':')
-    const id = rest.join(':')
-    byId.set(id, [...(byId.get(id) ?? []), platform])
-  }
   const full = new Map<string, Float32Array>()
-  const ids = [...byId.keys()]
-  for (let i = 0; i < ids.length; i += 400) {
+  for (const part of postKeyBatches(hits.map((h) => h.key))) {
     const rows = await db
       .select({
         platform: postEmbeddings.platform,
@@ -293,7 +301,7 @@ async function rescore(
           eq(postEmbeddings.kind, kind),
           eq(postEmbeddings.model, SEMANTIC_MODEL_VERSION),
           eq(postEmbeddings.status, 'ok'),
-          inArray(postEmbeddings.postId, ids.slice(i, i + 400)),
+          postKeyWhere(postEmbeddings.platform, postEmbeddings.postId, part),
         ),
       )
     for (const r of rows) {

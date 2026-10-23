@@ -365,7 +365,8 @@ export async function clearWordlessText(): Promise<number> {
   const rows = db.all<{ platform: string; post_id: string }>(sql`
     SELECT e.platform AS platform, e.post_id AS post_id
     FROM post_embeddings e
-    JOIN post_text_fts f ON f.platform = e.platform AND f.post_id = e.post_id
+    JOIN post_text_keys k ON k.platform = e.platform AND k.post_id = e.post_id
+    JOIN post_text_fts f ON f.rowid = k.row_id
     WHERE e.kind = 'text' AND e.status = 'ok' AND length(f.body) < 200
   `)
   let cleared = 0
