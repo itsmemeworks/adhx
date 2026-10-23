@@ -1,4 +1,5 @@
-import { and, eq, inArray } from 'drizzle-orm'
+import { postKeyBatches, postKeyWhere } from '@/lib/db/post-keys'
+import { and, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { bookmarkMedia, bookmarks, postEmbeddings, understandingQueue } from '@/lib/db/schema'
 import {
@@ -40,14 +41,6 @@ export interface UnderstandingStatus {
   } | null
 }
 
-const CHUNK = 400
-
-function chunks<T>(items: T[]): T[][] {
-  const out: T[][] = []
-  for (let i = 0; i < items.length; i += CHUNK) out.push(items.slice(i, i + CHUNK))
-  return out
-}
-
 export async function getUnderstandingStatus(userId: string): Promise<UnderstandingStatus> {
   const saved = await db
     .select({ platform: bookmarks.platform, id: bookmarks.id })
@@ -71,8 +64,7 @@ export async function getUnderstandingStatus(userId: string): Promise<Understand
 
   const results = new Map<string, string>() // `${platform}:${id}:${kind}` -> status
   const queued = new Set<string>()
-  const ids = [...new Set(saved.map((s) => s.id))]
-  for (const part of chunks(ids)) {
+  for (const part of postKeyBatches(saved)) {
     const rows = await db
       .select({
         platform: postEmbeddings.platform,
@@ -83,7 +75,10 @@ export async function getUnderstandingStatus(userId: string): Promise<Understand
       })
       .from(postEmbeddings)
       .where(
-        and(eq(postEmbeddings.model, SEMANTIC_MODEL_VERSION), inArray(postEmbeddings.postId, part)),
+        and(
+          eq(postEmbeddings.model, SEMANTIC_MODEL_VERSION),
+          postKeyWhere(postEmbeddings.platform, postEmbeddings.postId, part),
+        ),
       )
     for (const r of rows) {
       if (r.kind === 'video' && !videoResultCurrent(r.contentHash)) continue
@@ -96,7 +91,7 @@ export async function getUnderstandingStatus(userId: string): Promise<Understand
         kind: understandingQueue.kind,
       })
       .from(understandingQueue)
-      .where(inArray(understandingQueue.postId, part))
+      .where(postKeyWhere(understandingQueue.platform, understandingQueue.postId, part))
     for (const r of q) queued.add(`${r.platform}:${r.id}:${r.kind}`)
   }
   const savedKeys = new Set(saved.map((s) => `${s.platform}:${s.id}`))
@@ -176,11 +171,10 @@ export async function getUnderstandingStatus(userId: string): Promise<Understand
  */
 export async function stillLearning(keys: string[]): Promise<Set<string>> {
   if (keys.length === 0) return new Set()
-  const ids = [...new Set(keys.map((k) => k.slice(k.indexOf(':') + 1)))]
   const wanted = new Set(keys)
   const needs = new Map<string, Set<UnderstandingKind>>()
   const have = new Set<string>()
-  for (const part of chunks(ids)) {
+  for (const part of postKeyBatches(keys)) {
     const media = await db
       .selectDistinct({
         platform: bookmarkMedia.platform,
@@ -188,7 +182,7 @@ export async function stillLearning(keys: string[]): Promise<Set<string>> {
         type: bookmarkMedia.mediaType,
       })
       .from(bookmarkMedia)
-      .where(inArray(bookmarkMedia.bookmarkId, part))
+      .where(postKeyWhere(bookmarkMedia.platform, bookmarkMedia.bookmarkId, part))
     for (const m of media) {
       const key = `${m.platform}:${m.id}`
       if (!wanted.has(key)) continue
@@ -206,7 +200,10 @@ export async function stillLearning(keys: string[]): Promise<Set<string>> {
       })
       .from(postEmbeddings)
       .where(
-        and(eq(postEmbeddings.model, SEMANTIC_MODEL_VERSION), inArray(postEmbeddings.postId, part)),
+        and(
+          eq(postEmbeddings.model, SEMANTIC_MODEL_VERSION),
+          postKeyWhere(postEmbeddings.platform, postEmbeddings.postId, part),
+        ),
       )
     for (const r of rows) {
       if (r.kind === 'video' && !videoResultCurrent(r.contentHash)) continue

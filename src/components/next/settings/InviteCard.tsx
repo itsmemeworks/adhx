@@ -228,7 +228,7 @@ export function InviteCard() {
 
       {inv.made && (
         <div className={`flex flex-col gap-2.5 bg-black/40 p-4 ${IN_CARD}`}>
-          <span className="text-[13px] text-white/65">
+          <span className="text-[13px] text-nx-ink/65">
             {inv.made.nameHint
               ? `For ${inv.made.nameHint}. Send it to them; it’s shown only this once.`
               : 'Send it to them; it’s shown only this once.'}
@@ -259,11 +259,11 @@ export function InviteCard() {
       )}
 
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-bold uppercase tracking-[0.08em] text-white/55">
+        <span className="text-xs font-bold uppercase tracking-[0.08em] text-nx-ink/55">
           Waiting to be used
         </span>
         {inv.invites.length === 0 ? (
-          <span className="text-[13px] text-white/55">None right now.</span>
+          <span className="text-[13px] text-nx-ink/55">None right now.</span>
         ) : (
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
             {inv.invites.map((invite) => (
@@ -275,7 +275,7 @@ export function InviteCard() {
                   <span className="truncate font-bold">
                     {invite.nameHint ? `For ${invite.nameHint}` : 'Invite link'}
                   </span>
-                  <span className="text-xs text-white/55">
+                  <span className="text-xs text-nx-ink/55">
                     {`${invite.mine ? '' : `From @${invite.createdBy} · `}${daysLeft(invite.expiresAt)}`}
                   </span>
                 </span>
@@ -295,7 +295,7 @@ export function InviteCard() {
       </div>
 
       {inv.error && (
-        <p role="alert" className="m-0 text-[13px] text-[#ff8a7a]">
+        <p role="alert" className="m-0 text-[13px] text-nx-danger">
           {inv.error}
         </p>
       )}

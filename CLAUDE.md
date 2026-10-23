@@ -268,6 +268,13 @@ same).
 - **Line clamps:** put padding on a wrapper and `line-clamp-N` on a child with
   no vertical padding, or a clipped line peeks through.
 - **Dark is the only theme.** There is no theme toggle.
+- **Name colour tokens, never hex values.** The design system's tokens have
+  the same names and values everywhere: web `--nx-<name>` / Tailwind
+  `nx-<name>` (`src/app/globals.css`), iOS `Theme.<name>`, Android
+  `AdhxColors.<Name>`. `bg` is the page, `ink` the words, `hairline` quiet
+  dividers, `line` control borders. Selected (tabs, segments, chips) is
+  `cream` with `on-cream` text, never the yellow `accent`. Only black and
+  white alpha overlays stay literal.
 - **Nested corners.** Anything inside a rounded container, along its edge or
   in a corner, gets radius = the container's radius − the gap − its border,
   at least 8. Example: Live's 26 px card with an 8 px inset and a 2 px ring
@@ -379,6 +386,17 @@ Short notes on what is easy to get wrong. Each links to the full description.
   member's plays, finishes or seconds, by name or on a face. Totals across
   everyone, with no names, are fine for members who can see the post
   (`postPlays`).
+
+### Database query performance
+
+- Use bounded `postKeyBatches` / `postKeyWhere` for shared post lookups;
+  include owner keys for related personal rows. Do not query IDs across
+  platforms and filter the unwanted rows in JavaScript.
+- Keep startup `QUERY_INDEX_DDL`, Drizzle declarations and test setup aligned.
+  Keyword writes must update FTS and `post_text_keys` in one transaction.
+- Run `src/__tests__/db/query-performance.test.ts` after changing hot queries.
+  [Database performance](docs/database-performance.md) records the audit,
+  benchmark controls, statistics upkeep and limits of ordinary indexes.
 
 ### Kept media
 

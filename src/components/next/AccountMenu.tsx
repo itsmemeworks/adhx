@@ -159,9 +159,9 @@ export function AccountMenu({
         <div
           role="menu"
           aria-label="Your account"
-          className="absolute right-0 top-12 z-50 flex w-[240px] flex-col gap-0.5 rounded-2xl bg-[#1c1b19] p-1.5 font-nx-sans text-sm text-white shadow-nx-toast"
+          className="absolute right-0 top-12 z-50 flex w-[240px] flex-col gap-0.5 rounded-2xl bg-nx-sheet p-1.5 font-nx-sans text-sm text-nx-ink shadow-nx-toast"
         >
-          <span className="truncate px-3 pb-1.5 pt-2 text-xs text-white/55">{`@${handle}`}</span>
+          <span className="truncate px-3 pb-1.5 pt-2 text-xs text-nx-ink/55">{`@${handle}`}</span>
           {me.waitingSignIns > 0 && (
             <Link
               role="menuitem"

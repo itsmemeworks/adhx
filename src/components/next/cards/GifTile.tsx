@@ -20,7 +20,7 @@ export function GifTile({ item, ...frame }: TileProps) {
       </span>
       <MediaChip className="left-2.5 top-2.5">GIF · loops</MediaChip>
       <Scrim className="gap-1.5 px-3 pb-3 pt-10">
-        <AuthorLine author={author} className="text-white/85" />
+        <AuthorLine author={author} className="text-nx-ink/85" />
         {caption && <span className="line-clamp-2 text-[12.5px] leading-[1.35]">{caption}</span>}
       </Scrim>
     </TileFrame>

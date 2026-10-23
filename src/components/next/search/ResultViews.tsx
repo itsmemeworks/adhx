@@ -93,7 +93,7 @@ export function BestMatch({
         href={href ?? openHref(item)}
         aria-label={`Best match: ${author.name}. ${text}`}
         className={cn(
-          'relative flex flex-col justify-center gap-4 overflow-hidden rounded-[18px] bg-nx-cream p-8 text-nx-ink outline outline-2 outline-offset-[3px] outline-nx-accent md:p-12',
+          'relative flex flex-col justify-center gap-4 overflow-hidden rounded-[18px] bg-nx-cream p-8 text-nx-bg outline outline-2 outline-offset-[3px] outline-nx-accent md:p-12',
           className,
         )}
       >
@@ -450,7 +450,7 @@ export function RelatedHeading({ query, count }: { query: string; count: number 
         <StrengthMeter strength="related" />
         <span>{query.trim() ? `Related to “${query.trim()}”` : 'Related'}</span>
       </h2>
-      <p className="m-0 text-[13px] text-nx-muted">
+      <p className="m-0 text-[13px] text-nx-ink-faint">
         {`${count === 1 ? 'This one is' : `These ${count} are`} close in meaning, but not exactly what you described.`}
       </p>
     </div>
@@ -552,7 +552,7 @@ export function LeadResult({
       )}
     </>
   ) : (
-    <span className="absolute inset-0 flex flex-col justify-center gap-3 bg-nx-cream p-8 text-nx-ink">
+    <span className="absolute inset-0 flex flex-col justify-center gap-3 bg-nx-cream p-8 text-nx-bg">
       <span className="text-sm font-bold">{author.handle || author.name}</span>
       <span className="line-clamp-6 font-nx-serif text-[30px] leading-[1.08]">
         {kind === 'article' ? articleHeadline(post) : postText(post)}
@@ -569,7 +569,7 @@ export function LeadResult({
   const corner = (
     <span className="pointer-events-none absolute right-4 top-4 flex gap-1.5">
       {where && (
-        <span className="flex h-[30px] items-center whitespace-nowrap rounded-full bg-black/55 px-3 text-xs font-extrabold text-white backdrop-blur-md">
+        <span className="flex h-[30px] items-center whitespace-nowrap rounded-full bg-black/55 px-3 text-xs font-extrabold text-nx-ink backdrop-blur-md">
           Best match
         </span>
       )}
@@ -584,7 +584,7 @@ export function LeadResult({
     savers.length > 0 ? (
       <SaverFaces savers={savers} size={22} linked className="min-w-0" />
     ) : (
-      <span className="truncate text-[13px] text-nx-soft">
+      <span className="truncate text-[13px] text-nx-ink-soft">
         {item.saved ? 'You saved this' : 'Saved by someone else'}
       </span>
     )
@@ -600,11 +600,11 @@ export function LeadResult({
         {media}
         {whereChip}
         {corner}
-        <span className="absolute inset-x-0 bottom-0 flex flex-col gap-2.5 bg-gradient-to-b from-transparent to-black/90 px-[18px] pb-[18px] pt-[90px] text-white">
+        <span className="absolute inset-x-0 bottom-0 flex flex-col gap-2.5 bg-gradient-to-b from-transparent to-black/90 px-[18px] pb-[18px] pt-[90px] text-nx-ink">
           <span className="line-clamp-3 text-lg font-extrabold leading-[1.35]">
             <Highlighted text={title} query={query} />
           </span>
-          <span className="text-[13px] text-nx-soft">{meta}</span>
+          <span className="text-[13px] text-nx-ink-soft">{meta}</span>
           <span className="flex items-center justify-between gap-3">
             {saved}
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-nx-accent text-black">
@@ -634,14 +634,16 @@ export function LeadResult({
             <span className="line-clamp-2 text-xl font-extrabold leading-tight">
               <Highlighted text={title} query={query} />
             </span>
-            <span className="truncate text-sm text-nx-muted">{meta}</span>
+            <span className="truncate text-sm text-nx-ink-faint">{meta}</span>
           </span>
-          <span className="hidden shrink-0 items-center gap-2 text-[13px] font-semibold text-nx-soft sm:flex">
+          <span className="hidden shrink-0 items-center gap-2 text-[13px] font-semibold text-nx-ink-soft sm:flex">
             {STRENGTH_LABEL[strength]}
           </span>
         </div>
         <div className="mt-auto flex flex-wrap items-center justify-between gap-3">
-          <span className="flex min-w-0 items-center gap-2.5 text-sm text-nx-soft">{saved}</span>
+          <span className="flex min-w-0 items-center gap-2.5 text-sm text-nx-ink-soft">
+            {saved}
+          </span>
           <Link
             href={href}
             onClick={onOpen ? () => onOpen(item) : undefined}
@@ -739,13 +741,13 @@ export function GroupsView({
             >
               {group.name}
             </h2>
-            <span className="text-[13px] text-nx-muted">
+            <span className="text-[13px] text-nx-ink-faint">
               {group.items.length === 1 ? '1 post' : `${group.items.length} posts`}
             </span>
             <button
               type="button"
               onClick={() => onPlayGroup(group.signal)}
-              className="ml-auto flex h-10 items-center gap-1.5 rounded-full border border-nx-hairline px-3.5 text-[13px] text-nx-cream hover:border-nx-muted"
+              className="ml-auto flex h-10 items-center gap-1.5 rounded-full border border-nx-hairline px-3.5 text-[13px] text-nx-cream hover:border-nx-ink-faint"
             >
               <Play aria-hidden className="h-3.5 w-3.5" fill="currentColor" strokeWidth={0} />
               <span>Play this group</span>
@@ -780,7 +782,7 @@ export function QueueView({
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
       <div className="flex min-w-0 flex-1 flex-col gap-2.5 lg:sticky lg:top-4">
         <BestMatch item={lead} href={hrefFor?.(lead)} className="h-[min(56vh,420px)] w-full" />
-        <p className="m-0 text-sm text-nx-soft">
+        <p className="m-0 text-sm text-nx-ink-soft">
           <span className="font-bold text-nx-cream">Why this one: </span>
           <span>{matchReason(lead)}</span>
         </p>
@@ -795,7 +797,7 @@ export function QueueView({
           return (
             <li key={resultKey(item)}>
               {firstRelated && i > 0 && (
-                <span className="flex items-center gap-2 px-1 pb-1.5 pt-3 text-[13px] text-nx-muted">
+                <span className="flex items-center gap-2 px-1 pb-1.5 pt-3 text-[13px] text-nx-ink-faint">
                   <StrengthMeter strength="related" tone="plate" />
                   <span>Related: close in meaning, not exactly it</span>
                 </span>
@@ -806,14 +808,14 @@ export function QueueView({
                 className={cn(
                   'flex min-h-[72px] items-center gap-3 rounded-[14px] border px-2.5 py-2',
                   i === 0
-                    ? 'border-nx-accent bg-[#2b2510]'
+                    ? 'border-nx-accent bg-nx-accent/[0.12]'
                     : 'border-transparent bg-[#14120e] hover:bg-nx-surface',
                 )}
               >
                 <span
                   className={cn(
                     'w-6 shrink-0 text-right font-nx-serif text-[20px]',
-                    i === 0 ? 'text-nx-accent' : 'text-nx-muted',
+                    i === 0 ? 'text-nx-accent' : 'text-nx-ink-faint',
                   )}
                 >
                   {String(i + 1)}
@@ -829,7 +831,7 @@ export function QueueView({
                 ) : (
                   <span
                     aria-hidden
-                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[10px] bg-nx-cream font-nx-serif text-[28px] text-nx-ink"
+                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[10px] bg-nx-cream font-nx-serif text-[28px] text-nx-bg"
                   >
                     “
                   </span>
@@ -839,9 +841,9 @@ export function QueueView({
                     {headlineFor(item) ||
                       `${KIND_WORD[kind]} by ${postAuthor(item.post).handle || postAuthor(item.post).name}`}
                   </span>
-                  <span className="truncate text-xs text-nx-muted">{queueMeta(item)}</span>
+                  <span className="truncate text-xs text-nx-ink-faint">{queueMeta(item)}</span>
                 </span>
-                <span className="shrink-0 rounded-full border border-nx-hairline px-2 py-1 text-[11px] text-nx-soft">
+                <span className="shrink-0 rounded-full border border-nx-hairline px-2 py-1 text-[11px] text-nx-ink-soft">
                   {item.post.savers?.length
                     ? saversLine(item.post.savers)
                     : item.saved

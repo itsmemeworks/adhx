@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { SwitchLook } from '../primitives'
 
 /**
  * Nested corners. A card's buttons and fields curve at `--nx-nest`, which the
@@ -22,12 +23,12 @@ export const IN_CARD = 'rounded-[11px] [--nx-nest:8px] md:rounded-[8px]'
 export const PRIMARY = `inline-flex h-12 items-center justify-center gap-2 ${NESTED} bg-nx-accent px-5 text-[15px] font-extrabold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50`
 
 /** Quiet outline, everything else. */
-export const SECONDARY = `inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap ${NESTED} border-[1.5px] border-[#4a453e] px-4 text-sm font-semibold text-nx-cream transition-colors hover:border-nx-muted hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50`
+export const SECONDARY = `inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap ${NESTED} border-[1.5px] border-nx-line px-4 text-sm font-semibold text-nx-cream transition-colors hover:border-nx-ink-faint hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50`
 
 /** Red outline for the danger zone. */
-export const DANGER = `inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap ${NESTED} border border-[#ff8a7a]/60 px-4 text-sm font-bold text-[#ff8a7a] transition-colors hover:bg-[#ff8a7a]/10 disabled:cursor-not-allowed disabled:opacity-50`
+export const DANGER = `inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap ${NESTED} border border-nx-danger/60 px-4 text-sm font-bold text-nx-danger transition-colors hover:bg-nx-danger/10 disabled:cursor-not-allowed disabled:opacity-50`
 
-export const INPUT = `h-12 w-full min-w-0 ${NESTED} border-[1.5px] border-[#4a453e] bg-nx-ink px-[18px] text-base font-semibold text-nx-cream outline-none placeholder:font-normal placeholder:text-nx-muted focus:border-nx-accent`
+export const INPUT = `h-12 w-full min-w-0 ${NESTED} border-[1.5px] border-nx-line bg-nx-bg px-[18px] text-base font-semibold text-nx-cream outline-none placeholder:font-normal placeholder:text-nx-ink-faint focus:border-nx-accent`
 
 /** A rounded card on nx-surface with a serif heading. */
 export function SettingsCard({
@@ -59,7 +60,7 @@ export function SettingsCard({
       className={cn(
         'flex scroll-mt-24 flex-col gap-[18px] rounded-[28px] border border-white/[0.08] bg-nx-surface p-4 [--nx-nest:11px] md:p-6 md:[--nx-nest:8px]',
         tone === 'accent' && 'border-nx-accent/45',
-        tone === 'danger' && 'border-[#ff8a7a]/35',
+        tone === 'danger' && 'border-nx-danger/35',
         className,
       )}
     >
@@ -70,14 +71,14 @@ export function SettingsCard({
               id={headingId}
               className={cn(
                 'm-0 font-nx-serif text-[30px] font-normal leading-[0.95] md:text-[38px]',
-                tone === 'danger' && 'text-[#ff8a7a]',
+                tone === 'danger' && 'text-nx-danger',
               )}
             >
               {title}
             </h2>
-            {note && <span className="whitespace-nowrap text-sm text-nx-muted">{note}</span>}
+            {note && <span className="whitespace-nowrap text-sm text-nx-ink-faint">{note}</span>}
           </div>
-          {sub && <p className="m-0 text-sm text-white/60">{sub}</p>}
+          {sub && <p className="m-0 text-sm text-nx-ink/60">{sub}</p>}
         </div>
         {right}
       </div>
@@ -99,8 +100,8 @@ export function SettingRow({
   return (
     <div className={cn('flex items-center gap-3 bg-black/40 px-4 py-3.5', IN_CARD)}>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <div className="text-[15px] font-bold text-white">{label}</div>
-        {hint && <div className="text-[13px] leading-snug text-white/55">{hint}</div>}
+        <div className="text-[15px] font-bold text-nx-ink">{label}</div>
+        {hint && <div className="text-[13px] leading-snug text-nx-ink/55">{hint}</div>}
       </div>
       {children}
     </div>
@@ -129,17 +130,12 @@ export function Switch({
       aria-busy={busy || undefined}
       disabled={disabled}
       onClick={onChange}
-      className={cn(
-        'relative inline-flex h-8 w-[52px] shrink-0 items-center rounded-full p-[3px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-nx-accent focus-visible:ring-offset-2 focus-visible:ring-offset-nx-surface disabled:cursor-not-allowed disabled:opacity-50',
-        checked ? 'justify-end bg-nx-accent' : 'justify-start bg-[#4a453e]',
-      )}
+      // The 28 tall look keeps a 44 hit area without moving the row.
+      className="group -my-2 inline-flex shrink-0 py-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
     >
-      <span
-        aria-hidden
-        className={cn(
-          'block h-[26px] w-[26px] rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.4)]',
-          checked ? 'bg-black' : 'bg-nx-cream',
-        )}
+      <SwitchLook
+        on={checked}
+        className="group-focus-visible:ring-2 group-focus-visible:ring-nx-accent group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-nx-surface"
       />
     </button>
   )
@@ -177,16 +173,16 @@ export function Sheet({
         aria-modal="true"
         aria-label={label}
         className={cn(
-          // 24 px corners, 20 px padding (28 from md): buttons sit at the 8 px floor.
-          'fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col gap-4 overflow-y-auto rounded-t-[24px] bg-[#1c1b19] p-5 [--nx-nest:8px] pb-[max(20px,env(safe-area-inset-bottom))] font-nx-sans text-white md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:w-[460px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[24px] md:p-7',
-          tone === 'danger' && 'ring-1 ring-[#ff8a7a]/40',
+          // 28 px corners, 20 px padding (28 from md): buttons sit at the 8 px floor.
+          'fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col gap-4 overflow-y-auto rounded-t-[28px] bg-nx-sheet p-5 [--nx-nest:8px] pb-[max(20px,env(safe-area-inset-bottom))] font-nx-sans text-nx-ink md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:w-[460px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[28px] md:p-7',
+          tone === 'danger' && 'ring-1 ring-nx-danger/40',
         )}
       >
         <div className="flex items-start gap-3">
           <h3
             className={cn(
               'm-0 flex-1 font-nx-serif text-[30px] font-normal leading-none',
-              tone === 'danger' && 'text-[#ff8a7a]',
+              tone === 'danger' && 'text-nx-danger',
             )}
           >
             {label}

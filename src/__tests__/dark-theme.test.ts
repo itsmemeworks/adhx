@@ -18,7 +18,7 @@ describe('dark-only theme', () => {
   })
 
   it('uses a dark installed-app launch surface', () => {
-    expect(manifest.background_color).toBe('#08070a')
-    expect(manifest.theme_color).toBe('#08070a')
+    expect(manifest.background_color).toBe('#0f0e0c')
+    expect(manifest.theme_color).toBe('#0f0e0c')
   })
 })

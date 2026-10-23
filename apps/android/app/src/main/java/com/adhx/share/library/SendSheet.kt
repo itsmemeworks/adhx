@@ -67,9 +67,6 @@ import kotlinx.coroutines.withContext
 /** Where the send sheet hands the files. */
 private enum class Target { WhatsApp, Files, Phone, More }
 
-/** The tiles' and track's colour on the sheet. */
-private val Tile = Color(0xFF3A352D)
-
 /**
  * Send it (the rail's Share, for videos, sounds and photos): the copy your
  * ADHX kept comes down to the phone ("Sending the video itself", with how
@@ -166,7 +163,7 @@ fun SendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDis
         sheetState = state,
         containerColor = AdhxColors.Surface,
         shape = SquircleShape.top(28.dp),
-        dragHandle = { SheetHandle(AdhxColors.Hairline) },
+        dragHandle = { SheetHandle(AdhxColors.Line) },
     ) {
         Column(
             Modifier
@@ -225,7 +222,7 @@ private fun WordsSendSheet(post: PhonePost, server: String, onNotice: (String) -
         sheetState = state,
         containerColor = AdhxColors.Surface,
         shape = SquircleShape.top(28.dp),
-        dragHandle = { SheetHandle(AdhxColors.Hairline) },
+        dragHandle = { SheetHandle(AdhxColors.Line) },
     ) {
         Column(
             Modifier
@@ -237,7 +234,7 @@ private fun WordsSendSheet(post: PhonePost, server: String, onNotice: (String) -
                 Modifier
                     .fillMaxWidth()
                     .clip(SquircleShape(22.dp))
-                    .background(AdhxColors.Card)
+                    .background(AdhxColors.Plate)
                     .padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
@@ -245,9 +242,9 @@ private fun WordsSendSheet(post: PhonePost, server: String, onNotice: (String) -
                     if (post.kind == PostKind.ARTICLE) "Sending the article" else "Sending the words",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = AdhxColors.White,
+                    color = AdhxColors.Ink,
                 )
-                Text(words.ifBlank { "Nothing to send" }, fontSize = 13.sp, lineHeight = 19.sp, color = AdhxColors.Muted, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                Text(words.ifBlank { "Nothing to send" }, fontSize = 13.sp, lineHeight = 19.sp, color = AdhxColors.InkSoft, maxLines = 3, overflow = TextOverflow.Ellipsis)
             }
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Label("SEND VIA")
@@ -288,7 +285,7 @@ private fun Sending(post: PhonePost, server: String, progress: Float?, read: Lon
         Modifier
             .fillMaxWidth()
             .clip(SquircleShape(22.dp))
-            .background(AdhxColors.Card)
+            .background(AdhxColors.Plate)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -314,8 +311,8 @@ private fun Sending(post: PhonePost, server: String, progress: Float?, read: Lon
                 }
             }
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(what, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White)
-                Text(line, fontSize = 13.sp, lineHeight = 19.sp, color = AdhxColors.Muted)
+                Text(what, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Ink)
+                Text(line, fontSize = 13.sp, lineHeight = 19.sp, color = AdhxColors.InkSoft)
             }
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -325,11 +322,11 @@ private fun Sending(post: PhonePost, server: String, progress: Float?, read: Lon
                     if (done) "Ready to send" else "Downloading from your ADHX$percent",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = AdhxColors.White,
+                    color = AdhxColors.Ink,
                     modifier = Modifier.weight(1f),
                 )
                 if (total != null && !done) {
-                    Text("${megabytes(read, unit = false)} of ${megabytes(total)}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Faint)
+                    Text("${megabytes(read, unit = false)} of ${megabytes(total)}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.InkFaint)
                 }
             }
             val fraction by animateFloatAsState(if (done) 1f else (progress ?: 0f), label = "send")
@@ -338,7 +335,7 @@ private fun Sending(post: PhonePost, server: String, progress: Float?, read: Lon
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(50))
-                    .background(Tile),
+                    .background(AdhxColors.PaperInkSoft),
             ) {
                 Box(
                     Modifier
@@ -354,7 +351,7 @@ private fun Sending(post: PhonePost, server: String, progress: Float?, read: Lon
 
 @Composable
 private fun Label(text: String) {
-    Text(text, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.7.sp, color = AdhxColors.Faint)
+    Text(text, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.7.sp, color = AdhxColors.InkFaint)
 }
 
 /** One way to send: a 60dp tile with its icon, and its name under it. */
@@ -373,12 +370,12 @@ private fun Choice(icon: ImageVector, label: String, waiting: Boolean, onClick: 
             Modifier
                 .size(60.dp)
                 .clip(SquircleShape(18.dp))
-                .background(if (waiting) AdhxColors.Accent.copy(alpha = 0.25f) else Tile),
+                .background(if (waiting) AdhxColors.Accent.copy(alpha = 0.25f) else AdhxColors.PaperInkSoft),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(24.dp))
+            Icon(icon, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(24.dp))
         }
-        Text(label, fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White, textAlign = TextAlign.Center)
+        Text(label, fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Ink, textAlign = TextAlign.Center)
     }
 }
 

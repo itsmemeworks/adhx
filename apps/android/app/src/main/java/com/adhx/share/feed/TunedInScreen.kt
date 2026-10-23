@@ -141,7 +141,7 @@ fun TunedInScreen(
 
     val scope = rememberCoroutineScope()
     if (ui.items.isEmpty()) {
-        Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
+        Box(Modifier.fillMaxSize().background(AdhxColors.Bg)) {
             Column(
                 Modifier
                     .fillMaxSize()
@@ -152,7 +152,7 @@ fun TunedInScreen(
                 when {
                     !ui.loadedOnce -> Spinner(size = 30.dp, stroke = 3.dp)
                     else -> {
-                        Text(ui.error ?: Copy.LIVE_ENDED, fontSize = 15.sp, lineHeight = 22.sp, color = AdhxColors.Muted)
+                        Text(ui.error ?: Copy.LIVE_ENDED, fontSize = 15.sp, lineHeight = 22.sp, color = AdhxColors.InkSoft)
                         if (ui.error != null && ui.error != Copy.LIVE_ENDED) {
                             OutlineButton("Try again", onClick = { scope.launch { feed.pollTuned() } }, minHeight = 44.dp)
                         }
@@ -208,7 +208,7 @@ fun TunedInScreen(
                             .padding(horizontal = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("In", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Muted)
+                        Text("In", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.InkSoft)
                         Spacer(Modifier.width(6.dp))
                         Text(name, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
@@ -251,7 +251,7 @@ private fun ArrivalCard(post: PhonePost?, server: String, modifier: Modifier = M
             .shadow(20.dp, SquircleShape(20.dp), ambientColor = Color.Black, spotColor = Color.Black)
             .clip(SquircleShape(20.dp))
             .background(AdhxColors.Surface.copy(alpha = 0.85f))
-            .border(1.dp, (saver?.let { faceColor(it.username) } ?: AdhxColors.White).copy(alpha = 0.5f), SquircleShape(20.dp))
+            .border(1.dp, (saver?.let { faceColor(it.username) } ?: AdhxColors.Ink).copy(alpha = 0.5f), SquircleShape(20.dp))
             .padding(start = 8.dp, end = 14.dp, top = 8.dp, bottom = 8.dp)
             .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
         verticalAlignment = Alignment.CenterVertically,
@@ -284,7 +284,7 @@ private fun ArrivalCard(post: PhonePost?, server: String, modifier: Modifier = M
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (saver != null) Text(Copy.UP_NEXT, fontSize = 14.sp, color = AdhxColors.Muted)
+            if (saver != null) Text(Copy.UP_NEXT, fontSize = 14.sp, color = AdhxColors.InkSoft)
         }
     }
 }
@@ -311,14 +311,14 @@ private fun WatchersChip(watchers: List<Saver>, count: Int, server: String, modi
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (others.isNotEmpty()) {
-            Faces(others, server, size = 26.dp, ring = WatchingGreen)
+            Faces(others, server, size = 26.dp, ring = AdhxColors.Watching)
             Spacer(Modifier.width(9.dp))
         }
         Text(
             Copy.watchersShort(watchers, maxOf(count, watchers.size)),
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
-            color = AdhxColors.White,
+            color = AdhxColors.Ink,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

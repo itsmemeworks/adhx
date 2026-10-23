@@ -65,6 +65,10 @@ jobs:
         run: |
           swiftc apps/ios/App/Library/PostReactionsModel.swift apps/ios/Tests/ReactionConnectionTests.swift -o "$RUNNER_TEMP/adhx-reaction-connections"
           "$RUNNER_TEMP/adhx-reaction-connections"
+      - name: Test post people identity against late and cancelled responses
+        run: |
+          swiftc apps/ios/App/Library/PostPeopleModel.swift apps/ios/Tests/PostPeopleTests.swift -o "$RUNNER_TEMP/adhx-post-people"
+          "$RUNNER_TEMP/adhx-post-people"
       - name: Test resume isolation, playback deadlines, Reply pause and fresh-send acknowledgements
         run: |
           swiftc apps/ios/Shared/ResumeStore.swift apps/ios/App/Library/PlaybackRecovery.swift apps/ios/Tests/PlaybackRecoveryTests.swift -o "$RUNNER_TEMP/adhx-playback-recovery"

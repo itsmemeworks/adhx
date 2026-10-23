@@ -44,7 +44,7 @@ function MomentCard({ m }: { m: LiveMomentCard }) {
   return (
     <Link
       href={`/moments/${encodeURIComponent(m.slug)}`}
-      className={cn(CARD, 'flex min-w-0 flex-col overflow-hidden text-[#f4f1ea]')}
+      className={cn(CARD, 'flex min-w-0 flex-col overflow-hidden text-nx-ink')}
       style={{ borderColor: m.hue }}
     >
       <span className="relative flex h-[92px]">
@@ -52,17 +52,17 @@ function MomentCard({ m }: { m: LiveMomentCard }) {
           m.covers[i] ? (
             <img key={i} src={m.covers[i]} alt="" className="block h-full w-1/3 object-cover" />
           ) : (
-            <span key={i} className="block h-full w-1/3 bg-[#262320]" />
+            <span key={i} className="block h-full w-1/3 bg-nx-plate" />
           ),
         )}
         <span className="absolute left-2.5 top-2.5 inline-flex h-6 items-center gap-1.5 rounded-full bg-black/55 px-2.5 text-[11px] font-extrabold">
-          <Dot colour="#ff5a3c" />
+          <Dot colour="rgb(var(--nx-live))" />
           <span>{stateLine(m)}</span>
         </span>
       </span>
       <span className="flex flex-col gap-1.5 px-3.5 py-3">
         <span className="font-nx-serif text-[26px] leading-none">{m.title}</span>
-        <span className="flex min-w-0 items-center gap-2 text-[13px] text-[#c9bfab]">
+        <span className="flex min-w-0 items-center gap-2 text-[13px] text-nx-ink-soft">
           <FaceStack faces={m.savers.slice(0, 3)} size={22} />
           <span className="truncate">{saversLine(m)}</span>
         </span>
@@ -124,7 +124,7 @@ export function LiveView({ data, rangeWords }: { data: LiveBoard; rangeWords: st
             data.live.map((m) => <MomentCard key={m.slug} m={m} />)
           ) : (
             <Card className="px-[18px] py-4">
-              <p className="m-0 text-sm text-[#a39b8b]">Nothing live right now.</p>
+              <p className="m-0 text-sm text-nx-ink-faint">Nothing live right now.</p>
             </Card>
           )}
         </div>
@@ -140,7 +140,7 @@ export function LiveView({ data, rangeWords }: { data: LiveBoard; rangeWords: st
                       <Thumb src={f.cover} size={40} radius={10} />
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <span className="text-sm font-extrabold">{f.title}</span>
-                        <span className="text-xs text-[#a39b8b]">
+                        <span className="text-xs text-nx-ink-faint">
                           {`${plural(left, f.unit === 'people' ? 'more person' : 'more save', f.unit === 'people' ? 'more people' : 'more saves')} to go live`}
                         </span>
                       </span>
@@ -153,7 +153,7 @@ export function LiveView({ data, rangeWords }: { data: LiveBoard; rangeWords: st
                 })}
               </ul>
             ) : (
-              <p className="m-0 text-sm text-[#a39b8b]">Nothing forming.</p>
+              <p className="m-0 text-sm text-nx-ink-faint">Nothing forming.</p>
             )}
           </Card>
           <Card className="flex flex-1 flex-col gap-2.5 px-4 py-3.5">
@@ -164,14 +164,14 @@ export function LiveView({ data, rangeWords }: { data: LiveBoard; rangeWords: st
                   <li key={w.slug} className="flex items-center gap-2.5">
                     <Dot colour={DOTS[i % DOTS.length]} />
                     <span className="min-w-0 flex-1 truncate font-extrabold">{w.title}</span>
-                    <span className="whitespace-nowrap text-[#c9bfab]">
+                    <span className="whitespace-nowrap text-nx-ink-soft">
                       {`${plural(w.tuneIns, 'tune-in')} · ${plural(w.reactions, 'react')}`}
                     </span>
                   </li>
                 ))}
               </ol>
             ) : (
-              <p className="m-0 text-sm text-[#a39b8b]">No moments in this range.</p>
+              <p className="m-0 text-sm text-nx-ink-faint">No moments in this range.</p>
             )}
           </Card>
         </div>
@@ -188,12 +188,12 @@ export function LiveView({ data, rangeWords }: { data: LiveBoard; rangeWords: st
                   <li key={r.face.username} className="flex items-center gap-2.5">
                     <Face who={r.face} size={26} />
                     <span className="flex-1 text-sm font-extrabold">{displayName(r.face)}</span>
-                    <span className="text-[13px] text-[#c9bfab]">{fmt(r.count)}</span>
+                    <span className="text-[13px] text-nx-ink-soft">{fmt(r.count)}</span>
                   </li>
                 ))}
               </ol>
             ) : (
-              <p className="m-0 text-sm text-[#a39b8b]">No reactions yet.</p>
+              <p className="m-0 text-sm text-nx-ink-faint">No reactions yet.</p>
             )}
           </Card>
         </div>

@@ -16,7 +16,7 @@ export const BOARD_FEATURES_DDL = `
     seen_at TEXT,
     PRIMARY KEY (from_user_id, to_user_id, platform, post_id)
   );
-  CREATE INDEX IF NOT EXISTS post_sends_to_idx ON post_sends(to_user_id, seen_at);
+  CREATE INDEX IF NOT EXISTS post_sends_inbox_idx ON post_sends(to_user_id, seen_at, created_at DESC);
   CREATE TABLE IF NOT EXISTS moment_alert_subs (
     user_id TEXT NOT NULL,
     forming_id TEXT NOT NULL,

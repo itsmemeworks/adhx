@@ -135,7 +135,7 @@ struct SendSheet: View {
             Text("SEND VIA")
                 .font(Theme.sans(12, .heavy))
                 .tracking(0.96)
-                .foregroundStyle(Theme.faint)
+                .foregroundStyle(Theme.inkFaint)
                 .padding(.top, 6)
                 .accessibilityAddTraits(.isHeader)
             HStack(alignment: .top, spacing: 0) {
@@ -198,7 +198,7 @@ struct SendSheet: View {
                         .accessibilityAddTraits(.isHeader)
                     Text(detail)
                         .font(Theme.sans(13))
-                        .foregroundStyle(Theme.muted)
+                        .foregroundStyle(Theme.inkSoft)
                         .lineSpacing(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -214,7 +214,7 @@ struct SendSheet: View {
                         Text(sizeLine)
                             .font(Theme.sans(12))
                             .monospacedDigit()
-                            .foregroundStyle(Theme.faint)
+                            .foregroundStyle(Theme.inkFaint)
                     }
                 }
                 GeometryReader { box in
@@ -288,12 +288,12 @@ struct SendSheet: View {
             Text("OR STRAIGHT TO YOUR PEOPLE")
                 .font(Theme.sans(12, .heavy))
                 .tracking(0.72)
-                .foregroundStyle(Theme.faint)
+                .foregroundStyle(Theme.inkFaint)
                 .accessibilityAddTraits(.isHeader)
             if !targets.sendable {
                 Text("Just for you. Share it first to send it.")
                     .font(Theme.sans(14))
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
                 // The boards' row: the note beside the faces while they fit, else under them.
@@ -329,7 +329,7 @@ struct SendSheet: View {
         Text(text)
             .font(Theme.sans(12))
             .lineSpacing(2)
-            .foregroundStyle(Theme.faint)
+            .foregroundStyle(Theme.inkFaint)
             .multilineTextAlignment(.trailing)
             .fixedSize(horizontal: false, vertical: true)
     }

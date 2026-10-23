@@ -241,10 +241,10 @@ export default async function SharedTagPage({ params }: Props) {
 
 function PrivateChannel() {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-black px-6 text-center font-nx-sans text-white">
-      <Lock aria-hidden className="h-8 w-8 text-white/50" />
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-black px-6 text-center font-nx-sans text-nx-ink">
+      <Lock aria-hidden className="h-8 w-8 text-nx-ink/50" />
       <h1 className="m-0 font-nx-serif text-[36px] font-normal leading-none">Private channel</h1>
-      <p className="m-0 text-white/65">Only the person who made it can see this one.</p>
+      <p className="m-0 text-nx-ink/65">Only the person who made it can see this one.</p>
       <Link href="/" className="rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-black">
         Go to ADHX
       </Link>

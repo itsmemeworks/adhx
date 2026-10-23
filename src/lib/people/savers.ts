@@ -1,4 +1,5 @@
-import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm'
+import { postKeyBatches, postKeyWhere } from '@/lib/db/post-keys'
+import { and, desc, eq, sql, type SQL } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { bookmarks, userPreferences, users } from '@/lib/db/schema'
 import { usableAvatarUrl } from '@/lib/avatar/generated-avatar'
@@ -56,8 +57,6 @@ export function memberAvatar(avatarUrl: string | null, avatarSource: string | nu
   return avatarSource === 'generated' ? null : usableAvatarUrl(avatarUrl)
 }
 
-const CHUNK = 400
-
 /**
  * Savers for each post, keyed `platform:id`, newest saver first. Includes
  * non-banned members' visible saves plus the viewer's own save even when it
@@ -72,8 +71,7 @@ export function saversFor(
   const out = new Map<string, Saver[]>()
   if (!viewerId || keys.length === 0) return out
   const wanted = new Set(keys.map((k) => `${k.platform}:${k.id}`))
-  const ids = [...new Set(keys.map((k) => k.id))]
-  for (let i = 0; i < ids.length; i += CHUNK) {
+  for (const part of postKeyBatches(keys)) {
     const rows = db
       .select({
         platform: bookmarks.platform,
@@ -92,7 +90,7 @@ export function saversFor(
         userPreferences,
         and(eq(userPreferences.userId, bookmarks.userId), eq(userPreferences.key, 'avatarSource')),
       )
-      .where(and(inArray(bookmarks.id, ids.slice(i, i + CHUNK)), seenBy(viewerId)))
+      .where(and(postKeyWhere(bookmarks.platform, bookmarks.id, part), seenBy(viewerId)))
       .orderBy(desc(bookmarks.processedAt), users.username)
       .all()
     for (const r of rows) {
@@ -121,8 +119,7 @@ export function privateKeysFor(
 ): Set<string> {
   const out = new Set<string>()
   if (!viewerId || keys.length === 0) return out
-  const ids = [...new Set(keys.map((k) => k.id))]
-  for (let i = 0; i < ids.length; i += CHUNK) {
+  for (const part of postKeyBatches(keys)) {
     const rows = db
       .select({ platform: bookmarks.platform, id: bookmarks.id })
       .from(bookmarks)
@@ -130,7 +127,7 @@ export function privateKeysFor(
         and(
           eq(bookmarks.userId, viewerId),
           eq(bookmarks.isPrivate, true),
-          inArray(bookmarks.id, ids.slice(i, i + CHUNK)),
+          postKeyWhere(bookmarks.platform, bookmarks.id, part),
         ),
       )
       .all()

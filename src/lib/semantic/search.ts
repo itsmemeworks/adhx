@@ -1,4 +1,5 @@
-import { and, eq, inArray, like, or, sql } from 'drizzle-orm'
+import { postKeyBatches, postKeyWhere } from '@/lib/db/post-keys'
+import { and, eq, like, or, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { bookmarkLinks, bookmarkMedia, bookmarks, postEmbeddings } from '@/lib/db/schema'
 import { seenBy } from '@/lib/people/savers'
@@ -130,17 +131,9 @@ const KIND_SIGNAL: Record<UnderstandingKind, MatchSignal> = {
   video: 'video',
 }
 
-const CHUNK = 400
-
 function split(key: string): { platform: string; postId: string } {
   const at = key.indexOf(':')
   return { platform: key.slice(0, at), postId: key.slice(at + 1) }
-}
-
-function chunks<T>(items: T[]): T[][] {
-  const out: T[][] = []
-  for (let i = 0; i < items.length; i += CHUNK) out.push(items.slice(i, i + CHUNK))
-  return out
 }
 
 async function savedKeys(userId: string): Promise<Set<string>> {
@@ -162,11 +155,11 @@ export async function publishable(keys: string[], viewerId = ''): Promise<Set<st
   if (!moderated.ok) throw moderated.error
   const wanted = new Set(keys)
   const ok = new Set<string>()
-  for (const part of chunks([...new Set(keys.map((k) => split(k).postId))])) {
+  for (const part of postKeyBatches(keys)) {
     const rows = await db
       .selectDistinct({ platform: bookmarks.platform, id: bookmarks.id })
       .from(bookmarks)
-      .where(and(seenBy(viewerId), inArray(bookmarks.id, part)))
+      .where(and(seenBy(viewerId), postKeyWhere(bookmarks.platform, bookmarks.id, part)))
     for (const r of rows) {
       const key = `${r.platform}:${r.id}`
       if (wanted.has(key) && !moderated.value.has(key)) ok.add(key)
@@ -181,7 +174,7 @@ async function ofType(keys: string[], type: SearchType): Promise<Set<string>> {
   const video = new Set<string>()
   const photo = new Set<string>()
   const article = new Set<string>()
-  for (const part of chunks([...new Set(keys.map((k) => split(k).postId))])) {
+  for (const part of postKeyBatches(keys)) {
     const [media, cats, links] = await Promise.all([
       db
         .selectDistinct({
@@ -190,17 +183,22 @@ async function ofType(keys: string[], type: SearchType): Promise<Set<string>> {
           type: bookmarkMedia.mediaType,
         })
         .from(bookmarkMedia)
-        .where(inArray(bookmarkMedia.bookmarkId, part)),
+        .where(postKeyWhere(bookmarkMedia.platform, bookmarkMedia.bookmarkId, part)),
       db
         .selectDistinct({ platform: bookmarks.platform, id: bookmarks.id })
         .from(bookmarks)
-        .where(and(eq(bookmarks.category, 'article'), inArray(bookmarks.id, part))),
+        .where(
+          and(
+            eq(bookmarks.category, 'article'),
+            postKeyWhere(bookmarks.platform, bookmarks.id, part),
+          ),
+        ),
       db
         .selectDistinct({ platform: bookmarkLinks.platform, id: bookmarkLinks.bookmarkId })
         .from(bookmarkLinks)
         .where(
           and(
-            inArray(bookmarkLinks.bookmarkId, part),
+            postKeyWhere(bookmarkLinks.platform, bookmarkLinks.bookmarkId, part),
             or(
               like(bookmarkLinks.expandedUrl, '%/article/%'),
               like(bookmarkLinks.expandedUrl, '%/i/article/%'),
@@ -325,9 +323,11 @@ function flat(text: string): string {
 function keywordBodies(keys: string[]): Map<string, string> {
   const out = new Map<string, string>()
   const wanted = new Set(keys)
-  for (const part of chunks([...new Set(keys.map((k) => split(k).postId))])) {
+  for (const part of postKeyBatches(keys)) {
     const rows = db.all<{ platform: string; post_id: string; body: string }>(
-      sql`SELECT platform, post_id, body FROM post_text_fts WHERE post_id IN ${part}`,
+      sql`SELECT k.platform, k.post_id, f.body FROM post_text_keys k
+          JOIN post_text_fts f ON f.rowid = k.row_id
+          WHERE ${postKeyWhere(sql`k.platform`, sql`k.post_id`, part)} ORDER BY f.rowid`,
     )
     for (const r of rows) {
       const key = `${r.platform}:${r.post_id}`

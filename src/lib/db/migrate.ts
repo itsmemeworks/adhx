@@ -1,3 +1,4 @@
+import { QUERY_INDEX_DDL } from './query-indexes'
 /**
  * Database migration script
  *
@@ -180,6 +181,7 @@ try {
       PRIMARY KEY (user_id, platform, post_id)
     );
     CREATE INDEX IF NOT EXISTS post_views_seen_at_idx ON post_views(seen_at);
+    CREATE INDEX IF NOT EXISTS post_views_post_seen_idx ON post_views(platform, post_id, seen_at);
     CREATE TABLE IF NOT EXISTS keep_settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
@@ -544,10 +546,8 @@ try {
 
 // Create indexes
 db.exec(`
-  CREATE INDEX IF NOT EXISTS idx_bookmarks_user_id ON bookmarks(user_id);
   CREATE INDEX IF NOT EXISTS idx_bookmarks_category ON bookmarks(category);
   CREATE INDEX IF NOT EXISTS idx_bookmarks_author ON bookmarks(author);
-  CREATE INDEX IF NOT EXISTS idx_bookmarks_processed_at ON bookmarks(processed_at DESC);
   CREATE INDEX IF NOT EXISTS idx_bookmarks_created_at ON bookmarks(created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_bookmarks_source ON bookmarks(source);
 
@@ -561,7 +561,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_archived_posts_archived_at ON archived_posts(archived_at DESC);
   CREATE INDEX IF NOT EXISTS archived_posts_user_id_idx ON archived_posts(user_id);
 
-  CREATE INDEX IF NOT EXISTS idx_sync_logs_user_id ON sync_logs(user_id);
   CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON user_preferences(user_id);
 `)
 
@@ -1169,13 +1168,22 @@ try {
   console.log('[migrate] Warning: failed to create analytics_events table', error)
 }
 
-// Understanding pipeline (src/lib/semantic/). Derived data: a failure here
-// only disables search-by-meaning, so warn instead of exiting.
+// Keyword row identity and its cleanup trigger must change atomically. A
+// failed backfill must stop startup rather than serve partially indexed data.
 try {
-  db.exec(UNDERSTANDING_DDL)
-  console.log('[migrate] Ensured post_embeddings / understanding_queue tables')
+  db.transaction(() => {
+    db.exec(UNDERSTANDING_DDL)
+    if (!isSettled('keyword-rowid-lookup-v1')) {
+      db.exec(`INSERT OR REPLACE INTO post_text_keys(row_id,platform,post_id)
+        SELECT rowid,platform,post_id FROM post_text_fts`)
+      markSettled('keyword-rowid-lookup-v1')
+    }
+  })()
+  console.log('[migrate] Ensured understanding tables and keyword lookup')
 } catch (error) {
-  console.log('[migrate] Warning: failed to create understanding tables', error)
+  console.log('[migrate] FAILED ensuring understanding tables and keyword lookup', error)
+  db.close()
+  process.exit(1)
 }
 
 try {
@@ -1306,6 +1314,13 @@ for (const column of ['extracted_content', 'filed_path', 'needs_transcript'] as 
     // Column already gone (fresh DB after this drop, or a re-run).
   }
 }
+
+// Apply after every guarded column/table exists, including on already released DBs.
+// Index replacements are atomic; a failure leaves the previous indexes intact.
+db.transaction(() => db.exec(QUERY_INDEX_DDL))()
+// SQLite 3.46+ bounds this work. Statistics let it choose selective composite
+// indexes instead of relying on empty-schema estimates after an upgrade.
+db.pragma('optimize=0x10002')
 
 console.log(`[migrate] Database ready at: ${path.resolve(DB_PATH)}`)
 

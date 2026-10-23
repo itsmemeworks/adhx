@@ -99,6 +99,13 @@ export const UNDERSTANDING_DDL = `
     prefix = '2 3'
   );
 
+  CREATE TABLE IF NOT EXISTS post_text_keys (
+    row_id INTEGER PRIMARY KEY,
+    platform TEXT NOT NULL,
+    post_id TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS post_text_keys_post_idx ON post_text_keys(platform, post_id);
+
   CREATE TABLE IF NOT EXISTS post_extracted_text (
     platform TEXT NOT NULL,
     post_id TEXT NOT NULL,
@@ -120,13 +127,17 @@ export const UNDERSTANDING_DDL = `
     DELETE FROM post_extracted_text WHERE platform=OLD.platform AND post_id=OLD.id;
   END;
 
-  CREATE TRIGGER IF NOT EXISTS understanding_last_save_deleted
+  DROP TRIGGER IF EXISTS understanding_last_save_deleted;
+  CREATE TRIGGER understanding_last_save_deleted
   AFTER DELETE ON bookmarks
   WHEN NOT EXISTS (SELECT 1 FROM bookmarks WHERE platform=OLD.platform AND id=OLD.id)
   BEGIN
     DELETE FROM post_embeddings WHERE platform=OLD.platform AND post_id=OLD.id;
     DELETE FROM understanding_queue WHERE platform=OLD.platform AND post_id=OLD.id;
-    DELETE FROM post_text_fts WHERE platform=OLD.platform AND post_id=OLD.id;
+    DELETE FROM post_text_fts WHERE rowid IN (
+      SELECT row_id FROM post_text_keys WHERE platform=OLD.platform AND post_id=OLD.id
+    );
+    DELETE FROM post_text_keys WHERE platform=OLD.platform AND post_id=OLD.id;
   END;
 
   CREATE TABLE IF NOT EXISTS processing_leases (

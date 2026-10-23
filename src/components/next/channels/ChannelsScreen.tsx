@@ -107,7 +107,7 @@ export function ChannelsScreen() {
   }
 
   return (
-    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
+    <div className="min-h-dvh bg-nx-bg font-nx-sans text-nx-cream">
       <NxHeader>
         <LearningPill status={learning.status} onOpen={() => setLearningOpen(true)} />
         {/* Desktop pastes anywhere on the page (⌘V), the pill kept for keyboards; phones need it. */}
@@ -117,7 +117,7 @@ export function ChannelsScreen() {
         <h1 className="sr-only">Channels</h1>
         <div className="flex min-w-0 flex-col gap-[30px]">
           {error && (
-            <p className="m-0 text-white/70">Channels didn’t load. Refresh to try again.</p>
+            <p className="m-0 text-nx-ink/70">Channels didn’t load. Refresh to try again.</p>
           )}
 
           {!error && (
@@ -147,7 +147,7 @@ export function ChannelsScreen() {
                 ))}
               </div>
             ) : data && data.madeForYou.length === 0 ? (
-              <p className="m-0 text-sm text-nx-muted">
+              <p className="m-0 text-sm text-nx-ink-faint">
                 These appear once enough of your saves are understood. Keep saving, they’ll show up
                 here.
               </p>
@@ -165,7 +165,7 @@ export function ChannelsScreen() {
                         className="flex items-center gap-3.5 rounded-[20px] border border-white/[0.08] bg-nx-surface p-2.5"
                       >
                         {/* 20 px corners, 10 px padding, 1 px border: 9 px. */}
-                        <span className="relative block h-16 w-16 shrink-0 overflow-hidden rounded-[9px] bg-[#2a2620]">
+                        <span className="relative block h-16 w-16 shrink-0 overflow-hidden rounded-[9px] bg-nx-raised">
                           {cover?.img && (
                             <NxImage
                               src={cover.img}
@@ -176,7 +176,7 @@ export function ChannelsScreen() {
                         </span>
                         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                           <span className="truncate text-base font-extrabold">{c.name}</span>
-                          <span className="truncate text-[13px] text-nx-muted">
+                          <span className="truncate text-[13px] text-nx-ink-faint">
                             {`${countLabel(c.size)} · from what you keep`}
                           </span>
                           <button
@@ -192,7 +192,7 @@ export function ChannelsScreen() {
                         <Link
                           href={autoPlayHref(c.slug)}
                           aria-label={`Play ${c.name}, ${countLabel(c.size)}`}
-                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#2a2620] text-nx-cream"
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-nx-raised text-nx-cream"
                         >
                           <Play
                             aria-hidden
@@ -215,7 +215,7 @@ export function ChannelsScreen() {
                         <Link
                           href={autoPlayHref(c.slug)}
                           aria-label={`Play ${c.name}, ${countLabel(c.size)}`}
-                          className="relative block h-[160px] overflow-hidden rounded-[22px] bg-nx-surface text-white"
+                          className="relative block h-[160px] overflow-hidden rounded-[22px] bg-nx-surface text-nx-ink"
                         >
                           {cover?.img ? (
                             <NxImage
@@ -240,7 +240,7 @@ export function ChannelsScreen() {
                           onClick={() => void keep(c)}
                           aria-label={`Keep ${c.name} as one of your channels`}
                           // In the tile's corner: 22 − 12 = 10 px.
-                          className="absolute bottom-3 right-3 flex h-8 items-center whitespace-nowrap rounded-[10px] bg-black/55 px-3 text-xs font-extrabold text-white backdrop-blur-md hover:bg-black/75 disabled:opacity-60"
+                          className="absolute bottom-3 right-3 flex h-8 items-center whitespace-nowrap rounded-[10px] bg-black/55 px-3 text-xs font-extrabold text-nx-ink backdrop-blur-md hover:bg-black/75 disabled:opacity-60"
                         >
                           Keep
                         </button>
@@ -264,7 +264,7 @@ export function ChannelsScreen() {
               Your channels
             </h2>
             {data && data.mine.length === 0 && (
-              <p className="m-0 text-sm text-white/60">
+              <p className="m-0 text-sm text-nx-ink/60">
                 Save a post in the player and add it to a channel, or keep one of the channels made
                 for you.
               </p>
@@ -290,7 +290,7 @@ export function ChannelsScreen() {
                     </Link>
                     <span className="flex min-w-0 flex-col">
                       <span className="truncate text-[15px] font-bold">{channelTitle(c.tag)}</span>
-                      <span className="flex items-center gap-1 text-xs text-white/55">
+                      <span className="flex items-center gap-1 text-xs text-nx-ink/55">
                         {!c.isPublic && <Lock aria-hidden className="h-3 w-3" />}
                         <span>
                           {`${c.isPublic ? 'Public' : 'Private'} · ${countLabel(c.count)}${c.isPublic && c.viewCount ? ` · ${c.viewCount} views` : ''}`}
@@ -305,8 +305,8 @@ export function ChannelsScreen() {
           <TopChannels className="w-full lg:max-w-[560px]" />
         </div>
       </main>
-      <footer className="mx-auto flex max-w-[1600px] flex-wrap gap-x-4 gap-y-1 px-4 pb-10 text-[13px] text-nx-muted md:px-10">
-        <Link href="/settings" className="underline hover:text-white">
+      <footer className="mx-auto flex max-w-[1600px] flex-wrap gap-x-4 gap-y-1 px-4 pb-10 text-[13px] text-nx-ink-faint md:px-10">
+        <Link href="/settings" className="underline hover:text-nx-ink">
           Settings
         </Link>
       </footer>

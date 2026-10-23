@@ -96,10 +96,10 @@ fun ReactionsRow(ui: ReactedUi, server: String, onPlay: (Int) -> Unit) {
                     fontFamily = SerifFamily,
                     fontSize = 32.sp,
                     lineHeight = 30.sp,
-                    color = AdhxColors.White,
+                    color = AdhxColors.Ink,
                     modifier = Modifier.semantics { heading() },
                 )
-                Text(ReactionsCopy.count(ui.count, ui.more), fontSize = 14.sp, lineHeight = 18.sp, color = AdhxColors.Faint)
+                Text(ReactionsCopy.count(ui.count, ui.more), fontSize = 14.sp, lineHeight = 18.sp, color = AdhxColors.InkFaint)
             }
             Row(
                 Modifier
@@ -151,7 +151,7 @@ private fun ReactedTile(post: PhonePost, server: String, onClick: () -> Unit) {
                 fontFamily = SerifFamily,
                 fontSize = 17.sp,
                 lineHeight = 19.sp,
-                color = AdhxColors.Cream,
+                color = AdhxColors.Ink,
                 maxLines = 5,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(10.dp),

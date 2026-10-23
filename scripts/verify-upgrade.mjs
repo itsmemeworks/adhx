@@ -500,8 +500,18 @@ export async function rehearseUpgrade({ schemaFixture = false, writeSchemaFixtur
     migrate(root, restored)
     sqlite = new Database(restored)
     integrity(sqlite)
+    const reupgraded = snapshot(sqlite)
+    // A newly introduced one-time migration runs later after restoring the
+    // backup. Compare its key/value exactly, allowing only its receipt clock
+    // to differ. Existing receipt timestamps and every user/work row stay exact.
+    for (const row of reupgraded.migration_state) {
+      if (!(before.migration_state ?? []).some((old) => old.key === row.key)) {
+        const expected = first.migration_state.find((original) => original.key === row.key)
+        if (expected) row.updated_at = expected.updated_at
+      }
+    }
     assert.deepEqual(
-      snapshot(sqlite),
+      reupgraded,
       first,
       'Restored backup must support the same upgrade without lost work',
     )

@@ -143,7 +143,7 @@ private struct InviteSheet: View {
                     .accessibilityAddTraits(.isHeader)
                 Text("Anyone with this link can ask to join. Nobody gets in until you say yes.")
                     .font(Theme.sans(14))
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -198,13 +198,13 @@ private struct InviteSheet: View {
         } else if model.invites.isEmpty {
             Text("No links waiting.")
                 .font(Theme.sans(14))
-                .foregroundStyle(Theme.faint)
+                .foregroundStyle(Theme.inkFaint)
         } else {
             VStack(alignment: .leading, spacing: 8) {
                 Text("YOUR LINKS")
                     .font(Theme.sans(12, .heavy))
                     .tracking(0.7)
-                    .foregroundStyle(Theme.faint)
+                    .foregroundStyle(Theme.inkFaint)
                     .accessibilityAddTraits(.isHeader)
                 VStack(spacing: 0) {
                     ForEach(Array(model.invites.enumerated()), id: \.element.id) { index, invite in
@@ -229,7 +229,7 @@ private struct InviteSheet: View {
                     .lineLimit(1)
                 Text(detail(invite))
                     .font(Theme.sans(12))
-                    .foregroundStyle(Theme.faint)
+                    .foregroundStyle(Theme.inkFaint)
                     .lineLimit(2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -253,7 +253,7 @@ private struct InviteSheet: View {
                 } else {
                     Text("Revoke")
                         .font(Theme.sans(13, .bold))
-                        .foregroundStyle(Theme.warn)
+                        .foregroundStyle(Theme.danger)
                         .frame(minWidth: 64, minHeight: 44)
                         .contentShape(Rectangle())
                 }

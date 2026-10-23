@@ -104,7 +104,7 @@ fun ChannelsTab(feed: FeedViewModel, server: String, actions: HomeActions, heade
             }
             ui.error != null -> item(key = "error") {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(ui.error ?: Copy.CHANNELS_CANT_LOAD, fontSize = 15.sp, color = AdhxColors.Muted)
+                    Text(ui.error ?: Copy.CHANNELS_CANT_LOAD, fontSize = 15.sp, color = AdhxColors.InkSoft)
                     OutlineButton("Try again", onClick = { feed.loadChannels(force = true) }, minHeight = 44.dp)
                 }
             }
@@ -172,7 +172,7 @@ fun ChannelsTab(feed: FeedViewModel, server: String, actions: HomeActions, heade
                         Copy.CHANNELS_EMPTY,
                         fontSize = 14.sp,
                         lineHeight = 20.sp,
-                        color = AdhxColors.Faint,
+                        color = AdhxColors.InkFaint,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     )
                 }
@@ -201,10 +201,10 @@ private fun Heading(
                 fontFamily = SerifFamily,
                 fontSize = size.sp,
                 lineHeight = (size * 0.95f).sp,
-                color = AdhxColors.White,
+                color = AdhxColors.Ink,
                 modifier = Modifier.semantics { heading() },
             )
-            if (note != null) Text(note, fontSize = 14.sp, lineHeight = 18.sp, color = AdhxColors.Faint)
+            if (note != null) Text(note, fontSize = 14.sp, lineHeight = 18.sp, color = AdhxColors.InkFaint)
         }
         trailing?.invoke()
     }
@@ -218,7 +218,7 @@ fun CoverGrid(covers: List<String>, server: String, size: Dp, modifier: Modifier
         modifier
             .size(size)
             .clip(SquircleShape(corner))
-            .background(AdhxColors.Background),
+            .background(AdhxColors.Bg),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         for (row in 0..1) {
@@ -273,16 +273,16 @@ private fun GroupTile(channel: GroupChannel, server: String, onClick: () -> Unit
             fontSize = 15.sp,
             lineHeight = 19.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = AdhxColors.White,
+            color = AdhxColors.Ink,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (channel.savers.isNotEmpty()) {
-                Faces(channel.savers, server, size = 20.dp, ring = AdhxColors.Background)
+                Faces(channel.savers, server, size = 20.dp, ring = AdhxColors.Bg)
                 Spacer(Modifier.width(7.dp))
             }
-            Text(line, fontSize = 12.sp, lineHeight = 16.sp, color = AdhxColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(line, fontSize = 12.sp, lineHeight = 16.sp, color = AdhxColors.InkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -308,7 +308,7 @@ private fun PersonBubble(friend: FriendChannel, server: String, onClick: () -> U
             Box(
                 Modifier
                     .size(68.dp)
-                    .border(2.dp, if (fresh) AdhxColors.Accent else AdhxColors.Card, GobShape),
+                    .border(2.dp, if (fresh) AdhxColors.Accent else AdhxColors.Plate, GobShape),
             )
             Avatar(friend.username, friend.label, friend.avatarUrl, server, size = 60.dp)
             if (fresh) {
@@ -318,7 +318,7 @@ private fun PersonBubble(friend: FriendChannel, server: String, onClick: () -> U
                         .offset(x = 0.dp, y = 0.dp)
                         .height(22.dp)
                         .defaultMinSize(minWidth = 22.dp)
-                        .background(AdhxColors.Background, CircleShape)
+                        .background(AdhxColors.Bg, CircleShape)
                         .padding(2.dp)
                         .background(AdhxColors.Accent, CircleShape)
                         .padding(horizontal = 4.dp),
@@ -334,7 +334,7 @@ private fun PersonBubble(friend: FriendChannel, server: String, onClick: () -> U
                 }
             }
         }
-        Text(friend.label, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(friend.label, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -405,18 +405,18 @@ private fun MineRow(title: String, line: String, cover: String?, server: String,
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, fontSize = 15.sp, lineHeight = 19.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(line, fontSize = 13.sp, lineHeight = 17.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, fontSize = 15.sp, lineHeight = 19.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(line, fontSize = 13.sp, lineHeight = 17.sp, color = AdhxColors.InkFaint, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.width(12.dp))
         Box(
             Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(AdhxColors.Card),
+                .background(AdhxColors.Plate),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Glyphs.Play, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(18.dp))
+            Icon(Glyphs.Play, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(18.dp))
         }
     }
 }

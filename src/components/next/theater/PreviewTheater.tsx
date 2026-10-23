@@ -184,7 +184,7 @@ function Unavailable({
         <h1 className="m-0 font-nx-serif text-[34px] font-normal leading-tight">
           {removed ? 'This post was removed' : 'This post isn’t available'}
         </h1>
-        <p className="m-0 max-w-[440px] text-[15px] text-white/70">
+        <p className="m-0 max-w-[440px] text-[15px] text-nx-ink/70">
           {removed
             ? 'It was taken down from ADHX.'
             : 'It may have been deleted, or the account is private.'}
@@ -196,7 +196,7 @@ function Unavailable({
               href={originalUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-ink"
+              className="rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-bg"
             >
               {`Open on ${siteName(originalUrl)}`}
             </a>
@@ -206,7 +206,7 @@ function Unavailable({
             className={
               !removed && originalUrl
                 ? 'rounded-full border border-white/30 px-5 py-3 text-sm font-bold'
-                : 'rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-ink'
+                : 'rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-bg'
             }
           >
             See what’s live

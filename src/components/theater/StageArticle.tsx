@@ -93,7 +93,7 @@ function renderBlocks(blocks: ArticleMdBlock[], bionic: boolean): ReactNode[] {
         return (
           <Tag
             key={key}
-            className={cn('mb-3 mt-8 font-serif font-semibold text-white', sizeClass)}
+            className={cn('mb-3 mt-8 font-serif font-semibold text-nx-ink', sizeClass)}
             aria-label={bionic ? inlinePlainText(block.inline) : undefined}
           >
             {renderInline(block.inline, key, bionic)}
@@ -116,7 +116,7 @@ function renderBlocks(blocks: ArticleMdBlock[], bionic: boolean): ReactNode[] {
         return (
           <blockquote
             key={key}
-            className="my-6 border-l-2 border-clay/60 pl-4 italic text-white/75"
+            className="my-6 border-l-2 border-clay/60 pl-4 italic text-nx-ink/75"
             aria-label={bionic ? inlinePlainText(block.inline) : undefined}
           >
             {renderInline(block.inline, key, bionic)}
@@ -126,10 +126,10 @@ function renderBlocks(blocks: ArticleMdBlock[], bionic: boolean): ReactNode[] {
         return (
           <p
             key={key}
-            className="my-2 pl-5 text-white/85"
+            className="my-2 pl-5 text-nx-ink/85"
             aria-label={bionic ? inlinePlainText(block.inline) : undefined}
           >
-            <span className="mr-2 text-white/40" aria-hidden>
+            <span className="mr-2 text-nx-ink/40" aria-hidden>
               {block.ordered ? '•' : '—'}
             </span>
             {renderInline(block.inline, key, bionic)}
@@ -140,7 +140,7 @@ function renderBlocks(blocks: ArticleMdBlock[], bionic: boolean): ReactNode[] {
         return (
           <p
             key={key}
-            className="my-4 leading-relaxed text-white/85"
+            className="my-4 leading-relaxed text-nx-ink/85"
             aria-label={bionic ? inlinePlainText(block.inline) : undefined}
           >
             {renderInline(block.inline, key, bionic)}
@@ -239,7 +239,7 @@ export function StageArticle({ item }: StageArticleProps) {
           <div className="relative px-6 pb-8 pt-16 sm:px-10 sm:pb-10">
             <StageAuthorRow item={item} />
             <h1
-              className="font-serif text-3xl leading-tight text-white sm:text-4xl"
+              className="font-serif text-3xl leading-tight text-nx-ink sm:text-4xl"
               aria-label={bionic ? headline : undefined}
             >
               {bionic ? toBionicText(headline) : headline}
@@ -257,7 +257,7 @@ export function StageArticle({ item }: StageArticleProps) {
             dead stage. */}
         {failed && !hasReader && (
           <div className="flex flex-col items-center gap-4 px-6 pt-6 text-center">
-            <p className="text-sm text-white/50">Couldn&apos;t load the full article here.</p>
+            <p className="text-sm text-nx-ink/50">Couldn&apos;t load the full article here.</p>
             <StageCTA href={href} />
           </div>
         )}

@@ -6,6 +6,32 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-23 — Combine realtime, query and review fixes for release
+
+- Integrate the native/web streams with current design tokens, watcher/query indexes and the nine review fixes.
+- Preserve all worklog entries and both native CI regression groups; revalidate this combined release candidate.
+- Release and NAS installation remain separate from this integration commit.
+
+## 2026-10-23 — Integrate query indexes with the review fixes
+
+- Preserve the post watcher lookup and the user/recent-view index while merging the shared design system and feature-review fixes.
+- Keep both worklog histories and revalidate the combined migration, naming and native/API paths before release.
+- No live migration or deployment in this commit.
+
+## 2026-10-23 — Refresh feature-review fixes for release
+
+- Merge current main, preserving the shared design tokens, watch counts and CI improvements alongside the nine review fixes.
+- Resolve the append-only worklog conflict by retaining both sets of entries; application/native changes merge together.
+- Revalidate the integrated head before the requested release; no deployment in this commit.
+
+## 2026-10-23 — Design system, phase 1: one set of tokens on web, iOS and Android
+
+- Owner asked for one design system for web and phones; the design system artifact (tokens, guide, components) is the reference. Phase 1 moves the foundations.
+- Colour tokens now have the same names and values everywhere: web `--nx-<name>` / Tailwind `nx-<name>`, iOS `Theme.<name>`, Android `AdhxColors.<Name>`. Web renames: `nx-ink` → `nx-bg`, `nx-soft` → `nx-ink-soft`, `nx-muted` → `nx-ink-faint`, `nx-skeleton` → `nx-placeholder`, `nx-on-cream` → `nx-on-cream-soft`; `nx-ink` is now the words (#f4f1ea, replacing `text-white`). Added sheet, raised, plate, line, good, warn, live, danger, watching, paper, people, moments; bracketed hex literals with a token value became the token.
+- Value fixes: Android cream #f2ead9 and faint #a89f8d, the web's #a39b8b faint, the iOS hairline split into `hairline` (#2a2620, dividers) and `line` (#4a453e, controls). Browser theme colour is `bg`.
+- Small decided items shipped: selected tabs, segments and chips in cream (never yellow); one 48×28 switch on the web (`SwitchLook`), Android's large switch gone; 28-corner sheets on the web; serif floating words (20, three lines); reactions float 3.6s; Android shimmer and pulse stop under reduced motion.
+- Larger migrations listed for the owner in the PR (web theater to layout C, tab renames, the cream words card, bottom nav, toasts, Gob moods, empty states).
+
 ## 2026-10-22 — Stream foreground Live across web and phones
 
 - Replace native 5-second room polling with Foundation/official OkHttp SSE invalidations, coalesced serial snapshots, reconnect resync and legacy REST fallback.
@@ -14,6 +40,24 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - One shared durable-revision check catches worker-side changes for all phone subscriptions; retain existing progress, pairing, alert and worker polling.
 - Added transport/lifecycle/privacy/backpressure regressions and native CI coverage. Simulator/JVM builds are not physical-phone network verification.
 - In flight for review only; no deployment. Protocol, package choices and real-device follow-ups: `docs/realtime.md`.
+
+## 2026-10-22 — Indexed shared queries and bounded feed hydration
+
+- Audit web/phone server helpers with synthetic growth fixtures and production SQL plans.
+- Batch exact owner/platform/post keys; hydrate 40 posts in 8 statements instead of 86, preserving privacy and order.
+- Align recent-save, watched, sends, tags, queue and cleanup indexes; remove shorter/duplicate aliases and maintain bounded planner statistics.
+- Give FTS metadata a transactional rowid lookup with guarded backfill/cleanup; bound vector refresh pages and index recent inference failures.
+- Build affinity from sets, page narrow reaction identities, and make Right now ties deterministic with platform/visibility-safe naming.
+- Add plan/isolation/rollback/upgrade regressions and a linked database-performance guide with measured limits.
+- PR work only. No release, live database change, deployment or worker-setting change.
+
+## 2026-10-22 — Review new player, channel and downloader features
+
+- Record exactly which tags a group keep inserted, with their generation time; leave never guesses from a matching/generated name, and duplicate keeps are idempotent. Re-saved copies stay. Older unrecorded keeps are preserved.
+- Reject late/cancelled iOS people-row replies across posts and connection sessions; test the production model in native CI. Android combines saved/watched stickers and clears stale reply identities on refresh.
+- Preserve temporary yt-dlp failures for retry; never keep a private/missing post's login-page image. Keep ordinary picture fallback.
+- Index watchers by post for bounded reads; test an existing library's upgrade twice. Clamp narrow Android seek tracks and expose the screen-reader seek action.
+- Regression and native/server/browser checks accompany the PR. No live deployment or physical-phone verification.
 
 ## 2026-10-22 — Watch counts: who sees what
 

@@ -25,7 +25,7 @@ import {
 import { cn } from '@/lib/utils'
 import { sanitizeTag } from '@/lib/utils/tag'
 import { articleHeadline, postCoverSrc, postText } from '../post'
-import { NxImage } from '../primitives'
+import { NxImage, SwitchLook } from '../primitives'
 import { NoteField } from '../NoteField'
 import { kindOf, resultKey, type SearchResultItem } from '../search/model'
 import { isVideoItem, viaLabel } from './queue'
@@ -93,10 +93,10 @@ export function Sheet({
         tabIndex={-1}
         style={anchor ?? undefined}
         // `--nx-nest` is the curve for what lines its edges: radius − padding −
-        // border, at least 8 px. 22 − 16 on phones; 20 − 16 or 14 − 6 when wide;
+        // border, at least 8 px. 28 − 16 on phones; 20 − 16 or 14 − 6 when wide;
         // 22 − 8 − 1 = 13 beside the rail.
         className={cn(
-          'fixed inset-x-0 bottom-0 z-50 flex max-h-[78dvh] flex-col gap-3 overflow-y-auto rounded-t-[22px] bg-[#1c1b19]/[0.98] p-4 [--nx-nest:8px] pb-[max(16px,env(safe-area-inset-bottom))] font-nx-sans text-white shadow-[0_-10px_40px_rgba(0,0,0,0.5)] outline-none',
+          'fixed inset-x-0 bottom-0 z-50 flex max-h-[78dvh] flex-col gap-3 overflow-y-auto rounded-t-[28px] bg-nx-sheet/[0.98] p-4 [--nx-nest:12px] pb-[max(16px,env(safe-area-inset-bottom))] font-nx-sans text-nx-ink shadow-[0_-10px_40px_rgba(0,0,0,0.5)] outline-none',
           anchor
             ? 'md:left-auto md:top-auto md:max-h-[calc(100dvh-96px)] md:w-[308px] md:gap-0.5 md:rounded-[22px] md:border md:border-white/10 md:bg-nx-surface/[0.94] md:p-2 md:[--nx-nest:13px] md:shadow-[0_24px_60px_rgba(0,0,0,0.6)] md:backdrop-blur-xl'
             : side === 'right'
@@ -159,7 +159,7 @@ export function UpNextSheet({
             onClick={() => setFilter(f)}
             className={cn(
               'min-h-[34px] rounded-full px-3 text-[13px] font-semibold',
-              filter === f ? 'bg-white text-black' : 'bg-[#2e2c29] text-[#ddd]',
+              filter === f ? 'bg-nx-cream text-nx-on-cream' : 'bg-nx-plate text-nx-ink',
             )}
           >
             {f === 'all' ? 'All' : f === 'videos' ? 'Videos' : 'Posts'}
@@ -167,7 +167,7 @@ export function UpNextSheet({
         ))}
       </div>
       {upcoming.length === 0 ? (
-        <p className="m-0 py-6 text-center text-sm text-white/60">Nothing else queued.</p>
+        <p className="m-0 py-6 text-center text-sm text-nx-ink/60">Nothing else queued.</p>
       ) : (
         <ul className="m-0 grid list-none grid-cols-2 gap-2 p-0">
           {upcoming.map(({ item, index }, at) => {
@@ -180,7 +180,7 @@ export function UpNextSheet({
             return (
               <Fragment key={resultKey(item)}>
                 {heading && (
-                  <li className="col-span-2 flex items-center gap-2 pt-2 text-[13px] font-bold text-white/80">
+                  <li className="col-span-2 flex items-center gap-2 pt-2 text-[13px] font-bold text-nx-ink/80">
                     <Sparkles
                       aria-hidden
                       className="h-3.5 w-3.5 text-nx-accent"
@@ -203,7 +203,7 @@ export function UpNextSheet({
                         className="absolute inset-0 h-full w-full object-cover"
                       />
                     ) : (
-                      <span className="absolute inset-0 overflow-hidden bg-nx-cream p-3 font-nx-serif text-[15px] leading-[1.15] text-nx-ink">
+                      <span className="absolute inset-0 overflow-hidden bg-nx-cream p-3 font-nx-serif text-[15px] leading-[1.15] text-nx-bg">
                         {text}
                       </span>
                     )}
@@ -213,7 +213,7 @@ export function UpNextSheet({
                   </button>
                   {item.post.why && (
                     // The blended feed says why each one is coming up.
-                    <span className="mt-1 flex min-w-0 items-start gap-1 text-[12px] leading-tight text-white/65">
+                    <span className="mt-1 flex min-w-0 items-start gap-1 text-[12px] leading-tight text-nx-ink/65">
                       <WhyIcon
                         kind={whyKind(item.post)}
                         className="mt-px h-3 w-3 shrink-0 text-nx-accent"
@@ -268,25 +268,8 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   Archive: Archive,
 }
 
-/** A switch's look (the row carries the role). */
-export function SwitchLook({ on }: { on: boolean }) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        'relative h-[26px] w-11 shrink-0 rounded-full transition-colors',
-        on ? 'bg-nx-accent' : 'bg-[#4a453e]',
-      )}
-    >
-      <span
-        className={cn(
-          'absolute top-[3px] h-5 w-5 rounded-full transition-[left]',
-          on ? 'left-[21px] bg-black' : 'left-[3px] bg-nx-cream',
-        )}
-      />
-    </span>
-  )
-}
+/** The one switch's look, for the theater's rows (the row carries the role). */
+export { SwitchLook }
 
 export function MoreSheet({
   rows,
@@ -321,8 +304,8 @@ export function MoreSheet({
                 onClick={row.onSelect}
                 className={cn(
                   'flex shrink-0 items-center gap-3 rounded-[var(--nx-nest)] px-3.5 text-left text-[15px] font-semibold hover:bg-white/[0.06]',
-                  row.hint ? 'min-h-[60px] bg-[#262320] py-2 hover:bg-[#2c2925]' : 'min-h-12',
-                  row.danger ? 'text-[#ff8a7a]' : 'text-nx-cream',
+                  row.hint ? 'min-h-[60px] bg-nx-plate py-2 hover:bg-[#2c2925]' : 'min-h-12',
+                  row.danger ? 'text-nx-danger' : 'text-nx-cream',
                   row.className,
                 )}
               >
@@ -339,7 +322,7 @@ export function MoreSheet({
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span>{row.label}</span>
                   {row.hint && (
-                    <span className="text-xs font-normal text-nx-muted">{row.hint}</span>
+                    <span className="text-xs font-normal text-nx-ink-faint">{row.hint}</span>
                   )}
                 </span>
                 {row.value && (
@@ -348,7 +331,7 @@ export function MoreSheet({
                       'shrink-0 whitespace-nowrap text-[13px] font-semibold',
                       row.value === 'All' || row.value === 'This post'
                         ? 'text-nx-accent'
-                        : 'text-white/50',
+                        : 'text-nx-ink/50',
                     )}
                   >
                     {row.value}
@@ -356,7 +339,7 @@ export function MoreSheet({
                 )}
                 {switchRow && <SwitchLook on={!!row.checked} />}
                 {row.more && (
-                  <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-white/60" />
+                  <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-nx-ink/60" />
                 )}
               </button>
             </Fragment>
@@ -425,7 +408,7 @@ export function SaveSheet({
           <span className="font-nx-serif text-[34px] leading-none">
             {channelTitle(created.tag)}
           </span>
-          <span className="text-sm text-white/70">Public · anyone with the link can watch</span>
+          <span className="text-sm text-nx-ink/70">Public · anyone with the link can watch</span>
           {url && (
             <>
               <span className="max-w-full truncate rounded-full bg-white/10 px-3 py-1.5 text-[13px]">
@@ -486,11 +469,11 @@ export function SaveSheet({
           autoComplete="off"
           placeholder="Find or create a channel"
           onChange={(e) => setQuery(e.target.value)}
-          className="h-11 w-full rounded-[var(--nx-nest)] border border-white/10 bg-black/40 px-3.5 text-[15px] text-white outline-none placeholder:text-white/40 focus:border-nx-accent"
+          className="h-11 w-full rounded-[var(--nx-nest)] border border-white/10 bg-black/40 px-3.5 text-[15px] text-nx-ink outline-none placeholder:text-nx-ink/40 focus:border-nx-accent"
         />
       </form>
       {channels === null ? (
-        <p className="m-0 py-4 text-center text-sm text-white/60">Loading your channels…</p>
+        <p className="m-0 py-4 text-center text-sm text-nx-ink/60">Loading your channels…</p>
       ) : (
         <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
           {shown.map((c) => {
@@ -507,13 +490,13 @@ export function SaveSheet({
                 >
                   <span
                     aria-hidden
-                    className="flex h-[42px] w-[42px] shrink-0 items-end overflow-hidden rounded-[9px] bg-nx-cream p-1.5 font-nx-serif text-[13px] leading-none text-nx-ink"
+                    className="flex h-[42px] w-[42px] shrink-0 items-end overflow-hidden rounded-[9px] bg-nx-cream p-1.5 font-nx-serif text-[13px] leading-none text-nx-bg"
                   >
                     {c.tag}
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-sm font-semibold">{channelTitle(c.tag)}</span>
-                    <span className="text-xs text-white/55">
+                    <span className="text-xs text-nx-ink/55">
                       {`${c.isPublic ? 'Public' : 'Private'} · ${c.count === 1 ? '1 post' : `${c.count} posts`}`}
                     </span>
                   </span>
@@ -544,7 +527,7 @@ export function SaveSheet({
         </button>
       )}
       {!needle && channels !== null && channels.length === 0 && (
-        <p className="m-0 text-sm text-white/60">Type a name to start your first channel.</p>
+        <p className="m-0 text-sm text-nx-ink/60">Type a name to start your first channel.</p>
       )}
     </Sheet>
   )
@@ -571,28 +554,15 @@ export function PrivateRow({
     >
       <Lock
         aria-hidden
-        className={cn('h-[18px] w-[18px]', on ? 'text-nx-accent' : 'text-white/60')}
+        className={cn('h-[18px] w-[18px]', on ? 'text-nx-accent' : 'text-nx-ink/60')}
       />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="text-sm font-semibold">Just for me</span>
-        <span className="text-xs text-white/55">
+        <span className="text-xs text-nx-ink/55">
           {on ? 'Only you can see this save.' : 'Your people can see you saved this.'}
         </span>
       </span>
-      <span
-        aria-hidden
-        className={cn(
-          'relative h-6 w-10 shrink-0 rounded-full transition-colors',
-          on ? 'bg-nx-accent' : 'bg-white/25',
-        )}
-      >
-        <span
-          className={cn(
-            'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-[left]',
-            on ? 'left-[18px]' : 'left-0.5',
-          )}
-        />
-      </span>
+      <SwitchLook on={on} />
     </button>
   )
 }
@@ -648,7 +618,7 @@ export function ShareSheet({
           readOnly
           value={url}
           onFocus={(e) => e.currentTarget.select()}
-          className="h-11 w-full rounded-[var(--nx-nest)] bg-white/[0.08] px-3 text-[13px] text-white/85 outline-none focus:ring-2 focus:ring-nx-accent"
+          className="h-11 w-full rounded-[var(--nx-nest)] bg-white/[0.08] px-3 text-[13px] text-nx-ink/85 outline-none focus:ring-2 focus:ring-nx-accent"
         />
         <button
           type="button"
@@ -662,18 +632,18 @@ export function ShareSheet({
           <button
             type="button"
             onClick={() => void navigator.share({ url }).catch(() => {})}
-            className="h-11 rounded-[var(--nx-nest)] border border-white/25 text-[15px] font-bold text-white"
+            className="h-11 rounded-[var(--nx-nest)] border border-white/25 text-[15px] font-bold text-nx-ink"
           >
             More ways to share…
           </button>
         )}
         {copied === 'blocked' && (
-          <span role="status" className="text-[13px] text-white/70">
+          <span role="status" className="text-[13px] text-nx-ink/70">
             This browser blocked copying. The link above is selected; copy it from there.
           </span>
         )}
         {waiting && copied !== 'blocked' && (
-          <span className="text-[13px] text-white/55">Paused until you close this.</span>
+          <span className="text-[13px] text-nx-ink/55">Paused until you close this.</span>
         )}
         {post && (
           <SendToPeople
@@ -793,7 +763,7 @@ export function WhySheet({
                       onClick={() => onWeight(friend.username, on ? 0 : w)}
                       className={cn(
                         'flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-bold disabled:opacity-50',
-                        on ? 'bg-nx-cream text-black' : 'bg-white/10 text-white',
+                        on ? 'bg-nx-cream text-black' : 'bg-white/10 text-nx-ink',
                       )}
                     >
                       {w === 1 ? (
@@ -810,7 +780,7 @@ export function WhySheet({
           })}
         </div>
       )}
-      <p className="m-0 text-center text-xs text-white/55">
+      <p className="m-0 text-center text-xs text-nx-ink/55">
         No engagement bait. These are the only reasons.
       </p>
     </Sheet>

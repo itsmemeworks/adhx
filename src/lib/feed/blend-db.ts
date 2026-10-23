@@ -1,5 +1,6 @@
+import { postKeyBatches, postKeyWhere } from '@/lib/db/post-keys'
 import { randomBytes } from 'node:crypto'
-import { and, desc, eq, inArray, sql } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import {
   autoChannels,
@@ -76,7 +77,6 @@ const CLOSE_DAYS = 180
 const CLOSE_PRIOR = 4
 const SNAPSHOT_MS = 5 * 60_000
 const MAX_SNAPSHOTS = 500
-const CHUNK = 400
 const DAY = 86_400_000
 
 export type BlendItem = FeedItemResponse & {
@@ -194,8 +194,7 @@ function candidateKeys(
 function savesFor(keys: string[], viewerId: string): Map<string, BlendSave[]> {
   const wanted = new Set(keys)
   const out = new Map<string, BlendSave[]>()
-  const ids = [...new Set(keys.map((k) => split(k).id))]
-  for (let i = 0; i < ids.length; i += CHUNK) {
+  for (const part of postKeyBatches(keys)) {
     const rows = db
       .select({
         platform: bookmarks.platform,
@@ -207,7 +206,7 @@ function savesFor(keys: string[], viewerId: string): Map<string, BlendSave[]> {
       })
       .from(bookmarks)
       .innerJoin(users, eq(users.id, bookmarks.userId))
-      .where(and(inArray(bookmarks.id, ids.slice(i, i + CHUNK)), seenBy(viewerId)))
+      .where(and(postKeyWhere(bookmarks.platform, bookmarks.id, part), seenBy(viewerId)))
       .all()
     for (const r of rows) {
       const key = `${r.platform}:${r.id}`
@@ -232,17 +231,22 @@ function savesFor(keys: string[], viewerId: string): Map<string, BlendSave[]> {
 export function closenessFor(viewerId: string, now: number): Map<string, number> {
   const since = new Date(now - CLOSE_DAYS * DAY).toISOString()
   const rows = db.all<{ user_id: string; total: number; hits: number | null }>(sql`
-    SELECT b.user_id, COUNT(*) AS total,
-      SUM(CASE WHEN EXISTS (
-            SELECT 1 FROM post_views v
-            WHERE v.user_id = ${viewerId} AND v.platform = b.platform AND v.post_id = b.id)
-          OR EXISTS (
-            SELECT 1 FROM bookmarks m
-            WHERE m.user_id = ${viewerId} AND m.platform = b.platform AND m.id = b.id)
-        THEN 1 ELSE 0 END) AS hits
-    FROM bookmarks b
-    WHERE ${visibleSave('b')} AND b.user_id != ${viewerId} AND b.processed_at >= ${since}
-    GROUP BY b.user_id
+    WITH known AS (
+      SELECT platform, post_id AS id FROM post_views WHERE user_id = ${viewerId}
+      UNION
+      SELECT platform, id FROM bookmarks WHERE user_id = ${viewerId}
+    ), totals AS (
+      SELECT b.user_id, COUNT(*) AS total FROM bookmarks b
+      WHERE ${visibleSave('b')} AND b.user_id != ${viewerId} AND b.processed_at >= ${since}
+      GROUP BY b.user_id
+    ), hits AS (
+      SELECT b.user_id, COUNT(*) AS n FROM known k
+      JOIN bookmarks b ON b.platform = k.platform AND b.id = k.id
+      WHERE ${visibleSave('b')} AND b.user_id != ${viewerId} AND b.processed_at >= ${since}
+      GROUP BY b.user_id
+    )
+    SELECT t.user_id, t.total, COALESCE(h.n, 0) AS hits
+    FROM totals t LEFT JOIN hits h ON h.user_id = t.user_id
   `)
   const out = new Map<string, number>()
   for (const r of rows) {
@@ -259,8 +263,7 @@ export function closenessFor(viewerId: string, now: number): Map<string, number>
 function postVectors(keys: string[]): Map<string, Float32Array> {
   const wanted = new Set(keys)
   const sums = new Map<string, Float32Array>()
-  const ids = [...new Set(keys.map((k) => split(k).id))]
-  for (let i = 0; i < ids.length; i += CHUNK) {
+  for (const part of postKeyBatches(keys)) {
     const rows = db
       .select({
         platform: postEmbeddings.platform,
@@ -272,7 +275,7 @@ function postVectors(keys: string[]): Map<string, Float32Array> {
         and(
           eq(postEmbeddings.model, SEMANTIC_MODEL_VERSION),
           eq(postEmbeddings.status, 'ok'),
-          inArray(postEmbeddings.postId, ids.slice(i, i + CHUNK)),
+          postKeyWhere(postEmbeddings.platform, postEmbeddings.postId, part),
         ),
       )
       .all()
@@ -334,12 +337,14 @@ function keptLabels(
   }
   const rest = keys.filter((k) => !out.has(k))
   if (rest.length === 0) return out
-  const ids = [...new Set(rest.map((k) => split(k).id))]
+  const refs = rest.map(split)
   const [posts, media] = [
     db
       .select({ platform: bookmarks.platform, id: bookmarks.id, author: bookmarks.author })
       .from(bookmarks)
-      .where(and(eq(bookmarks.userId, viewerId), inArray(bookmarks.id, ids)))
+      .where(
+        and(eq(bookmarks.userId, viewerId), postKeyWhere(bookmarks.platform, bookmarks.id, refs)),
+      )
       .all(),
     db
       .select({
@@ -348,7 +353,12 @@ function keptLabels(
         type: bookmarkMedia.mediaType,
       })
       .from(bookmarkMedia)
-      .where(and(eq(bookmarkMedia.userId, viewerId), inArray(bookmarkMedia.bookmarkId, ids)))
+      .where(
+        and(
+          eq(bookmarkMedia.userId, viewerId),
+          postKeyWhere(bookmarkMedia.platform, bookmarkMedia.bookmarkId, refs),
+        ),
+      )
       .all(),
   ]
   const kinds = new Map<string, keyof typeof KIND_NOUN>()

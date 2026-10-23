@@ -170,6 +170,7 @@ Where next:
 | Use UGREEN's Docker interface                                                                                  | [UGOS Pro walkthrough](deploy/nas/ugreen.md)                                     |
 | Move video understanding and conversion to an Apple Silicon Mac                                                | [Mac helper](deploy/mac/README.md) and [how it works](docs/remote-processing.md) |
 | Know what's in a release and how images, the Android APK and TestFlight builds are made                        | [Build and release flow](docs/releasing.md)                                      |
+| Understand database indexes, query performance and growth limits                                               | [Database performance](docs/database-performance.md)                             |
 | Know exactly what your server stores and who can see it                                                        | [Privacy](PRIVACY.md)                                                            |
 
 Kept media and shared post previews can be opened by anyone who can reach your server and knows the address. Invites and the email allowlist protect accounts, not playback, so put it on a private network or VPN if that's the boundary you want.

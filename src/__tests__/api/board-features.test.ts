@@ -694,6 +694,148 @@ describe('keep a From everyone channel', () => {
     })
   })
 
+  it('leaving preserves pre-existing same-name tags and saves from another kept channel', async () => {
+    viewer = PETE
+    testInstance.db
+      .insert(schema.bookmarkTags)
+      .values({
+        userId: PETE,
+        platform: 'twitter',
+        bookmarkId: 'pasta',
+        tag: 'food-youll-cook',
+      })
+      .run()
+    save(PETE, 'other-keep', 1, { source: 'channel_keep' })
+    testInstance.db
+      .insert(schema.bookmarkTags)
+      .values({
+        userId: PETE,
+        platform: 'twitter',
+        bookmarkId: 'other-keep',
+        tag: 'food-youll-cook',
+      })
+      .run()
+    const auth = { authorization: `Bearer ${createAccessKey(PETE, 'Phone', 'phone')!.key}` }
+    const route = await import('@/app/api/app/channels/[kind]/[slug]/keep/route')
+    await route.POST(json('/api/app/channels/group/food-x1/keep', 'POST', undefined, auth))
+    const left = await route.DELETE(
+      json('/api/app/channels/group/food-x1/keep', 'DELETE', undefined, auth),
+    )
+    expect(await left.json()).toEqual({ removed: 1 })
+    expect(
+      testInstance.db
+        .select()
+        .from(schema.bookmarkTags)
+        .all()
+        .filter((r) => r.userId === PETE)
+        .map((r) => r.bookmarkId)
+        .sort(),
+    ).toEqual(['other-keep', 'pasta'])
+    expect(
+      testInstance.db
+        .select()
+        .from(schema.bookmarks)
+        .all()
+        .some((r) => r.userId === PETE && r.id === 'other-keep'),
+    ).toBe(true)
+  })
+
+  it('leaves the original kept tag after a group channel is renamed', async () => {
+    const auth = { authorization: `Bearer ${createAccessKey(PETE, 'Phone', 'phone')!.key}` }
+    const route = await import('@/app/api/app/channels/[kind]/[slug]/keep/route')
+    await route.POST(json('/api/app/channels/group/food-x1/keep', 'POST', undefined, auth))
+    testInstance.db.run(
+      sql`UPDATE group_channels SET name = 'A different name' WHERE slug = 'food-x1'`,
+    )
+    const left = await route.DELETE(
+      json('/api/app/channels/group/food-x1/keep', 'DELETE', undefined, auth),
+    )
+    expect(await left.json()).toEqual({ removed: 1 })
+    expect(
+      testInstance.db
+        .select()
+        .from(schema.bookmarkTags)
+        .all()
+        .filter((r) => r.userId === PETE),
+    ).toEqual([])
+  })
+
+  it('keeps explicit repeat saves and re-added tags when leaving', async () => {
+    const auth = { authorization: `Bearer ${createAccessKey(PETE, 'Phone', 'phone')!.key}` }
+    const route = await import('@/app/api/app/channels/[kind]/[slug]/keep/route')
+    await route.POST(json('/api/app/channels/group/food-x1/keep', 'POST', undefined, auth))
+    const { applyRepeatSave } = await import('@/lib/bookmarks/privacy')
+    applyRepeatSave({ userId: PETE, platform: 'twitter', id: 'steak' }, {})
+    testInstance.db.run(
+      sql`UPDATE bookmark_tags SET created_at = '2099-01-01T00:00:00.000Z' WHERE user_id = ${PETE} AND bookmark_id = 'pasta'`,
+    )
+    const left = await route.DELETE(
+      json('/api/app/channels/group/food-x1/keep', 'DELETE', undefined, auth),
+    )
+    expect(await left.json()).toEqual({ removed: 0 })
+    expect(
+      testInstance.db
+        .select()
+        .from(schema.bookmarks)
+        .all()
+        .filter((r) => r.userId === PETE)
+        .map((r) => r.id)
+        .sort(),
+    ).toEqual(['pasta', 'steak'])
+    expect(
+      testInstance.db
+        .select()
+        .from(schema.bookmarkTags)
+        .all()
+        .filter((r) => r.userId === PETE)
+        .map((r) => r.bookmarkId),
+    ).toEqual(['pasta'])
+  })
+
+  it('leaves even after the generated channel disappears and serializes duplicate keeps', async () => {
+    const auth = { authorization: `Bearer ${createAccessKey(PETE, 'Phone', 'phone')!.key}` }
+    const route = await import('@/app/api/app/channels/[kind]/[slug]/keep/route')
+    const responses = await Promise.all([
+      route.POST(json('/api/app/channels/group/food-x1/keep', 'POST', undefined, auth)),
+      route.POST(json('/api/app/channels/group/food-x1/keep', 'POST', undefined, auth)),
+    ])
+    expect((await Promise.all(responses.map((r) => r.json()))).map((r) => r.added).sort()).toEqual([
+      0, 2,
+    ])
+    testInstance.db.run(sql`DELETE FROM group_channels WHERE slug = 'food-x1'`)
+    const left = await route.DELETE(
+      json('/api/app/channels/group/food-x1/keep', 'DELETE', undefined, auth),
+    )
+    expect(await left.json()).toEqual({ removed: 1 })
+    expect(
+      testInstance.db
+        .select()
+        .from(schema.bookmarkTags)
+        .all()
+        .filter((r) => r.userId === PETE),
+    ).toEqual([])
+  })
+
+  it('does not guess ownership of a channel kept before provenance was recorded', async () => {
+    testInstance.db
+      .insert(schema.bookmarkTags)
+      .values({ userId: PETE, platform: 'twitter', bookmarkId: 'pasta', tag: 'food-youll-cook' })
+      .run()
+    const auth = { authorization: `Bearer ${createAccessKey(PETE, 'Phone', 'phone')!.key}` }
+    const route = await import('@/app/api/app/channels/[kind]/[slug]/keep/route')
+    const left = await route.DELETE(
+      json('/api/app/channels/group/food-x1/keep', 'DELETE', undefined, auth),
+    )
+    expect(left.status).toBe(404)
+    expect(
+      testInstance.db
+        .select()
+        .from(schema.bookmarkTags)
+        .all()
+        .some((r) => r.userId === PETE && r.bookmarkId === 'pasta'),
+    ).toBe(true)
+  })
+
   it('leaves from the phone: the channel goes, with only the saves the keep added', async () => {
     const key = createAccessKey(PETE, 'Phone', 'phone')!.key
     const auth = { authorization: `Bearer ${key}` }

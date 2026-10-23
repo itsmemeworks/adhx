@@ -65,7 +65,7 @@ export function AdhxLoader({
   return (
     <div
       role="status"
-      className={cn('flex flex-col items-center gap-[22px] text-white', className)}
+      className={cn('flex flex-col items-center gap-[22px] text-nx-ink', className)}
     >
       <span className="flex flex-col items-center">
         <AdhxFace size={size} bounce />
@@ -122,13 +122,13 @@ export function StageSkeleton({ className }: { className?: string }) {
         aria-hidden
         className="absolute bottom-[30px] left-3.5 right-[60px] flex flex-col gap-2"
       >
-        <span className="block h-3 w-1/2 rounded-md bg-nx-skeleton" />
-        <span className="block h-3 w-[90%] rounded-md bg-nx-skeleton" />
-        <span className="block h-3 w-[70%] rounded-md bg-nx-skeleton" />
+        <span className="block h-3 w-1/2 rounded-md bg-nx-placeholder" />
+        <span className="block h-3 w-[90%] rounded-md bg-nx-placeholder" />
+        <span className="block h-3 w-[70%] rounded-md bg-nx-placeholder" />
       </span>
       <span aria-hidden className="absolute bottom-[120px] right-2.5 flex flex-col gap-3">
         {[0, 1, 2].map((i) => (
-          <span key={i} className="block h-10 w-10 rounded-full bg-nx-skeleton" />
+          <span key={i} className="block h-10 w-10 rounded-full bg-nx-placeholder" />
         ))}
       </span>
     </div>
@@ -185,13 +185,13 @@ export function PasteToast({
       aria-live="polite"
       data-state={state}
       className={cn(
-        'flex w-full max-w-[380px] animate-nx-drop items-center gap-3 rounded-2xl bg-nx-surface/[.97] py-2.5 pl-2.5 pr-3.5 font-nx-sans text-white shadow-nx-toast',
+        'flex w-full max-w-[380px] animate-nx-drop items-center gap-3 rounded-2xl bg-nx-surface/[.97] py-2.5 pl-2.5 pr-3.5 font-nx-sans text-nx-ink shadow-nx-toast',
         className,
       )}
     >
       {state === 'saved' && thumbSrc ? (
         // In the toast's corner: 16 − 10 leaves the 8 px floor (its button too).
-        <span className="relative block h-11 w-11 shrink-0 overflow-hidden rounded-[8px] bg-nx-skeleton">
+        <span className="relative block h-11 w-11 shrink-0 overflow-hidden rounded-[8px] bg-nx-placeholder">
           <NxImage src={thumbSrc} alt="" className="absolute inset-0 h-full w-full object-cover" />
         </span>
       ) : (
@@ -202,7 +202,7 @@ export function PasteToast({
         {detail && (
           <span
             className={cn(
-              'text-[12px] text-nx-muted',
+              'text-[12px] text-nx-ink-faint',
               state === 'grabbing' ? 'truncate' : 'line-clamp-2',
             )}
           >

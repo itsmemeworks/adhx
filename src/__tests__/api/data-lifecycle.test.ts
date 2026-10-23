@@ -82,6 +82,11 @@ function understood(id: string) {
   testInstance.sqlite
     .prepare(`INSERT INTO post_text_fts (platform, post_id, body) VALUES ('twitter', ?, 'words')`)
     .run(id)
+  testInstance.sqlite
+    .prepare(
+      `INSERT INTO post_text_keys(row_id,platform,post_id) VALUES(last_insert_rowid(),'twitter',?)`,
+    )
+    .run(id)
 }
 
 function understanding(id: string) {

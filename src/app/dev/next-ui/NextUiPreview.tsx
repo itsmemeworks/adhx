@@ -64,7 +64,7 @@ function Section({ title, note, children }: { title: string; note: string; child
         <h2 className="m-0 font-nx-serif text-[30px] font-normal leading-tight sm:text-[38px]">
           {title}
         </h2>
-        <span className="text-[14px] text-nx-muted">{note}</span>
+        <span className="text-[14px] text-nx-ink-faint">{note}</span>
       </div>
       {children}
     </section>
@@ -75,7 +75,7 @@ function Labelled({ label, children }: { label: string; children: ReactNode }) {
   return (
     <figure className="m-0 flex min-w-0 flex-col gap-2">
       {children}
-      <figcaption className="text-[12px] text-nx-muted">{label}</figcaption>
+      <figcaption className="text-[12px] text-nx-ink-faint">{label}</figcaption>
     </figure>
   )
 }
@@ -93,7 +93,7 @@ function Row({ children, style }: { children: ReactNode; style?: CSSProperties }
 
 function Missing({ what }: { what: string }) {
   return (
-    <p className="m-0 rounded-xl border border-dashed border-nx-hairline px-4 py-3 text-[13px] text-nx-muted">
+    <p className="m-0 rounded-xl border border-dashed border-nx-hairline px-4 py-3 text-[13px] text-nx-ink-faint">
       {`No saved ${what} to show yet.`}
     </p>
   )
@@ -170,7 +170,7 @@ export function NextUiPreview() {
   const savedItem = tallVideo ?? album ?? kinds.gif[0]
 
   return (
-    <main className="min-h-screen bg-nx-ink font-nx-sans text-nx-cream">
+    <main className="min-h-screen bg-nx-bg font-nx-sans text-nx-cream">
       <div className="mx-auto flex max-w-[1440px] flex-col gap-10 px-4 py-8 sm:px-8 sm:py-10">
         <header className="flex flex-col gap-4">
           <div className="flex items-center gap-3">
@@ -179,7 +179,7 @@ export function NextUiPreview() {
               The new look
             </h1>
           </div>
-          <p className="m-0 max-w-[720px] text-[15px] leading-relaxed text-nx-soft">
+          <p className="m-0 max-w-[720px] text-[15px] leading-relaxed text-nx-ink-soft">
             Every card, stage and loading state for the redesign, drawn with your saved posts.
             Nothing here is live yet — pages switch over behind the next_ui flag.
           </p>

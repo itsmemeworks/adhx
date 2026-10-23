@@ -73,11 +73,8 @@ import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.SettingsCopy
 import com.adhx.share.ui.SquircleShape
 
-/** Green: it plays already. */
-private val Playable = Color(0xFF7FD1AE)
-
 /** The row a download that gave up sits in. */
-private val NeedsYouBorder = Color(0xFFFF5A3C).copy(alpha = 0.5f)
+private val NeedsYouBorder = AdhxColors.Live.copy(alpha = 0.5f)
 
 /** Asks `/api/app/doing` while the screen holding it is in front. */
 @Composable
@@ -138,11 +135,11 @@ fun DoingPill(count: Int, needsYou: Int, onClick: () -> Unit, modifier: Modifier
         CircularProgressIndicator(
             modifier = Modifier.size(14.dp),
             color = AdhxColors.Accent,
-            trackColor = AdhxColors.Hairline,
+            trackColor = AdhxColors.Line,
             strokeWidth = 2.5.dp,
         )
         Spacer(Modifier.width(8.dp))
-        Text(label, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Cream, modifier = Modifier.clearAndSetSemantics { })
+        Text(label, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Ink, modifier = Modifier.clearAndSetSemantics { })
     }
 }
 
@@ -179,15 +176,15 @@ fun DoingSheet(
                     fontFamily = SerifFamily,
                     fontSize = 32.sp,
                     lineHeight = 34.sp,
-                    color = AdhxColors.White,
+                    color = AdhxColors.Ink,
                     modifier = Modifier.weight(1f).semantics { heading() },
                 )
                 if (ui.needsYou > 0) {
-                    Text(SettingsCopy.needsYou(ui.needsYou), fontSize = 13.sp, color = AdhxColors.Faint, modifier = Modifier.padding(bottom = 4.dp))
+                    Text(SettingsCopy.needsYou(ui.needsYou), fontSize = 13.sp, color = AdhxColors.InkFaint, modifier = Modifier.padding(bottom = 4.dp))
                 }
             }
             if (shown.isEmpty()) {
-                Text(SettingsCopy.DOING_EMPTY, fontSize = 15.sp, color = AdhxColors.Muted)
+                Text(SettingsCopy.DOING_EMPTY, fontSize = 15.sp, color = AdhxColors.InkSoft)
             }
             shown.forEach { item ->
                 DoingRow(
@@ -203,7 +200,7 @@ fun DoingSheet(
             Text(
                 SettingsCopy.ON_YOUR_SERVER,
                 fontSize = 12.sp,
-                color = AdhxColors.Faint,
+                color = AdhxColors.InkFaint,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
@@ -230,7 +227,7 @@ fun DoingRow(
         Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(AdhxColors.Button)
+            .background(AdhxColors.Plate)
             .then(if (item.needsYou) Modifier.border(1.dp, NeedsYouBorder, shape) else Modifier)
             .padding(10.dp)
             .semantics(mergeDescendants = true) { },
@@ -244,7 +241,7 @@ fun DoingRow(
                 fontSize = 14.sp,
                 lineHeight = 18.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = AdhxColors.White,
+                color = AdhxColors.Ink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -253,7 +250,7 @@ fun DoingRow(
                 note ?: SettingsCopy.doingLine(item),
                 fontSize = 12.sp,
                 lineHeight = 15.sp,
-                color = AdhxColors.Muted,
+                color = AdhxColors.InkSoft,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -269,9 +266,9 @@ fun DoingRow(
                 contentAlignment = Alignment.Center,
             ) {
                 if (retrying) {
-                    CircularProgressIndicator(Modifier.size(18.dp), color = AdhxColors.Black, strokeWidth = 2.dp)
+                    CircularProgressIndicator(Modifier.size(18.dp), color = AdhxColors.OnCream, strokeWidth = 2.dp)
                 } else {
-                    Text(SettingsCopy.RETRY, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Black)
+                    Text(SettingsCopy.RETRY, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.OnCream)
                 }
             }
         }
@@ -302,8 +299,8 @@ private fun Thumb(item: DoingItem, server: String) {
 private fun Bar(item: DoingItem) {
     val fraction = SettingsCopy.doingProgress(item)
     val color = when {
-        item.playable || item.ready -> Playable
-        item.status == com.adhx.share.net.DoingStatus.WAITING -> AdhxColors.Faint
+        item.playable || item.ready -> AdhxColors.Good
+        item.status == com.adhx.share.net.DoingStatus.WAITING -> AdhxColors.InkFaint
         else -> AdhxColors.Accent
     }
     Box(
@@ -311,7 +308,7 @@ private fun Bar(item: DoingItem) {
             .fillMaxWidth()
             .height(4.dp)
             .clip(RoundedCornerShape(2.dp))
-            .background(AdhxColors.Hairline)
+            .background(AdhxColors.Line)
             .clearAndSetSemantics { },
     ) {
         Box(
@@ -343,7 +340,7 @@ fun DoingScreen(doing: DoingViewModel, server: String, onBack: () -> Unit) {
     Column(
         Modifier
             .fillMaxSize()
-            .background(AdhxColors.Background)
+            .background(AdhxColors.Bg)
             .statusBarsPadding()
             .padding(horizontal = 16.dp),
     ) {
@@ -354,14 +351,14 @@ fun DoingScreen(doing: DoingViewModel, server: String, onBack: () -> Unit) {
                 SettingsCopy.DOING,
                 fontFamily = SerifFamily,
                 fontSize = 26.sp,
-                color = AdhxColors.White,
+                color = AdhxColors.Ink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.semantics { heading() },
             )
         }
         SettingsCopy.doingSummary(ui.view?.summary)?.let {
-            Text(it, fontSize = 14.sp, color = AdhxColors.Faint, modifier = Modifier.padding(bottom = 12.dp))
+            Text(it, fontSize = 14.sp, color = AdhxColors.InkFaint, modifier = Modifier.padding(bottom = 12.dp))
         }
         Segmented(
             options = SettingsCopy.DOING_FILTERS,
@@ -372,16 +369,16 @@ fun DoingScreen(doing: DoingViewModel, server: String, onBack: () -> Unit) {
         )
         Spacer(Modifier.height(14.dp))
         when {
-            ui.unavailable -> Text(SettingsCopy.DOING_UNAVAILABLE, fontSize = 15.sp, color = AdhxColors.Muted)
+            ui.unavailable -> Text(SettingsCopy.DOING_UNAVAILABLE, fontSize = 15.sp, color = AdhxColors.InkSoft)
             ui.view == null && ui.error != null -> {
-                Text(ui.error ?: SettingsCopy.DOING_CANT_LOAD, fontSize = 15.sp, color = AdhxColors.Muted)
+                Text(ui.error ?: SettingsCopy.DOING_CANT_LOAD, fontSize = 15.sp, color = AdhxColors.InkSoft)
                 Spacer(Modifier.height(12.dp))
                 OutlineButton("Try again", onClick = doing::refresh, minHeight = 44.dp)
             }
             ui.view == null -> Box(Modifier.fillMaxWidth().padding(top = 30.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(Modifier.size(34.dp), color = AdhxColors.Accent, trackColor = AdhxColors.Hairline, strokeWidth = 3.dp)
+                CircularProgressIndicator(Modifier.size(34.dp), color = AdhxColors.Accent, trackColor = AdhxColors.Line, strokeWidth = 3.dp)
             }
-            items.isEmpty() -> Text(SettingsCopy.DOING_EMPTY, fontSize = 15.sp, color = AdhxColors.Faint)
+            items.isEmpty() -> Text(SettingsCopy.DOING_EMPTY, fontSize = 15.sp, color = AdhxColors.InkFaint)
             else -> LazyColumn(
                 Modifier.fillMaxWidth().weight(1f),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -400,7 +397,7 @@ fun DoingScreen(doing: DoingViewModel, server: String, onBack: () -> Unit) {
                     Text(
                         SettingsCopy.ON_YOUR_SERVER,
                         fontSize = 12.sp,
-                        color = AdhxColors.Faint,
+                        color = AdhxColors.InkFaint,
                         modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 16.dp),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     )

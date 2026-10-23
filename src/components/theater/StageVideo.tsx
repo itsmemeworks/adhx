@@ -849,7 +849,7 @@ export function StageVideo({
               e.stopPropagation()
               handleStartTap()
             }}
-            className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-md"
+            className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-black/55 text-nx-ink backdrop-blur-md"
             aria-label="Play video"
           >
             <Play size={26} fill="currentColor" />
@@ -866,21 +866,21 @@ export function StageVideo({
           the way past it. */}
       {errored && unavailableReason && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-[#08070a]/70 px-6 text-center">
-          <p className="max-w-xs text-sm text-white/70">{unavailableReason}</p>
+          <p className="max-w-xs text-sm text-nx-ink/70">{unavailableReason}</p>
         </div>
       )}
 
       {/* Generic playback error fallback: poster stays visible, offer a retry. */}
       {errored && !unavailableReason && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[#08070a]/70 text-center">
-          <p className="max-w-xs text-sm text-white/70">This video couldn&apos;t load.</p>
+          <p className="max-w-xs text-sm text-nx-ink/70">This video couldn&apos;t load.</p>
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation()
               handleStartTap()
             }}
-            className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-sm font-semibold text-white"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-sm font-semibold text-nx-ink"
           >
             <RotateCcw size={15} />
             <span>Try again</span>

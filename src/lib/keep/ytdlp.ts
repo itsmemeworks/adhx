@@ -58,18 +58,26 @@ export interface YtdlpInfo {
   _type?: string
 }
 
-const PERMANENT = [
-  /no video formats found/i,
-  /unsupported url/i,
+const UNAVAILABLE = [
   /video (?:is )?unavailable/i,
-  /private video/i,
-  /this video (?:has been|is) (?:removed|deleted|no longer available)/i,
+  /private (?:video|post)|(?:video|post) is private/i,
+  /this (?:video|post) (?:has been|is) (?:removed|deleted|no longer available)/i,
   /does not exist/i,
   /\b404\b/,
-  /there is no video in this/i,
-  /not a video/i,
   /drm protected/i,
 ]
+const PERMANENT = [
+  ...UNAVAILABLE,
+  /no video formats found/i,
+  /unsupported url/i,
+  /there is no video in this|no video could be found/i,
+  /not a video/i,
+]
+
+/** A missing, private or protected post; its page preview is never its media. */
+export function isUnavailable(message: string): boolean {
+  return UNAVAILABLE.some((re) => re.test(message))
+}
 
 const SIGN_IN_ONLY = [
   // TikTok: "This post may not be comfortable for some audiences. Log in for access."

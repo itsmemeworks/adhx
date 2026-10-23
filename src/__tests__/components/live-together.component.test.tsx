@@ -153,6 +153,10 @@ describe('ReactionFloats and the arrival toast', () => {
     expect(items[0].querySelector('[data-shape="gob"]')).not.toBeNull()
     expect(items[1]).toHaveTextContent('Jo said:<b>who sent this</b> 💀')
     expect(items[1].querySelector('b')).toBeNull()
+    // Words float in the serif, at most three lines.
+    const words = within(items[1]).getByText('<b>who sent this</b> 💀')
+    expect(words).toHaveClass('line-clamp-3')
+    expect(words.parentElement).toHaveClass('font-nx-serif', 'text-[20px]')
     expect(items[2]).toHaveTextContent('You: Fire')
     expect(personColour('jo')).toBe(personColour('jo'))
   })

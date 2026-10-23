@@ -1,3 +1,4 @@
+import { QUERY_INDEX_DDL } from '@/lib/db/query-indexes'
 import { SAVE_VISIBILITY_DDL } from '@/lib/bookmarks/visibility-sql'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
@@ -358,6 +359,7 @@ export const FULL_SCHEMA_SQL = `
     PRIMARY KEY (user_id, platform, post_id)
   );
   CREATE INDEX post_views_seen_at_idx ON post_views(seen_at);
+  CREATE INDEX post_views_post_seen_idx ON post_views(platform, post_id, seen_at);
   CREATE TABLE keep_settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -437,6 +439,7 @@ export function createTestDb(): TestDbInstance {
   sqlite.pragma('foreign_keys = ON')
   sqlite.exec(FULL_SCHEMA_SQL)
   sqlite.exec(UNDERSTANDING_DDL)
+  sqlite.exec(QUERY_INDEX_DDL)
 
   const db = drizzle(sqlite, { schema })
 

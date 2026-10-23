@@ -119,7 +119,7 @@ fun LiveTab(feed: FeedViewModel, server: String, actions: HomeActions, header: @
                 fontFamily = SerifFamily,
                 fontSize = 36.sp,
                 lineHeight = 34.sp,
-                color = AdhxColors.White,
+                color = AdhxColors.Ink,
                 modifier = Modifier
                     .padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 9.dp)
                     .semantics { heading() },
@@ -131,7 +131,7 @@ fun LiveTab(feed: FeedViewModel, server: String, actions: HomeActions, header: @
             }
             ui.moments.isEmpty() && ui.error != null -> item(key = "error") {
                 Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(ui.error ?: Copy.LIVE_CANT_LOAD, fontSize = 15.sp, color = AdhxColors.Muted)
+                    Text(ui.error ?: Copy.LIVE_CANT_LOAD, fontSize = 15.sp, color = AdhxColors.InkSoft)
                     OutlineButton("Try again", onClick = feed::loadLive, minHeight = 44.dp)
                 }
             }
@@ -158,8 +158,8 @@ private fun NothingLive() {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Image(painterResource(R.drawable.ic_gob), contentDescription = null, modifier = Modifier.size(64.dp))
-        Text(Copy.LIVE_EMPTY_TITLE, fontFamily = SerifFamily, fontSize = 28.sp, color = AdhxColors.White)
-        Text(Copy.LIVE_EMPTY_NOTE, fontSize = 14.sp, lineHeight = 20.sp, color = AdhxColors.Faint)
+        Text(Copy.LIVE_EMPTY_TITLE, fontFamily = SerifFamily, fontSize = 28.sp, color = AdhxColors.Ink)
+        Text(Copy.LIVE_EMPTY_NOTE, fontSize = 14.sp, lineHeight = 20.sp, color = AdhxColors.InkFaint)
     }
 }
 
@@ -194,12 +194,6 @@ fun LiveBadge(modifier: Modifier = Modifier, height: Dp = 30.dp, border: Boolean
     }
 }
 
-/** The ring round the live moment's card (the boards' pink). */
-private val LiveRing = Color(0xFFFF8FA3)
-
-/** The green ring round the faces of people watching now. */
-val WatchingGreen = Color(0xFF5EE38A)
-
 /** The first moment: a mosaic of its covers, LIVE, who's watching, its name, and Tune in. */
 @Composable
 private fun BigMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit) {
@@ -215,7 +209,7 @@ private fun BigMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit) 
             .padding(horizontal = 16.dp, vertical = 5.dp)
             .clip(SquircleShape(26.dp))
             .background(AdhxColors.Surface)
-            .then(if (moment.live) Modifier.border(2.dp, LiveRing, SquircleShape(26.dp)) else Modifier)
+            .then(if (moment.live) Modifier.border(2.dp, AdhxColors.Person2, SquircleShape(26.dp)) else Modifier)
             .clickable(onClickLabel = Copy.TUNE_IN, onClick = onTuneIn)
             // The board's 2dp ring sits outside its 8dp of padding; border() draws inside this box.
             .padding(if (moment.live) 10.dp else 8.dp)
@@ -255,7 +249,7 @@ private fun BigMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit) 
                 ) {
                     val faces = moment.watchers.ifEmpty { moment.savers }
                     if (faces.isNotEmpty()) {
-                        Faces(faces, server, size = 24.dp, ring = WatchingGreen)
+                        Faces(faces, server, size = 24.dp, ring = AdhxColors.Watching)
                         Spacer(Modifier.width(8.dp))
                     }
                     Text(watching, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
@@ -269,10 +263,10 @@ private fun BigMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit) 
                 fontFamily = SerifFamily,
                 fontSize = 32.sp,
                 lineHeight = 30.4.sp,
-                color = AdhxColors.White,
+                color = AdhxColors.Ink,
                 modifier = Modifier.serifLineBox(32.sp, 30.4.sp),
             )
-            if (line.isNotBlank()) Text(line, fontSize = 13.sp, color = AdhxColors.Muted, modifier = Modifier.sansLineBox(13.sp))
+            if (line.isNotBlank()) Text(line, fontSize = 13.sp, color = AdhxColors.InkSoft, modifier = Modifier.sansLineBox(13.sp))
         }
         Row(
             Modifier
@@ -327,13 +321,13 @@ private fun SmallMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit
                     Text(Copy.LIVE_BADGE, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.9.sp, color = AdhxColors.Live)
                 }
             }
-            Text(moment.label, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(moment.label, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (moment.savers.isNotEmpty()) {
                     Faces(moment.savers, server, size = 20.dp, ring = AdhxColors.Surface)
                     Spacer(Modifier.width(6.dp))
                 }
-                if (line.isNotBlank()) Text(line, fontSize = 13.sp, color = AdhxColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (line.isNotBlank()) Text(line, fontSize = 13.sp, color = AdhxColors.InkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         Spacer(Modifier.width(12.dp))
@@ -341,10 +335,10 @@ private fun SmallMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit
             Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(AdhxColors.Card),
+                .background(AdhxColors.Plate),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Glyphs.Play, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(18.dp))
+            Icon(Glyphs.Play, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -396,13 +390,13 @@ private fun FormingRow(forming: FormingMoment, server: String, busy: Boolean = f
                         .drawBehind { dashedOutline(AdhxColors.Accent.copy(alpha = 0.7f), RoundedCornerShape(50)) }
                         .padding(horizontal = 9.dp, vertical = 4.dp),
                 )
-                Text(forming.title, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(forming.title, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (forming.people.isNotEmpty()) {
                         Faces(forming.people, server, size = 20.dp, max = 4, ring = AdhxColors.Surface)
                         Spacer(Modifier.width(7.dp))
                     }
-                    Text(line, fontSize = 13.sp, color = AdhxColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(line, fontSize = 13.sp, color = AdhxColors.InkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -420,12 +414,12 @@ private fun BellButton(title: String, on: Boolean, busy: Boolean, onClick: () ->
         Modifier
             .size(44.dp)
             .clip(CircleShape)
-            .background(if (on) AdhxColors.Accent else AdhxColors.Card)
+            .background(if (on) AdhxColors.Accent else AdhxColors.Plate)
             .toggleable(value = on, enabled = !busy, role = Role.Switch, onValueChange = { onClick() })
             .semantics { contentDescription = Copy.tellMeWhen(title) },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Glyphs.Bell, contentDescription = null, tint = if (on) Color.Black else AdhxColors.White, modifier = Modifier.size(18.dp))
+        Icon(Glyphs.Bell, contentDescription = null, tint = if (on) Color.Black else AdhxColors.Ink, modifier = Modifier.size(18.dp))
     }
 }
 

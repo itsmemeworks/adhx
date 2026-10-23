@@ -275,7 +275,7 @@ private struct LiveCard: View {
                         HStack(spacing: 8) {
                             if !moment.watchers.isEmpty {
                                 FaceStack(savers: moment.watchers, server: server, size: 24,
-                                          ring: Color(hex: 0x5EE38A))
+                                          ring: Theme.watching)
                             }
                             Text(watching)
                                 .font(Theme.sans(13, .semibold))
@@ -303,7 +303,7 @@ private struct LiveCard: View {
                 if !metaLine.isEmpty {
                     Text(metaLine)
                         .font(Theme.sans(13))
-                        .foregroundStyle(Theme.muted)
+                        .foregroundStyle(Theme.inkSoft)
                         .lineLimit(2)
                 }
             }
@@ -322,7 +322,7 @@ private struct LiveCard: View {
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 26, style: .continuous).fill(Theme.surface))
         .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous)
-            .strokeBorder(Theme.hue(moment.hue) ?? Color(hex: 0xFF8FA3), lineWidth: 2))
+            .strokeBorder(Theme.hue(moment.hue) ?? Theme.person2, lineWidth: 2))
     }
 
     /// "3 of you watching".
@@ -379,7 +379,7 @@ private struct QuietMomentRow: View {
                         Text(label.uppercased())
                             .font(Theme.sans(11, .heavy))
                             .tracking(0.88)
-                            .foregroundStyle(Theme.faint)
+                            .foregroundStyle(Theme.inkFaint)
                     }
                 }
                 Text(moment.name)
@@ -391,7 +391,7 @@ private struct QuietMomentRow: View {
                         FaceStack(savers: moment.savers, server: server, size: 20, ring: Theme.surface)
                         Text(SaverWords.who(moment.savers))
                             .font(Theme.sans(13))
-                            .foregroundStyle(Theme.muted)
+                            .foregroundStyle(Theme.inkSoft)
                             .lineLimit(1)
                     }
                 }
@@ -455,7 +455,7 @@ private struct FormingRow: View {
                         }
                         Text(group.toGoLine)
                             .font(Theme.sans(13))
-                            .foregroundStyle(Theme.muted)
+                            .foregroundStyle(Theme.inkSoft)
                             .lineLimit(1)
                     }
                 }
@@ -693,7 +693,7 @@ struct TunedInScreen: View {
                             .foregroundStyle(.white)
                         Text(model.loadError ?? (model.gone ? "Everyone’s moved on. Plenty more on Home." : "Hang on, your lot are saving."))
                             .font(Theme.sans(15))
-                            .foregroundStyle(Theme.muted)
+                            .foregroundStyle(Theme.inkSoft)
                         if model.loadError != nil {
                             Button("Try again") { Task { await model.refresh() } }.buttonStyle(PillButtonStyle(kind: .primary))
                         }
@@ -702,7 +702,7 @@ struct TunedInScreen: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Theme.app.ignoresSafeArea())
+                .background(Theme.bg.ignoresSafeArea())
             }
             FloatingReactions(reactions: model.floating, server: server)
                 .padding(.top, 200)
@@ -724,7 +724,7 @@ struct TunedInScreen: View {
                 }
             }
         }
-        .background(Color.black.ignoresSafeArea())
+        .background(Theme.stage.ignoresSafeArea())
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: model.arrival)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: picking)
         .task(id: scenePhase) {
@@ -766,7 +766,7 @@ struct TunedInScreen: View {
                             .foregroundStyle(.white)
                         Text("up next")
                             .font(Theme.sans(14))
-                            .foregroundStyle(Theme.muted)
+                            .foregroundStyle(Theme.inkSoft)
                     }
                     .lineLimit(1)
                     Spacer(minLength: 0)
@@ -814,7 +814,7 @@ struct TunedInScreen: View {
         let unnamed = max(0, (model.moment.watching ?? 1) - 1 - others.count)
         return HStack(spacing: 9) {
             if !others.isEmpty {
-                FaceStack(savers: others, server: server, size: 26, ring: Color(hex: 0x5EE38A))
+                FaceStack(savers: others, server: server, size: 26, ring: Theme.watching)
             }
             // The names when they fit; the faces say who when they don't.
             ViewThatFits(in: .horizontal) {

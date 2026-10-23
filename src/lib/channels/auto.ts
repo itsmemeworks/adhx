@@ -1,3 +1,4 @@
+import { postKeyBatches, postKeyWhere } from '@/lib/db/post-keys'
 import { and, count, desc, eq, inArray } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
 import {
@@ -38,7 +39,6 @@ const STALE_MS = 12 * 60 * 60_000
 const MAX_AGE_MS = 7 * 24 * 60 * 60_000
 const RETRY_EMPTY_MS = 10 * 60_000
 const CHANGED_SAVES = 5
-const CHUNK = 400
 
 export interface AutoChannelView {
   slug: string
@@ -105,8 +105,7 @@ export async function meanVectors(
 ): Promise<{ keys: string[]; vectors: Float32Array[] }> {
   const wanted = new Set(posts.map((s) => `${s.platform}:${s.id}`))
   const sums = new Map<string, Float32Array>()
-  const ids = [...new Set(posts.map((s) => s.id))]
-  for (let i = 0; i < ids.length; i += CHUNK) {
+  for (const part of postKeyBatches(posts)) {
     const rows = await db
       .select({
         platform: postEmbeddings.platform,
@@ -118,7 +117,7 @@ export async function meanVectors(
         and(
           eq(postEmbeddings.model, SEMANTIC_MODEL_VERSION),
           eq(postEmbeddings.status, 'ok'),
-          inArray(postEmbeddings.postId, ids.slice(i, i + CHUNK)),
+          postKeyWhere(postEmbeddings.platform, postEmbeddings.postId, part),
         ),
       )
     for (const r of rows) {

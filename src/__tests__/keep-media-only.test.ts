@@ -44,6 +44,15 @@ describe('keeping a video-only post yt-dlp can’t download', () => {
     ).rejects.toThrow(/DRM/)
   })
 
+  it('never archives a private post’s login-page image as the post', async () => {
+    const { YtdlpError } = await import('@/lib/keep/ytdlp')
+    ytdlpDownload.mockRejectedValue(new YtdlpError('This post is private', true))
+    const { keepPost } = await import('@/lib/keep/download')
+    await expect(
+      keepPost({ platform: 'tiktok', postId: '123', author: 'test', category: 'video' }),
+    ).rejects.toThrow(/private/)
+  })
+
   it('still keeps a picture network’s preview images', async () => {
     const { YtdlpError } = await import('@/lib/keep/ytdlp')
     ytdlpDownload.mockRejectedValue(new YtdlpError('ERROR: No video formats found', true))

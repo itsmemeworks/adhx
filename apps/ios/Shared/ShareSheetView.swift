@@ -138,7 +138,7 @@ private struct NetworkLabel: View {
             NetworkMark(platform: platform, size: 15)
             Text(text)
                 .font(Theme.sans(13, .bold))
-                .foregroundStyle(Theme.muted)
+                .foregroundStyle(Theme.inkSoft)
                 .lineLimit(1)
                 .truncationMode(.tail)
         }
@@ -316,7 +316,7 @@ struct JustForMeSwitch: View {
                             .font(.system(size: 16, weight: .semibold))
                     }
                 }
-                .foregroundStyle(isOn ? .black : Theme.muted)
+                .foregroundStyle(isOn ? .black : Theme.inkSoft)
                 .frame(width: 40, height: 40)
                 .background(Circle().fill(isOn ? Theme.accent : Theme.plate))
                 .accessibilityHidden(true)
@@ -326,7 +326,7 @@ struct JustForMeSwitch: View {
                         .foregroundStyle(Theme.ink)
                     Text(isOn ? "Your people won’t see this save" : "Keep it private. Still kept, still searchable.")
                         .font(Theme.sans(13))
-                        .foregroundStyle(Theme.faint)
+                        .foregroundStyle(Theme.inkFaint)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -356,7 +356,7 @@ private struct SavingContent: View {
                     if let link = flow.link {
                         Text(Links.short(link))
                             .font(Theme.sans(12))
-                            .foregroundStyle(Theme.faint)
+                            .foregroundStyle(Theme.inkFaint)
                             .lineLimit(1)
                     }
                 }
@@ -377,7 +377,7 @@ private struct SavingContent: View {
             Text("You can close this. Your ADHX carries on, and the post shows up in My saves once it’s ready.")
                 .font(Theme.sans(13))
                 .lineSpacing(3)
-                .foregroundStyle(Theme.faint)
+                .foregroundStyle(Theme.inkFaint)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -513,11 +513,11 @@ private struct NoteField: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Add a note")
                 .font(Theme.sans(13, .semibold))
-                .foregroundStyle(Theme.muted)
+                .foregroundStyle(Theme.inkSoft)
                 .accessibilityHidden(true)
             TextField("", text: $flow.note,
                       prompt: Text(flow.justForMe ? "A note to future you" : "Say why they’ll like it")
-                          .foregroundColor(Theme.faint))
+                          .foregroundColor(Theme.inkFaint))
                 .font(Theme.sans(16))
                 .foregroundStyle(Theme.ink)
                 .tint(Theme.accent)
@@ -530,7 +530,7 @@ private struct NoteField: View {
                 .onChange(of: focused) { _, now in if now { flow.touch() } }
                 .padding(.horizontal, 16)
                 .frame(height: 48)
-                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.app))
+                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.bg))
                 .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .strokeBorder(focused || !flow.note.isEmpty ? Theme.accent.opacity(0.6) : .white.opacity(0.12),
                                   lineWidth: 1))
@@ -553,7 +553,7 @@ private struct KeepProgress: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(showsBar && percent != nil && keep.status != "kept" ? "\(line) · \(percent!)%" : line)
                     .font(Theme.sans(12, .semibold))
-                    .foregroundStyle(tone == .warn ? Theme.warn : Theme.muted)
+                    .foregroundStyle(tone == .warn ? Theme.warn : Theme.inkSoft)
                     .lineLimit(1)
                 if showsBar {
                     ProgressBar(fraction: Double(percent ?? 0) / 100)
@@ -612,7 +612,7 @@ private struct AlreadySavedContent: View {
                             .font(Theme.sans(16, .heavy))
                         Text(subtitle)
                             .font(Theme.sans(13))
-                            .foregroundStyle(Theme.muted)
+                            .foregroundStyle(Theme.inkSoft)
                     }
                 }
             }
@@ -642,7 +642,7 @@ private struct OfflineContent: View {
                             .font(Theme.sans(16, .heavy))
                         Text("Your ADHX can’t be reached right now. This goes as soon as it can.")
                             .font(Theme.sans(13))
-                            .foregroundStyle(Theme.muted)
+                            .foregroundStyle(Theme.inkSoft)
                             .lineSpacing(2)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -675,7 +675,7 @@ private struct MessageContent: View {
                     .accessibilityAddTraits(.isHeader)
                 Text(message)
                     .font(Theme.sans(14))
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.inkSoft)
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
             }

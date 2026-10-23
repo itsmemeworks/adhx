@@ -215,7 +215,7 @@ export function PostStage({
   const readingFont =
     reading.font && (text.length > READING_LENGTH || reading.bionic) ? reading.font : undefined
   return (
-    <StageFrame item={item} className={cn('bg-nx-cream text-nx-ink', className)}>
+    <StageFrame item={item} className={cn('bg-nx-cream text-nx-bg', className)}>
       {/* Scroll box + min-h-full column: centres short posts without clipping the top of long ones. */}
       <div
         ref={scroller}
@@ -233,7 +233,7 @@ export function PostStage({
             <span className="flex min-w-0 flex-col">
               <span className="truncate text-[14px] font-bold">{author.name}</span>
               {author.handle && (
-                <span className="truncate text-[13px] text-nx-on-cream">{author.handle}</span>
+                <span className="truncate text-[13px] text-nx-on-cream-soft">{author.handle}</span>
               )}
             </span>
           </span>
@@ -253,7 +253,7 @@ export function PostStage({
           {card && <LinkCard card={card} className="max-w-[560px]" />}
           {quote && (
             <span className="flex flex-col gap-1 rounded-2xl border border-nx-bone px-4 py-3">
-              <span className="text-[12px] font-semibold text-nx-on-cream">{`@${quote.author}`}</span>
+              <span className="text-[12px] font-semibold text-nx-on-cream-soft">{`@${quote.author}`}</span>
               <span
                 className="line-clamp-3 text-[14px] leading-[1.4]"
                 style={reading.font ? { fontFamily: reading.font } : undefined}
@@ -295,7 +295,7 @@ export function ArticleStage({
   return (
     <StageFrame
       item={item}
-      className={cn('flex flex-col bg-nx-ink text-nx-cream sm:flex-row', className)}
+      className={cn('flex flex-col bg-nx-bg text-nx-cream sm:flex-row', className)}
     >
       {cover && (
         <span className="relative block h-[38%] shrink-0 overflow-hidden sm:h-full sm:w-[42%]">
@@ -314,7 +314,7 @@ export function ArticleStage({
           {articleHeadline(item)}
         </h2>
         <p
-          className="m-0 line-clamp-6 text-[14px] leading-[1.5] text-nx-soft sm:text-[15px]"
+          className="m-0 line-clamp-6 text-[14px] leading-[1.5] text-nx-ink-soft sm:text-[15px]"
           style={reading.font ? { fontFamily: reading.font } : undefined}
         >
           <ReadingText text={articleLede(item)} bionic={reading.bionic} />
@@ -324,7 +324,7 @@ export function ArticleStage({
             <button
               type="button"
               onClick={onRead}
-              className={cn(READ_BUTTON, 'bg-nx-cream font-bold text-nx-ink')}
+              className={cn(READ_BUTTON, 'bg-nx-cream font-bold text-nx-bg')}
             >
               Read it here
             </button>
@@ -333,7 +333,7 @@ export function ArticleStage({
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className={cn(READ_BUTTON, 'bg-nx-cream font-bold text-nx-ink')}
+              className={cn(READ_BUTTON, 'bg-nx-cream font-bold text-nx-bg')}
             >
               Read it here
             </a>
@@ -342,7 +342,7 @@ export function ArticleStage({
             <button
               type="button"
               onClick={onSkip}
-              className={cn(READ_BUTTON, 'border border-nx-muted/40 text-nx-cream')}
+              className={cn(READ_BUTTON, 'border border-nx-ink-faint/40 text-nx-cream')}
             >
               Skip for now
             </button>

@@ -84,6 +84,37 @@ describe('Phase 4 startup migration', () => {
     migrated.close()
   })
 
+  it('adds the per-post watcher index to existing libraries idempotently', () => {
+    const { databasePath, migrationsPath, sqlite } = createMigrationFixture()
+    sqlite.exec('DROP INDEX post_views_post_seen_idx')
+    sqlite.prepare("INSERT INTO users(id, username) VALUES ('watcher', 'watcher')").run()
+    sqlite
+      .prepare('INSERT INTO post_views VALUES (?, ?, ?, ?)')
+      .run('watcher', 'twitter', 'old', new Date().toISOString())
+    sqlite.close()
+    for (let i = 0; i < 2; i++) {
+      const result = runMigration(databasePath, migrationsPath)
+      expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0)
+    }
+    const migrated = new Database(databasePath)
+    try {
+      const plan = migrated
+        .prepare(
+          'EXPLAIN QUERY PLAN SELECT user_id, seen_at FROM post_views WHERE platform = ? AND post_id = ? ORDER BY seen_at DESC LIMIT 50',
+        )
+        .all('twitter', 'old') as { detail: string }[]
+      expect(
+        plan.some((r) =>
+          r.detail.includes('SEARCH post_views USING INDEX post_views_post_seen_idx'),
+        ),
+      ).toBe(true)
+      expect(plan.some((r) => r.detail.includes('TEMP B-TREE'))).toBe(false)
+      expect(migrated.prepare('SELECT count(*) AS n FROM post_views').get()).toEqual({ n: 1 })
+    } finally {
+      migrated.close()
+    }
+  })
+
   it('adds OAuth state generation and backfills the account generation idempotently', () => {
     const { databasePath, migrationsPath, sqlite } = createMigrationFixture()
     sqlite.exec('ALTER TABLE oauth_state DROP COLUMN x_link_version')

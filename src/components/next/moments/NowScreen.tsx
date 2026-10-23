@@ -8,7 +8,7 @@ import { SharedSavesNotice } from './SharedSavesNotice'
 /** The Right now page: the live moments, under the same header as everywhere else. */
 export function NowScreen() {
   return (
-    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
+    <div className="min-h-dvh bg-nx-bg font-nx-sans text-nx-cream">
       <NxHeader current="now">
         <SaveTools />
       </NxHeader>

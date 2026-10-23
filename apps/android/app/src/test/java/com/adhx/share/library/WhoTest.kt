@@ -70,7 +70,7 @@ class WhoTest {
         assertEquals(listOf("ana", "ben", "jo", "mum", "pete", "kit"), faces.map { it.saver.username })
         val (a, b, jo, mum, me, kit) = faces
         assertTrue(a.saved)
-        assertFalse(a.watched)
+        assertTrue(a.watched)
         assertNull(a.emoji)
         assertTrue(b.saved)
         assertEquals("😂", b.emoji)
@@ -83,7 +83,7 @@ class WhoTest {
         assertFalse(kit.saved || kit.watched)
         assertEquals("🔥", kit.emoji)
 
-        assertEquals("Ana saved it first", Who.label(a, firstOfSeveral = true))
+        assertEquals("Ana saved it first and watched it", Who.label(a, firstOfSeveral = true))
         assertEquals("Ben saved it, reacted 😂 and said “his FACE”", Who.label(b))
         assertEquals("Jo watched it and reacted 👀", Who.label(jo))
         assertEquals("Mum watched it", Who.label(mum))

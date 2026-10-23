@@ -121,7 +121,7 @@ export function ChannelPage({
   }
 
   return (
-    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
+    <div className="min-h-dvh bg-nx-bg font-nx-sans text-nx-cream">
       <NxHeader>{signedIn && <PasteButton onClick={paste.pasteFromClipboard} />}</NxHeader>
       <main className="mx-auto flex max-w-[1600px] flex-col gap-7 px-0 pb-16 md:px-7 lg:flex-row lg:items-start">
         <section aria-label="Channel" className="flex min-w-0 flex-1 flex-col gap-4 md:gap-[18px]">
@@ -190,7 +190,7 @@ export function ChannelPage({
                 )}
               </span>
               {mine && visibility === 'error' && (
-                <span role="alert" className="text-sm text-[#ff8a7a] [text-shadow:none]">
+                <span role="alert" className="text-sm text-nx-danger [text-shadow:none]">
                   Couldn’t change that. Try again.
                 </span>
               )}
@@ -351,7 +351,7 @@ function VisibilityToggle({
           onClick={() => !on && onChange(value)}
           className={cn(
             'flex h-full items-center gap-1.5 rounded-[var(--nx-nest,9999px)] px-3.5 text-sm font-bold disabled:opacity-70',
-            on ? 'bg-nx-cream text-black' : 'text-white/80',
+            on ? 'bg-nx-cream text-black' : 'text-nx-ink/80',
           )}
         >
           <Icon aria-hidden className="h-4 w-4" />

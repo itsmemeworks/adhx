@@ -92,12 +92,12 @@ function SyncProgressBlock({
         <span className="font-nx-serif text-[56px] leading-[0.9] tabular-nums">
           {String(imported)}
         </span>
-        <span className="text-sm text-white/65">bookmarks in so far</span>
+        <span className="text-sm text-nx-ink/65">bookmarks in so far</span>
       </div>
       <div className="flex flex-col gap-1.5">
         <span className="flex justify-between gap-3 text-[13px]">
           <span className="font-bold">Bringing them in from X</span>
-          <span className="text-right text-white/65">
+          <span className="text-right text-nx-ink/65">
             {sync.total
               ? `${imported} of ${sync.total}`
               : `Looking through your bookmarks${sync.found ? ` · ${sync.found} found` : ''}`}
@@ -113,7 +113,7 @@ function SyncProgressBlock({
         <div className="flex flex-col gap-1.5">
           <span className="flex justify-between gap-3 text-[13px]">
             <span className="font-bold">Making them searchable</span>
-            <span className="text-white/65">{`${words.done} of ${words.total}`}</span>
+            <span className="text-nx-ink/65">{`${words.done} of ${words.total}`}</span>
           </span>
           <Bar
             label="Making your saves searchable"
@@ -127,7 +127,7 @@ function SyncProgressBlock({
           {sync.thumbs.map((t) => (
             <span
               key={t.id}
-              className="relative block h-12 animate-nx-pop overflow-hidden rounded-[8px] bg-[#1c1b19]"
+              className="relative block h-12 animate-nx-pop overflow-hidden rounded-[8px] bg-nx-sheet"
             >
               {t.img && (
                 <NxImage
@@ -140,7 +140,7 @@ function SyncProgressBlock({
           ))}
         </div>
       )}
-      <span className="text-sm text-white/75">Keep this page open until it finishes.</span>
+      <span className="text-sm text-nx-ink/75">Keep this page open until it finishes.</span>
     </div>
   )
 }
@@ -149,7 +149,7 @@ function Count({ n, label }: { n: number; label: string }) {
   return (
     <div className={`flex min-w-0 flex-col gap-1 bg-black/40 px-3 py-3 ${IN_CARD}`}>
       <span className="font-nx-serif text-[28px] leading-none tabular-nums">{String(n)}</span>
-      <span className="text-xs leading-snug text-white/55">{label}</span>
+      <span className="text-xs leading-snug text-nx-ink/55">{label}</span>
     </div>
   )
 }
@@ -242,7 +242,7 @@ export function SyncCard({
             </GobShape>
             <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
               <span className="max-w-full truncate text-[15px] font-bold">{`@${xIdentity.username}`}</span>
-              <span className="rounded-full bg-[#7ddc8a]/15 px-2 py-0.5 text-[11px] font-bold text-[#7ddc8a]">
+              <span className="rounded-full bg-nx-good/15 px-2 py-0.5 text-[11px] font-bold text-nx-good">
                 Connected
               </span>
             </div>
@@ -261,7 +261,7 @@ export function SyncCard({
             </button>
           </div>
           {disconnectError && (
-            <p role="alert" className="m-0 text-[13px] text-[#ff8a7a]">
+            <p role="alert" className="m-0 text-[13px] text-nx-danger">
               {disconnectError}
             </p>
           )}
@@ -270,7 +270,7 @@ export function SyncCard({
 
       {!xConnected ? (
         <div className="flex flex-col gap-3">
-          <p className="m-0 text-sm leading-relaxed text-white/70">
+          <p className="m-0 text-sm leading-relaxed text-nx-ink/70">
             We only read your bookmarks. We never post for you.
           </p>
           <a href={CONNECT_X_URL} className={PRIMARY}>
@@ -320,7 +320,7 @@ export function SyncCard({
               <span className="font-nx-serif text-[24px] leading-none">
                 That sync didn’t finish
               </span>
-              {sync.error && <span className="text-sm text-white/70">{sync.error}</span>}
+              {sync.error && <span className="text-sm text-nx-ink/70">{sync.error}</span>}
               {sync.errorCode === 'reauth' && (
                 <a href={CONNECT_X_URL} className={`${PRIMARY} mt-1`}>
                   <span>Reconnect X</span>
@@ -339,13 +339,13 @@ export function SyncCard({
               </button>
             ) : (
               <p
-                className={`m-0 border border-white/15 px-4 py-3 text-center text-sm text-white/75 ${IN_CARD}`}
+                className={`m-0 border border-white/15 px-4 py-3 text-center text-sm text-nx-ink/75 ${IN_CARD}`}
               >
                 {`You can sync again in ${formatWait(waitMs)}.`}
               </p>
             ))}
 
-          <p className="m-0 text-[13px] text-white/55">
+          <p className="m-0 text-[13px] text-nx-ink/55">
             {`${counts.lastSyncAt ? `Last synced ${timeSince(counts.lastSyncAt)}.` : 'Not synced yet.'} You can sync everything by hand again a minute after the last sync.`}
           </p>
         </>
@@ -384,7 +384,7 @@ export function SyncHistoryCard({
           ))}
         </div>
       ) : syncs.length === 0 ? (
-        <p className="m-0 py-4 text-center text-sm text-white/55">No syncs yet.</p>
+        <p className="m-0 py-4 text-center text-sm text-nx-ink/55">No syncs yet.</p>
       ) : (
         <ul className="m-0 flex list-none flex-col gap-2 p-0">
           {syncs.map((log) => (
@@ -394,12 +394,12 @@ export function SyncHistoryCard({
             >
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate font-bold">{formatWhen(log.startedAt)}</span>
-                <span className="text-xs text-white/55">
+                <span className="text-xs text-nx-ink/55">
                   {log.triggerType === 'auto' ? 'Automatic' : 'By hand'}
                 </span>
               </span>
               <span className="whitespace-nowrap font-bold text-nx-accent">{`+${log.newBookmarks} new`}</span>
-              <span className="whitespace-nowrap text-white/55">{`${log.totalFetched} checked`}</span>
+              <span className="whitespace-nowrap text-nx-ink/55">{`${log.totalFetched} checked`}</span>
             </li>
           ))}
         </ul>

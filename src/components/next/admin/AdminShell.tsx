@@ -34,7 +34,7 @@ export function AdminShell({
   children: ReactNode
 }) {
   return (
-    <div className="min-h-dvh bg-nx-ink font-nx-sans text-[#f4f1ea]">
+    <div className="min-h-dvh bg-nx-bg font-nx-sans text-nx-ink">
       <NxHeader current={null}>
         <AdminChip />
       </NxHeader>
@@ -44,16 +44,18 @@ export function AdminShell({
             Admin
           </h1>
           <AdminNav badges={badges} />
-          <div className="mt-auto hidden flex-col gap-1.5 rounded-[18px] bg-[#1a1814] p-3.5 lg:flex">
+          <div className="mt-auto hidden flex-col gap-1.5 rounded-[18px] bg-nx-surface p-3.5 lg:flex">
             <span className="flex items-center gap-2 text-[13px] font-extrabold">
               <span
                 aria-hidden
                 className="block h-2 w-2 rounded-full"
-                style={{ background: server.healthy ? '#7ddc8a' : '#ff8a7a' }}
+                style={{
+                  background: server.healthy ? 'rgb(var(--nx-good))' : 'rgb(var(--nx-danger))',
+                }}
               />
               <span>{server.name}</span>
             </span>
-            <span className="text-xs text-[#a39b8b]">
+            <span className="text-xs text-nx-ink-faint">
               {`v${server.version} · ${uptimeLabel(server.uptimeSeconds)}`}
             </span>
           </div>
