@@ -85,7 +85,7 @@ export function ReactionsRow() {
                     className="absolute inset-0 h-full w-full object-cover"
                   />
                 ) : (
-                  <span className="absolute inset-0 overflow-hidden bg-nx-cream p-3 font-nx-serif text-[15px] leading-tight text-nx-ink">
+                  <span className="absolute inset-0 overflow-hidden bg-nx-cream p-3 font-nx-serif text-[15px] leading-tight text-nx-bg">
                     {tile?.text?.slice(0, 140)}
                   </span>
                 )}
@@ -100,14 +100,14 @@ export function ReactionsRow() {
                   />
                   <span
                     className={cn(
-                      'nx-text-shadow min-w-0 truncate text-white',
+                      'nx-text-shadow min-w-0 truncate text-nx-ink',
                       emoji ? 'text-xl leading-none' : 'text-[13px] font-semibold',
                     )}
                   >
                     {emoji ?? text}
                   </span>
                   {reactions.count > 1 && (
-                    <span className="nx-text-shadow ml-auto shrink-0 text-xs font-bold text-white/80">
+                    <span className="nx-text-shadow ml-auto shrink-0 text-xs font-bold text-nx-ink/80">
                       {`+${reactions.count - 1}`}
                     </span>
                   )}

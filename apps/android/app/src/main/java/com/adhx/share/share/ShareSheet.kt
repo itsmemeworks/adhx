@@ -267,7 +267,7 @@ private fun Sheet(frosted: Boolean, onTouched: () -> Unit, onDismiss: () -> Unit
 @Composable
 private fun SavingContent(ui: ShareUi, onJustForMe: (Boolean) -> Unit, note: String, onNote: (String) -> Unit) {
     CardTop(ui = ui, title = Copy.SAVING, line = null)
-    Text(Copy.SAVING_NOTE, fontSize = 13.sp, lineHeight = 19.sp, color = AdhxColors.Faint)
+    Text(Copy.SAVING_NOTE, fontSize = 13.sp, lineHeight = 19.sp, color = AdhxColors.InkFaint)
     NoteField(note, onNote, ui.justForMe)
     JustForMeRow(on = ui.justForMe, onChange = onJustForMe)
 }
@@ -302,11 +302,11 @@ private fun SavedContent(
                 .weight(1f)
                 .height(52.dp)
                 .clip(CardInner)
-                .background(AdhxColors.Card)
+                .background(AdhxColors.Plate)
                 .clickable(role = Role.Button, onClick = onOpen),
             contentAlignment = Alignment.Center,
         ) {
-            Text("Open in ADHX", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White)
+            Text("Open in ADHX", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Ink)
         }
         Box(
             Modifier
@@ -344,7 +344,7 @@ private fun CardTop(ui: ShareUi, title: String, line: String?, done: Boolean = f
                 if (posterUrl != null) {
                     AsyncImage(posterUrl, null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
                 } else {
-                    NetworkMark(ui.platform, size = 22.dp, tint = AdhxColors.Faint)
+                    NetworkMark(ui.platform, size = 22.dp, tint = AdhxColors.InkFaint)
                 }
             }
             if (done) {
@@ -356,7 +356,7 @@ private fun CardTop(ui: ShareUi, title: String, line: String?, done: Boolean = f
                         .background(AdhxColors.Surface, CircleShape)
                         .padding(3.dp)
                         .clip(CircleShape)
-                        .background(if (ui.justForMe) AdhxColors.White else AdhxColors.Accent),
+                        .background(if (ui.justForMe) AdhxColors.Ink else AdhxColors.Accent),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -371,9 +371,9 @@ private fun CardTop(ui: ShareUi, title: String, line: String?, done: Boolean = f
         Box(Modifier.width(16.dp))
         Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             AdhxBrand(markSize = 20.dp)
-            Text(title, fontFamily = SerifFamily, fontSize = 34.sp, lineHeight = 33.sp, color = AdhxColors.White, modifier = Modifier.serifLineBox(34.sp, 33.sp))
+            Text(title, fontFamily = SerifFamily, fontSize = 34.sp, lineHeight = 33.sp, color = AdhxColors.Ink, modifier = Modifier.serifLineBox(34.sp, 33.sp))
             if (networkName.isNotBlank()) {
-                Text(networkName, fontSize = 13.sp, lineHeight = 17.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(networkName, fontSize = 13.sp, lineHeight = 17.sp, color = AdhxColors.InkFaint, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             // Still saving: the post's words aren't in yet.
             if (post == null) {
@@ -383,7 +383,7 @@ private fun CardTop(ui: ShareUi, title: String, line: String?, done: Boolean = f
             Spacer(Modifier.weight(1f))
             // The line and its bar sit 6dp apart at the bottom, level with the poster's foot (the boards' margin-top: auto).
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (line != null) Text(line, fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Muted, maxLines = 1)
+                if (line != null) Text(line, fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.InkSoft, maxLines = 1)
                 if (bar) KeepBar(ui.keep)
             }
         }
@@ -395,13 +395,13 @@ private fun CardTop(ui: ShareUi, title: String, line: String?, done: Boolean = f
 private fun NoteField(note: String, onNote: (String) -> Unit, justForMe: Boolean) {
     var focused by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(Copy.ADD_A_NOTE, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Muted)
+        Text(Copy.ADD_A_NOTE, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.InkSoft)
         Box(
             Modifier
                 .fillMaxWidth()
                 .height(48.dp)
                 .clip(SquircleShape(16.dp))
-                .background(AdhxColors.Background)
+                .background(AdhxColors.Bg)
                 .border(
                     1.dp,
                     if (focused || note.isNotEmpty()) AdhxColors.Accent.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.12f),
@@ -414,7 +414,7 @@ private fun NoteField(note: String, onNote: (String) -> Unit, justForMe: Boolean
                 Text(
                     if (justForMe) Copy.NOTE_PRIVATE_HINT else Copy.NOTE_HINT,
                     fontSize = 16.sp,
-                    color = AdhxColors.Faint.copy(alpha = 0.8f),
+                    color = AdhxColors.InkFaint.copy(alpha = 0.8f),
                     maxLines = 1,
                     modifier = Modifier.clearAndSetSemantics { },
                 )
@@ -423,7 +423,7 @@ private fun NoteField(note: String, onNote: (String) -> Unit, justForMe: Boolean
                 value = note,
                 onValueChange = { onNote(it.take(Copy.NOTE_MAX)) },
                 singleLine = true,
-                textStyle = TextStyle(fontFamily = SansFamily, fontSize = 16.sp, color = AdhxColors.White),
+                textStyle = TextStyle(fontFamily = SansFamily, fontSize = 16.sp, color = AdhxColors.Ink),
                 cursorBrush = SolidColor(AdhxColors.Accent),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
                 modifier = Modifier
@@ -440,8 +440,8 @@ private fun OfflineContent(ui: ShareUi, onJustForMe: (Boolean) -> Unit, onDone: 
     LinkRow(ui)
     StatusBox {
         Column {
-            Text(if (ui.justForMe) Copy.PRIVATE_LATER else Copy.OFFLINE_TITLE, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White)
-            Text(Copy.OFFLINE_BODY, fontSize = 13.sp, lineHeight = 18.sp, color = AdhxColors.Muted)
+            Text(if (ui.justForMe) Copy.PRIVATE_LATER else Copy.OFFLINE_TITLE, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Ink)
+            Text(Copy.OFFLINE_BODY, fontSize = 13.sp, lineHeight = 18.sp, color = AdhxColors.InkSoft)
         }
     }
     JustForMeRow(on = ui.justForMe, onChange = onJustForMe)
@@ -452,8 +452,8 @@ private fun OfflineContent(ui: ShareUi, onJustForMe: (Boolean) -> Unit, onDone: 
 private fun MessageContent(ui: ShareUi, title: String, body: String, button: String, onButton: () -> Unit) {
     if (ui.link != null) LinkRow(ui)
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(title, fontFamily = SerifFamily, fontSize = 30.sp, lineHeight = 32.sp, color = AdhxColors.White)
-        Text(body, fontSize = 14.sp, lineHeight = 20.sp, color = AdhxColors.Muted)
+        Text(title, fontFamily = SerifFamily, fontSize = 30.sp, lineHeight = 32.sp, color = AdhxColors.Ink)
+        Text(body, fontSize = 14.sp, lineHeight = 20.sp, color = AdhxColors.InkSoft)
     }
     PrimaryButton(button, onClick = onButton, modifier = Modifier.fillMaxWidth(), shape = BrandInner)
 }
@@ -461,8 +461,8 @@ private fun MessageContent(ui: ShareUi, title: String, body: String, button: Str
 @Composable
 private fun NotConnectedContent(onOpenApp: () -> Unit, onClose: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(Copy.NOT_CONNECTED_TITLE, fontFamily = SerifFamily, fontSize = 30.sp, lineHeight = 32.sp, color = AdhxColors.White)
-        Text(Copy.NOT_CONNECTED_BODY, fontSize = 14.sp, lineHeight = 20.sp, color = AdhxColors.Muted)
+        Text(Copy.NOT_CONNECTED_TITLE, fontFamily = SerifFamily, fontSize = 30.sp, lineHeight = 32.sp, color = AdhxColors.Ink)
+        Text(Copy.NOT_CONNECTED_BODY, fontSize = 14.sp, lineHeight = 20.sp, color = AdhxColors.InkSoft)
     }
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlineButton("Not now", onClick = onClose, modifier = Modifier.weight(1f), shape = BrandInner)
@@ -494,17 +494,17 @@ private fun Audience(ui: ShareUi) {
                     .background(AdhxColors.Cream),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Glyphs.Lock, contentDescription = null, tint = AdhxColors.Black, modifier = Modifier.size(18.dp))
+                Icon(Glyphs.Lock, contentDescription = null, tint = AdhxColors.OnCream, modifier = Modifier.size(18.dp))
             }
             Box(Modifier.width(12.dp))
-            Text(Copy.PRIVATE_NOTE, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White)
+            Text(Copy.PRIVATE_NOTE, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Ink)
         } else {
             val names = ui.people.map { it.label }
             if (ui.people.isNotEmpty() && ui.server != null) {
                 Faces(ui.people, ui.server, size = 30.dp, max = 4, ring = Color(0xFF22201C))
                 Box(Modifier.width(12.dp))
             }
-            Text(Copy.willSee(names), fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White)
+            Text(Copy.willSee(names), fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Ink)
         }
     }
 }
@@ -523,7 +523,7 @@ private fun PostHeader(ui: ShareUi, loading: Boolean) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 NetworkMark(ui.platform, size = 16.dp)
                 Box(Modifier.width(7.dp))
-                Text(networkName, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Muted, maxLines = 1)
+                Text(networkName, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AdhxColors.InkSoft, maxLines = 1)
             }
             if (loading || post == null) {
                 SkeletonBar(16.dp, Modifier.fillMaxWidth(0.7f))
@@ -533,7 +533,7 @@ private fun PostHeader(ui: ShareUi, loading: Boolean) {
                     Text(
                         Links.display(it),
                         fontSize = 12.sp,
-                        color = AdhxColors.Faint,
+                        color = AdhxColors.InkFaint,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -545,7 +545,7 @@ private fun PostHeader(ui: ShareUi, loading: Boolean) {
                         title,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = AdhxColors.White,
+                        color = AdhxColors.Ink,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -556,7 +556,7 @@ private fun PostHeader(ui: ShareUi, loading: Boolean) {
                         words,
                         fontSize = 14.sp,
                         lineHeight = 20.sp,
-                        color = AdhxColors.Muted,
+                        color = AdhxColors.InkSoft,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -591,7 +591,7 @@ private fun Poster(url: String?, platform: String?) {
                 },
             )
         } else {
-            NetworkMark(platform, size = 22.dp, tint = AdhxColors.Faint)
+            NetworkMark(platform, size = 22.dp, tint = AdhxColors.InkFaint)
         }
     }
 }
@@ -606,7 +606,7 @@ private fun LinkRow(ui: ShareUi) {
             ui.link?.let(Links::display) ?: "",
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
-            color = AdhxColors.Muted,
+            color = AdhxColors.InkSoft,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -620,7 +620,7 @@ private fun StatusBox(content: @Composable () -> Unit) {
             .fillMaxWidth()
             .clip(SquircleShape(16.dp))
             // Darker glass inside the card, not a solid block.
-            .background(AdhxColors.Black.copy(alpha = 0.4f))
+            .background(AdhxColors.Stage.copy(alpha = 0.4f))
             .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         content()
@@ -645,7 +645,7 @@ private fun CheckBadge() {
             .background(AdhxColors.Accent),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Icons.Filled.Check, contentDescription = null, tint = AdhxColors.Black, modifier = Modifier.size(18.dp))
+        Icon(Icons.Filled.Check, contentDescription = null, tint = AdhxColors.OnAccent, modifier = Modifier.size(18.dp))
     }
 }
 

@@ -77,11 +77,11 @@ struct UpNextSheet: View {
                 Spacer(minLength: 8)
                 Text(aside)
                     .font(Theme.sans(13))
-                    .foregroundStyle(Theme.faint)
+                    .foregroundStyle(Theme.inkFaint)
             }
             Text("Always in this order. Tap any post to start there.")
                 .font(Theme.sans(14))
-                .foregroundStyle(Theme.muted)
+                .foregroundStyle(Theme.inkSoft)
             ScrollViewReader { reader in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 4, pinnedViews: []) {
@@ -131,7 +131,7 @@ struct UpNextSheet: View {
             Spacer(minLength: 8)
             Text(part == .foryou ? "from what you keep" : "\(feed.sections?[part] ?? 0)")
                 .font(Theme.sans(12, .semibold))
-                .foregroundStyle(Theme.faint)
+                .foregroundStyle(Theme.inkFaint)
         }
         .padding(.horizontal, 4)
         .padding(.top, 12)
@@ -167,12 +167,12 @@ struct QueueSheet: View {
                 Spacer(minLength: 8)
                 Text("\(name) · \(posts.count)")
                     .font(Theme.sans(13))
-                    .foregroundStyle(Theme.faint)
+                    .foregroundStyle(Theme.inkFaint)
                     .lineLimit(1)
             }
             Text(note)
                 .font(Theme.sans(14))
-                .foregroundStyle(Theme.muted)
+                .foregroundStyle(Theme.inkSoft)
             ScrollViewReader { reader in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 4) {
@@ -249,7 +249,7 @@ struct UpNextRow: View {
                         }
                         Text(meta)
                             .font(Theme.sans(13))
-                            .foregroundStyle(Theme.muted)
+                            .foregroundStyle(Theme.inkSoft)
                             .lineLimit(1)
                     }
                     if let chip {

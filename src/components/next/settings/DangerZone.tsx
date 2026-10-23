@@ -70,7 +70,7 @@ export function DangerZone({
         <button
           type="button"
           onClick={() => setOpen('delete')}
-          className="inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-[var(--nx-nest)] bg-[#e5484d] px-4 text-sm font-bold text-white hover:bg-[#d13b40]"
+          className="inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-[var(--nx-nest)] bg-nx-danger-fill px-4 text-sm font-bold text-nx-ink hover:bg-[#]"
         >
           Delete account
         </button>
@@ -82,8 +82,8 @@ export function DangerZone({
           onClose={close}
           tone="danger"
         >
-          <p className="m-0 text-[15px] text-white/80">This deletes, for good:</p>
-          <ul className="m-0 flex list-disc flex-col gap-1 pl-5 text-sm text-white/75">
+          <p className="m-0 text-[15px] text-nx-ink/80">This deletes, for good:</p>
+          <ul className="m-0 flex list-disc flex-col gap-1 pl-5 text-sm text-nx-ink/75">
             {open === 'clear' ? (
               <>
                 <li>All your saves</li>
@@ -100,15 +100,15 @@ export function DangerZone({
             )}
           </ul>
           {open === 'clear' && (
-            <p className="m-0 flex items-center gap-1.5 text-sm text-[#7ddc8a]">
+            <p className="m-0 flex items-center gap-1.5 text-sm text-nx-good">
               <Check aria-hidden className="h-4 w-4 shrink-0" />
               <span>You stay signed in, and X stays connected if it is.</span>
             </p>
           )}
-          <label className="flex flex-col gap-2 text-sm text-white/75">
+          <label className="flex flex-col gap-2 text-sm text-nx-ink/75">
             <span>
               <span>Type </span>
-              <span className="rounded bg-white/10 px-1.5 py-0.5 font-bold text-white">
+              <span className="rounded bg-white/10 px-1.5 py-0.5 font-bold text-nx-ink">
                 {WORD[open]}
               </span>
               <span> to confirm</span>
@@ -132,7 +132,7 @@ export function DangerZone({
               type="button"
               onClick={() => void (open === 'clear' ? clearData() : deleteAccount())}
               disabled={typed !== WORD[open] || busy}
-              className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-[var(--nx-nest)] bg-[#e5484d] px-4 text-sm font-bold text-white hover:bg-[#d13b40] disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-[var(--nx-nest)] bg-nx-danger-fill px-4 text-sm font-bold text-nx-ink hover:bg-[#] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy && <RefreshCw aria-hidden className="h-4 w-4 animate-spin" />}
               <span>{open === 'clear' ? 'Clear data' : 'Delete account'}</span>

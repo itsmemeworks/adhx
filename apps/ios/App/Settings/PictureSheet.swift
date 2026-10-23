@@ -152,7 +152,7 @@ private struct PictureSheet: View {
                         .accessibilityAddTraits(.isHeader)
                     Text("Your people see it on your saves and reactions.")
                         .font(Theme.sans(13))
-                        .foregroundStyle(Theme.faint)
+                        .foregroundStyle(Theme.inkFaint)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -192,7 +192,7 @@ private struct PictureSheet: View {
                     Button {
                         Task { if await model.remove() { changed() } }
                     } label: {
-                        choiceRow(icon: "trash", title: "Remove picture", tint: Theme.warn,
+                        choiceRow(icon: "trash", title: "Remove picture", tint: Theme.danger,
                                   busy: model.busy == .remove)
                     }
                     .buttonStyle(.plain)
@@ -227,14 +227,14 @@ private struct PictureSheet: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Or be a Gob")
                 .font(Theme.sans(13, .heavy))
-                .foregroundStyle(Theme.muted)
+                .foregroundStyle(Theme.inkSoft)
             HStack(spacing: 12) {
                 ForEach(GobColour.allCases) { colour in
                     Button {
                         Task { if await model.gob(colour) { changed() } }
                     } label: {
                         ZStack {
-                            Color(hex: 0x1A1814)
+                            Theme.surface
                             Gob(size: 50, colour: Color(hex: colour.hex))
                             if model.busy == .gob(colour) {
                                 Color.black.opacity(0.45)
@@ -351,7 +351,7 @@ struct AvatarCropScreen: View {
                         .accessibilityAddTraits(.isHeader)
                     Text("Your face goes in the circle.")
                         .font(Theme.sans(14))
-                        .foregroundStyle(Theme.muted)
+                        .foregroundStyle(Theme.inkSoft)
                 }
                 // Clear of the status bar and Dynamic Island however this
                 // screen is presented: the window's own top inset, less where
@@ -420,7 +420,7 @@ struct AvatarCropScreen: View {
             .accessibilityAction(named: "Zoom in") { setZoom(zoom + 0.5, side: side) }
             .accessibilityAction(named: "Zoom out") { setZoom(zoom - 0.5, side: side) }
         }
-        .background(Color.black.ignoresSafeArea())
+        .background(Theme.stage.ignoresSafeArea())
         .statusBarHidden()
         .onAppear { model.problem = nil }
     }

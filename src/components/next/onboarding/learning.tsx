@@ -171,7 +171,7 @@ function Ring({ progress, size = 26 }: { progress: number; size?: number }) {
       className="flex shrink-0 items-center justify-center rounded-full"
       style={{ width: size, height: size, background: `conic-gradient(#ffd23f ${pct}%, #444 0)` }}
     >
-      <span className="rounded-full bg-[#1c1b19]" style={{ width: size - 8, height: size - 8 }} />
+      <span className="rounded-full bg-nx-sheet" style={{ width: size - 8, height: size - 8 }} />
     </span>
   )
 }
@@ -197,7 +197,7 @@ export function LearningPill({
       onClick={onOpen}
       aria-label={`${label}. Show what’s being learned`}
       className={cn(
-        'flex h-10 shrink-0 items-center gap-2 rounded-full border border-[#3a352c] bg-[#1c1b19]/90 px-1.5 text-[13px] text-nx-cream sm:pr-3.5',
+        'flex h-10 shrink-0 items-center gap-2 rounded-full border border-nx-line bg-nx-sheet/90 px-1.5 text-[13px] text-nx-cream sm:pr-3.5',
         className,
       )}
     >
@@ -235,14 +235,14 @@ export function LearningSheet({
       <div
         role="dialog"
         aria-label="Getting to know your saves"
-        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col gap-4 overflow-y-auto rounded-t-[24px] bg-[#1c1b19] p-5 pb-[max(20px,env(safe-area-inset-bottom))] font-nx-sans text-white md:inset-x-auto md:bottom-auto md:right-6 md:top-20 md:w-[400px] md:rounded-[22px]"
+        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col gap-4 overflow-y-auto rounded-t-[28px] bg-nx-sheet p-5 pb-[max(20px,env(safe-area-inset-bottom))] font-nx-sans text-nx-ink md:inset-x-auto md:bottom-auto md:right-6 md:top-20 md:w-[400px] md:rounded-[22px]"
       >
         <div className="flex items-start gap-3">
           <span className="flex flex-1 flex-col gap-1">
             <span className="font-nx-serif text-[28px] leading-none">
               Getting to know your saves
             </span>
-            <span className="text-sm text-white/65">
+            <span className="text-sm text-nx-ink/65">
               So you can find things by what’s in them, even what’s said in a video.
             </span>
           </span>
@@ -282,16 +282,13 @@ export function LearningSheet({
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="text-[15px] font-bold">{r.label}</span>
-                    <span className="text-xs text-white/55">{r.sub}</span>
+                    <span className="text-xs text-nx-ink/55">{r.sub}</span>
                   </span>
-                  <span className="text-[13px] tabular-nums text-white/70">{`${r.done} / ${r.total}`}</span>
+                  <span className="text-[13px] tabular-nums text-nx-ink/70">{`${r.done} / ${r.total}`}</span>
                 </span>
                 <span aria-hidden className="block h-1.5 rounded-full bg-white/10">
                   <span
-                    className={cn(
-                      'block h-1.5 rounded-full',
-                      done ? 'bg-[#7ddc8a]' : 'bg-nx-accent',
-                    )}
+                    className={cn('block h-1.5 rounded-full', done ? 'bg-nx-good' : 'bg-nx-accent')}
                     style={{ width: `${Math.round((r.done / Math.max(1, r.total)) * 100)}%` }}
                   />
                 </span>
@@ -299,10 +296,10 @@ export function LearningSheet({
             )
           })}
         </ul>
-        <p className="m-0 text-[13px] text-white/60">
+        <p className="m-0 text-[13px] text-nx-ink/60">
           Up next and new saves jump the line, so what you’re about to watch gets learned first.
         </p>
-        <p className="m-0 text-xs text-white/45">
+        <p className="m-0 text-xs text-nx-ink/45">
           Pictures, videos, what’s said in them and text on screen are understood on your own
           server, and none of that leaves it.
         </p>

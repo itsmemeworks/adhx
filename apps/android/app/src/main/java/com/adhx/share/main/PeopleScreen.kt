@@ -61,7 +61,7 @@ fun PeopleScreen(people: PeopleViewModel, server: String, onBack: () -> Unit, on
     Column(
         Modifier
             .fillMaxSize()
-            .background(AdhxColors.Background)
+            .background(AdhxColors.Bg)
             .statusBarsPadding()
             .padding(horizontal = 16.dp),
     ) {
@@ -72,18 +72,18 @@ fun PeopleScreen(people: PeopleViewModel, server: String, onBack: () -> Unit, on
                 SettingsCopy.YOUR_PEOPLE,
                 fontFamily = SerifFamily,
                 fontSize = 26.sp,
-                color = AdhxColors.White,
+                color = AdhxColors.Ink,
                 modifier = Modifier.semantics { heading() },
             )
         }
         when {
-            ui.unavailable -> Text(SettingsCopy.PEOPLE_UNAVAILABLE, fontSize = 15.sp, color = AdhxColors.Muted)
+            ui.unavailable -> Text(SettingsCopy.PEOPLE_UNAVAILABLE, fontSize = 15.sp, color = AdhxColors.InkSoft)
             ui.people == null && ui.error != null -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(ui.error ?: SettingsCopy.PEOPLE_CANT_LOAD, fontSize = 15.sp, color = AdhxColors.Muted)
+                Text(ui.error ?: SettingsCopy.PEOPLE_CANT_LOAD, fontSize = 15.sp, color = AdhxColors.InkSoft)
                 OutlineButton("Try again", onClick = people::load, minHeight = 44.dp)
             }
             ui.people == null -> Box(Modifier.fillMaxWidth().padding(top = 30.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(Modifier.size(34.dp), color = AdhxColors.Accent, trackColor = AdhxColors.Hairline, strokeWidth = 3.dp)
+                CircularProgressIndicator(Modifier.size(34.dp), color = AdhxColors.Accent, trackColor = AdhxColors.Line, strokeWidth = 3.dp)
             }
             else -> LazyColumn(
                 Modifier
@@ -97,7 +97,7 @@ fun PeopleScreen(people: PeopleViewModel, server: String, onBack: () -> Unit, on
                 }
                 if (members.none { !it.isYou }) {
                     item {
-                        Text(SettingsCopy.PEOPLE_EMPTY, fontSize = 14.sp, color = AdhxColors.Faint, modifier = Modifier.padding(16.dp))
+                        Text(SettingsCopy.PEOPLE_EMPTY, fontSize = 14.sp, color = AdhxColors.InkFaint, modifier = Modifier.padding(16.dp))
                     }
                 }
             }
@@ -124,16 +124,16 @@ private fun PersonRow(person: Person, server: String, onClick: () -> Unit) {
                 if (person.isYou) "${person.label} (you)" else person.label,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = AdhxColors.White,
+                color = AdhxColors.Ink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(SettingsCopy.personLine(person), fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(SettingsCopy.personLine(person), fontSize = 13.sp, color = AdhxColors.InkFaint, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         val last = Copy.shortAgoIso(person.lastSavedAt)
         when {
             person.banned -> Text(SettingsCopy.BANNED, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Warn)
-            last != null -> Text(last, fontSize = 13.sp, color = AdhxColors.Faint)
+            last != null -> Text(last, fontSize = 13.sp, color = AdhxColors.InkFaint)
         }
     }
 }

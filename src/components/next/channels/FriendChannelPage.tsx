@@ -70,7 +70,7 @@ export function FriendNoteTile({
     <Link
       href={href}
       aria-label={`${who}’s note: “${note.text}”${title ? `, on ${title}` : ''}`}
-      className="flex flex-col gap-2.5 rounded-[20px] bg-[#e4dac8] p-[18px] font-nx-sans text-[#141414] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nx-accent"
+      className="flex flex-col gap-2.5 rounded-[20px] bg-nx-paper p-[18px] font-nx-sans text-nx-paper-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nx-accent"
     >
       <span className="flex items-center gap-2 text-[12px] font-extrabold">
         <NxAvatar
@@ -83,7 +83,7 @@ export function FriendNoteTile({
         className="whitespace-pre-line break-words font-nx-serif text-[26px] leading-[0.95]"
         translate="no"
       >{`“${note.text}”`}</span>
-      {on && <span className="line-clamp-2 text-[12px] text-[#3a352d]">{on}</span>}
+      {on && <span className="line-clamp-2 text-[12px] text-nx-paper-ink-soft">{on}</span>}
     </Link>
   )
 }
@@ -222,7 +222,7 @@ export function FriendChannelPage({
   const savesLabel = total === 1 ? '1 save' : `${total.toLocaleString('en-GB')} saves`
 
   return (
-    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
+    <div className="min-h-dvh bg-nx-bg font-nx-sans text-nx-cream">
       <NxHeader current="channels">
         {/* Desktop pastes anywhere on the page (⌘V), the pill kept for keyboards; phones need it. */}
         <PasteButton onClick={paste.pasteFromClipboard} keyboardOnlyFrom="md" />
@@ -234,7 +234,7 @@ export function FriendChannelPage({
         >
           <Link
             href="/channels"
-            className="hidden h-6 items-center gap-1.5 text-sm font-semibold text-nx-soft hover:text-nx-cream lg:flex"
+            className="hidden h-6 items-center gap-1.5 text-sm font-semibold text-nx-ink-soft hover:text-nx-cream lg:flex"
           >
             <ChevronLeft aria-hidden className="h-4 w-4" />
             <span>All channels</span>
@@ -257,7 +257,7 @@ export function FriendChannelPage({
               <h1 className="m-0 truncate font-nx-serif text-[36px] font-normal leading-[0.95] tracking-[-0.01em] lg:mt-[22px] lg:whitespace-nowrap lg:text-[62px]">
                 {title}
               </h1>
-              <p className="m-0 mt-1.5 text-[13px] font-semibold text-nx-soft lg:mt-3 lg:text-[17px]">
+              <p className="m-0 mt-1.5 text-[13px] font-semibold text-nx-ink-soft lg:mt-3 lg:text-[17px]">
                 <span>{savesLabel}</span>
                 {newCount > 0 && (
                   <>
@@ -268,7 +268,7 @@ export function FriendChannelPage({
               </p>
             </div>
           </div>
-          <p className="m-0 mt-2 hidden text-sm leading-normal text-nx-muted lg:block">
+          <p className="m-0 mt-2 hidden text-sm leading-normal text-nx-ink-faint lg:block">
             {mostly
               ? `${mostly} Picked by hand, one at a time, like it’s 2009.`
               : 'Picked by hand, one at a time, like it’s 2009.'}
@@ -285,7 +285,7 @@ export function FriendChannelPage({
               <Link
                 href={friendPlayHref(username, { onlyNew: true })}
                 aria-label={newCount === 1 ? 'Play the new one' : `Play the ${newCount} new ones`}
-                className="flex h-12 min-w-0 items-center justify-center gap-2.5 whitespace-nowrap rounded-full border border-white/[0.08] bg-[#262320] px-5 text-base font-extrabold text-nx-cream lg:h-[52px]"
+                className="flex h-12 min-w-0 items-center justify-center gap-2.5 whitespace-nowrap rounded-full border border-white/[0.08] bg-nx-plate px-5 text-base font-extrabold text-nx-cream lg:h-[52px]"
               >
                 <span aria-hidden className="h-2 w-2 rounded-full bg-nx-accent" />
                 {/* Phones say it shorter, as the phone app does. */}
@@ -324,7 +324,7 @@ export function FriendChannelPage({
                 ))}
             </div>
           )}
-          <p className="m-0 mt-3 flex items-center gap-2 text-[13px] text-nx-muted lg:mt-auto lg:pt-6">
+          <p className="m-0 mt-3 flex items-center gap-2 text-[13px] text-nx-ink-faint lg:mt-auto lg:pt-6">
             <Lock aria-hidden className="h-3.5 w-3.5 shrink-0" />
             <span>Only people on this server can see this page.</span>
           </p>
@@ -343,7 +343,7 @@ export function FriendChannelPage({
               ))}
             </div>
           ) : shown.length === 0 ? (
-            <p className="m-0 text-white/65">
+            <p className="m-0 text-nx-ink/65">
               {failed
                 ? 'Their saves didn’t load. Refresh to try again.'
                 : 'Nothing here yet. Whatever they keep for the group shows up here.'}

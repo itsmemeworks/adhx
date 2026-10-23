@@ -359,6 +359,13 @@ registered for the app and the Share Extension on first use (`BundledFonts` in
 picked on its `wght` axis. Without them the app falls back to the system serif
 and sans.
 
+Colours are the shared design system's tokens, one `static let` each in
+`enum Theme` (`bg`, `stage`, `surface`, `plate`, `line`, `accent`, `cream`,
+`ink`, `inkSoft`, `inkFaint`, `danger`, the paper, person and moment sets, …),
+named as on the web and Android. Use a token rather than a hex literal; only
+black and white alpha overlays stay literal. `hairline` is for quiet dividers
+only; control borders, the switch-off track and spinner tracks use `line`.
+
 ## Debug launch arguments
 
 Debug builds read a few launch arguments, for the simulator and design checks

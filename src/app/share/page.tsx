@@ -57,7 +57,7 @@ function ShareRedirect() {
 /** While the shared link is worked out (a moment, usually). */
 function Grabbing() {
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-black font-nx-sans text-white">
+    <div className="flex min-h-dvh items-center justify-center bg-black font-nx-sans text-nx-ink">
       <AdhxLoader label="Grabbing it…" />
     </div>
   )
@@ -65,7 +65,7 @@ function Grabbing() {
 
 function NotSupported() {
   return (
-    <div className="flex min-h-dvh flex-col bg-black font-nx-sans text-white">
+    <div className="flex min-h-dvh flex-col bg-black font-nx-sans text-nx-ink">
       <header className="px-4 py-3 md:px-7 md:py-[18px]">
         <NxLogo />
       </header>
@@ -73,7 +73,7 @@ function NotSupported() {
         <h1 className="m-0 font-nx-serif text-[40px] font-normal leading-none md:text-[52px]">
           Not a supported link
         </h1>
-        <p className="m-0 max-w-[460px] text-[15px] text-white/70">
+        <p className="m-0 max-w-[460px] text-[15px] text-nx-ink/70">
           That doesn’t look like a link to one post. ADHX keeps posts from X, Instagram, TikTok,
           YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur
           and Bluesky.

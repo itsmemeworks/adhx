@@ -42,18 +42,18 @@ export function OnTheirWayPill({ className }: { className?: string }) {
       )}
     >
       {error ? (
-        <CloudOff aria-hidden className="h-[18px] w-[18px] shrink-0 text-nx-muted" />
+        <CloudOff aria-hidden className="h-[18px] w-[18px] shrink-0 text-nx-ink-faint" />
       ) : (
         <span
           aria-hidden
-          className="block h-[18px] w-[18px] shrink-0 animate-nx-spin rounded-full border-[2.5px] border-[#4a453e] border-t-nx-accent"
+          className="block h-[18px] w-[18px] shrink-0 animate-nx-spin rounded-full border-[2.5px] border-nx-line border-t-nx-accent"
         />
       )}
       <span className="hidden lg:inline">{label}</span>
       {!!summary?.needsYou && (
         <span
           aria-hidden
-          className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ff5a3c] px-1.5 text-[11px] font-extrabold text-black"
+          className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-nx-live px-1.5 text-[11px] font-extrabold text-black"
         >
           {summary.needsYou}
         </span>

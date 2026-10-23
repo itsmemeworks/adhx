@@ -24,7 +24,7 @@ struct ConnectedView: View {
                 .foregroundStyle(Theme.good)
                 .padding(.horizontal, 12)
                 .frame(height: 30)
-                .background(Capsule(style: .continuous).fill(Color(hex: 0x7FD1AE, opacity: 0.14)))
+                .background(Capsule(style: .continuous).fill(Theme.good.opacity(0.14)))
                 .padding(.top, 12)
 
             // The boards' line-height 0.95: the two lines nearly touch.
@@ -43,11 +43,11 @@ struct ConnectedView: View {
             if !settings.members.isEmpty {
                 HStack(spacing: 10) {
                     FaceStack(savers: settings.members.map(\.asSaver), server: model.server, size: 30,
-                              ring: Theme.app, limit: 5)
+                              ring: Theme.bg, limit: 5)
                     Text(SaverWords.names(SaverWords.ordered(settings.members.map(\.asSaver)).map(\.displayName),
                                           upTo: 4))
                         .font(Theme.sans(14))
-                        .foregroundStyle(Theme.muted)
+                        .foregroundStyle(Theme.inkSoft)
                         .lineLimit(1)
                 }
                 .padding(.top, 12)
@@ -69,7 +69,7 @@ struct ConnectedView: View {
                 Text("Share from any app to save. Your saves are shared with your people unless you make them just for you.")
                     .font(Theme.sans(12))
                     .lineSpacing(3)
-                    .foregroundStyle(Theme.faint)
+                    .foregroundStyle(Theme.inkFaint)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -79,7 +79,7 @@ struct ConnectedView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             ZStack {
-                Theme.app
+                Theme.bg
                 RadialGradient(colors: [Theme.accent.opacity(0.1), .clear], center: UnitPoint(x: 0.5, y: 0.12),
                                startRadius: 0, endRadius: 240)
             }
@@ -123,7 +123,7 @@ struct ConnectedView: View {
                 ForEach(0..<dots, id: \.self) { dot in
                     let on = min(current / 2, dots - 1) == dot
                     Capsule(style: .continuous)
-                        .fill(on ? Theme.ink : Color(hex: 0x4A453E))
+                        .fill(on ? Theme.ink : Theme.line)
                         .frame(width: on ? 18 : 6, height: 6)
                 }
             }
@@ -198,25 +198,25 @@ private struct WeekCard: View {
 private struct Confetti: View {
     var body: some View {
         Canvas { context, _ in
-            func bit(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat, _ angle: Double, _ hex: UInt32) {
+            func bit(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat, _ angle: Double, _ colour: Color) {
                 var piece = context
                 piece.translateBy(x: x + w / 2, y: y + h / 2)
                 piece.rotate(by: .degrees(angle))
                 piece.fill(Path(roundedRect: CGRect(x: -w / 2, y: -h / 2, width: w, height: h), cornerRadius: 2),
-                           with: .color(Color(hex: hex)))
+                           with: .color(colour))
             }
-            bit(30, 18, 10, 5, -25, 0xFF8FA3)
-            bit(58, 62, 9, 5, 30, 0x7FD1AE)
-            bit(176, 14, 10, 5, 35, 0xC4A7FF)
-            bit(196, 56, 10, 5, -20, 0xFFB35C)
+            bit(30, 18, 10, 5, -25, Theme.person2)
+            bit(58, 62, 9, 5, 30, Theme.person1)
+            bit(176, 14, 10, 5, 35, Theme.person4)
+            bit(196, 56, 10, 5, -20, Theme.person5)
             context.fill(Path(ellipseIn: CGRect(x: 66.5, y: 18.5, width: 7, height: 7)), with: .color(Theme.accent))
-            context.fill(Path(ellipseIn: CGRect(x: 165, y: 67, width: 6, height: 6)), with: .color(Color(hex: 0xFF8FA3)))
-            for (x, y, hex) in [(CGFloat(14), CGFloat(48), UInt32(0xFFD23F)), (206, 34, 0x7FD1AE)] {
+            context.fill(Path(ellipseIn: CGRect(x: 165, y: 67, width: 6, height: 6)), with: .color(Theme.person2))
+            for (x, y, colour) in [(CGFloat(14), CGFloat(48), Theme.accent), (206, 34, Theme.person1)] {
                 var wave = Path()
                 wave.move(to: CGPoint(x: x, y: y))
                 wave.addQuadCurve(to: CGPoint(x: x + 12, y: y), control: CGPoint(x: x + 6, y: y - 8))
                 wave.addQuadCurve(to: CGPoint(x: x + 24, y: y), control: CGPoint(x: x + 18, y: y + 8))
-                context.stroke(wave, with: .color(Color(hex: hex)), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                context.stroke(wave, with: .color(colour), style: StrokeStyle(lineWidth: 2, lineCap: .round))
             }
         }
         .accessibilityHidden(true)

@@ -87,7 +87,7 @@ export function WatchersBar({
       className={cn('nx-plate flex items-center gap-3 rounded-2xl py-2.5 pl-3 pr-4', className)}
     >
       <Faces people={watchers} size={30} live ring="#111" max={4} className="pl-1" />
-      <span className="min-w-0 text-[14px] leading-[1.35] text-white">
+      <span className="min-w-0 text-[14px] leading-[1.35] text-nx-ink">
         <span className="font-extrabold">{names}</span>
         <span>{` ${rest}`}</span>
       </span>
@@ -115,7 +115,7 @@ export function ReactButton({
       onClick={onToggle}
       className={cn(
         'nx-plate pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full md:h-[52px] md:w-[52px]',
-        open ? 'text-nx-accent ring-2 ring-nx-accent' : 'text-white',
+        open ? 'text-nx-accent ring-2 ring-nx-accent' : 'text-nx-ink',
         className,
       )}
     >
@@ -167,7 +167,7 @@ export function ReactionPicker({
       }}
       // What lines its edges curves at 26 − 12 − 1 = 13 px.
       className={cn(
-        'pointer-events-auto flex max-h-[calc(100%-32px)] min-w-0 flex-col gap-2.5 overflow-y-auto overscroll-contain rounded-[26px] border border-white/10 bg-[#1a1814]/90 p-3 text-white shadow-nx-toast backdrop-blur-xl',
+        'pointer-events-auto flex max-h-[calc(100%-32px)] min-w-0 flex-col gap-2.5 overflow-y-auto overscroll-contain rounded-[26px] border border-white/10 bg-nx-surface/90 p-3 text-nx-ink shadow-nx-toast backdrop-blur-xl',
         className,
       )}
     >
@@ -185,7 +185,7 @@ export function ReactionPicker({
             title={r.label}
             disabled={disabled}
             onClick={() => onEmoji(r.emoji)}
-            className="flex h-12 min-w-0 items-center justify-center rounded-[13px] bg-[#262320] text-[26px] leading-none transition-transform hover:scale-110 disabled:opacity-60 motion-reduce:hover:scale-100"
+            className="flex h-12 min-w-0 items-center justify-center rounded-[13px] bg-nx-plate text-[26px] leading-none transition-transform hover:scale-110 disabled:opacity-60 motion-reduce:hover:scale-100"
           >
             <span aria-hidden>{r.emoji}</span>
           </button>
@@ -212,7 +212,7 @@ export function ReactionPicker({
           autoComplete="off"
           enterKeyHint="send"
           placeholder={live ? 'Say something to everyone watching' : 'Say something'}
-          className="h-11 min-w-0 flex-1 rounded-[13px] border border-[#4a453e] bg-[#0f0e0c] px-4 text-[15px] text-nx-cream placeholder:text-nx-muted"
+          className="h-11 min-w-0 flex-1 rounded-[13px] border border-nx-line bg-nx-bg px-4 text-[15px] text-nx-cream placeholder:text-nx-ink-faint"
         />
         <button
           type="submit"
@@ -222,13 +222,13 @@ export function ReactionPicker({
           <span>{disabled ? 'Sending…' : error ? 'Retry' : 'Send'}</span>
         </button>
       </form>
-      <p id={`${inputId}-hint`} className="m-0 text-xs text-nx-soft">
+      <p id={`${inputId}-hint`} className="m-0 text-xs text-nx-ink-soft">
         {live
           ? 'Everyone watching sees it now. It stays on the post for people who can see it.'
           : 'People who can see this post see it when they watch it.'}
       </p>
       {error && (
-        <p role="status" className="m-0 text-sm text-[#ffb891]">
+        <p role="status" className="m-0 text-sm text-nx-warn">
           {error}
         </p>
       )}
@@ -311,10 +311,12 @@ export function ReactionFloats({
                 <span className="sr-only">{`${name} said:`}</span>
                 {face}
                 <span
-                  className="relative mb-[18px] max-w-[min(260px,60vw)] truncate rounded-[16px_16px_16px_4px] px-3 py-2 text-[14px] font-bold text-black"
+                  // Words float in the serif, at most three lines (the clamp sits on a child
+                  // with no vertical padding so no clipped line peeks through).
+                  className="relative mb-[18px] max-w-[min(260px,60vw)] rounded-[16px_16px_16px_4px] px-3 py-2 font-nx-serif text-[20px] font-normal leading-[1.1] text-nx-on-accent"
                   style={{ background: colour }}
                 >
-                  <span>{r.text}</span>
+                  <span className="line-clamp-3 break-words">{r.text}</span>
                 </span>
               </span>
             )}
@@ -347,7 +349,7 @@ export function ArrivalToast({
     <>
       <span className="relative shrink-0">
         {/* In the toast's corner: 18 − 10 = 8 px. */}
-        <span className="block h-[42px] w-[42px] overflow-hidden rounded-[8px] bg-[#2a2620]">
+        <span className="block h-[42px] w-[42px] overflow-hidden rounded-[8px] bg-nx-raised">
           {cover && <NxImage src={cover} alt="" className="h-full w-full object-cover" />}
         </span>
         <span aria-hidden className="absolute -bottom-1.5 -right-1.5 block">
@@ -359,8 +361,8 @@ export function ArrivalToast({
         </span>
       </span>
       <span className="flex min-w-0 flex-col gap-0.5 text-left text-[13px]">
-        <span className="truncate font-extrabold text-white">{arrivalLine(saver)}</span>
-        <span className="text-white/70">{now ? 'playing now' : 'playing next'}</span>
+        <span className="truncate font-extrabold text-nx-ink">{arrivalLine(saver)}</span>
+        <span className="text-nx-ink/70">{now ? 'playing now' : 'playing next'}</span>
       </span>
     </>
   )
@@ -369,7 +371,7 @@ export function ArrivalToast({
     <div
       role="status"
       className={cn(
-        'rounded-[18px] bg-[#1a1814]/90 shadow-nx-toast backdrop-blur-md animate-nx-slide-in',
+        'rounded-[18px] bg-nx-surface/90 shadow-nx-toast backdrop-blur-md animate-nx-slide-in',
         className,
       )}
       style={{ boxShadow: `0 0 0 1px ${hue}73, 0 16px 40px rgba(0,0,0,0.5)` }}

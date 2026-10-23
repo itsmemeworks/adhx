@@ -61,14 +61,14 @@ function Tile({
       {src ? (
         <NxImage src={src} alt="" className="absolute inset-0 h-full w-full object-cover" />
       ) : (
-        <span className="absolute inset-0 overflow-hidden bg-nx-cream px-3 pb-3 pt-11 font-nx-serif text-[16px] leading-[1.15] text-nx-ink">
+        <span className="absolute inset-0 overflow-hidden bg-nx-cream px-3 pb-3 pt-11 font-nx-serif text-[16px] leading-[1.15] text-nx-bg">
           {text}
         </span>
       )}
       <span
         className={cn(
           'absolute left-2.5 top-2.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold',
-          fresh ? 'text-black' : 'nx-plate text-white',
+          fresh ? 'text-black' : 'nx-plate text-nx-ink',
         )}
         style={fresh ? { background: hue } : undefined}
       >
@@ -84,12 +84,12 @@ function Tile({
         )
       )}
       {nextPostKind(post) === 'video' && (
-        <span className="nx-plate absolute bottom-2.5 right-2.5 rounded-md px-2 py-0.5 text-[11px] font-bold text-white">
+        <span className="nx-plate absolute bottom-2.5 right-2.5 rounded-md px-2 py-0.5 text-[11px] font-bold text-nx-ink">
           Video
         </span>
       )}
       {src && text && (
-        <span className="nx-scrim nx-text-shadow absolute inset-x-0 bottom-0 line-clamp-2 px-2.5 pb-2.5 pt-8 text-xs font-semibold text-white">
+        <span className="nx-scrim nx-text-shadow absolute inset-x-0 bottom-0 line-clamp-2 px-2.5 pb-2.5 pt-8 text-xs font-semibold text-nx-ink">
           {text}
         </span>
       )}
@@ -103,9 +103,9 @@ export function MomentScreen({ slug }: { slug: string }) {
 
   if (missing) {
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-black px-6 text-center font-nx-sans text-white">
+      <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-black px-6 text-center font-nx-sans text-nx-ink">
         <h1 className="m-0 font-nx-serif text-[36px] font-normal">This moment has passed</h1>
-        <p className="m-0 text-white/65">People have moved on. See what they’re saving now.</p>
+        <p className="m-0 text-nx-ink/65">People have moved on. See what they’re saving now.</p>
         <Link
           href="/now"
           className="rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-black"
@@ -124,7 +124,7 @@ export function MomentScreen({ slug }: { slug: string }) {
     : 0
 
   return (
-    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
+    <div className="min-h-dvh bg-nx-bg font-nx-sans text-nx-cream">
       <NxHeader current="now">
         <SaveTools />
       </NxHeader>
@@ -147,20 +147,20 @@ export function MomentScreen({ slug }: { slug: string }) {
               {m?.title ?? ' '}
             </h1>
             {m && (
-              <p className="m-0 max-w-[620px] text-[17px] leading-[1.45] text-nx-soft">
+              <p className="m-0 max-w-[620px] text-[17px] leading-[1.45] text-nx-ink-soft">
                 {`${plural(m.posts, 'post')} saved by ${plural(m.people, 'person', 'people')}${
                   videos > m.posts / 2 ? ', mostly videos' : ''
                 }. Last save ${timeAgo(m.lastAt)}.`}
               </p>
             )}
             {m?.savers && m.savers.length > 0 && (
-              <p className="m-0 flex items-center gap-2.5 text-[15px] text-nx-soft">
+              <p className="m-0 flex items-center gap-2.5 text-[15px] text-nx-ink-soft">
                 <Faces people={m.savers} size={30} ring="#000" max={5} />
                 <span>{savingLine(m.savers, m.people)}</span>
               </p>
             )}
             {watchers.length > 0 && (
-              <p className="m-0 flex items-center gap-2.5 text-[14px] text-nx-soft">
+              <p className="m-0 flex items-center gap-2.5 text-[14px] text-nx-ink-soft">
                 <Faces people={watchers} size={26} live ring="#000" />
                 <span>{watchingLine(watchers)}</span>
               </p>
@@ -193,7 +193,7 @@ export function MomentScreen({ slug }: { slug: string }) {
             aria-label="How it’s moving"
             className="flex flex-[1_1_340px] flex-col gap-3.5 rounded-[22px] bg-nx-surface p-5"
           >
-            <span className="text-[13px] font-bold text-nx-muted">Saves, last 30 minutes</span>
+            <span className="text-[13px] font-bold text-nx-ink-faint">Saves, last 30 minutes</span>
             <div aria-hidden className="flex h-24 items-end gap-1">
               {(detail?.bars ?? new Array(30).fill(0)).map((v, i, all) => (
                 <span
@@ -214,11 +214,11 @@ export function MomentScreen({ slug }: { slug: string }) {
               ].map(({ v, l }) => (
                 <div key={l} className="flex flex-col gap-0.5">
                   <span className="font-nx-serif text-[36px] leading-none tabular-nums">{v}</span>
-                  <span className="text-xs text-nx-muted">{l}</span>
+                  <span className="text-xs text-nx-ink-faint">{l}</span>
                 </div>
               ))}
             </div>
-            <span className="text-xs text-nx-muted">
+            <span className="text-xs text-nx-ink-faint">
               {m?.savers
                 ? 'Only your people see who saved what. Private saves never count.'
                 : 'Counts are anonymous. Nobody sees who saved what.'}

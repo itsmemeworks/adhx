@@ -79,7 +79,7 @@ function Tile({ tile, className }: { tile: CoverTile | undefined; className?: st
   return (
     <span
       className={cn(
-        'block h-full w-full overflow-hidden bg-nx-cream p-2 text-[11px] leading-tight text-nx-ink',
+        'block h-full w-full overflow-hidden bg-nx-cream p-2 text-[11px] leading-tight text-nx-bg',
         className,
       )}
     >
@@ -108,7 +108,7 @@ export function RowHeading({
       >
         {title}
       </h2>
-      <span className="text-sm text-nx-muted md:text-base">{sub}</span>
+      <span className="text-sm text-nx-ink-faint md:text-base">{sub}</span>
       {children && <span className="hidden flex-1 md:block" />}
       {children}
     </div>
@@ -158,7 +158,7 @@ export function FromEveryoneRow({
       {channels === null ? (
         <Shimmer height="h-[230px]" />
       ) : channels.length === 0 ? (
-        <p className="m-0 text-sm text-white/60">
+        <p className="m-0 text-sm text-nx-ink/60">
           These dig themselves once your lot has saved a few dozen things. Keep going.
         </p>
       ) : (
@@ -178,13 +178,13 @@ export function FromEveryoneRow({
                       <Tile key={i} tile={tiles[i] ?? tiles[i % Math.max(1, tiles.length)]} />
                     ))}
                     <NewPill count={c.newCount} className="left-2.5 top-2.5" />
-                    <span className="absolute bottom-2.5 right-2.5 hidden h-7 items-center gap-1.5 rounded-full bg-black/55 px-3 text-xs font-extrabold text-white backdrop-blur-md md:flex">
+                    <span className="absolute bottom-2.5 right-2.5 hidden h-7 items-center gap-1.5 rounded-full bg-black/55 px-3 text-xs font-extrabold text-nx-ink backdrop-blur-md md:flex">
                       <Play aria-hidden className="h-3 w-3" fill="currentColor" strokeWidth={0} />
                       <span>Play all</span>
                     </span>
                   </span>
                   <span className="truncate text-[15px] font-extrabold md:text-lg">{c.name}</span>
-                  <span className="flex min-w-0 items-center gap-2 text-xs text-nx-soft md:gap-2.5 md:text-sm">
+                  <span className="flex min-w-0 items-center gap-2 text-xs text-nx-ink-soft md:gap-2.5 md:text-sm">
                     {c.savers.length > 0 && (
                       <SaverFaces savers={c.savers} size={22} compact linked tone="scrim" />
                     )}
@@ -222,7 +222,7 @@ export function YourPeopleRow({
       ) : (
         <>
           {friends.length === 0 && (
-            <p className="m-0 text-sm text-white/60">
+            <p className="m-0 text-sm text-nx-ink/60">
               {canInvite
                 ? 'Just you so far. The feed gets better with company.'
                 : 'Just you so far. When your people start saving, they show up here.'}
@@ -247,14 +247,14 @@ export function YourPeopleRow({
                       size={64}
                       className={cn(
                         f.newCount > 0 &&
-                          'shadow-[0_0_0_2px_rgb(var(--nx-ink)),0_0_0_4px_rgb(var(--nx-accent))]',
+                          'shadow-[0_0_0_2px_rgb(var(--nx-bg)),0_0_0_4px_rgb(var(--nx-accent))]',
                       )}
                     />
                     <span className="max-w-full truncate text-[13px] font-semibold">
                       {f.name?.trim() || f.username}
                     </span>
                     {f.newCount > 0 && (
-                      <span className="absolute -right-1.5 -top-1 flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-nx-accent px-1.5 text-[11px] font-extrabold text-black shadow-[0_0_0_2px_rgb(var(--nx-ink))]">
+                      <span className="absolute -right-1.5 -top-1 flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-nx-accent px-1.5 text-[11px] font-extrabold text-black shadow-[0_0_0_2px_rgb(var(--nx-bg))]">
                         {f.newCount > 99 ? '99+' : String(f.newCount)}
                       </span>
                     )}
@@ -306,7 +306,9 @@ export function YourPeopleRow({
                         />
                         <span className="flex min-w-0 flex-col gap-0.5">
                           <span className="truncate text-[17px] font-extrabold">{title}</span>
-                          <span className="text-[13px] text-nx-muted">{savesLabel(f.size)}</span>
+                          <span className="text-[13px] text-nx-ink-faint">
+                            {savesLabel(f.size)}
+                          </span>
                         </span>
                       </span>
                       {/* Along the card's bottom: 24 − 16 − 1 leaves the 8 px floor. */}
@@ -345,7 +347,7 @@ export function YourPeopleRow({
                       <Plus className="h-[22px] w-[22px]" />
                     </span>
                     <span className="text-base font-extrabold text-nx-accent">Invite someone</span>
-                    <span className="text-[13px] text-nx-muted">
+                    <span className="text-[13px] text-nx-ink-faint">
                       One link signs them in and pairs their phone
                     </span>
                   </Link>

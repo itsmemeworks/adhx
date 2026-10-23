@@ -118,7 +118,7 @@ export function InviteDoneClient({
     .find((src): src is string => !!src)
 
   return (
-    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
+    <div className="min-h-dvh bg-nx-bg font-nx-sans text-nx-cream">
       <NxHeader current={null} />
       <main className="mx-auto grid w-full max-w-[1280px] grid-cols-1 gap-10 px-4 py-8 md:px-14 md:py-10 lg:min-h-[calc(100dvh-72px)] lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-14">
         <section aria-labelledby="in-h" className="flex min-w-0 flex-col justify-center">
@@ -145,7 +145,7 @@ export function InviteDoneClient({
             </span>
             <span className="font-semibold">{`Signed in as ${username}`}</span>
             {inviter && (
-              <span className="hidden text-nx-muted sm:inline">{`on ${possessive(nameOf(inviter))} ADHX`}</span>
+              <span className="hidden text-nx-ink-faint sm:inline">{`on ${possessive(nameOf(inviter))} ADHX`}</span>
             )}
           </span>
 
@@ -156,7 +156,7 @@ export function InviteDoneClient({
             <span>{'You’re in, '}</span>
             <span className="text-nx-accent">{`${greeting}.`}</span>
           </h1>
-          <p className="m-0 mt-3.5 text-[17px] leading-[1.45] text-nx-soft md:text-[19px]">
+          <p className="m-0 mt-3.5 text-[17px] leading-[1.45] text-nx-ink-soft md:text-[19px]">
             {connected
               ? `${connected} is connected. Share a post to try it.`
               : 'One last thing. Put ADHX on your phone, it connects itself.'}
@@ -165,7 +165,7 @@ export function InviteDoneClient({
           {connected ? (
             <div
               role="status"
-              className="mt-8 flex items-center gap-3 self-start rounded-2xl bg-[#7ddc8a]/12 px-4 py-3 text-[15px] font-semibold text-[#7ddc8a]"
+              className="mt-8 flex items-center gap-3 self-start rounded-2xl bg-nx-good/12 px-4 py-3 text-[15px] font-semibold text-nx-good"
             >
               <Check aria-hidden className="h-5 w-5 shrink-0" strokeWidth={3} />
               <span>{`${connected} is connected.`}</span>
@@ -182,16 +182,16 @@ export function InviteDoneClient({
               >
                 {localOnly && <LocalOnlyWarning />}
                 {pair.error && (
-                  <p role="alert" className="m-0 text-[13px] text-[#ff8a7a]">
+                  <p role="alert" className="m-0 text-[13px] text-nx-danger">
                     {pair.error}
                   </p>
                 )}
               </PhoneSteps>
               <div className="mt-8 hidden flex-col gap-6 sm:flex sm:flex-row sm:items-center sm:gap-9">
                 {/* 28 px frame, 14 px padding: the code inside curves at 14 px. */}
-                <div className="flex-none self-start rounded-[28px] bg-[#e4dac8] p-3.5 shadow-[0_30px_70px_rgba(0,0,0,0.55)] sm:self-auto">
+                <div className="flex-none self-start rounded-[28px] bg-nx-paper p-3.5 shadow-[0_30px_70px_rgba(0,0,0,0.55)] sm:self-auto">
                   {pairing && !expired ? (
-                    <span className="relative block h-[240px] w-[240px] overflow-hidden rounded-[14px] bg-[#f4f1ea] p-3 md:h-[268px] md:w-[268px]">
+                    <span className="relative block h-[240px] w-[240px] overflow-hidden rounded-[14px] bg-nx-ink p-3 md:h-[268px] md:w-[268px]">
                       <img
                         src={pairing.qr}
                         alt="QR code to connect your phone"
@@ -199,13 +199,13 @@ export function InviteDoneClient({
                       />
                       <span
                         aria-hidden
-                        className="absolute left-1/2 top-1/2 flex h-[26%] w-[26%] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-lg bg-[#f4f1ea]"
+                        className="absolute left-1/2 top-1/2 flex h-[26%] w-[26%] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-lg bg-nx-ink"
                       >
                         <Gob size={64} className="h-[90%] w-[90%]" />
                       </span>
                     </span>
                   ) : (
-                    <span className="flex h-[240px] w-[240px] flex-col items-center justify-center gap-3 rounded-[14px] bg-[#f4f1ea] p-4 text-center text-nx-ink md:h-[268px] md:w-[268px]">
+                    <span className="flex h-[240px] w-[240px] flex-col items-center justify-center gap-3 rounded-[14px] bg-nx-ink p-4 text-center text-nx-bg md:h-[268px] md:w-[268px]">
                       {pairing && expired && <span className="text-sm">That code ran out.</span>}
                       <button
                         type="button"
@@ -232,11 +232,16 @@ export function InviteDoneClient({
                   </span>
                   {pairing && !expired && (
                     <div className="flex flex-col gap-1.5 rounded-[22px] border border-white/[0.08] bg-nx-surface px-[22px] py-[18px]">
-                      <span className="text-sm text-nx-muted">Or type this code in the app</span>
+                      <span className="text-sm text-nx-ink-faint">
+                        Or type this code in the app
+                      </span>
                       <span className="whitespace-nowrap text-[32px] font-extrabold leading-[1.1] tracking-[0.1em] md:text-[40px]">
                         {spacedPairCode(pairing.code)}
                       </span>
-                      <span className="flex items-center gap-2 text-sm text-nx-muted" role="status">
+                      <span
+                        className="flex items-center gap-2 text-sm text-nx-ink-faint"
+                        role="status"
+                      >
                         <Timer aria-hidden className="h-3.5 w-3.5 shrink-0" />
                         <span>
                           {`Works once, for 10 minutes · ${left === 1 ? '1 minute' : `${left} minutes`} left`}
@@ -246,7 +251,7 @@ export function InviteDoneClient({
                   )}
                   {localOnly && <LocalOnlyWarning />}
                   {pair.error && (
-                    <p role="alert" className="m-0 text-[13px] text-[#ff8a7a]">
+                    <p role="alert" className="m-0 text-[13px] text-nx-danger">
                       {pair.error}
                     </p>
                   )}
@@ -270,7 +275,7 @@ export function InviteDoneClient({
                 </a>
               ))}
             {!connected && apps.length === 0 && (
-              <span className="hidden text-sm text-nx-muted sm:inline">
+              <span className="hidden text-sm text-nx-ink-faint sm:inline">
                 No app link yet? Ask whoever invited you where to get it.
               </span>
             )}
@@ -279,7 +284,7 @@ export function InviteDoneClient({
               className={
                 connected
                   ? PRIMARY
-                  : 'flex h-12 items-center whitespace-nowrap px-3 text-[15px] font-semibold text-nx-soft underline underline-offset-[3px] hover:text-nx-cream'
+                  : 'flex h-12 items-center whitespace-nowrap px-3 text-[15px] font-semibold text-nx-ink-soft underline underline-offset-[3px] hover:text-nx-cream'
               }
             >
               {connected ? 'Go to the feed' : 'Skip, take me to the feed'}
@@ -287,9 +292,12 @@ export function InviteDoneClient({
           </div>
 
           {!hasEmail && (
-            <p className="m-0 mt-6 text-[13px] leading-relaxed text-nx-muted">
+            <p className="m-0 mt-6 text-[13px] leading-relaxed text-nx-ink-faint">
               {'To sign in on another browser later, add an email in '}
-              <a href="/settings#account" className="underline underline-offset-2 hover:text-white">
+              <a
+                href="/settings#account"
+                className="underline underline-offset-2 hover:text-nx-ink"
+              >
                 Settings
               </a>
               .
@@ -314,7 +322,7 @@ export function InviteDoneClient({
               <h2 id="wait-h" className="m-0 text-[19px] font-extrabold">
                 {connected ? 'Your phone is connected' : 'Waiting for your phone…'}
               </h2>
-              <span className="text-sm text-nx-muted">
+              <span className="text-sm text-nx-ink-faint">
                 {connected
                   ? 'Share a post to it to try it.'
                   : 'This page moves on by itself once you scan.'}
@@ -323,7 +331,7 @@ export function InviteDoneClient({
           </div>
 
           <div aria-hidden className="flex min-h-0 flex-1 items-center justify-center">
-            <div className="relative h-[404px] w-[212px] overflow-hidden rounded-[40px] border-8 border-[#262320] bg-black shadow-[0_30px_60px_rgba(0,0,0,0.6)]">
+            <div className="relative h-[404px] w-[212px] overflow-hidden rounded-[40px] border-8 border-nx-plate bg-black shadow-[0_30px_60px_rgba(0,0,0,0.6)]">
               {peek && (
                 <NxImage
                   src={peek}
@@ -340,13 +348,13 @@ export function InviteDoneClient({
                 <span className="absolute inset-x-3 top-[58%] h-0.5 bg-nx-accent shadow-[0_0_12px_rgb(var(--nx-accent))]" />
               </span>
               <span className="absolute inset-x-0 top-[30px] flex justify-center">
-                <span className="flex h-[30px] items-center gap-1.5 rounded-full bg-black/55 px-3 text-xs font-semibold text-white backdrop-blur-md">
+                <span className="flex h-[30px] items-center gap-1.5 rounded-full bg-black/55 px-3 text-xs font-semibold text-nx-ink backdrop-blur-md">
                   <Gob size={18} />
                   <span>Scan your code</span>
                 </span>
               </span>
               <span className="absolute inset-x-0 bottom-0 h-[130px] bg-gradient-to-b from-transparent to-black/90" />
-              <span className="absolute inset-x-4 bottom-[22px] text-center text-[13px] leading-[1.4] text-white">
+              <span className="absolute inset-x-4 bottom-[22px] text-center text-[13px] leading-[1.4] text-nx-ink">
                 Point your phone at the code on your laptop
               </span>
             </div>
@@ -354,7 +362,7 @@ export function InviteDoneClient({
 
           {waiting > 0 && (
             // Along the card's bottom: 28 − 28 − 1 leaves the 8 px floor.
-            <div className="flex items-center gap-3.5 rounded-[8px] bg-[#262320] px-4 py-3.5">
+            <div className="flex items-center gap-3.5 rounded-[8px] bg-nx-plate px-4 py-3.5">
               <span className="flex flex-none">
                 {waitingFaces.map((f, i) => (
                   <NxAvatar
@@ -436,7 +444,9 @@ function PhoneSteps({
             </a>
           ))
         ) : (
-          <span className="text-sm text-nx-muted">Ask whoever invited you where to get it.</span>
+          <span className="text-sm text-nx-ink-faint">
+            Ask whoever invited you where to get it.
+          </span>
         )}
       </section>
       <section className={STEP_CARD}>
@@ -453,7 +463,7 @@ function PhoneSteps({
               <Smartphone aria-hidden className="h-[18px] w-[18px]" />
               <span>Connect this phone</span>
             </a>
-            <span className="flex items-center gap-3 text-[13px] text-nx-muted">
+            <span className="flex items-center gap-3 text-[13px] text-nx-ink-faint">
               <span aria-hidden className="h-px flex-1 bg-white/[0.08]" />
               <span className="whitespace-nowrap">or type this code in the app</span>
               <span aria-hidden className="h-px flex-1 bg-white/[0.08]" />
@@ -463,7 +473,7 @@ function PhoneSteps({
                 <span className="whitespace-nowrap text-[28px] font-extrabold leading-[1.1] tracking-[0.08em]">
                   {code}
                 </span>
-                <span className="text-[13px] text-nx-muted">Works once, for 10 minutes</span>
+                <span className="text-[13px] text-nx-ink-faint">Works once, for 10 minutes</span>
               </span>
               <span
                 role="status"

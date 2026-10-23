@@ -71,7 +71,7 @@ export function SendToPeople({
   if (!loaded) return null
   if (!loaded.sendable) {
     return (
-      <p className={cn('m-0 text-[13px] text-white/60', className)}>
+      <p className={cn('m-0 text-[13px] text-nx-ink/60', className)}>
         Just for you. Share it first to send it.
       </p>
     )
@@ -132,7 +132,7 @@ export function SendToPeople({
       aria-label="Or straight to your people"
       className={cn('flex flex-col gap-2.5', className)}
     >
-      <span className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-white/55">
+      <span className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-nx-ink/55">
         Or straight to your people
       </span>
       <label className="sr-only" htmlFor="nx-send-note">
@@ -145,7 +145,7 @@ export function SendToPeople({
         placeholder="Add a note (optional)"
         onChange={(e) => setNote(e.currentTarget.value)}
         className={cn(
-          'h-10 w-full rounded-[var(--nx-nest,10px)] bg-white/[0.08] px-3 text-base text-white/90 outline-none placeholder:text-white/40 focus:ring-2 focus:ring-nx-accent sm:text-[13px]',
+          'h-10 w-full rounded-[var(--nx-nest,10px)] bg-white/[0.08] px-3 text-base text-nx-ink/90 outline-none placeholder:text-nx-ink/40 focus:ring-2 focus:ring-nx-accent sm:text-[13px]',
           over && 'ring-2 ring-red-400',
         )}
       />
@@ -180,7 +180,7 @@ export function SendToPeople({
                   {done && (
                     <span
                       aria-hidden
-                      className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-nx-accent text-black ring-2 ring-[#1c1b19]"
+                      className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-nx-accent text-black ring-2 ring-nx-sheet"
                     >
                       <Check className="h-3 w-3" strokeWidth={3} />
                     </span>
@@ -192,9 +192,9 @@ export function SendToPeople({
           )
         })}
       </ul>
-      {already && <span className="text-[12px] leading-tight text-white/55">{already}</span>}
+      {already && <span className="text-[12px] leading-tight text-nx-ink/55">{already}</span>}
       {failed && (
-        <span role="status" className="text-[13px] text-white/70">
+        <span role="status" className="text-[13px] text-nx-ink/70">
           That didn’t send. Try again.
         </span>
       )}

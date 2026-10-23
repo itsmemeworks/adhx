@@ -51,19 +51,55 @@ const config: Config = {
         flame: 'var(--m-flame)',
         live: 'var(--m-live)',
         done: 'var(--m-done)',
-        // ——— next_ui palette (RGB channel vars so `/alpha` modifiers work) ———
+        // The design system colour tokens (src/app/globals.css), as `nx-<name>`.
         nx: {
-          ink: 'rgb(var(--nx-ink) / <alpha-value>)', // warm black page
-          stage: 'rgb(var(--nx-stage) / <alpha-value>)', // pure black stage
-          surface: 'rgb(var(--nx-surface) / <alpha-value>)', // raised card on ink
-          cream: 'rgb(var(--nx-cream) / <alpha-value>)',
-          soft: 'rgb(var(--nx-soft) / <alpha-value>)', // secondary text on dark
-          muted: 'rgb(var(--nx-muted) / <alpha-value>)',
+          bg: 'rgb(var(--nx-bg) / <alpha-value>)',
+          stage: 'rgb(var(--nx-stage) / <alpha-value>)',
+          deep: 'rgb(var(--nx-deep) / <alpha-value>)',
+          surface: 'rgb(var(--nx-surface) / <alpha-value>)',
+          sheet: 'rgb(var(--nx-sheet) / <alpha-value>)',
+          raised: 'rgb(var(--nx-raised) / <alpha-value>)',
+          plate: 'rgb(var(--nx-plate) / <alpha-value>)',
+          'plate-hover': 'rgb(var(--nx-plate-hover) / <alpha-value>)',
+          placeholder: 'rgb(var(--nx-placeholder) / <alpha-value>)',
           hairline: 'rgb(var(--nx-hairline) / <alpha-value>)',
-          accent: 'rgb(var(--nx-accent) / <alpha-value>)', // yellow
-          'on-cream': 'rgb(var(--nx-on-cream) / <alpha-value>)', // secondary text on cream
-          bone: 'rgb(var(--nx-bone) / <alpha-value>)', // outlines on cream
-          skeleton: 'rgb(var(--nx-skeleton) / <alpha-value>)',
+          line: 'rgb(var(--nx-line) / <alpha-value>)',
+          accent: 'rgb(var(--nx-accent) / <alpha-value>)',
+          'on-accent': 'rgb(var(--nx-on-accent) / <alpha-value>)',
+          cream: 'rgb(var(--nx-cream) / <alpha-value>)',
+          'on-cream': 'rgb(var(--nx-on-cream) / <alpha-value>)',
+          'on-cream-soft': 'rgb(var(--nx-on-cream-soft) / <alpha-value>)',
+          bone: 'rgb(var(--nx-bone) / <alpha-value>)',
+          ink: 'rgb(var(--nx-ink) / <alpha-value>)',
+          'ink-soft': 'rgb(var(--nx-ink-soft) / <alpha-value>)',
+          'ink-faint': 'rgb(var(--nx-ink-faint) / <alpha-value>)',
+          good: 'rgb(var(--nx-good) / <alpha-value>)',
+          warn: 'rgb(var(--nx-warn) / <alpha-value>)',
+          live: 'rgb(var(--nx-live) / <alpha-value>)',
+          danger: 'rgb(var(--nx-danger) / <alpha-value>)',
+          'danger-fill': 'rgb(var(--nx-danger-fill) / <alpha-value>)',
+          watching: 'rgb(var(--nx-watching) / <alpha-value>)',
+          paper: 'rgb(var(--nx-paper) / <alpha-value>)',
+          'paper-ink': 'rgb(var(--nx-paper-ink) / <alpha-value>)',
+          'paper-ink-soft': 'rgb(var(--nx-paper-ink-soft) / <alpha-value>)',
+          'person-1': 'rgb(var(--nx-person-1) / <alpha-value>)',
+          'person-2': 'rgb(var(--nx-person-2) / <alpha-value>)',
+          'person-3': 'rgb(var(--nx-person-3) / <alpha-value>)',
+          'person-4': 'rgb(var(--nx-person-4) / <alpha-value>)',
+          'person-5': 'rgb(var(--nx-person-5) / <alpha-value>)',
+          'moment-1': 'rgb(var(--nx-moment-1) / <alpha-value>)',
+          'moment-2': 'rgb(var(--nx-moment-2) / <alpha-value>)',
+          'moment-3': 'rgb(var(--nx-moment-3) / <alpha-value>)',
+          'moment-4': 'rgb(var(--nx-moment-4) / <alpha-value>)',
+          'moment-5': 'rgb(var(--nx-moment-5) / <alpha-value>)',
+          'moment-6': 'rgb(var(--nx-moment-6) / <alpha-value>)',
+          'moment-7': 'rgb(var(--nx-moment-7) / <alpha-value>)',
+          'moment-8': 'rgb(var(--nx-moment-8) / <alpha-value>)',
+          'moment-9': 'rgb(var(--nx-moment-9) / <alpha-value>)',
+          'gob-1': 'rgb(var(--nx-gob-1) / <alpha-value>)',
+          'gob-2': 'rgb(var(--nx-gob-2) / <alpha-value>)',
+          'gob-3': 'rgb(var(--nx-gob-3) / <alpha-value>)',
+          'gob-4': 'rgb(var(--nx-gob-4) / <alpha-value>)',
         },
         primary: {
           DEFAULT: 'hsl(var(--primary))',
@@ -107,6 +143,11 @@ const config: Config = {
         // Backplate under controls that sit on media.
         'nx-plate': '0 2px 10px rgba(0,0,0,.35)',
         'nx-toast': '0 10px 30px rgba(0,0,0,.5)',
+        'nx-sheet': '0 -10px 40px rgba(0,0,0,.5)',
+        'nx-popover': '0 24px 60px rgba(0,0,0,.6)',
+        'nx-dialog': '0 30px 80px rgba(0,0,0,.6)',
+        'nx-knob': '0 2px 6px rgba(0,0,0,.4)',
+        'nx-bubble': '0 10px 24px rgba(0,0,0,.35)',
       },
       backgroundImage: {
         'clay-grad': 'var(--m-grad)',

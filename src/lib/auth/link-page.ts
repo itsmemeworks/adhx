@@ -62,19 +62,19 @@ body{margin:0;min-height:100dvh;display:flex;justify-content:center;padding:20px
 main{width:min(100%,440px);display:flex;flex-direction:column}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;height:48px;margin:0 0 28px}
 .brand{display:flex;align-items:center;gap:6px;color:#f4f1ea;text-decoration:none;font:400 30px/1 'Instrument Serif',Georgia,serif}
-.kicker{font-size:14px;color:#a39b8b;white-space:nowrap}
+.kicker{font-size:14px;color:#a89f8d;white-space:nowrap}
 .chip{display:flex;align-items:center;gap:14px;padding:10px 18px 10px 10px;border-radius:28px;background:#1a1814;border:1px solid rgba(255,255,255,.08);margin:0 0 24px}
 .face{flex:none;width:44px;height:44px;border-radius:38%;transform:rotate(-4deg);display:flex;align-items:center;justify-content:center;color:#000;font-weight:800;font-size:18px}
 .chip b{display:block;font-size:15px;font-weight:800;color:#f4f1ea}
-.chip small{display:block;font-size:13px;color:#a39b8b;margin-top:2px}
+.chip small{display:block;font-size:13px;color:#a89f8d;margin-top:2px}
 h1{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:40px;line-height:1.02;letter-spacing:-.01em;margin:0 0 26px}
 h1 .accent{display:block;color:#ffd23f}
 p{font-size:16px;line-height:1.5;color:#c9bfab;margin:0 0 24px}
 label{display:block;font-size:15px;font-weight:700;color:#c9bfab;margin:0 0 10px}
-input.field{display:block;box-sizing:border-box;width:100%;height:60px;border-radius:18px;border:2px solid #3a352d;background:#1a1814;color:#f4f1ea;padding:0 18px;font:700 19px system-ui,sans-serif;margin:0 0 10px}
+input.field{display:block;box-sizing:border-box;width:100%;height:60px;border-radius:18px;border:2px solid #4a453e;background:#1a1814;color:#f4f1ea;padding:0 18px;font:700 19px system-ui,sans-serif;margin:0 0 10px}
 input.field:focus{outline:none;border-color:#ffd23f;box-shadow:0 0 0 4px rgba(255,210,63,.16)}
-.hint{font-size:14px;color:#a39b8b;margin:0 0 22px}
-.note{font-size:14px;line-height:1.5;color:#a39b8b;margin:18px 0 0;text-align:center}
+.hint{font-size:14px;color:#a89f8d;margin:0 0 22px}
+.note{font-size:14px;line-height:1.5;color:#a89f8d;margin:18px 0 0;text-align:center}
 [role=alert]{color:#ff8a7a}
 button,.button{display:flex;align-items:center;justify-content:center;gap:10px;box-sizing:border-box;width:100%;height:56px;border:0;border-radius:99px;background:#ffd23f;color:#000;padding:0 20px;text-align:center;text-decoration:none;font:800 18px system-ui,sans-serif;cursor:pointer}
 button:focus-visible,a:focus-visible{outline:3px solid white;outline-offset:4px}

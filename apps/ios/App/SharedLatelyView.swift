@@ -56,7 +56,7 @@ struct SharedLatelyView: View {
             if let note {
                 Text(note)
                     .font(Theme.sans(13, .bold))
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.updatesFrequently)
             }
@@ -64,7 +64,7 @@ struct SharedLatelyView: View {
         .padding(.horizontal, 20)
         .padding(.top, 16)
         .padding(.bottom, 12)
-        .background(Theme.app.ignoresSafeArea())
+        .background(Theme.bg.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .fullScreenCover(item: $playing) { post in
             if let server = model.server {
@@ -112,7 +112,7 @@ struct ConnectionPill: View {
                 .truncationMode(.middle)
         }
         .font(Theme.sans(13, .bold))
-        .foregroundStyle(Theme.muted)
+        .foregroundStyle(Theme.inkSoft)
         .padding(.vertical, 8)
         .padding(.horizontal, 14)
         .background(Capsule(style: .continuous).fill(Theme.surface))
@@ -122,7 +122,7 @@ struct ConnectionPill: View {
     private var dot: Color {
         switch state {
         case .connected: return Theme.good
-        case .checking: return Theme.faint
+        case .checking: return Theme.inkFaint
         case .unreachable: return Theme.warn
         }
     }
@@ -164,7 +164,7 @@ private struct ShareRow: View {
                     TimelineView(.periodic(from: .now, by: 30)) { context in
                         Text(Format.ago(record.createdAt, now: context.date))
                             .font(Theme.sans(12))
-                            .foregroundStyle(Theme.faint)
+                            .foregroundStyle(Theme.inkFaint)
                     }
                 }
             }
@@ -188,7 +188,7 @@ struct EmptyShares: View {
                 .foregroundStyle(.white)
             Text("In any app, tap Share on a post and pick ADHX. It shows up here. Everything you’ve saved is in the player.")
                 .font(Theme.sans(15))
-                .foregroundStyle(Theme.muted)
+                .foregroundStyle(Theme.inkSoft)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
         }

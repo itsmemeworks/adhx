@@ -22,7 +22,7 @@ struct ConnectView: View {
             .scrollBounceBehavior(.basedOnSize)
             .scrollDismissesKeyboard(.interactively)
         }
-        .background(Theme.app.ignoresSafeArea())
+        .background(Theme.bg.ignoresSafeArea())
         .task {
             if camera == .undetermined {
                 camera = await QRScannerView.requestAccess() ? .ready : .denied
@@ -65,7 +65,7 @@ struct ConnectView: View {
                     .accessibilityAddTraits(.isHeader)
                 Text(intro)
                     .font(Theme.sans(15))
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.inkSoft)
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -96,7 +96,7 @@ struct ConnectView: View {
 
                 Text("The app only talks to your ADHX.")
                     .font(Theme.sans(12))
-                    .foregroundStyle(Theme.faint)
+                    .foregroundStyle(Theme.inkFaint)
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
@@ -157,7 +157,7 @@ struct ConnectView: View {
         HStack(spacing: 10) {
             if model.pairing {
                 RingSpinner()
-                Text("Connecting…").foregroundStyle(Theme.muted)
+                Text("Connecting…").foregroundStyle(Theme.inkSoft)
             } else if let error = model.pairError ?? scanNote {
                 Image(systemName: "exclamationmark.circle")
                     .foregroundStyle(Theme.warn)
@@ -166,10 +166,10 @@ struct ConnectView: View {
                 switch camera {
                 case .ready, .undetermined:
                     RingSpinner()
-                    Text("Looking for the code…").foregroundStyle(Theme.muted)
+                    Text("Looking for the code…").foregroundStyle(Theme.inkSoft)
                 case .denied:
                     VStack(spacing: 8) {
-                        Text("The camera is off for ADHX Share.").foregroundStyle(Theme.muted)
+                        Text("The camera is off for ADHX Share.").foregroundStyle(Theme.inkSoft)
                         Button("Turn it on in Settings") {
                             if let url = URL(string: UIApplication.openSettingsURLString) {
                                 UIApplication.shared.open(url)
@@ -180,7 +180,7 @@ struct ConnectView: View {
                     }
                 case .noCamera:
                     Text("There’s no camera here. Sign in with your email or type the code instead.")
-                        .foregroundStyle(Theme.muted)
+                        .foregroundStyle(Theme.inkSoft)
                 }
             }
         }
@@ -252,7 +252,7 @@ private struct TypeAddressForm: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             field(label: "Your ADHX address") {
-                TextField("", text: $address, prompt: Text("adhx.example.com").foregroundColor(Theme.faint))
+                TextField("", text: $address, prompt: Text("adhx.example.com").foregroundColor(Theme.inkFaint))
                     .keyboardType(.URL)
                     .textContentType(.URL)
                     .textInputAutocapitalization(.never)
@@ -262,7 +262,7 @@ private struct TypeAddressForm: View {
                     .onSubmit { focus = .code }
             }
             field(label: "Code") {
-                TextField("", text: $code, prompt: Text("ABCD-EFGH").foregroundColor(Theme.faint.opacity(0.55)))
+                TextField("", text: $code, prompt: Text("ABCD-EFGH").foregroundColor(Theme.inkFaint.opacity(0.55)))
                     .textInputAutocapitalization(.characters)
                     .autocorrectionDisabled()
                     .font(Theme.sans(17, .bold).monospaced())
@@ -301,7 +301,7 @@ private struct TypeAddressForm: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(Theme.sans(13, .bold))
-                .foregroundStyle(Theme.muted)
+                .foregroundStyle(Theme.inkSoft)
             content()
                 .font(Theme.sans(17))
                 .foregroundStyle(Theme.cream)
@@ -309,7 +309,7 @@ private struct TypeAddressForm: View {
                 .frame(height: 52)
                 .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.surface))
                 .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Theme.hairline, lineWidth: 1))
+                    .strokeBorder(Theme.line, lineWidth: 1))
         }
     }
 

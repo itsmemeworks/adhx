@@ -89,8 +89,8 @@ export function AdminNav({ badges }: { badges: Partial<Record<AdminSectionId, nu
             className={cn(
               'flex h-[42px] shrink-0 items-center gap-2.5 whitespace-nowrap rounded-full px-3.5 text-[15px]',
               active
-                ? 'bg-[#262320] font-extrabold text-[#f4f1ea]'
-                : 'font-semibold text-[#c9bfab] hover:bg-white/[0.05] hover:text-white',
+                ? 'bg-nx-plate font-extrabold text-nx-ink'
+                : 'font-semibold text-nx-ink-soft hover:bg-white/[0.05] hover:text-nx-ink',
               'max-lg:border max-lg:border-white/[0.08]',
             )}
           >

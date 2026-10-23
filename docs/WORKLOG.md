@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-23 — Design system, phase 1: one set of tokens on web, iOS and Android
+
+- Owner asked for one design system for web and phones; the design system artifact (tokens, guide, components) is the reference. Phase 1 moves the foundations.
+- Colour tokens now have the same names and values everywhere: web `--nx-<name>` / Tailwind `nx-<name>`, iOS `Theme.<name>`, Android `AdhxColors.<Name>`. Web renames: `nx-ink` → `nx-bg`, `nx-soft` → `nx-ink-soft`, `nx-muted` → `nx-ink-faint`, `nx-skeleton` → `nx-placeholder`, `nx-on-cream` → `nx-on-cream-soft`; `nx-ink` is now the words (#f4f1ea, replacing `text-white`). Added sheet, raised, plate, line, good, warn, live, danger, watching, paper, people, moments; bracketed hex literals with a token value became the token.
+- Value fixes: Android cream #f2ead9 and faint #a89f8d, the web's #a39b8b faint, the iOS hairline split into `hairline` (#2a2620, dividers) and `line` (#4a453e, controls). Browser theme colour is `bg`.
+- Small decided items shipped: selected tabs, segments and chips in cream (never yellow); one 48×28 switch on the web (`SwitchLook`), Android's large switch gone; 28-corner sheets on the web; serif floating words (20, three lines); reactions float 3.6s; Android shimmer and pulse stop under reduced motion.
+- Larger migrations listed for the owner in the PR (web theater to layout C, tab renames, the cream words card, bottom nav, toasts, Gob moods, empty states).
+
 ## 2026-10-22 — Watch counts: who sees what
 
 - Owner decided: members see only their own exact counts ("watched 14×", their Wrapped); totals across everyone, without names, are fine. Written into CLAUDE.md, ARCHITECTURE, the phone spec and `src/lib/people/watch-counts.ts`. No UI yet.

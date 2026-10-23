@@ -265,7 +265,7 @@ export function AvatarDialog({
       'relative flex min-h-[112px] flex-col items-start gap-2 rounded-[8px] border-2 p-3.5 text-left',
       on
         ? 'border-nx-accent bg-nx-accent/[0.08]'
-        : 'border-transparent bg-[#262320] hover:bg-[#2e2a26]',
+        : 'border-transparent bg-nx-plate hover:bg-[#2e2a26]',
     )
   const tick = (
     <span
@@ -291,9 +291,9 @@ export function AvatarDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="avatar-dialog-title"
-        // 24 px corners, 20 px padding (28 px, 1 px border and 32 px from md):
+        // 28 px corners, 20 px padding (28 px, 1 px border and 32 px from md):
         // what lines its edges sits at the 8 px floor.
-        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[92dvh] flex-col gap-5 overflow-y-auto rounded-t-[24px] bg-[#1a1814] p-5 [--nx-nest:8px] pb-[max(20px,env(safe-area-inset-bottom))] font-nx-sans text-white outline-none md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:w-[min(880px,calc(100vw-48px))] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[28px] md:border md:border-white/10 md:p-8"
+        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[92dvh] flex-col gap-5 overflow-y-auto rounded-t-[28px] bg-nx-surface p-5 [--nx-nest:8px] pb-[max(20px,env(safe-area-inset-bottom))] font-nx-sans text-nx-ink outline-none md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:w-[min(880px,calc(100vw-48px))] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[28px] md:border md:border-white/10 md:p-8"
       >
         <div className="flex items-start gap-4">
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -303,7 +303,7 @@ export function AvatarDialog({
             >
               Change picture
             </h2>
-            <p className="m-0 text-[15px] text-[#c9bfab]">
+            <p className="m-0 text-[15px] text-nx-ink-soft">
               Your people see this on everything you save.
             </p>
           </div>
@@ -311,7 +311,7 @@ export function AvatarDialog({
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#262320]"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-nx-plate"
           >
             <X aria-hidden className="h-5 w-5" />
           </button>
@@ -393,7 +393,7 @@ export function AvatarDialog({
             {photo && (
               <>
                 <div className="flex w-full max-w-[300px] items-center gap-3">
-                  <Square aria-hidden className="h-2.5 w-2.5 shrink-0 text-[#c9bfab]" />
+                  <Square aria-hidden className="h-2.5 w-2.5 shrink-0 text-nx-ink-soft" />
                   <input
                     type="range"
                     aria-label="Zoom"
@@ -412,16 +412,16 @@ export function AvatarDialog({
                       } as React.CSSProperties
                     }
                   />
-                  <Square aria-hidden className="h-[18px] w-[18px] shrink-0 text-[#c9bfab]" />
+                  <Square aria-hidden className="h-[18px] w-[18px] shrink-0 text-nx-ink-soft" />
                 </div>
-                <span className="text-[13px] text-[#a39b8b]">Drag to move. Slide to zoom.</span>
+                <span className="text-[13px] text-nx-ink-faint">Drag to move. Slide to zoom.</span>
               </>
             )}
           </div>
 
           {/* Sources and preview */}
           <div className="flex min-w-0 flex-col gap-2.5">
-            <span className="text-[13px] font-semibold text-[#c9bfab]">Where it comes from</span>
+            <span className="text-[13px] font-semibold text-nx-ink-soft">Where it comes from</span>
             <div role="radiogroup" aria-label="Picture source" className="grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -434,13 +434,13 @@ export function AvatarDialog({
                   aria-hidden
                   className={cn(
                     'flex h-10 w-10 items-center justify-center rounded-full',
-                    source === 'upload' ? 'bg-nx-accent text-black' : 'bg-[#0f0e0c]',
+                    source === 'upload' ? 'bg-nx-accent text-black' : 'bg-nx-bg',
                   )}
                 >
                   <Upload className="h-5 w-5" />
                 </span>
                 <span className="text-[15px] font-extrabold">Upload a photo</span>
-                <span className="max-w-full truncate text-[13px] text-[#a39b8b]">
+                <span className="max-w-full truncate text-[13px] text-nx-ink-faint">
                   {source === 'upload' && photo
                     ? `${photo.file.name} · ${sizeLabel(photo.file.size)}`
                     : 'Up to 5 MB'}
@@ -458,14 +458,14 @@ export function AvatarDialog({
                   aria-hidden
                   className={cn(
                     'flex h-10 w-10 items-center justify-center rounded-full',
-                    source === 'camera' ? 'bg-nx-accent text-black' : 'bg-[#0f0e0c]',
+                    source === 'camera' ? 'bg-nx-accent text-black' : 'bg-nx-bg',
                   )}
                 >
                   <Camera className="h-5 w-5" />
                 </span>
                 <span className="text-[15px] font-extrabold">Take one</span>
-                <span className="text-[13px] text-[#a39b8b] md:hidden">Uses your camera</span>
-                <span className="hidden text-[13px] text-[#a39b8b] md:inline">
+                <span className="text-[13px] text-nx-ink-faint md:hidden">Uses your camera</span>
+                <span className="hidden text-[13px] text-nx-ink-faint md:inline">
                   Uses this computer’s camera
                 </span>
                 {source === 'camera' && tick}
@@ -480,12 +480,12 @@ export function AvatarDialog({
                 >
                   <span
                     aria-hidden
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0f0e0c]"
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-nx-bg"
                   >
                     <XLogo className="h-4 w-4" />
                   </span>
                   <span className="text-[15px] font-extrabold">Use your X picture</span>
-                  <span className="max-w-full truncate text-[13px] text-[#a39b8b]">
+                  <span className="max-w-full truncate text-[13px] text-nx-ink-faint">
                     {xHandle ? `From @${xHandle} on X` : 'From your X account'}
                   </span>
                   {source === 'x' && tick}
@@ -507,7 +507,7 @@ export function AvatarDialog({
                   </GobShape>
                   <span className="flex min-w-0 flex-col">
                     <span className="text-[15px] font-extrabold">Make me a Gob</span>
-                    <span className="text-[13px] text-[#a39b8b]">A face in your colour</span>
+                    <span className="text-[13px] text-nx-ink-faint">A face in your colour</span>
                   </span>
                 </button>
                 <span role="radiogroup" aria-label="Gob colour" className="mt-auto flex gap-2">
@@ -556,13 +556,13 @@ export function AvatarDialog({
               onChange={(e) => pick(e, 'camera')}
             />
 
-            <span className="mt-2 text-[13px] font-semibold text-[#c9bfab]">How you’ll look</span>
+            <span className="mt-2 text-[13px] font-semibold text-nx-ink-soft">How you’ll look</span>
             <AvatarPreview sample={sample} you={{ username, name, avatarUrl: faceUrl }} />
           </div>
         </div>
 
         {error && (
-          <p role="alert" className="m-0 text-[14px] font-semibold text-[#ff8a7a]">
+          <p role="alert" className="m-0 text-[14px] font-semibold text-nx-danger">
             {error}
           </p>
         )}
@@ -573,7 +573,7 @@ export function AvatarDialog({
               type="button"
               onClick={() => void remove()}
               disabled={busy}
-              className="min-h-[44px] text-[14px] font-semibold text-[#c9bfab] underline-offset-2 hover:text-white hover:underline"
+              className="min-h-[44px] text-[14px] font-semibold text-nx-ink-soft underline-offset-2 hover:text-nx-ink hover:underline"
             >
               Remove picture
             </button>
@@ -646,7 +646,7 @@ function AvatarPreview({
   return (
     <div
       data-testid="avatar-preview"
-      className="relative flex h-[112px] items-end overflow-hidden rounded-[8px] bg-gradient-to-b from-[#2a2620] to-black p-4"
+      className="relative flex h-[112px] items-end overflow-hidden rounded-[8px] bg-gradient-to-b from-nx-raised to-black p-4"
     >
       {cover && (
         <>
@@ -663,9 +663,9 @@ function AvatarPreview({
       <div className="relative flex min-w-0 flex-col gap-1">
         <span className="flex min-w-0 items-center gap-1.5">
           <SaverFaces size={32} savers={savers} className="[&>span:last-child]:text-[14px]" />
-          {ago && <span className="shrink-0 text-[13px] text-[#c9bfab]">{`· ${ago}`}</span>}
+          {ago && <span className="shrink-0 text-[13px] text-nx-ink-soft">{`· ${ago}`}</span>}
         </span>
-        <span className="text-[13px] text-[#c9bfab]">
+        <span className="text-[13px] text-nx-ink-soft">
           {kind ?? 'How your people see your saves'}
         </span>
       </div>

@@ -133,11 +133,11 @@ fun HomeScreen(
                 }
             },
         )
-        HomeTab.Channels -> Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
+        HomeTab.Channels -> Box(Modifier.fillMaxSize().background(AdhxColors.Bg)) {
             ChannelsTab(feed, connection.server, actions, header = { HomeHeader(tab, onTab, actions.onSettings, actions.onSearch, overMedia = false, newBadge = badge) })
             BottomFade()
         }
-        HomeTab.Live -> Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
+        HomeTab.Live -> Box(Modifier.fillMaxSize().background(AdhxColors.Bg)) {
             LiveTab(feed, connection.server, actions, header = { HomeHeader(tab, onTab, actions.onSettings, actions.onSearch, overMedia = false, newBadge = badge) })
             BottomFade()
         }
@@ -152,7 +152,7 @@ fun BoxScope.BottomFade() {
             .align(Alignment.BottomCenter)
             .fillMaxWidth()
             .windowInsetsBottomHeight(WindowInsets.navigationBars)
-            .background(AdhxColors.Background),
+            .background(AdhxColors.Bg),
     )
     Box(
         Modifier
@@ -160,7 +160,7 @@ fun BoxScope.BottomFade() {
             .navigationBarsPadding()
             .fillMaxWidth()
             .height(48.dp)
-            .background(Brush.verticalGradient(listOf(AdhxColors.Background.copy(alpha = 0f), AdhxColors.Background))),
+            .background(Brush.verticalGradient(listOf(AdhxColors.Bg.copy(alpha = 0f), AdhxColors.Bg))),
     )
 }
 
@@ -301,7 +301,7 @@ private fun HomeTabs(
                         label,
                         fontSize = 15.sp,
                         fontWeight = if (on) FontWeight.ExtraBold else FontWeight.SemiBold,
-                        color = if (on) AdhxColors.Black else AdhxColors.Cream,
+                        color = if (on) AdhxColors.OnCream else AdhxColors.Ink,
                         maxLines = 1,
                         softWrap = false,
                         modifier = Modifier.clearAndSetSemantics { },

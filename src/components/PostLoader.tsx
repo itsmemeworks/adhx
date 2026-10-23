@@ -56,10 +56,10 @@ export function PostLoader({
           className={cn(
             'font-indie-flower text-[22px]',
             variant === 'dark'
-              ? 'text-[#F4F1EA]'
+              ? 'text-nx-ink'
               : variant === 'paper'
                 ? 'text-[#141414]'
-                : 'text-[#141414] dark:text-[#F4F1EA]',
+                : 'text-[#141414] dark:text-nx-ink',
           )}
         >
           <span>{caption}</span>

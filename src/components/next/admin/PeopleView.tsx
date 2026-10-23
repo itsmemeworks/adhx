@@ -45,12 +45,12 @@ export function JoinBanner({ request }: { request: JoinRequest }) {
       <WaitingFace />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="text-[15px] font-extrabold">{`${request.username} is waiting to join`}</span>
-        <span className="text-[13px] text-[#c9bfab]" suppressHydrationWarning>
+        <span className="text-[13px] text-nx-ink-soft" suppressHydrationWarning>
           {[by, agoShort(request.askedAt), 'new faces need your OK on this server']
             .filter(Boolean)
             .join(' · ')}
         </span>
-        {error && <span className="text-[13px] text-[#ff8a7a]">{error}</span>}
+        {error && <span className="text-[13px] text-nx-danger">{error}</span>}
       </span>
       <span className="flex gap-2.5">
         <button
@@ -105,14 +105,14 @@ function MemberMenu({ member, lastAdmin }: { member: AdminMember; lastAdmin: boo
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="h-10 w-10 rounded-full bg-[#262320] text-base font-extrabold text-[#f4f1ea] hover:bg-[#2f2b27]"
+        className="h-10 w-10 rounded-full bg-nx-plate text-base font-extrabold text-nx-ink hover:bg-nx-plate-hover"
       >
         <span aria-hidden>⋯</span>
       </button>
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-11 z-30 flex w-56 flex-col gap-0.5 rounded-2xl border border-white/10 bg-[#1a1814] p-1.5 shadow-nx-toast"
+          className="absolute right-0 top-11 z-30 flex w-56 flex-col gap-0.5 rounded-2xl border border-white/10 bg-nx-surface p-1.5 shadow-nx-toast"
         >
           <Link
             role="menuitem"
@@ -157,7 +157,7 @@ function MemberMenu({ member, lastAdmin }: { member: AdminMember; lastAdmin: boo
             <button
               type="button"
               role="menuitem"
-              className={cn(item, !member.banned && 'text-[#ff8a7a]')}
+              className={cn(item, !member.banned && 'text-nx-danger')}
               disabled={!!busy}
               onClick={() => {
                 if (
@@ -175,7 +175,7 @@ function MemberMenu({ member, lastAdmin }: { member: AdminMember; lastAdmin: boo
               {member.banned ? 'Let back in' : 'Keep out'}
             </button>
           )}
-          {error && <span className="px-3 py-1 text-xs text-[#ff8a7a]">{error}</span>}
+          {error && <span className="px-3 py-1 text-xs text-nx-danger">{error}</span>}
         </div>
       )}
     </div>
@@ -232,12 +232,12 @@ export function PeopleView({ data, server }: { data: PeopleBoard; server: string
                   <td className={cn(TD, 'h-[60px] pl-4')}>
                     <Link
                       href={`/admin/people/${encodeURIComponent(m.username)}`}
-                      className="flex items-center gap-2.5 text-[#f4f1ea] hover:underline"
+                      className="flex items-center gap-2.5 text-nx-ink hover:underline"
                     >
                       <Face who={m} size={34} />
                       <span className="flex flex-col gap-px">
                         <span className="font-extrabold">{`${displayName(m)}${m.isYou ? ' (you)' : ''}`}</span>
-                        <span className="text-xs text-[#a39b8b]">
+                        <span className="text-xs text-nx-ink-faint">
                           {`@${m.username} · invited by ${m.invitedBy ? displayName(m.invitedBy) : 'nobody'}`}
                         </span>
                       </span>
@@ -249,16 +249,16 @@ export function PeopleView({ data, server }: { data: PeopleBoard; server: string
                     ) : m.role === 'admin' ? (
                       <Chip tone="admin">Admin</Chip>
                     ) : (
-                      <span className="text-[13px] text-[#c9bfab]">Member</span>
+                      <span className="text-[13px] text-nx-ink-soft">Member</span>
                     )}
                   </td>
-                  <td className={cn(TD, 'h-[60px] text-[#c9bfab]')}>{shortDate(m.joinedAt)}</td>
-                  <td className={cn(TD, 'h-[60px] text-[#c9bfab]')} suppressHydrationWarning>
+                  <td className={cn(TD, 'h-[60px] text-nx-ink-soft')}>{shortDate(m.joinedAt)}</td>
+                  <td className={cn(TD, 'h-[60px] text-nx-ink-soft')} suppressHydrationWarning>
                     {seenLabel(m.lastSeenAt)}
                   </td>
                   <td className={cn(TD, 'h-[60px] text-right')}>
                     <span className="font-extrabold">{fmt(m.saves)}</span>
-                    <span className="block text-xs text-[#a39b8b]">{`${fmt(m.privateSaves)} Just for me`}</span>
+                    <span className="block text-xs text-nx-ink-faint">{`${fmt(m.privateSaves)} Just for me`}</span>
                   </td>
                   <td className={cn(TD, 'h-[60px] text-right')}>{fmt(m.notes)}</td>
                   <td className={cn(TD, 'h-[60px] text-right')}>{fmt(m.sends)}</td>
@@ -280,7 +280,7 @@ export function PeopleView({ data, server }: { data: PeopleBoard; server: string
           <span className="text-[15px] font-extrabold">{MODE_LINE[data.inviteMode]}</span>
           <Link
             href="/admin/invites"
-            className="text-sm font-extrabold text-nx-accent underline hover:text-white"
+            className="text-sm font-extrabold text-nx-accent underline hover:text-nx-ink"
           >
             Change
           </Link>
@@ -290,7 +290,7 @@ export function PeopleView({ data, server }: { data: PeopleBoard; server: string
           <span className="text-[15px] font-extrabold">
             {`${fmt(data.invites.waiting)} waiting to be used · ${fmt(data.invites.used)} used`}
           </span>
-          <span className="font-mono text-[13px] text-[#c9bfab]">
+          <span className="font-mono text-[13px] text-nx-ink-soft">
             {data.invites.codes.length ? data.invites.codes.join(' · ') : 'No links waiting'}
           </span>
         </Card>
@@ -309,7 +309,7 @@ export function PeopleView({ data, server }: { data: PeopleBoard; server: string
               .filter(Boolean)
               .join(' · ')}
           </span>
-          <span className="text-[13px] text-[#c9bfab]">Remove one from the person’s page</span>
+          <span className="text-[13px] text-nx-ink-soft">Remove one from the person’s page</span>
         </Card>
       </div>
     </>

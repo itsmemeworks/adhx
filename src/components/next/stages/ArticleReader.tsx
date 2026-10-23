@@ -197,7 +197,7 @@ export function ArticleReader({
       aria-modal={inline ? undefined : true}
       aria-label={`Reading: ${headline}`}
       className={cn(
-        'flex flex-col bg-nx-ink font-nx-sans text-nx-soft',
+        'flex flex-col bg-nx-bg font-nx-sans text-nx-ink-soft',
         inline ? 'relative h-full w-full' : 'absolute inset-0 z-40',
       )}
     >
@@ -214,7 +214,7 @@ export function ArticleReader({
           type="button"
           aria-label="Close the article"
           onClick={onClose}
-          className="nx-plate absolute right-4 top-[max(16px,env(safe-area-inset-top))] z-10 flex h-11 w-11 items-center justify-center rounded-full text-white"
+          className="nx-plate absolute right-4 top-[max(16px,env(safe-area-inset-top))] z-10 flex h-11 w-11 items-center justify-center rounded-full text-nx-ink"
         >
           <X aria-hidden className="h-5 w-5" />
         </button>
@@ -251,7 +251,7 @@ export function ArticleReader({
             <NxAvatar author={author} size={36} />
             <span className="flex flex-col leading-tight">
               <span className="font-bold text-nx-cream">{author.name}</span>
-              <span className="text-nx-muted">{author.handle}</span>
+              <span className="text-nx-ink-faint">{author.handle}</span>
             </span>
           </div>
           {cover && (
@@ -276,7 +276,7 @@ export function ArticleReader({
               <p className="mt-8">
                 {reading.bionic ? toBionicText(articleLede(item)) : articleLede(item)}
               </p>
-              <p className="mt-6 font-nx-sans text-[15px] text-nx-muted">
+              <p className="mt-6 font-nx-sans text-[15px] text-nx-ink-faint">
                 The full article didn’t load here.{' '}
                 <a
                   href={original}

@@ -2,26 +2,121 @@ import CoreText
 import SwiftUI
 import UIKit
 
-/// Colours and type from docs/specs/phone-app.md.
+/// Colours and type from the ADHX design system (`tokens.json`, shared with
+/// the web's `--nx-*` and Android's `AdhxColors`). One theme: dark.
 enum Theme {
-    static let app = Color(hex: 0x0F0E0C)
-    static let behind = Color.black
+    // Grounds
+
+    /// The app ground (warm black) behind every page, header, Live and Channels.
+    static let bg = Color(hex: 0x0F0E0C)
+    /// Behind media: the player stage, behind sheets, the words stage for text posts.
+    static let stage = Color(hex: 0x000000)
+    /// Deep hero and strip ground (the web's hero and Just saved strip).
+    static let deep = Color(hex: 0x12110F)
+    /// Raised cards on `bg`: settings cards, rows, the search field, tiles.
     static let surface = Color(hex: 0x1A1814)
+    /// Menus, popovers and sheet panels (under the frost on phones).
+    static let sheet = Color(hex: 0x1C1B19)
+    /// A card on a card: thumbnail and cover backgrounds, sheet close buttons.
     static let raised = Color(hex: 0x2A2620)
-    /// The boards' quiet buttons and round icon plates (#262320).
+    /// Quiet filled controls: raised buttons, round icon plates, the current row.
     static let plate = Color(hex: 0x262320)
-    /// The boards' white text on dark (#f4f1ea).
-    static let ink = Color(hex: 0xF4F1EA)
+    /// `plate` under a pointer (the web's hover; phones have none).
+    static let plateHover = Color(hex: 0x2F2B27)
+    /// Skeleton bars and pictures before they load.
     static let placeholder = Color(hex: 0x2A2825)
-    static let hairline = Color(hex: 0x4A453C)
+
+    // Lines
+
+    /// Quiet dividers only (article rules, header rules); never a control's border.
+    static let hairline = Color(hex: 0x2A2620)
+    /// Control borders: fields at rest, the switch-off track, spinner tracks, page dots.
+    static let line = Color(hex: 0x4A453E)
+
+    // Accent and selection
+
+    /// The yellow: the one thing to press, switch on, focus, progress, badges.
     static let accent = Color(hex: 0xFFD23F)
+    /// Text and icons on `accent` (and on `dangerFill`).
+    static let onAccent = Color(hex: 0x000000)
+    /// Selected state: the chosen tab, segment, chip and weight button; the toast.
     static let cream = Color(hex: 0xF2EAD9)
-    static let muted = Color(hex: 0xC9BFAB)
-    static let faint = Color(hex: 0xA89F8D)
+    /// Text and icons on `cream`; also Gob's eyes and mouth.
+    static let onCream = Color(hex: 0x141414)
+    /// Secondary text on `cream`.
+    static let onCreamSoft = Color(hex: 0x5C5446)
+    /// Outlines and rules on `cream` (decorative, never text).
+    static let bone = Color(hex: 0xB8AB92)
+
+    // Text on dark
+
+    /// Primary text and icons on every dark ground.
+    static let ink = Color(hex: 0xF4F1EA)
+    /// Secondary text: sub lines, captions under titles, pending steps.
+    static let inkSoft = Color(hex: 0xC9BFAB)
+    /// Tertiary text: placeholders, meta lines, footnotes, counts.
+    static let inkFaint = Color(hex: 0xA89F8D)
+
+    // States (always with a word or an icon, never colour alone)
+
+    /// Success and done: the connected dot, "Saved", finished bars.
     static let good = Color(hex: 0x7DDC8A)
+    /// Warnings and soft errors: the "can't reach it" dot, sign-in notices.
     static let warn = Color(hex: 0xFFB59A)
-    /// The red dot on Live.
+    /// Live: the LIVE dot and chip, needs-you counts and rings.
     static let live = Color(hex: 0xFF5A3C)
+    /// Destructive words and borders: Remove this phone, Decline, Revoke.
+    static let danger = Color(hex: 0xFF8A7A)
+    /// The one solid destructive button, labelled in `onAccent`.
+    static let dangerFill = Color(hex: 0xE5484D)
+    /// The ring round people watching live, and the "Tuned in" tick.
+    static let watching = Color(hex: 0x5EE38A)
+
+    // Paper (notes from friends)
+
+    /// The paper note card and the shared-saves notice.
+    static let paper = Color(hex: 0xE4DAC8)
+    /// Text on `paper`: the note quote in the serif.
+    static let paperInk = Color(hex: 0x141414)
+    /// Footer and meta text on `paper`.
+    static let paperInkSoft = Color(hex: 0x3A352D)
+
+    // People: one colour each, black initials read on all five
+
+    /// Face colour 0 (Ben, green).
+    static let person1 = Color(hex: 0x7FD1AE)
+    /// Face colour 1 (Ana, pink); also a moment's fallback hue.
+    static let person2 = Color(hex: 0xFF8FA3)
+    /// Face colour 2 (Pete, blue).
+    static let person3 = Color(hex: 0x6B8CFF)
+    /// Face colour 3 (Jo, purple).
+    static let person4 = Color(hex: 0xC4A7FF)
+    /// Face colour 4 (Mum, orange).
+    static let person5 = Color(hex: 0xFFB35C)
+    /// The five face colours in the web's `FACE_COLOURS` order, indexed by
+    /// `Face.colourIndex(for:)` so a person has one colour everywhere.
+    static let people: [Color] = [person1, person2, person3, person4, person5]
+
+    // Moments: hues the server assigns (`src/lib/moments/config.ts` HUES), read by `hue(_:)`
+
+    /// Moment hue 1 of 9.
+    static let moment1 = Color(hex: 0x7EE08A)
+    /// Moment hue 2 of 9.
+    static let moment2 = Color(hex: 0xFF9A62)
+    /// Moment hue 3 of 9.
+    static let moment3 = Color(hex: 0xFF9EC7)
+    /// Moment hue 4 of 9.
+    static let moment4 = Color(hex: 0xF6C35C)
+    /// Moment hue 5 of 9.
+    static let moment5 = Color(hex: 0x86C2FF)
+    /// Moment hue 6 of 9.
+    static let moment6 = Color(hex: 0xC3A6FF)
+    /// Moment hue 7 of 9.
+    static let moment7 = Color(hex: 0x7FE3D6)
+    /// Moment hue 8 of 9.
+    static let moment8 = Color(hex: 0xFF8A8A)
+    /// Moment hue 9 of 9.
+    static let moment9 = Color(hex: 0xD6E36B)
 
     /// A colour the server sends as "#rrggbb" (a moment's hue), if it reads.
     static func hue(_ text: String?) -> Color? {
@@ -159,8 +254,6 @@ struct Gob: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var bobUp = false
 
-    private static let ink = Color(hex: 0x141414)
-
     var body: some View {
         Canvas { context, canvasSize in
             if mood == .happy {
@@ -172,17 +265,17 @@ struct Gob: View {
 
             context.fill(Path(roundedRect: CGRect(x: 10, y: 14, width: 76, height: 72), cornerRadius: 28),
                          with: .color(colour))
-            context.fill(Path(ellipseIn: Self.circle(36, 46, 7)), with: .color(Self.ink))
-            context.fill(Path(ellipseIn: Self.circle(63, 42, 11)), with: .color(Self.ink))
+            context.fill(Path(ellipseIn: Self.circle(36, 46, 7)), with: .color(Theme.onCream))
+            context.fill(Path(ellipseIn: Self.circle(63, 42, 11)), with: .color(Theme.onCream))
             context.fill(Path(ellipseIn: Self.circle(66, 39, 3.5)), with: .color(colour))
 
             if mood == .busy {
-                context.fill(Path(ellipseIn: Self.circle(49, 69, 5)), with: .color(Self.ink))
+                context.fill(Path(ellipseIn: Self.circle(49, 69, 5)), with: .color(Theme.onCream))
             } else {
                 var mouth = context
                 mouth.rotate(-7, around: CGPoint(x: 49, y: 67.5))
                 mouth.fill(Path(roundedRect: CGRect(x: 36, y: 64, width: 26, height: 7), cornerRadius: 3.5),
-                           with: .color(Self.ink))
+                           with: .color(Theme.onCream))
             }
         }
         .frame(width: size, height: size)
@@ -210,7 +303,7 @@ struct Gob: View {
             var path = Path()
             path.move(to: CGPoint(x: x, y: y))
             path.addQuadCurve(to: CGPoint(x: x + w, y: y), control: CGPoint(x: x + w / 2, y: y - rise))
-            context.stroke(path, with: .color(ink), style: StrokeStyle(lineWidth: line, lineCap: .round))
+            context.stroke(path, with: .color(Theme.onCream), style: StrokeStyle(lineWidth: line, lineCap: .round))
         }
         // The board's own quadratic control points (`q3 -4 6 0`, `q4.5 -6 9 0`, `q6.5 6 13 -0.5`).
         arc(10.5, 17.5, 6, 4, 2.4)
@@ -219,8 +312,8 @@ struct Gob: View {
         mouth.move(to: CGPoint(x: 13.5, y: 25))
         mouth.addQuadCurve(to: CGPoint(x: 26.5, y: 24.5), control: CGPoint(x: 20, y: 31))
         mouth.closeSubpath()
-        context.fill(mouth, with: .color(ink))
-        context.stroke(mouth, with: .color(ink), style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round))
+        context.fill(mouth, with: .color(Theme.onCream))
+        context.stroke(mouth, with: .color(Theme.onCream), style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round))
     }
 
     private static func circle(_ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat) -> CGRect {
@@ -255,11 +348,11 @@ struct Wordmark: View {
     }
 }
 
-/// The small ring spinner from the designs: hairline ring, yellow quarter.
+/// The small ring spinner from the designs: a `line` ring, yellow quarter.
 struct RingSpinner: View {
     var size: CGFloat = 14
     var lineWidth: CGFloat = 2
-    var track: Color = Theme.hairline
+    var track: Color = Theme.line
     @State private var spinning = false
 
     var body: some View {
@@ -282,9 +375,10 @@ struct RingSpinner: View {
 }
 
 /// Rounded pill buttons, as on the boards: yellow filled (16/800), a quiet
-/// hairline outline, or a raised plate (15/600).
+/// outline (1.5pt white .25), a raised plate (15/600), or a destructive
+/// outline in `danger`.
 struct PillButtonStyle: ButtonStyle {
-    enum Kind { case primary, outline, raised, warn }
+    enum Kind { case primary, outline, raised, danger }
     var kind: Kind = .primary
     var height: CGFloat = 52
     var fullWidth = true
@@ -303,7 +397,7 @@ struct PillButtonStyle: ButtonStyle {
             .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: height)
             .foregroundStyle(foreground)
             .background(shape.fill(fill))
-            .overlay(shape.strokeBorder(border, lineWidth: 1))
+            .overlay(shape.strokeBorder(border, lineWidth: kind == .outline ? 1.5 : 1))
             .contentShape(shape)
             .opacity(configuration.isPressed ? 0.7 : 1)
     }
@@ -314,24 +408,24 @@ struct PillButtonStyle: ButtonStyle {
         switch kind {
         case .primary: return Theme.accent
         case .raised: return Theme.plate
-        case .outline, .warn: return .clear
+        case .outline, .danger: return .clear
         }
     }
 
     private var foreground: Color {
         switch kind {
-        case .primary: return .black
+        case .primary: return Theme.onAccent
         case .outline, .raised: return Theme.ink
-        case .warn: return Theme.warn
+        case .danger: return Theme.danger
         }
     }
 
     private var border: Color {
         switch kind {
         case .primary: return .clear
-        case .outline: return .white.opacity(0.16)
+        case .outline: return .white.opacity(0.25)
         case .raised: return .white.opacity(0.12)
-        case .warn: return Theme.warn
+        case .danger: return Theme.danger
         }
     }
 }
@@ -380,11 +474,11 @@ struct BoardSwitchStyle: ToggleStyle {
 
         var body: some View {
             Capsule(style: .continuous)
-                .fill(on ? Theme.accent : Color(hex: 0x4A453E))
+                .fill(on ? Theme.accent : Theme.line)
                 .frame(width: 48, height: 28)
                 .overlay(alignment: on ? .trailing : .leading) {
                     Circle()
-                        .fill(on ? Color.black : Theme.ink)
+                        .fill(on ? Theme.onAccent : Theme.cream)
                         .frame(width: 22, height: 22)
                         .padding(3)
                 }
@@ -404,7 +498,7 @@ struct CloseButton: View {
         Button(action: action) {
             Image(systemName: "xmark")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Theme.muted)
+                .foregroundStyle(Theme.inkSoft)
                 .frame(width: 44, height: 44)
                 .background(Circle().fill(Theme.plate))
         }

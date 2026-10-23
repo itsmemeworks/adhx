@@ -51,7 +51,7 @@ export function ChannelCover({
         />
       )}
       {shown.length === 0 && (
-        <span className="absolute inset-0 flex items-end bg-nx-cream p-3 font-nx-serif text-[22px] leading-none text-nx-ink">
+        <span className="absolute inset-0 flex items-end bg-nx-cream p-3 font-nx-serif text-[22px] leading-none text-nx-bg">
           {label}
         </span>
       )}
@@ -76,7 +76,7 @@ export function ChannelCover({
                 className="absolute inset-0 h-full w-full object-cover"
               />
             ) : (
-              <span className="absolute inset-0 overflow-hidden bg-nx-cream p-2 font-nx-serif text-[13px] leading-[1.1] text-nx-ink">
+              <span className="absolute inset-0 overflow-hidden bg-nx-cream p-2 font-nx-serif text-[13px] leading-[1.1] text-nx-bg">
                 {tile.text}
               </span>
             )}
@@ -145,18 +145,18 @@ export function TopChannels({
     <section
       aria-labelledby="nx-top"
       // 22 px corners, 16 px padding (18 from md): tabs and rows sit at the 8 px floor.
-      className={cn('flex flex-col gap-3.5 rounded-[22px] bg-[#121110] p-4 md:p-[18px]', className)}
+      className={cn('flex flex-col gap-3.5 rounded-[22px] bg-nx-deep p-4 md:p-[18px]', className)}
     >
       <div className="flex items-baseline justify-between">
         <h2 id="nx-top" className="m-0 font-nx-serif text-[30px] font-normal md:text-[32px]">
           Top channels
         </h2>
-        <span className="text-xs text-white/55">by views + saves</span>
+        <span className="text-xs text-nx-ink/55">by views + saves</span>
       </div>
       <div
         role="tablist"
         aria-label="Time window"
-        className="flex gap-0.5 rounded-[8px] bg-[#1c1b19] p-[3px]"
+        className="flex gap-0.5 rounded-[8px] bg-nx-sheet p-[3px]"
       >
         {WINDOWS.map((w) => (
           <button
@@ -167,7 +167,7 @@ export function TopChannels({
             onClick={() => setWindow(w.slug)}
             className={cn(
               'min-h-[38px] flex-1 rounded-[8px] text-[13px]',
-              window === w.slug ? 'bg-white font-bold text-black' : 'text-[#bbb]',
+              window === w.slug ? 'bg-nx-cream font-bold text-nx-on-cream' : 'text-nx-ink-soft',
             )}
           >
             {w.label}
@@ -181,7 +181,7 @@ export function TopChannels({
           ))}
         </div>
       ) : rows.length === 0 ? (
-        <p className="m-0 py-6 text-center text-sm text-white/60">
+        <p className="m-0 py-6 text-center text-sm text-nx-ink/60">
           No public channels with views yet in this window.
         </p>
       ) : (
@@ -203,7 +203,7 @@ export function TopChannels({
                     className={cn(
                       'w-7 shrink-0 text-center font-nx-serif',
                       i < 3 ? 'text-[28px]' : 'text-[20px]',
-                      i === 0 ? 'text-nx-accent' : i < 3 ? 'text-white' : 'text-white/50',
+                      i === 0 ? 'text-nx-accent' : i < 3 ? 'text-nx-ink' : 'text-nx-ink/50',
                     )}
                   >
                     {String(r.rank)}
@@ -227,7 +227,7 @@ export function TopChannels({
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="truncate text-[15px] font-bold">{channelTitle(r.tag)}</span>
-                    <span className="truncate text-xs text-white/60">
+                    <span className="truncate text-xs text-nx-ink/60">
                       <span>{`@${r.username} · `}</span>
                       <span className="font-semibold text-nx-accent">
                         {`${plural(r.viewCount, 'view')}${r.cloneCount ? ` · ${plural(r.cloneCount, 'save')}` : ''}`}
@@ -238,7 +238,7 @@ export function TopChannels({
                 <Link
                   href={channelPlayHref(r.username, r.tag)}
                   aria-label={`Play ${channelTitle(r.tag)}`}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#2e2c29] text-white"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-nx-plate text-nx-ink"
                 >
                   <Play
                     aria-hidden
@@ -266,7 +266,7 @@ export function NxHeader({
 }) {
   return (
     <>
-      <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-white/[0.08] bg-nx-ink/95 px-4 backdrop-blur md:h-[72px] md:gap-3 lg:gap-7 lg:px-8">
+      <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-white/[0.08] bg-nx-bg/95 px-4 backdrop-blur md:h-[72px] md:gap-3 lg:gap-7 lg:px-8">
         <NxLogo />
         <PrimaryNav current={current} />
         <div className="ml-auto flex min-w-0 items-center gap-2 md:gap-3 lg:gap-3.5">

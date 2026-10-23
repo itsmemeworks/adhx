@@ -56,7 +56,7 @@ function State({ row, remote }: { row: QueueRow; remote: boolean }) {
     return row.reason ? (
       <Chip tone="warn">Will retry</Chip>
     ) : (
-      <span className="text-[#a39b8b]">Next</span>
+      <span className="text-nx-ink-faint">Next</span>
     )
   }
   if (row.percent !== null) return <span>{`${row.percent}%`}</span>
@@ -106,7 +106,7 @@ export function ProcessingView({ data, server }: { data: ProcessingBoard; server
       />
       {(data.paused || error) && (
         <Card accent className="px-4 py-3 text-sm">
-          <span className={error ? 'text-[#ff8a7a]' : 'text-nx-accent'}>
+          <span className={error ? 'text-nx-danger' : 'text-nx-accent'}>
             {error ?? 'New work is paused. What’s running finishes; nothing new starts.'}
           </span>
         </Card>
@@ -173,18 +173,18 @@ export function ProcessingView({ data, server }: { data: ProcessingBoard; server
                     <td className={cn(TD, 'pl-4')}>
                       <Link
                         href={r.openPath}
-                        className="flex items-center gap-2.5 text-[#f4f1ea] hover:underline"
+                        className="flex items-center gap-2.5 text-nx-ink hover:underline"
                       >
                         <Thumb src={r.thumbnail} size={34} radius={9} />
                         <span className="max-w-[190px] truncate font-extrabold">{r.title}</span>
                       </Link>
                     </td>
-                    <td className={cn(TD, 'max-w-[160px] truncate text-[#c9bfab]')}>{r.step}</td>
+                    <td className={cn(TD, 'max-w-[160px] truncate text-nx-ink-soft')}>{r.step}</td>
                     <td className={TD}>
                       {r.percent !== null ? (
                         <span
                           aria-hidden
-                          className="block h-1.5 w-[100px] overflow-hidden rounded-full bg-[#262320]"
+                          className="block h-1.5 w-[100px] overflow-hidden rounded-full bg-nx-plate"
                         >
                           <span
                             className="block h-1.5 bg-nx-accent"
@@ -202,7 +202,7 @@ export function ProcessingView({ data, server }: { data: ProcessingBoard; server
                 ))}
                 {!data.queue.length && (
                   <tr>
-                    <td colSpan={4} className={cn(TD, 'pl-4 text-[#a39b8b]')}>
+                    <td colSpan={4} className={cn(TD, 'pl-4 text-nx-ink-faint')}>
                       Nothing on its way.
                     </td>
                   </tr>
@@ -211,7 +211,7 @@ export function ProcessingView({ data, server }: { data: ProcessingBoard; server
             </table>
           </TableBox>
           {data.queuePrivate > 0 && (
-            <p className="m-0 border-t border-white/[0.06] px-4 py-3 text-xs text-[#a39b8b]">
+            <p className="m-0 border-t border-white/[0.06] px-4 py-3 text-xs text-nx-ink-faint">
               {`And ${plural(data.queuePrivate, 'Just for me post')} on its way, counted, never listed.`}
             </p>
           )}
@@ -223,19 +223,21 @@ export function ProcessingView({ data, server }: { data: ProcessingBoard; server
             {remote ? (
               <>
                 <span className="flex items-center gap-2 text-[15px] font-extrabold">
-                  <Dot colour={data.helper.connected ? '#7ddc8a' : '#ff8a7a'} />
+                  <Dot
+                    colour={data.helper.connected ? 'rgb(var(--nx-good))' : 'rgb(var(--nx-danger))'}
+                  />
                   <span>
                     {data.helper.connected
                       ? `Connected${data.helper.name ? ` · ${data.helper.name}` : ''}`
                       : 'Not connected'}
                   </span>
                 </span>
-                <span className="text-[13px] text-[#c9bfab]" suppressHydrationWarning>
+                <span className="text-[13px] text-nx-ink-soft" suppressHydrationWarning>
                   {`${seenAgo(data.helper.lastSeenAt)} · ${plural(data.helper.convertedWeek, 'video')} converted, ${fmt(data.helper.understoodWeek)} understood this week`}
                 </span>
               </>
             ) : (
-              <span className="text-[13px] text-[#c9bfab]">
+              <span className="text-[13px] text-nx-ink-soft">
                 {`This server does the work · ${plural(data.helper.convertedWeek, 'video')} converted, ${fmt(data.helper.understoodWeek)} understood this week`}
               </span>
             )}
@@ -255,7 +257,7 @@ export function ProcessingView({ data, server }: { data: ProcessingBoard; server
                 ['Stop when free disk', `under ${data.settings.minFreeGb} GB`],
               ].map(([k, v]) => (
                 <li key={k} className="flex justify-between gap-2.5">
-                  <span className="text-[#c9bfab]">{k}</span>
+                  <span className="text-nx-ink-soft">{k}</span>
                   <span className="text-right font-extrabold">{v}</span>
                 </li>
               ))}
@@ -268,7 +270,7 @@ export function ProcessingView({ data, server }: { data: ProcessingBoard; server
               height={54}
               label="Posts kept, converted and understood each day this week"
             />
-            <span className="text-xs text-[#a39b8b]">
+            <span className="text-xs text-nx-ink-faint">
               {`${fmt(totals.kept)} kept · ${fmt(totals.converted)} converted · ${fmt(totals.understood)} understood`}
             </span>
           </Card>

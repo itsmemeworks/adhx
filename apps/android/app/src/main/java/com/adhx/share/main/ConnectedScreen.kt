@@ -74,9 +74,6 @@ import com.adhx.share.ui.Glyphs
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.SquircleShape
 
-/** The board's green for "This phone is connected". */
-private val Green = Color(0xFF7FD1AE)
-
 /**
  * Just paired: Gob cheering, "This phone is connected", "Connected to Ana's
  * ADHX" with your people's faces, a row of what they saved lately, and
@@ -104,7 +101,7 @@ fun ConnectedScreen(
     Box(
         Modifier
             .fillMaxSize()
-            .background(AdhxColors.Background)
+            .background(AdhxColors.Bg)
             .drawBehind {
                 // A soft yellow glow behind Gob.
                 val c = Offset(size.width / 2, 60.dp.toPx() + 144.dp.toPx())
@@ -140,13 +137,13 @@ fun ConnectedScreen(
                         .padding(top = 12.dp)
                         .height(30.dp)
                         .clip(RoundedCornerShape(50))
-                        .background(Green.copy(alpha = 0.14f))
+                        .background(AdhxColors.Good.copy(alpha = 0.14f))
                         .padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Glyphs.Check, null, tint = Green, modifier = Modifier.size(14.dp))
+                    Icon(Glyphs.Check, null, tint = AdhxColors.Good, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(Copy.PHONE_CONNECTED, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Green)
+                    Text(Copy.PHONE_CONNECTED, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Good)
                 }
                 Text(
                     buildAnnotatedString {
@@ -157,18 +154,18 @@ fun ConnectedScreen(
                     fontFamily = SerifFamily,
                     fontSize = 48.sp,
                     lineHeight = 46.sp,
-                    color = AdhxColors.White,
+                    color = AdhxColors.Ink,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 6.dp).semantics { heading() },
                 )
                 if (people.isNotEmpty()) {
                     Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Faces(people, connection.server, size = 30.dp, max = 5, ring = AdhxColors.Background)
+                        Faces(people, connection.server, size = 30.dp, max = 5, ring = AdhxColors.Bg)
                         Spacer(Modifier.width(10.dp))
                         Text(
                             Copy.youAnd(people.filterNot { it.isYou }.map { it.label }),
                             fontSize = 14.sp,
-                            color = AdhxColors.Muted,
+                            color = AdhxColors.InkSoft,
                             maxLines = 1,
                         )
                     }
@@ -178,7 +175,7 @@ fun ConnectedScreen(
                         Copy.SAVED_THIS_WEEK,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = AdhxColors.White,
+                        color = AdhxColors.Ink,
                         modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 18.dp, bottom = 12.dp),
                     )
                     val list = rememberLazyListState()
@@ -198,7 +195,7 @@ fun ConnectedScreen(
                                 Modifier
                                     .size(width = if (on) 18.dp else 6.dp, height = 6.dp)
                                     .clip(RoundedCornerShape(50))
-                                    .background(if (on) AdhxColors.White else AdhxColors.Hairline),
+                                    .background(if (on) AdhxColors.Ink else AdhxColors.Line),
                             )
                         }
                     }
@@ -222,7 +219,7 @@ fun ConnectedScreen(
                     Spacer(Modifier.width(10.dp))
                     Text(Copy.START_WATCHING, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
                 }
-                Text(Copy.CONNECTED_NOTE, fontSize = 12.sp, lineHeight = 17.sp, color = AdhxColors.Faint, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                Text(Copy.CONNECTED_NOTE, fontSize = 12.sp, lineHeight = 17.sp, color = AdhxColors.InkFaint, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -315,14 +312,14 @@ private val GobHappy: ImageVector = ImageVector.Builder(defaultWidth = 92.dp, de
 
 /** The bits of confetti round Gob. */
 private val Confetti: ImageVector = ImageVector.Builder(defaultWidth = 240.dp, defaultHeight = 92.dp, viewportWidth = 240f, viewportHeight = 92f)
-    .group(rotate = -25f, pivotX = 35f, pivotY = 20f) { blob(rect(30f, 18f, 10f, 5f, 2f), Color(0xFFFF8FA3)) }
-    .group(rotate = 30f, pivotX = 62f, pivotY = 64f) { blob(rect(58f, 62f, 9f, 5f, 2f), Color(0xFF7FD1AE)) }
+    .group(rotate = -25f, pivotX = 35f, pivotY = 20f) { blob(rect(30f, 18f, 10f, 5f, 2f), AdhxColors.Person2) }
+    .group(rotate = 30f, pivotX = 62f, pivotY = 64f) { blob(rect(58f, 62f, 9f, 5f, 2f), AdhxColors.Person1) }
     .apply { blob(circle(70f, 22f, 3.5f), AdhxColors.Accent) }
-    .group(rotate = 35f, pivotX = 181f, pivotY = 16f) { blob(rect(176f, 14f, 10f, 5f, 2f), Color(0xFFC4A7FF)) }
-    .group(rotate = -20f, pivotX = 201f, pivotY = 58f) { blob(rect(196f, 56f, 10f, 5f, 2f), Color(0xFFFFB35C)) }
+    .group(rotate = 35f, pivotX = 181f, pivotY = 16f) { blob(rect(176f, 14f, 10f, 5f, 2f), AdhxColors.Person4) }
+    .group(rotate = -20f, pivotX = 201f, pivotY = 58f) { blob(rect(196f, 56f, 10f, 5f, 2f), AdhxColors.Person5) }
     .apply {
-        blob(circle(168f, 70f, 3f), Color(0xFFFF8FA3))
+        blob(circle(168f, 70f, 3f), AdhxColors.Person2)
         line("M14 48 q6 -8 12 0 t12 0", AdhxColors.Accent, 2f)
-        line("M206 34 q5 -7 10 0 t10 0", Color(0xFF7FD1AE), 2f)
+        line("M206 34 q5 -7 10 0 t10 0", AdhxColors.Person1, 2f)
     }
     .build()

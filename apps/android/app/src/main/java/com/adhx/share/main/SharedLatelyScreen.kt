@@ -85,7 +85,7 @@ fun SharedLatelyScreen(vm: MainViewModel, connection: Connection, onBack: () -> 
     Column(
         Modifier
             .fillMaxSize()
-            .background(AdhxColors.Background)
+            .background(AdhxColors.Bg)
             .systemBarsPadding()
             .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
@@ -99,7 +99,7 @@ fun SharedLatelyScreen(vm: MainViewModel, connection: Connection, onBack: () -> 
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(com.adhx.share.ui.Glyphs.Back, contentDescription = "Back", tint = AdhxColors.White, modifier = Modifier.size(22.dp))
+                Icon(com.adhx.share.ui.Glyphs.Back, contentDescription = "Back", tint = AdhxColors.Ink, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.weight(1f))
             AdhxBrand(markSize = 26.dp)
@@ -107,14 +107,14 @@ fun SharedLatelyScreen(vm: MainViewModel, connection: Connection, onBack: () -> 
 
         ConnectedPill(host = Links.host(connection.server), reach = reach)
 
-        Text("Shared lately", style = MaterialTheme.typography.displaySmall, color = AdhxColors.White)
+        Text("Shared lately", style = MaterialTheme.typography.displaySmall, color = AdhxColors.Ink)
 
         if (items.isEmpty()) {
             Text(
                 "Nothing yet. In any app, tap Share on a post and pick ADHX.",
                 fontSize = 15.sp,
                 lineHeight = 22.sp,
-                color = AdhxColors.Faint,
+                color = AdhxColors.InkFaint,
                 modifier = Modifier.weight(1f),
             )
         } else {
@@ -143,7 +143,7 @@ fun SharedLatelyScreen(vm: MainViewModel, connection: Connection, onBack: () -> 
 fun ConnectedPill(host: String, reach: Reach) {
     val (dot, label) = when (reach) {
         Reach.Connected -> AdhxColors.Good to "$host · connected"
-        Reach.Checking -> AdhxColors.Faint to host
+        Reach.Checking -> AdhxColors.InkFaint to host
         Reach.Unreachable -> AdhxColors.Warn to "$host · can’t be reached"
     }
     Row(
@@ -155,7 +155,7 @@ fun ConnectedPill(host: String, reach: Reach) {
     ) {
         Box(Modifier.size(8.dp).clip(CircleShape).background(dot))
         Box(Modifier.width(8.dp))
-        Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AdhxColors.InkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -176,7 +176,7 @@ private fun HistoryRow(item: HistoryItem, now: Long, onClick: () -> Unit) {
             Modifier
                 .size(40.dp)
                 .clip(SquircleShape(8.dp))
-                .background(AdhxColors.Black),
+                .background(AdhxColors.Stage),
             contentAlignment = Alignment.Center,
         ) {
             NetworkMark(item.platform ?: Links.guessPlatform(item.link), size = 20.dp)
@@ -187,13 +187,13 @@ private fun HistoryRow(item: HistoryItem, now: Long, onClick: () -> Unit) {
                 Copy.historyTitle(item),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
-                color = AdhxColors.White,
+                color = AdhxColors.Ink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(status, fontSize = 12.sp, color = statusColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Box(Modifier.width(12.dp))
-        Text(Copy.shortAgo(item.sharedAt, now), fontSize = 12.sp, color = AdhxColors.Faint)
+        Text(Copy.shortAgo(item.sharedAt, now), fontSize = 12.sp, color = AdhxColors.InkFaint)
     }
 }

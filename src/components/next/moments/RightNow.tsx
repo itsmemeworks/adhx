@@ -69,7 +69,7 @@ function Cover({ post, className, tiny }: { post: FeedItem; className?: string; 
       <span
         aria-hidden
         className={cn(
-          'absolute inset-0 flex items-center justify-center bg-nx-cream font-nx-serif text-[15px] text-nx-ink',
+          'absolute inset-0 flex items-center justify-center bg-nx-cream font-nx-serif text-[15px] text-nx-bg',
           className,
         )}
       >
@@ -86,7 +86,7 @@ function Cover({ post, className, tiny }: { post: FeedItem; className?: string; 
   return (
     <span
       className={cn(
-        'absolute inset-0 flex flex-col gap-1.5 overflow-hidden bg-nx-cream p-3 text-nx-ink',
+        'absolute inset-0 flex flex-col gap-1.5 overflow-hidden bg-nx-cream p-3 text-nx-bg',
         className,
       )}
     >
@@ -107,15 +107,18 @@ function StreamChip({ item, fresh }: { item: StreamItem; fresh: boolean }) {
     <li
       className={cn(
         'flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-3',
-        fresh ? 'animate-nx-slide-in bg-[#1f1d1a]' : 'bg-[#1a1814]',
+        fresh ? 'animate-nx-slide-in bg-[#1f1d1a]' : 'bg-nx-surface',
       )}
       style={fresh ? { boxShadow: `0 0 0 1.5px ${hue}` } : undefined}
     >
-      <span className="relative block h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-[#2a2620]">
+      <span className="relative block h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-nx-raised">
         <Cover post={post} tiny />
       </span>
       <span
-        className={cn('whitespace-nowrap text-[13px]', fresh ? 'font-semibold' : 'text-nx-soft')}
+        className={cn(
+          'whitespace-nowrap text-[13px]',
+          fresh ? 'font-semibold' : 'text-nx-ink-soft',
+        )}
       >
         {shortWhat(post)}
       </span>
@@ -228,7 +231,7 @@ function LeadMoment({
           <span
             key={`${post.platform}:${post.id}`}
             className={cn(
-              'relative block overflow-hidden bg-[#2a2620]',
+              'relative block overflow-hidden bg-nx-raised',
               i === 3 && 'hidden lg:block',
             )}
           >
@@ -251,22 +254,22 @@ function LeadMoment({
           </span>
         )}
         {/* Phones: live and who's watching sit on the pictures, as on the phone app. */}
-        <span className="absolute left-2.5 top-2.5 flex h-[30px] items-center gap-2 whitespace-nowrap rounded-full bg-black/55 px-3 text-xs font-extrabold tracking-[0.06em] text-white backdrop-blur-md lg:hidden">
+        <span className="absolute left-2.5 top-2.5 flex h-[30px] items-center gap-2 whitespace-nowrap rounded-full bg-black/55 px-3 text-xs font-extrabold tracking-[0.06em] text-nx-ink backdrop-blur-md lg:hidden">
           <span
             aria-hidden
-            className="block h-2 w-2 rounded-full bg-[#ff5a3c] shadow-[0_0_0_3px_rgba(255,90,60,0.3)]"
+            className="block h-2 w-2 rounded-full bg-nx-live shadow-[0_0_0_3px_rgba(255,90,60,0.3)]"
           />
           <span>{moment.rising ? 'RISING' : 'LIVE'}</span>
         </span>
         {watchers.length > 0 ? (
-          <span className="absolute bottom-2.5 right-2.5 flex h-[34px] items-center gap-2 whitespace-nowrap rounded-full bg-black/55 pl-1 pr-3 text-xs font-extrabold text-white backdrop-blur-md lg:hidden">
+          <span className="absolute bottom-2.5 right-2.5 flex h-[34px] items-center gap-2 whitespace-nowrap rounded-full bg-black/55 pl-1 pr-3 text-xs font-extrabold text-nx-ink backdrop-blur-md lg:hidden">
             <Faces people={watchers} size={24} live ring="#000" />
             <span>{`${watchers.length} watching`}</span>
           </span>
         ) : null}
         <span
           className={cn(
-            'absolute bottom-2.5 right-2.5 h-[30px] items-center whitespace-nowrap rounded-full bg-black/55 px-3 text-xs font-extrabold text-white backdrop-blur-md',
+            'absolute bottom-2.5 right-2.5 h-[30px] items-center whitespace-nowrap rounded-full bg-black/55 px-3 text-xs font-extrabold text-nx-ink backdrop-blur-md',
             watchers.length > 0 ? 'hidden lg:flex' : 'flex',
           )}
         >
@@ -274,15 +277,15 @@ function LeadMoment({
         </span>
       </Link>
       <div className="flex min-w-0 flex-1 flex-col gap-3.5 px-1 pb-1 lg:px-0 lg:py-3 lg:pr-3.5">
-        <p className="relative m-0 hidden h-8 items-center gap-2 self-start whitespace-nowrap rounded-full border border-[#ff5a3c]/40 bg-[#ff5a3c]/[0.14] pl-3 pr-3.5 text-[13px] lg:flex">
+        <p className="relative m-0 hidden h-8 items-center gap-2 self-start whitespace-nowrap rounded-full border border-nx-live/40 bg-nx-live/[0.14] pl-3 pr-3.5 text-[13px] lg:flex">
           <span
             aria-hidden
-            className="block h-[9px] w-[9px] shrink-0 rounded-full bg-[#ff5a3c] shadow-[0_0_0_4px_rgba(255,90,60,0.25),0_0_0_8px_rgba(255,90,60,0.1)]"
+            className="block h-[9px] w-[9px] shrink-0 rounded-full bg-nx-live shadow-[0_0_0_4px_rgba(255,90,60,0.25),0_0_0_8px_rgba(255,90,60,0.1)]"
           />
           <span className="font-extrabold tracking-[0.06em]">
             {moment.rising ? 'RISING' : 'LIVE'}
           </span>
-          <span aria-hidden className="text-nx-soft">
+          <span aria-hidden className="text-nx-ink-soft">
             ·
           </span>
           {recent ? (
@@ -290,7 +293,7 @@ function LeadMoment({
           ) : (
             <>
               <span className="tabular-nums">{plural(moment.people, 'person', 'people')}</span>
-              <span className="text-nx-soft">{`· ${plural(moment.posts, 'save')}`}</span>
+              <span className="text-nx-ink-soft">{`· ${plural(moment.posts, 'save')}`}</span>
             </>
           )}
           {flash && (
@@ -310,12 +313,12 @@ function LeadMoment({
           </Title>
         </Link>
         {/* Phones: one short line instead of the LIVE pill and the faces. */}
-        <p className="-mt-1.5 m-0 truncate text-[13px] text-nx-soft lg:hidden">
+        <p className="-mt-1.5 m-0 truncate text-[13px] text-nx-ink-soft lg:hidden">
           {`${recent ?? `${plural(moment.people, 'person', 'people')} · ${plural(moment.posts, 'save')}`}${savers.length ? ` · ${namesOf(savers.map(saverName), moment.people)}` : ''}`}
         </p>
         {savers.length > 0 && (
           // Members only: the server sends `savers` to signed-in members alone.
-          <p className="m-0 hidden min-w-0 items-center gap-3 text-base text-nx-soft lg:flex">
+          <p className="m-0 hidden min-w-0 items-center gap-3 text-base text-nx-ink-soft lg:flex">
             <Faces people={savers} size={32} />
             <span className="truncate">{savingLine(savers, moment.people)}</span>
           </p>
@@ -327,7 +330,7 @@ function LeadMoment({
                 key={`${post.platform}:${post.id}`}
                 className="flex min-w-0 items-center gap-3 text-sm"
               >
-                <span className="relative block h-9 w-9 shrink-0 overflow-hidden rounded-[10px] bg-[#2a2620]">
+                <span className="relative block h-9 w-9 shrink-0 overflow-hidden rounded-[10px] bg-nx-raised">
                   <Cover post={post} tiny />
                 </span>
                 <span
@@ -336,9 +339,9 @@ function LeadMoment({
                   style={{ background: personColour(saver.username) }}
                 />
                 <span className="shrink-0 font-semibold">{saverName(saver)}</span>
-                <span className="min-w-0 truncate text-nx-muted">{whatItIs(post)}</span>
+                <span className="min-w-0 truncate text-nx-ink-faint">{whatItIs(post)}</span>
                 <span className="flex-1" />
-                <span className="shrink-0 whitespace-nowrap text-nx-muted">
+                <span className="shrink-0 whitespace-nowrap text-nx-ink-faint">
                   {timeAgo(saver.savedAt)}
                 </span>
               </li>
@@ -356,13 +359,13 @@ function LeadMoment({
             <span className="truncate">{tuneInLabel(watchers)}</span>
           </Link>
           {watchers.length > 0 ? (
-            <span className="hidden min-w-0 items-center gap-2.5 text-sm text-nx-soft lg:flex">
+            <span className="hidden min-w-0 items-center gap-2.5 text-sm text-nx-ink-soft lg:flex">
               <Faces people={watchers} size={28} live />
               <span className="truncate">{watchingLine(watchers)}</span>
             </span>
           ) : (
             moment.watching > 0 && (
-              <span className="whitespace-nowrap text-sm text-nx-soft">{`${moment.watching} watching`}</span>
+              <span className="whitespace-nowrap text-sm text-nx-ink-soft">{`${moment.watching} watching`}</span>
             )
           )}
         </div>
@@ -402,7 +405,7 @@ function SideCard({
       <span
         className={cn(
           // 24 px card, 12 px padding, 1 px border: 11 px.
-          'relative block h-[84px] w-[84px] shrink-0 overflow-hidden rounded-[11px] bg-[#2a2620] lg:h-auto lg:w-[140px]',
+          'relative block h-[84px] w-[84px] shrink-0 overflow-hidden rounded-[11px] bg-nx-raised lg:h-auto lg:w-[140px]',
           dashed && 'saturate-[0.75]',
         )}
       >
@@ -439,13 +442,13 @@ function OtherMoment({
         <Link
           href={href}
           aria-label={label}
-          className="flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-full bg-[#2a2620] text-nx-cream lg:hidden"
+          className="flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-full bg-nx-raised text-nx-cream lg:hidden"
         >
           <Play aria-hidden className="ml-0.5 h-4 w-4" fill="currentColor" strokeWidth={0} />
         </Link>
       }
     >
-      <span className="flex items-center gap-2 whitespace-nowrap text-xs font-extrabold uppercase tracking-[0.08em] text-nx-muted">
+      <span className="flex items-center gap-2 whitespace-nowrap text-xs font-extrabold uppercase tracking-[0.08em] text-nx-ink-faint">
         <span
           aria-hidden
           className="block h-1.5 w-1.5 shrink-0 rounded-full"
@@ -458,7 +461,7 @@ function OtherMoment({
           {moment.title}
         </Title>
       </Link>
-      <p className="relative m-0 flex min-w-0 items-center gap-2 text-sm text-nx-soft">
+      <p className="relative m-0 flex min-w-0 items-center gap-2 text-sm text-nx-ink-soft">
         {savers.length > 0 && <Faces people={savers} size={24} />}
         <span className="truncate">
           {savers.length > 0
@@ -579,7 +582,7 @@ function FormingCard({
       <Title className="m-0 truncate text-[17px] font-extrabold leading-tight lg:font-nx-serif lg:text-[34px] lg:font-normal lg:leading-[0.95]">
         {forming.title}
       </Title>
-      <span className="flex min-w-0 items-center gap-2 text-sm text-nx-soft">
+      <span className="flex min-w-0 items-center gap-2 text-sm text-nx-ink-soft">
         {faces.length > 0 && <Faces people={faces} size={24} max={4} />}
         <span className="truncate">{`${left} more ${unit} to go live`}</span>
       </span>
@@ -612,7 +615,7 @@ function Stat({ value, label }: { value: string; label: string }) {
       <span className="font-nx-serif text-[32px] leading-none tabular-nums md:text-[38px]">
         {value}
       </span>
-      <span className="text-xs text-nx-muted">{label}</span>
+      <span className="text-xs text-nx-ink-faint">{label}</span>
     </div>
   )
 }
@@ -680,7 +683,12 @@ export function RightNow({
           >
             {page ? intoTitle(label) : label}
           </Heading>
-          <p className={cn('m-0 text-[15px] text-nx-soft md:text-base', page && 'hidden md:block')}>
+          <p
+            className={cn(
+              'm-0 text-[15px] text-nx-ink-soft md:text-base',
+              page && 'hidden md:block',
+            )}
+          >
             {page
               ? 'When a few of you save the same kind of thing at once, it goes live. Tune in and watch it together.'
               : 'What people are saving, sorted into moments as it happens. Tune in to one and new saves play the moment they arrive.'}
@@ -688,7 +696,7 @@ export function RightNow({
         </div>
         {page ? (
           on.length > 0 && (
-            <p className="m-0 hidden items-center gap-2.5 pb-0.5 text-sm text-nx-soft md:flex">
+            <p className="m-0 hidden items-center gap-2.5 pb-0.5 text-sm text-nx-ink-soft md:flex">
               <Faces people={on} size={30} ring="#0f0e0c" />
               <span className="whitespace-nowrap">
                 {on.length === 1
@@ -714,7 +722,7 @@ export function RightNow({
 
       {quiet ? (
         <div className="flex flex-col items-center gap-4 rounded-[24px] bg-nx-surface px-5 py-8 text-center">
-          <p className="m-0 text-nx-soft">
+          <p className="m-0 text-nx-ink-soft">
             Nothing’s trending yet. When a few people save the same kind of thing, it shows up here.
           </p>
           <span className="flex flex-wrap justify-center gap-2">
@@ -726,7 +734,7 @@ export function RightNow({
             </Link>
             <Link
               href="/play?recent=1"
-              className="flex h-11 items-center rounded-full border border-white/30 px-5 text-sm font-bold text-white"
+              className="flex h-11 items-center rounded-full border border-white/30 px-5 text-sm font-bold text-nx-ink"
             >
               Play my saves
             </Link>
@@ -763,8 +771,8 @@ export function RightNow({
       )}
 
       {stream.length > 0 && (
-        <div className="flex items-center gap-3 overflow-hidden rounded-[18px] bg-[#12110f] px-3 py-2.5">
-          <span className="shrink-0 text-[11px] font-extrabold tracking-[.14em] text-nx-muted">
+        <div className="flex items-center gap-3 overflow-hidden rounded-[18px] bg-nx-deep px-3 py-2.5">
+          <span className="shrink-0 text-[11px] font-extrabold tracking-[.14em] text-nx-ink-faint">
             JUST SAVED
           </span>
           <ul aria-live="polite" className="m-0 flex min-w-0 list-none gap-2 overflow-hidden p-0">

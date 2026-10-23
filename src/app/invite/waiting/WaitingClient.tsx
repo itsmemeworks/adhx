@@ -64,7 +64,7 @@ export function WaitingClient({
   const who = admin ?? 'whoever runs this ADHX'
 
   return (
-    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
+    <div className="min-h-dvh bg-nx-bg font-nx-sans text-nx-cream">
       <header className="flex h-16 items-center justify-between gap-3 border-b border-white/[0.08] px-4 md:h-[72px] md:px-8">
         <NxLogo />
         {username && (
@@ -83,7 +83,7 @@ export function WaitingClient({
               </h1>
               <Gob size={72} mood="busy" className="mt-1 shrink-0" />
             </div>
-            <p className="m-0 text-[17px] leading-[1.45] text-nx-soft">
+            <p className="m-0 text-[17px] leading-[1.45] text-nx-ink-soft">
               {`${inviter ? `${inviter} invited you. ` : ''}Here, ${who} says yes first. This page moves on by itself.`}
             </p>
             <div
@@ -111,7 +111,7 @@ export function WaitingClient({
               </h1>
               <Gob size={72} mood="shut" className="mt-1 shrink-0" />
             </div>
-            <p className="m-0 text-[17px] leading-[1.45] text-nx-soft">
+            <p className="m-0 text-[17px] leading-[1.45] text-nx-ink-soft">
               {inviter
                 ? `${who} didn’t let this account in. Ask ${inviter} if that’s a mistake.`
                 : `${who} didn’t let this account in.`}

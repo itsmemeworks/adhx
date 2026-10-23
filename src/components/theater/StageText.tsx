@@ -142,11 +142,11 @@ export function StageText({
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             {photoCaption ? (
-              <p className="max-w-2xl px-8 text-center font-serif text-3xl text-white/80">
+              <p className="max-w-2xl px-8 text-center font-serif text-3xl text-nx-ink/80">
                 {text || 'Photo'}
               </p>
             ) : (
-              <p className="text-sm text-white/40">Photo</p>
+              <p className="text-sm text-nx-ink/40">Photo</p>
             )}
           </div>
         )}
@@ -168,7 +168,7 @@ export function StageText({
                 author={item.author}
                 size="sm"
               />
-              <span className="truncate text-[13.5px] font-semibold text-white">{authorName}</span>
+              <span className="truncate text-[13.5px] font-semibold text-nx-ink">{authorName}</span>
               <PlatformChip platform={item.platform} />
             </div>
             {text && (
@@ -226,7 +226,7 @@ export function StageText({
           >
             <StageAuthorRow item={item} />
             {bodyText ? (
-              <p className={cn('break-words font-serif leading-tight text-white', typesetClass)}>
+              <p className={cn('break-words font-serif leading-tight text-nx-ink', typesetClass)}>
                 <TheaterLinkedText
                   platform={item.platform}
                   text={bodyText}
@@ -236,7 +236,7 @@ export function StageText({
                 />
               </p>
             ) : !linkPreview ? (
-              <p className={cn('font-serif leading-tight text-white', textSizeClass(''))}>
+              <p className={cn('font-serif leading-tight text-nx-ink', textSizeClass(''))}>
                 <span>Saved post</span>
               </p>
             ) : null}

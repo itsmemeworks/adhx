@@ -7,7 +7,7 @@ import { NxLogo } from '@/components/next/PrimaryNav'
  */
 export default function NotFound() {
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-black font-nx-sans text-white">
+    <div className="fixed inset-0 z-[60] flex flex-col bg-black font-nx-sans text-nx-ink">
       <header className="px-4 py-3 md:px-7 md:py-[18px]">
         <NxLogo />
       </header>
@@ -15,7 +15,7 @@ export default function NotFound() {
         <h1 className="m-0 font-nx-serif text-[40px] font-normal leading-none md:text-[52px]">
           Nothing here
         </h1>
-        <p className="m-0 max-w-[420px] text-[15px] text-white/70">
+        <p className="m-0 max-w-[420px] text-[15px] text-nx-ink/70">
           This page doesn’t exist, or it wandered off.
         </p>
         <div className="flex flex-wrap justify-center gap-2.5">

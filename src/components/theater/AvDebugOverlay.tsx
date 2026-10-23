@@ -130,12 +130,12 @@ export function AvDebugOverlay() {
       aria-hidden
     >
       {lines.length === 0 ? (
-        <div className="text-white/40">[av/sv] waiting for events…</div>
+        <div className="text-nx-ink/40">[av/sv] waiting for events…</div>
       ) : (
         lines.map((line, i) => (
           <div key={i} className="truncate">
-            <span className="text-white/40">{line.time}</span> {line.text}
-            {line.count > 1 && <span className="text-white/40"> ×{line.count}</span>}
+            <span className="text-nx-ink/40">{line.time}</span> {line.text}
+            {line.count > 1 && <span className="text-nx-ink/40"> ×{line.count}</span>}
           </div>
         ))
       )}
