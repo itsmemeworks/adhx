@@ -27,10 +27,12 @@ enum TestError: Error { case offline }
     var result: [LiveReactionEvent]?
     var hold = false
     var calls = 0
+    var completed = 0
     var pending: CheckedContinuation<[LiveReactionEvent], Error>?
     init(_ result: [LiveReactionEvent]?) { self.result = result }
     func reactions(to post: PostRef) async throws -> [LiveReactionEvent] {
         calls += 1
+        defer { completed += 1 }
         if hold { return try await withCheckedThrowingContinuation { pending = $0 } }
         guard let result else { throw TestError.offline }
         return result
@@ -54,41 +56,52 @@ enum TestError: Error { case offline }
             Store.key = key
             Store.current = client
         }
-        func settle() async { try? await Task.sleep(nanoseconds: 700_000_000) }
+        // The production replay starts after 600ms. A fixed 700ms sleep races
+        // the runner scheduler; observe the request/result instead, with a bound.
+        func waitUntil(_ message: String, _ ready: @MainActor () -> Bool) async {
+            // Keep the original replay-observation window for negative assertions
+            // (for example, a cached visit must not issue a second request).
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+            while !ready() {
+                precondition(ContinuousClock.now < deadline, message)
+                try? await Task.sleep(nanoseconds: 10_000_000)
+            }
+        }
         let a = FakeClient([event("account-a")])
         connect("a", "credential-a", a)
         let first = PostReactionsModel()
         first.arrive(post)
-        await settle()
+        await waitUntil("first replay completed") { first.floating.map(\.event.id) == ["account-a"] }
         precondition(first.floating.map(\.event.id) == ["account-a"])
 
         // A different server must not use the cache, even without an explicit reset.
         let b = FakeClient(nil)
         connect("b", "credential-b", b)
         first.arrive(post, again: true)
-        await settle()
+        await waitUntil("failed new-server request completed") { b.completed == 1 }
         precondition(first.floating.isEmpty, "failed fresh fetch must not fall back across servers")
         precondition(first.answer == nil, "cached identity cannot cross connections")
         precondition(b.calls == 1)
         b.result = [event("account-b")]
         first.arrive(post)
-        await settle()
+        await waitUntil("new-server replay completed") { first.floating.map(\.event.id) == ["account-b"] }
         precondition(first.floating.map(\.event.id) == ["account-b"])
 
         // Same-server credential replacement also starts a fresh replay session.
         let c = FakeClient([event("account-c")])
         connect("b", "credential-c", c)
         first.arrive(post)
-        await settle()
+        await waitUntil("new-credential replay completed") { first.floating.map(\.event.id) == ["account-c"] }
         precondition(first.floating.map(\.event.id) == ["account-c"])
         precondition(first.answer?.reaction.id == "account-c")
         c.result = [] // e.g. moderation removed the only visible reaction.
         first.arrive(post, again: true)
-        await settle()
+        await waitUntil("empty refresh completed") { c.completed == 2 }
         precondition(first.answer == nil, "a fresh empty answer removes the cached reply label")
         c.result = nil
         first.arrive(post, again: true)
-        await settle()
+        await waitUntil("failed refresh completed") { c.completed == 3 }
         precondition(first.floating.isEmpty, "failed refresh never replays a stale cached answer")
         precondition(first.answer == nil, "failed refresh never restores a cached reply label")
 
@@ -98,7 +111,7 @@ enum TestError: Error { case offline }
         slow.hold = true
         connect("old", "old-key", slow)
         first.arrive(post)
-        await settle()
+        await waitUntil("old request entered transport") { slow.pending != nil }
         precondition(slow.pending != nil)
         PostReactionsModel.forget()
         let next = FakeClient([event("new")])
@@ -106,16 +119,16 @@ enum TestError: Error { case offline }
         slow.pending?.resume(returning: [event("stale")])
         let second = PostReactionsModel()
         second.arrive(post)
-        await settle()
+        await waitUntil("old and new requests completed") { slow.completed == 1 && second.floating.map(\.event.id) == ["new"] }
         precondition(first.floating.isEmpty)
         precondition(second.floating.map(\.event.id) == ["new"])
         let ordinary = PostReactionsModel()
         ordinary.arrive(post)
-        await settle()
+        await waitUntil("cached answer available") { ordinary.answer?.reaction.id == "new" }
         precondition(next.calls == 1, "ordinary visits still replay only once")
         PostReactionsModel.forget()
         ordinary.arrive(post)
-        await settle()
+        await waitUntil("same-credential reconnect fetched again") { next.completed == 2 }
         precondition(next.calls == 2, "reconnecting the same credentials explicitly clears the session")
         print("ReactionConnectionTests: connection isolation, failed refresh, cancellation and normal replay passed")
     }

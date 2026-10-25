@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-25 — Remove the iOS reaction fixture’s scheduler race
+
+- Hosted CI exposed a fixed700ms wait racing the production600ms replay delay.
+- Wait for bounded transport/result conditions instead, retaining connection-isolation, failed-refresh and cancellation assertions.
+- No production model behavior changed.
+
 ## 2026-10-25 — Align the in-app privacy explanation
 
 - Match the privacy page and canonical guide to media revalidation, immediate orphan denial and watch-retry receipt retention.
