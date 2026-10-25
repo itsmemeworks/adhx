@@ -259,7 +259,15 @@ Watch counts are separate from seen: every player (the web theater's
 `useWatchCounts`, iOS `Playback`, Android `PlayerScreen`) counts plays,
 finishes and seconds watched by one set of rules (`src/lib/watch/tally.ts`),
 keeps unsent tallies in an account-scoped outbox that survives restarts, and
-sends them to `POST /api/watched` (phones: `POST /api/app/watched`).
+sends immutable `{ batchId, posts }` requests to `POST /api/watched` (phones:
+`POST /api/app/watched`). The UUID and request remain persisted until acknowledged,
+including across connection loss or process restart; new watching collects separately.
+`watch_batch_receipts` stores only account, UUID and payload hash, atomically with
+counts, so an uncertain response can be retried without duplication. Receipts
+live until Clear data/account deletion rather than expiring and letting old
+requests count again. Indexed receipt storage grows with batches, not just posts;
+include it in database sizing/backups. Clients without a UUID remain compatible
+but need updating for deduplication.
 `src/lib/watch/record.ts` adds them to `post_watch_counts`, one row per
 member, post and UTC year, only for posts the member can see. They are never
 pruned (Wrapped reads a whole year). `src/lib/people/watch-counts.ts` reads a

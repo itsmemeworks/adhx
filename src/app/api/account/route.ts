@@ -33,7 +33,7 @@ import {
   collectionEvents,
   userBans,
 } from '@/lib/db/schema'
-import { and, eq, or } from 'drizzle-orm'
+import { and, eq, or, sql } from 'drizzle-orm'
 import { runInTransaction } from '@/lib/db'
 import { removeAvatarFiles } from '@/lib/avatar/store'
 import { withAuth } from '@/lib/api/with-auth'
@@ -94,6 +94,7 @@ export const DELETE = withAuth(async (_req, userId) => {
       db.delete(postViews).where(eq(postViews.userId, userId)).run()
       // 10a. How many times it watched each post
       db.delete(postWatchCounts).where(eq(postWatchCounts.userId, userId)).run()
+      db.run(sql`DELETE FROM watch_batch_receipts WHERE user_id=${userId}`)
 
       // 10b. Posts sent to or by this account, and its live bells and alerts.
       db.delete(postSends)

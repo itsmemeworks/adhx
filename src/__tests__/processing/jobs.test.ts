@@ -456,3 +456,21 @@ describe('scoped retained-media transfer', () => {
     expect((await GET(new Request(url))).status).toBe(401)
   })
 })
+
+it('keeps a media lease when only private save state changes', async () => {
+  await saved('video')
+  const job = (await claim())!
+  instance.sqlite
+    .prepare("UPDATE bookmarks SET note='private note',is_private=1,processed_at=? WHERE id='100'")
+    .run(new Date().toISOString())
+  await expect(heartbeat(job.id, job.lease)).resolves.toBeUndefined()
+  await planProcessingVideo(job.id, job.lease, 120)
+  await expect(completeVideoSegment(job.id, job.lease, 0, vector)).resolves.toBeTypeOf('boolean')
+})
+
+it('invalidates a media lease when actual retained media changes', async () => {
+  await saved('video')
+  const job = (await claim())!
+  instance.sqlite.prepare("UPDATE kept_files SET bytes=18 WHERE post_id='100'").run()
+  await expect(heartbeat(job.id, job.lease)).rejects.toThrow('Post changed')
+})

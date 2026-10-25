@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-25 — Close pre-launch privacy and delivery gaps
+
+- Deny orphaned retained files; quote access follows a live, same-owner parent, including private ownership and moderation.
+- Revalidate shared media with ETags and version new URLs past old long-lived cache entries; recheck access after download/poster waits.
+- Bound web file prefetch to one transfer and 64 MiB; cancel abandoned speculation, preserve shared consumers, stream larger downloads with clear feedback.
+- Keep Mac inference leases across note/privacy/bookkeeping edits; real public content or retained-media replacements still cancel stale work.
+- Recheck approval and bans for queued shares before upstream work and commit; blocked owners cannot publish in-flight saves.
+- Persist immutable watch batches on web/iOS/Android; account-scoped atomic receipts deduplicate ambiguous replies and survive restart. Older clients remain compatible and need updating for receipt protection.
+- Update fast-uri locks; add privacy, resource, queue, receipt, migration and native transport regressions. Source work only, no deployment or cookie-refresh service.
+
 ## 2026-10-23 — Recover browser CI from stalled package downloads
 
 - The hosted Ubuntu Azure mirror exhausted the browser-install timeout before tests ran; a fresh runner was also slow.

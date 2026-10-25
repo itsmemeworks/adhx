@@ -24,42 +24,42 @@ const item = (over: Partial<FeedItem>): FeedItem =>
 describe('feedVideoSrc — inline playback (focus/collection)', () => {
   it('Twitter → the kept-file route for video #1 (built from author + id)', () => {
     expect(feedVideoSrc(item({ platform: 'twitter', author: 'jack', id: '99' }))).toBe(
-      '/api/files/twitter/99/video-1?a=jack',
+      '/api/files/twitter/99/video-1?a=jack&v=2',
     )
   })
 
   it('TikTok → its own kept-file route with the author, NOT the Twitter route', () => {
     expect(feedVideoSrc(item({ platform: 'tiktok', author: 'bob', id: '7' }))).toBe(
-      '/api/files/tiktok/7/video-1?a=bob',
+      '/api/files/tiktok/7/video-1?a=bob&v=2',
     )
   })
 
   it('Instagram → its own kept-file route, NOT the Twitter route', () => {
     const src = feedVideoSrc(item({ platform: 'instagram', id: 'DXVsqQ7CSXw' }))
-    expect(src).toBe('/api/files/instagram/DXVsqQ7CSXw/video-1')
+    expect(src).toBe('/api/files/instagram/DXVsqQ7CSXw/video-1?v=2')
     expect(src).not.toContain('/api/files/twitter/')
   })
 
   it('a new network gets its own route too', () => {
     expect(
       feedVideoSrc(item({ platform: 'youtube' as FeedItem['platform'], id: 'jNQXAC9IVRw' })),
-    ).toBe('/api/files/youtube/jNQXAC9IVRw/video-1')
+    ).toBe('/api/files/youtube/jNQXAC9IVRw/video-1?v=2')
   })
 })
 
 describe('feedHoverSrc — gallery hover-to-play', () => {
   it('Twitter → the kept-file route for video #1', () => {
     expect(feedHoverSrc(item({ platform: 'twitter', author: 'jack', id: '99' }))).toBe(
-      '/api/files/twitter/99/video-1?a=jack',
+      '/api/files/twitter/99/video-1?a=jack&v=2',
     )
   })
 
   it('TikTok + Instagram → their kept-file route (hover-play enabled)', () => {
     expect(feedHoverSrc(item({ platform: 'tiktok', author: 'bob', id: '7' }))).toBe(
-      '/api/files/tiktok/7/video-1?a=bob',
+      '/api/files/tiktok/7/video-1?a=bob&v=2',
     )
     expect(feedHoverSrc(item({ platform: 'instagram', id: 'abc' }))).toBe(
-      '/api/files/instagram/abc/video-1',
+      '/api/files/instagram/abc/video-1?v=2',
     )
   })
 })

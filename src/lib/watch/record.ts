@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm'
+import { createHash } from 'node:crypto'
 import { db, runInTransaction } from '@/lib/db'
 import { postWatchCounts } from '@/lib/db/schema'
 import { POST_ID_PATTERN } from '@/lib/platform/networks'
@@ -40,7 +41,14 @@ function count(value: unknown, cap: number): number | null {
  * (one per post, repeats added together, empty ones dropped), or an error
  * message. Counts are whole numbers ≥ 0; each is capped.
  */
-export function parseWatchedBody(body: unknown): { posts: Watched[] } | { error: string } {
+export class WatchBatchConflict extends Error {}
+const BATCH_ID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
+export function parseWatchedBody(
+  body: unknown,
+): { posts: Watched[]; batchId?: string } | { error: string } {
+  const batchId = (body as { batchId?: unknown } | null)?.batchId
+  if (batchId !== undefined && (typeof batchId !== 'string' || !BATCH_ID.test(batchId)))
+    return { error: 'A batch id must be a UUID.' }
   const posts = (body as { posts?: unknown } | null)?.posts
   if (!Array.isArray(posts)) {
     return { error: 'Send { posts: [{ platform, id, plays, finishes, seconds }] }.' }
@@ -74,7 +82,10 @@ export function parseWatchedBody(body: unknown): { posts: Watched[] } | { error:
       seconds: Math.min(MAX_SECONDS, (before?.seconds ?? 0) + seconds),
     })
   }
-  return { posts: [...out.values()].filter((w) => w.plays || w.finishes || w.seconds) }
+  return {
+    posts: [...out.values()].filter((w) => w.plays || w.finishes || w.seconds),
+    ...(typeof batchId === 'string' ? { batchId: batchId.toLowerCase() } : {}),
+  }
 }
 
 /**
@@ -82,13 +93,34 @@ export function parseWatchedBody(body: unknown): { posts: Watched[] } | { error:
  * see are left out (a phone can still be holding a batch for a post that was
  * since made private or removed). Returns how many posts were counted.
  */
-export function recordWatched(userId: string, posts: Watched[], now = new Date()): number {
+export function recordWatched(
+  userId: string,
+  posts: Watched[],
+  now = new Date(),
+  batchId?: string,
+): number {
   if (!userId || posts.length === 0) return 0
-  const allowed = posts.filter((p) => canSeePost(userId, p.platform, p.id))
-  if (allowed.length === 0) return 0
+  if (batchId !== undefined && !BATCH_ID.test(batchId))
+    throw new WatchBatchConflict('Invalid batch id')
   const at = now.toISOString()
   const year = now.getUTCFullYear()
-  runInTransaction(() => {
+  return runInTransaction(() => {
+    if (batchId) {
+      const id = batchId.toLowerCase()
+      const hash = createHash('sha256').update(JSON.stringify(posts)).digest('hex')
+      const previous = db.get<{ payload_hash: string }>(
+        sql`SELECT payload_hash FROM watch_batch_receipts WHERE user_id=${userId} AND batch_id=${id}`,
+      )
+      if (previous) {
+        if (previous.payload_hash !== hash)
+          throw new WatchBatchConflict('A batch id cannot change its posts')
+        return 0
+      }
+      db.run(
+        sql`INSERT INTO watch_batch_receipts(user_id,batch_id,payload_hash) VALUES(${userId},${id},${hash})`,
+      )
+    }
+    const allowed = posts.filter((p) => canSeePost(userId, p.platform, p.id))
     for (const p of allowed) {
       db.insert(postWatchCounts)
         .values({
@@ -118,6 +150,6 @@ export function recordWatched(userId: string, posts: Watched[], now = new Date()
         })
         .run()
     }
+    return allowed.length
   })
-  return allowed.length
 }

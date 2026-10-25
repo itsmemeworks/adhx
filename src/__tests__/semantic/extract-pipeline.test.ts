@@ -187,7 +187,7 @@ describe('the text document', () => {
   })
 
   it('gives a wordless meme a text vector through its caption', () => {
-    const meme = feedItem({ text: '', media: [media('photo', '/api/files/twitter/1/photo-1')] })
+    const meme = feedItem({ text: '', media: [media('photo', '/api/files/twitter/1/photo-1?v=2')] })
     expect(buildPostDocument(meme).hasWords).toBe(false)
     expect(hashFor(buildPostDocument(meme), 'text')).toBeNull()
     const read = buildPostDocument(meme, { screen: 'WHEN THE WIFI GOES DOWN' })
@@ -201,18 +201,18 @@ describe('the text document', () => {
     expect(hashFor(text, 'screen')).toBeNull()
 
     const video = buildPostDocument(
-      feedItem({ media: [media('video', '/api/files/twitter/1/video-1')] }),
+      feedItem({ media: [media('video', '/api/files/twitter/1/video-1?v=2')] }),
     )
-    expect(video.speech?.url).toBe('/api/files/twitter/1/video-1')
+    expect(video.speech?.url).toBe('/api/files/twitter/1/video-1?v=2')
     expect(video.screen).toMatchObject({
       images: [],
-      video: '/api/files/twitter/1/video-1',
+      video: '/api/files/twitter/1/video-1?v=2',
       videoSeconds: 41,
     })
 
     const album = buildPostDocument(
       feedItem({
-        media: [1, 2, 3, 4, 5].map((n) => media('photo', `/api/files/twitter/1/photo-${n}`)),
+        media: [1, 2, 3, 4, 5].map((n) => media('photo', `/api/files/twitter/1/photo-${n}?v=2`)),
       }),
     )
     expect(album.speech).toBeNull()
@@ -285,10 +285,12 @@ describe('the worker', () => {
     )
     await drain()
     expect(transcribeSource).toHaveBeenCalledTimes(1)
-    expect(transcribeSource.mock.calls[0][0]).toBe('/kept/api/files/twitter/1/video-1?a=testauthor')
+    expect(transcribeSource.mock.calls[0][0]).toBe(
+      '/kept/api/files/twitter/1/video-1?a=testauthor&v=2',
+    )
     expect(readScreenText).toHaveBeenCalledTimes(1)
     expect(readScreenText.mock.calls[0][1]).toEqual({
-      source: '/kept/api/files/twitter/1/video-1?a=testauthor',
+      source: '/kept/api/files/twitter/1/video-1?a=testauthor&v=2',
       duration: 41,
     })
     expect(getExtracted('twitter', '1', 'speech')).toMatchObject({
@@ -333,7 +335,7 @@ describe('the worker', () => {
     const [images, video] = readScreenText.mock.calls[0]
     expect(images).toHaveLength(1)
     expect(video).toBeNull()
-    expect(fetchImageBytes).toHaveBeenCalledWith('/api/files/twitter/1/photo-1?a=testauthor')
+    expect(fetchImageBytes).toHaveBeenCalledWith('/api/files/twitter/1/photo-1?a=testauthor&v=2')
     const text = testInstance.db
       .select()
       .from(schema.postEmbeddings)

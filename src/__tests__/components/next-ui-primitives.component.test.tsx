@@ -36,7 +36,7 @@ function media(partial: Partial<MediaItem> = {}): MediaItem {
     width: 720,
     height: 1280,
     durationMs: 41_000,
-    url: '/api/files/twitter/1/video-1?a=a',
+    url: '/api/files/twitter/1/video-1?a=a&v=2',
     thumbnailUrl: 'https://pbs.twimg.com/thumb.jpg',
     shareUrl: '',
     ...partial,
@@ -117,7 +117,7 @@ describe('post helpers', () => {
   })
 
   it('routes X photos per index through kept files and keeps video thumbnails as-is', () => {
-    expect(mediaImageSrc(album, 1)).toBe('/api/files/twitter/1004/photo-2?a=JamesMelville')
+    expect(mediaImageSrc(album, 1)).toBe('/api/files/twitter/1004/photo-2?a=JamesMelville&v=2')
     expect(mediaImageSrc(tallVideo)).toBe('https://pbs.twimg.com/thumb.jpg')
   })
 

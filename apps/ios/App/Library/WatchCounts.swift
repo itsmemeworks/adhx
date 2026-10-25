@@ -16,18 +16,25 @@ final class WatchCounts {
     /// Posts kept waiting at most (the oldest go first).
     private static let most = 500
 
+    private struct Pending: Codable {
+        let batchId: String
+        let posts: [WatchedPost]
+    }
+
     private struct Saved: Codable {
         let scope: String
         let tallies: [String: WatchTracker.Tally]
+        let pending: Pending?
     }
 
     private var tracker = WatchTracker()
+    private var pending: Pending?
     private var scope: String?
     private var sending = false
     private var flushSoon: Task<Void, Never>?
     private var savedAt = Date.distantPast
 
-    private init() {
+    init() {
         load()
     }
 
@@ -44,6 +51,7 @@ final class WatchCounts {
         if now != scope {
             scope = now
             tracker = WatchTracker()
+            pending = nil
             load()
         }
         return scope != nil
@@ -55,6 +63,7 @@ final class WatchCounts {
               let saved = try? JSONDecoder().decode(Saved.self, from: data) else { return }
         if saved.scope == scope {
             tracker.tallies = saved.tallies
+            pending = saved.pending
         } else {
             AppGroup.defaults.removeObject(forKey: Self.storageKey)
         }
@@ -68,10 +77,10 @@ final class WatchCounts {
                 tracker.tallies[key] = nil
             }
         }
-        if tracker.tallies.isEmpty {
+        if tracker.tallies.isEmpty && pending == nil {
             AppGroup.defaults.removeObject(forKey: Self.storageKey)
         } else {
-            AppGroup.defaults.set(try? JSONEncoder().encode(Saved(scope: scope, tallies: tracker.tallies)),
+            AppGroup.defaults.set(try? JSONEncoder().encode(Saved(scope: scope, tallies: tracker.tallies, pending: pending)),
                                   forKey: Self.storageKey)
         }
     }
@@ -123,24 +132,28 @@ final class WatchCounts {
         flushSoon = nil
         guard !sending, checkScope(), let client = Store.client() else { return }
         let scope = self.scope
-        let batch = tracker.takeBatch(max: 50)
+        if pending == nil {
+            let posts = tracker.takeBatch(max: 50).map {
+                WatchedPost(platform: $0.platform, id: $0.id, plays: $0.plays, finishes: $0.finishes, seconds: $0.seconds)
+            }
+            guard !posts.isEmpty else { return }
+            pending = Pending(batchId: UUID().uuidString, posts: posts)
+        }
+        guard let batch = pending else { return }
+        // The immutable request survives process termination and uncertain replies.
         save(now: true)
-        guard !batch.isEmpty else { return }
         sending = true
         defer { sending = false }
+        var acknowledged = false
         do {
-            try await client.watched(batch.map {
-                WatchedPost(platform: $0.platform, id: $0.id, plays: $0.plays, finishes: $0.finishes, seconds: $0.seconds)
-            })
+            try await client.watched(batch.posts, batchId: batch.batchId)
+            acknowledged = true
         } catch let error as APIError where error.isMissing || error.code == "bad_posts" {
-            // An older ADHX without counts, or a batch it won't take: let it go.
-        } catch {
-            // Only ever back into the account it was counted for.
-            if scope == self.scope {
-                tracker.putBack(batch)
-                save(now: true)
-                sendSoon()
-            }
-        }
+            acknowledged = true // Old server or invalid body: do not retry forever.
+        } catch { /* Retain the identical request and receipt id for retry. */ }
+        guard scope == self.scope, scope == Self.connectionScope() else { return }
+        if acknowledged { pending = nil }
+        save(now: true)
+        if pending != nil || !tracker.tallies.isEmpty { sendSoon() }
     }
 }

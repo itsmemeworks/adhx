@@ -18,17 +18,29 @@ import { visibleSave } from '@/lib/people/savers'
 export type KeptFileAccess = 'shared' | 'private' | 'unsaved'
 
 /**
- * `shared`: someone's shared save, or a quoted copy shown inside another
- * post. `private`: saves exist, all Just for me. `unsaved`: nobody has it.
+ * Quotes inherit access from a live parent in the same account and platform.
+ * A leftover quoted row cannot publish media after its parent disappears.
  */
 export function keptFileAccess(platform: string, id: string): KeptFileAccess {
   const [row] = db.all<{ visible: number | null; quoted: number | null; saves: number }>(sql`
     SELECT
       MAX(CASE WHEN ${visibleSave('b')} THEN 1 ELSE 0 END) AS visible,
-      MAX(CASE WHEN COALESCE(b.source, '') = 'quoted' THEN 1 ELSE 0 END) AS quoted,
-      COUNT(*) AS saves
+      MAX(CASE WHEN COALESCE(b.source, '') = 'quoted' AND b.is_private = 0 AND EXISTS (
+        SELECT 1 FROM bookmarks p WHERE p.user_id = b.user_id AND p.platform = b.platform
+          AND p.quoted_tweet_id = b.id AND ${visibleSave('p')}
+          AND NOT EXISTS (SELECT 1 FROM moderated_posts m
+            WHERE m.platform = p.platform AND m.bookmark_id = p.id AND m.hidden = 1)
+      ) THEN 1 ELSE 0 END) AS quoted,
+      SUM(CASE WHEN COALESCE(b.source, '') != 'quoted' OR EXISTS (
+        SELECT 1 FROM bookmarks p WHERE p.user_id = b.user_id AND p.platform = b.platform
+          AND p.quoted_tweet_id = b.id AND COALESCE(p.source, '') != 'quoted'
+          AND NOT EXISTS (SELECT 1 FROM user_bans ub WHERE ub.user_id = p.user_id)
+          AND NOT EXISTS (SELECT 1 FROM moderated_posts m
+            WHERE m.platform = p.platform AND m.bookmark_id = p.id AND m.hidden = 1)
+      ) THEN 1 ELSE 0 END) AS saves
     FROM bookmarks b
     WHERE b.platform = ${platform} AND b.id = ${id}
+      AND NOT EXISTS (SELECT 1 FROM user_bans ub WHERE ub.user_id = b.user_id)
   `)
   if (!row || !row.saves) return 'unsaved'
   if (row.visible || row.quoted) return 'shared'
@@ -41,7 +53,13 @@ export function ownsSave(userId: string, platform: string, id: string): boolean 
     db.all(sql`
       SELECT 1 FROM bookmarks
       WHERE user_id = ${userId} AND platform = ${platform} AND id = ${id}
-        AND COALESCE(source, '') != 'quoted'
+        AND (COALESCE(source, '') != 'quoted' OR EXISTS (
+          SELECT 1 FROM bookmarks p WHERE p.user_id = bookmarks.user_id
+            AND p.platform = bookmarks.platform AND p.quoted_tweet_id = bookmarks.id
+            AND COALESCE(p.source, '') != 'quoted'
+            AND NOT EXISTS (SELECT 1 FROM moderated_posts m
+              WHERE m.platform = p.platform AND m.bookmark_id = p.id AND m.hidden = 1)
+        ))
       LIMIT 1
     `).length > 0
   )

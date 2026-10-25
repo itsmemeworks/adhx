@@ -61,17 +61,29 @@ interface VideoState {
 const digest = (value: string) => createHash('sha256').update(value).digest('hex')
 
 /** Server-only concurrency stamp. Never sent to a worker or used as model input;
- * private tags/preferences are deliberately not read. A fresh source write after
+ * private state and saver-specific bookkeeping are deliberately not read. A fresh source write after
  * asynchronous document loading must not let an old result delete its new job. */
 function generation(row: Pick<Lease, 'platform' | 'post_id'>): string {
   const sources = [
-    ['bookmarks', 'id'],
-    ['bookmark_media', 'bookmark_id'],
-    ['bookmark_links', 'bookmark_id'],
-    ['kept_files', 'post_id'],
-  ].map(([table, id]) =>
+    [
+      'bookmarks',
+      'id',
+      'author,author_name,author_profile_image_url,text,tweet_url,created_at,category,is_reply,reply_context,is_quote,quote_context,quoted_tweet_id,is_retweet,retweet_context,summary,raw_json',
+    ],
+    [
+      'bookmark_media',
+      'bookmark_id',
+      'media_type,original_url,preview_url,width,height,duration_ms,alt_text',
+    ],
+    [
+      'bookmark_links',
+      'bookmark_id',
+      'expanded_url,link_type,domain,content_json,preview_title,preview_description,preview_image_url',
+    ],
+    ['kept_files', 'post_id', 'slot,path,mime,bytes,width,height,duration_ms,created_at'],
+  ].map(([table, id, columns]) =>
     db.all(
-      sql`SELECT * FROM ${sql.raw(table)} WHERE platform=${row.platform} AND ${sql.raw(id)}=${row.post_id} ORDER BY rowid`,
+      sql`SELECT DISTINCT ${sql.raw(columns)} FROM ${sql.raw(table)} WHERE platform=${row.platform} AND ${sql.raw(id)}=${row.post_id} ORDER BY ${sql.raw(columns)}`,
     ),
   )
   return digest(JSON.stringify(sources))

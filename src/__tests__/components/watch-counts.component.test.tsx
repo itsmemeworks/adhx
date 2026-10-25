@@ -74,7 +74,9 @@ it('keeps a batch that didn’t get through, across a reload, for its own accoun
   play(0, 6, 30)
   await tick(WATCHED_FLUSH_MS)
   expect(fetcher).toHaveBeenCalledTimes(1)
-  expect(JSON.parse(localStorage.getItem('adhx-watched-outbox:ana')!)['twitter:clip'].plays).toBe(1)
+  expect(JSON.parse(localStorage.getItem('adhx-watched-outbox:ana')!).pending.posts[0].plays).toBe(
+    1,
+  )
   // Ben signs in on this browser: Ana's counts wait for her.
   hook.rerender({ accountId: 'ben' })
   fetcher.mockResolvedValue(ok())
@@ -87,4 +89,56 @@ it('keeps a batch that didn’t get through, across a reload, for its own accoun
     { platform: 'twitter', id: 'clip', plays: 1, finishes: 0, seconds: 6 },
   ])
   expect(localStorage.getItem('adhx-watched-outbox:ana')).toBeNull()
+  expect(JSON.parse(String(fetcher.mock.calls[0][1]!.body)).batchId).toBe(
+    JSON.parse(String(fetcher.mock.calls[1][1]!.body)).batchId,
+  )
+})
+
+it('persists an in-flight receipt before sending and replays it unchanged after a reload', async () => {
+  const fetcher = vi.fn<typeof fetch>(
+    (_url, init) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () =>
+          reject(new DOMException('aborted', 'AbortError')),
+        )
+      }),
+  )
+  vi.stubGlobal('fetch', fetcher)
+  const hook = renderHook(
+    ({ accountId }) => useWatchCounts(true, accountId, 'twitter:clip', true),
+    { initialProps: { accountId: 'ana' } },
+  )
+  play(0, 4, 20)
+  await tick(WATCHED_FLUSH_MS)
+  const inFlight = JSON.parse(String(fetcher.mock.calls[0][1]!.body))
+  const saved = JSON.parse(localStorage.getItem('adhx-watched-outbox:ana')!)
+  expect(saved.pending).toEqual(inFlight)
+  // Simulate process death: storage is all the new module can recover.
+  hook.rerender({ accountId: 'ben' })
+  await tick(0)
+  hook.unmount()
+  vi.resetModules()
+  fetcher.mockResolvedValue(ok())
+  const restored = (await import('@/components/next/theater/useWatchCounts')).useWatchCounts
+  renderHook(() => restored(true, 'ana', 'twitter:other', true))
+  await tick(WATCHED_FLUSH_MS)
+  expect(JSON.parse(String(fetcher.mock.calls[1][1]!.body))).toEqual(inFlight)
+  expect(localStorage.getItem('adhx-watched-outbox:ana')).toBeNull()
+})
+
+it('does not merge new watching into a failed immutable request', async () => {
+  const fetcher = vi.fn<typeof fetch>(async () => ok(503))
+  vi.stubGlobal('fetch', fetcher)
+  renderHook(() => useWatchCounts(true, 'ana', 'twitch:clip', true))
+  play(0, 4, 20)
+  await tick(WATCHED_FLUSH_MS)
+  const first = JSON.parse(String(fetcher.mock.calls[0][1]!.body))
+  play(4.25, 8, 20)
+  fetcher.mockResolvedValue(ok())
+  await tick(WATCHED_FLUSH_MS * 2)
+  expect(JSON.parse(String(fetcher.mock.calls[1][1]!.body))).toEqual(first)
+  await tick(WATCHED_FLUSH_MS)
+  const next = JSON.parse(String(fetcher.mock.calls[2][1]!.body))
+  expect(next.batchId).not.toBe(first.batchId)
+  expect(next.posts[0].seconds).toBe(4)
 })

@@ -345,7 +345,7 @@ describe('POST /api/app/save', () => {
       authorName: 'Some Channel',
       text: 'a video',
       category: 'video',
-      posterUrl: `/api/files/youtube/${VIDEO_ID}/poster`,
+      posterUrl: `/api/files/youtube/${VIDEO_ID}/poster?v=2`,
       openPath: expect.stringContaining(VIDEO_ID),
       alreadySaved: false,
     })
@@ -403,7 +403,7 @@ describe('POST /api/app/save', () => {
       alreadySaved: true,
       savedAt: '2026-10-01T00:00:00.000Z',
       // Through /api/files: the kept poster, or X's picture until it's kept.
-      posterUrl: '/api/files/twitter/2110000000000000001/poster?a=someone',
+      posterUrl: '/api/files/twitter/2110000000000000001/poster?a=someone&v=2',
       openPath: '/someone/status/2110000000000000001',
     })
   })
@@ -664,6 +664,38 @@ describe('helpers', () => {
 })
 
 describe('saving in the background (Prefer: respond-async)', () => {
+  it('does not read or insert queued saves while their owner is banned', async () => {
+    const key = await phoneKey()
+    expect((await share({ url: `https://youtu.be/${VIDEO_ID}` }, key)).status).toBe(202)
+    mockDescribeNetworkPost.mockClear()
+    testInstance.sqlite
+      .prepare("INSERT INTO user_bans(user_id,created_at,created_by) VALUES('user-1',?,'user-2')")
+      .run(new Date().toISOString())
+    const { saveQueueTick } = await import('@/lib/app/save-queue')
+    expect(await saveQueueTick()).toBe(0)
+    expect(mockDescribeNetworkPost).not.toHaveBeenCalled()
+    expect(testInstance.db.select().from(schema.bookmarks).all()).toHaveLength(0)
+  })
+
+  it('cancels a queued save if the owner is banned during metadata I/O', async () => {
+    const key = await phoneKey()
+    const receipt = await share({ url: `https://youtu.be/${VIDEO_ID}` }, key)
+    const description = await mockDescribeNetworkPost()
+    mockDescribeNetworkPost.mockImplementationOnce(async () => {
+      testInstance.sqlite
+        .prepare("INSERT INTO user_bans(user_id,created_at,created_by) VALUES('user-1',?,'user-2')")
+        .run(new Date().toISOString())
+      return description
+    })
+    const { saveQueueTick, queuedSave } = await import('@/lib/app/save-queue')
+    await saveQueueTick()
+    expect(testInstance.db.select().from(schema.bookmarks).all()).toHaveLength(0)
+    expect(queuedSave('user-1', receipt.body.id)).toMatchObject({
+      state: 'failed',
+      errorCode: 'cancelled',
+    })
+  })
+
   async function share(body: unknown, key: string) {
     const { POST } = await import('@/app/api/app/save/route')
     const req = new NextRequest(`${BASE}/api/app/save`, {

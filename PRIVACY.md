@@ -9,7 +9,11 @@ Last updated: 20 October 2026.
 - **Named to friends, never to strangers.** A _member_ is anyone who can sign in to your server (approved and not banned). Your saves are shared with members by default: they see the post, your username, display name, picture, when you saved it and your note.
 - **Just for me** keeps a save out of everyone else's feed, channels, search, Right now and counts, and its kept files are yours alone. One exception you should know about: admins' post and member counts include it.
 - **Strangers** (anyone not signed in) see posts and counts, never who saved them. Right now, preview pages, public channels and the sitemap do show _which posts_ people on your server shared.
-- **Kept media files of shared posts are not behind sign-in.** Anyone who can reach your server and knows a post's network and ID can fetch them. A post only saved Just for me is served to its owner alone. Keep the server on a private network if that matters to you.
+- **Kept media files of shared posts are not behind sign-in.** Anyone who can reach your server and knows a post's network and ID can fetch them. A post only saved Just for me is served to its owner alone. Quoted files follow their live parent save's access; files with no remaining
+  save or quote parent are inaccessible while disk cleanup catches up. Shared
+  media must revalidate access when reused from a browser cache. Private files
+  are not cached. A previously downloaded copy cannot be recalled. Keep the
+  server on a private network if that matters to you.
 - Your archive, tags (until you make a channel public), viewing history, Show more / less choices, bells and alerts are yours alone. A send is seen by you and the person you sent it to.
 - No ads, no advertising pixels, nothing sold. Search by meaning runs on your server (or the operator's own Mac). Only the optional search refinement service receives text, described below.
 
@@ -69,6 +73,11 @@ Saves (`bookmarks`), their media and link rows, tags, archive state and preferen
 
 - **What you've watched** (`post_views`): a post is marked seen after about 2 seconds on screen or when you skip it. ADHX uses it to leave watched posts out of your New and to work out which friends' saves you watch most ("You watch most of Ben's saves", shown only to you). Nobody else can see your viewing marks. They are deleted after 180 days (when the server restarts), and with Clear data or account deletion. Unsent marks wait in your browser for up to 7 days.
 - **Show more / Show less** from a friend, and **What's in your feed**, are stored as your preferences. Only you see them. Show more / less is stored by your friend's username.
+
+Watch-count requests have a random batch ID to avoid counting a retry twice.
+The server keeps the account ID, batch ID and a hash of its counts in
+`watch_batch_receipts` until Clear data or account deletion. Receipts contain
+no post IDs, names, search words or timestamps and are never public.
 
 ### Sends
 

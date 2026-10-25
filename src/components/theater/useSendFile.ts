@@ -61,6 +61,7 @@ export interface SendFile {
   /** Force a browser download, even on touch devices that can share files. */
   download: () => boolean | Promise<boolean>
   error?: string | null
+  notice?: string | null
 }
 
 /** Delay before prefetching starts — aligned with the seen-dwell threshold so
@@ -72,50 +73,103 @@ const FETCH_TIMEOUT_MS = 30_000
 let cachedKey: string | null = null
 let cachedBlob: Blob | null = null
 
-/**
- * Shared in-flight prefetch. The hook is instantiated TWICE for the same item
- * (desktop Rail and the mobile chrome are both always mounted, just CSS-hidden
- * at the other breakpoint), so without this both instances would download the
- * same MP4. Whoever starts the fetch owns the AbortController; the other
- * instance just awaits the same promise.
- */
-let inflightKey: string | null = null
-let inflightPromise: Promise<Blob> | null = null
+/** Bound both concurrent transfers and retained bytes, including unknown-length responses. */
+export const MAX_SEND_FILE_BYTES = 64 * 1024 * 1024
+class SendFileTooLarge extends Error {}
+type Transfer = {
+  key: string
+  controller: AbortController
+  promise: Promise<Blob>
+  explicit: boolean
+}
+let transfer: Transfer | null = null
+const consumers = new Map<string, number>()
 
-function prefetchBlob(key: string, mp4: string): Promise<Blob> {
-  if (inflightKey === key && inflightPromise) return inflightPromise
+function retainSource(key: string): () => void {
+  consumers.set(key, (consumers.get(key) ?? 0) + 1)
+  return () => {
+    const remaining = (consumers.get(key) ?? 1) - 1
+    if (remaining) consumers.set(key, remaining)
+    else consumers.delete(key)
+    // Both responsive controls share the transfer. StrictMode can reattach
+    // synchronously; abort only when its last consumer really left.
+    queueMicrotask(() => {
+      if (consumers.has(key)) return
+      if (transfer?.key === key && !transfer.explicit) transfer.controller.abort()
+      if (cachedKey === key) {
+        cachedKey = null
+        cachedBlob = null
+      }
+    })
+  }
+}
 
+function prefetchBlob(key: string, mp4: string, explicit = false): Promise<Blob> {
+  if (cachedKey === key && cachedBlob) return Promise.resolve(cachedBlob)
+  if (transfer?.key === key && !transfer.controller.signal.aborted) {
+    transfer.explicit ||= explicit
+    return transfer.promise
+  }
+  // A tap's download keeps its slot; speculative work for another video waits.
+  if (transfer?.explicit && !explicit) {
+    const resume = () => {
+      if (!consumers.has(key)) throw new DOMException('Download cancelled', 'AbortError')
+      return prefetchBlob(key, mp4)
+    }
+    return transfer.promise.then(resume, resume)
+  }
+  transfer?.controller.abort()
   const controller = new AbortController()
   const abortTimer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
-  const promise = fetch(mp4, { signal: controller.signal })
-    .then(async (res) => {
-      if (!res.ok) throw new Error('Send file unavailable')
-      const contentType = (res.headers.get('content-type') || '').split(';')[0].trim()
-      // A proxy 200 with a JSON/HTML error body is not a video — reject it
-      // before it gets shared or downloaded as garbage (the exact trap
-      // `isMediaAvailable`/`fileFromMediaUrl` guard against elsewhere).
-      if (contentType.includes('json') || contentType.includes('html')) {
-        throw new Error('Send file unavailable')
-      }
-      const blob = await res.blob()
-      if (blob.size === 0) throw new Error('Send file unavailable')
-      cachedKey = key
-      cachedBlob = blob
-      return blob
-    })
-    .finally(() => {
-      clearTimeout(abortTimer)
-      if (inflightKey === key) {
-        inflightKey = null
-        inflightPromise = null
-      }
-    })
-
-  inflightKey = key
-  inflightPromise = promise
-  // Prevent an unhandled-rejection warning when no instance is awaiting.
-  promise.catch(() => {})
-  return promise
+  const entry: Transfer = {
+    key,
+    controller,
+    explicit,
+    promise: fetch(mp4, { signal: controller.signal })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Send file unavailable')
+        const contentType = (res.headers.get('content-type') || '').split(';')[0].trim()
+        if (contentType.includes('json') || contentType.includes('html')) {
+          await res.body?.cancel()
+          throw new Error('Send file unavailable')
+        }
+        if (Number(res.headers.get('content-length')) > MAX_SEND_FILE_BYTES) {
+          await res.body?.cancel()
+          throw new SendFileTooLarge('Use the streaming download for this file')
+        }
+        if (!res.body) throw new Error('Send file unavailable')
+        const reader = res.body.getReader()
+        const chunks: ArrayBuffer[] = []
+        let bytes = 0
+        try {
+          for (;;) {
+            const chunk = await reader.read()
+            if (chunk.done) break
+            bytes += chunk.value.byteLength
+            if (bytes > MAX_SEND_FILE_BYTES)
+              throw new SendFileTooLarge('Use the streaming download for this file')
+            chunks.push(chunk.value.slice().buffer as ArrayBuffer)
+          }
+        } finally {
+          await reader.cancel().catch(() => {})
+        }
+        if (controller.signal.aborted) throw new DOMException('Download cancelled', 'AbortError')
+        if (!bytes) throw new Error('Send file unavailable')
+        const blob = new Blob(chunks, { type: contentType })
+        if (consumers.has(key)) {
+          cachedKey = key
+          cachedBlob = blob
+        }
+        return blob
+      })
+      .finally(() => {
+        clearTimeout(abortTimer)
+        if (transfer === entry) transfer = null
+      }),
+  }
+  transfer = entry
+  entry.promise.catch(() => {})
+  return entry.promise
 }
 
 type SendableItem = Pick<TheaterItem, 'platform' | 'bookmarkId' | 'author' | 'contentType'>
@@ -190,6 +244,7 @@ export function useSendFile(
   const [ready, setReady] = useState(false)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   // SSR-safe default: 'share' until the client effect below settles it. This
   // only drives a label/icon, so a brief mismatch on desktop's first paint is
   // harmless (and avoided in practice — Rail/mobile chrome only render the
@@ -227,21 +282,21 @@ export function useSendFile(
   const key = item && source ? sendSourceKey(item, source) : null
 
   useEffect(() => {
-    // New item (or one that lost its source) — reset this instance. A shared
-    // in-flight fetch is deliberately NOT aborted here: the other hook
-    // instance tracks the same current item, and a superseded fetch is
-    // bounded by its own 30s timeout anyway.
+    // Each responsive control retains the current source; its last release
+    // cancels obsolete speculative work without interrupting a user download.
     setReady(false)
     setPrimed(false)
     setError(null)
+    setNotice(null)
     blobRef.current = null
 
     if (!source || !key) return
+    const release = retainSource(key)
 
     if (cachedKey === key && cachedBlob) {
       blobRef.current = cachedBlob
       setReady(true)
-      return
+      return release
     }
 
     let cancelled = false
@@ -270,6 +325,7 @@ export function useSendFile(
     return () => {
       cancelled = true
       clearTimeout(delayTimer)
+      release()
     }
   }, [key, source?.src, eager])
 
@@ -280,7 +336,7 @@ export function useSendFile(
     try {
       // Verify the file before reporting success. An attachment URL can return
       // an error page after an anchor click, which the page cannot observe.
-      const blob = blobRef.current ?? (await prefetchBlob(key, source.src))
+      const blob = blobRef.current ?? (await prefetchBlob(key, source.src, true))
       const blobUrl = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = blobUrl
@@ -296,7 +352,17 @@ export function useSendFile(
         source: 'download',
       })
       return true
-    } catch {
+    } catch (error) {
+      if (error instanceof SendFileTooLarge) {
+        const link = document.createElement('a')
+        link.href = source.downloadSrc
+        link.download = source.filename
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        setNotice('Downloading the full file through your browser.')
+        return true
+      }
       setError("Couldn't get the file. Try again or use Share link.")
       return false
     } finally {
@@ -330,10 +396,11 @@ export function useSendFile(
       // Download mode is handled by the verified-file action above.
       if (!blob && key && wantsShare) {
         try {
-          blob = await prefetchBlob(key, source.src)
+          blob = await prefetchBlob(key, source.src, true)
           blobRef.current = blob
           setReady(true)
-        } catch {
+        } catch (error) {
+          if (error instanceof SendFileTooLarge) return await download()
           // No file to be had — the fallbacks below still make the tap useful.
         }
       }
@@ -427,5 +494,5 @@ export function useSendFile(
     }
   }, [item, source, mode, key, download])
 
-  return { supported, ready, sending, primed, mode, send, download, error }
+  return { supported, ready, sending, primed, mode, send, download, error, notice }
 }

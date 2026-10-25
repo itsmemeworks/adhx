@@ -28,7 +28,10 @@ function handOff(location: string): NextResponse {
 }
 
 function notFound(): NextResponse {
-  return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  return NextResponse.json(
+    { error: 'Not found' },
+    { status: 404, headers: { 'Cache-Control': 'no-store' } },
+  )
 }
 
 /** Slot URLs stay stable when an uploaded browser copy replaces its source. */
@@ -203,24 +206,43 @@ export async function GET(
     }
   }
   // Someone else's Just for me save: answer as if nobody had saved it.
+  // An unsaved retained file may have belonged to a private save. Never
+  // expose orphaned bytes while the asynchronous disk cleanup catches up.
   const hidden = access === 'private' && !privateToOwner
+  const retainedAllowed = access !== 'unsaved' && !hidden
 
   // A picture post has no separate poster: its first picture is the poster.
   // A sound-only post (SoundCloud) plays its sound in the video slot.
-  let kept = hidden ? null : findKept(platform, id, slot)
+  let kept = retainedAllowed ? findKept(platform, id, slot) : null
   const author = request.nextUrl.searchParams.get('a') ?? ''
   const download = request.nextUrl.searchParams.get('download') === '1'
   // Where to send it meanwhile, worked out only when it isn't kept.
-  const meanwhile = kept ? null : standIn(platform, id, slot, author, download, hidden)
+  const meanwhile = kept ? null : standIn(platform, id, slot, author, download, !retainedAllowed)
   // Nothing to hand over (no proxy, no stored picture): a fresh save is
   // usually seconds from kept. Wait for it rather than failing the player.
-  if (!kept && !hidden && !meanwhile && downloading(platform, id)) {
+  if (!kept && retainedAllowed && !meanwhile && downloading(platform, id)) {
     wakeKeep()
     kept = await waitForKept(platform, id, slot, request.signal)
   }
   // A video kept before stills were taken on download: make its poster now.
-  if (!kept && !hidden && slot === 'poster') kept = await ensurePoster(platform, id)
+  if (!kept && retainedAllowed && slot === 'poster') kept = await ensurePoster(platform, id)
   if (kept) {
+    // Waiting for a download/poster crosses asynchronous boundaries. Privacy,
+    // deletion and moderation may have changed while this request was waiting.
+    let currentAccess = keptFileAccess(platform, id)
+    const token = validFileToken(platform, id, request.nextUrl.searchParams.get('k'))
+    if (currentAccess === 'private' && !token) await callerId()
+    currentAccess = keptFileAccess(platform, id)
+    privateToOwner =
+      currentAccess === 'private' && (token || (!!caller && ownsSave(caller, platform, id)))
+    const currentModeration = readPostModeration(platform, id)
+    if (
+      currentAccess === 'unsaved' ||
+      (currentAccess === 'private' && !privateToOwner) ||
+      !currentModeration.ok ||
+      currentModeration.value
+    )
+      return notFound()
     let file: string
     let size: number
     let modified: number
@@ -239,14 +261,10 @@ export async function GET(
         ? 'private, no-store'
         : conversionPending(platform, id, kept.slot)
           ? 'no-store'
-          : // A poster can be remade (a black one is replaced once), so it's
-            // checked again hourly; the ETag keeps that a cheap 304.
-            kept.slot === 'poster'
-            ? 'public, max-age=3600'
-            : 'public, max-age=604800',
+          : 'private, no-cache, max-age=0, must-revalidate',
       'X-Content-Type-Options': 'nosniff',
     }
-    if (kept.slot === 'poster' && !privateToOwner) {
+    if (!privateToOwner && !conversionPending(platform, id, kept.slot)) {
       const etag = `"${size}-${modified}"`
       headers['ETag'] = etag
       if (request.headers.get('if-none-match') === etag) {

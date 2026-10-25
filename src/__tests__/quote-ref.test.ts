@@ -26,8 +26,8 @@ describe('quoteRefFromSource', () => {
       bookmarkId: '99',
     })
     expect(ref?.photoUrls).toEqual([
-      '/api/files/twitter/99/photo-1?a=mark_k',
-      '/api/files/twitter/99/photo-2?a=mark_k',
+      '/api/files/twitter/99/photo-1?a=mark_k&v=2',
+      '/api/files/twitter/99/photo-2?a=mark_k&v=2',
     ])
     expect(ref?.thumbnailUrl).toBe(ref?.photoUrls?.[0])
     expect(ref?.hasVideo).toBeUndefined()
@@ -58,6 +58,6 @@ describe('quoteRefFromStoredContext', () => {
       media: { photos: [{ url: 'https://pbs.twimg.com/media/x.jpg' }] },
     })
     expect(ref?.bookmarkId).toBe('55')
-    expect(ref?.photoUrls).toEqual(['/api/files/twitter/55/photo-1?a=alice'])
+    expect(ref?.photoUrls).toEqual(['/api/files/twitter/55/photo-1?a=alice&v=2'])
   })
 })

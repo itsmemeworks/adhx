@@ -121,8 +121,10 @@ same).
   privately.
 - **Never copy a note to another account** (clones set `note: null`).
 - **Kept files of Just for me-only posts are owner-only**
-  (`src/lib/keep/file-access.ts`). Everything else under `/api/files/` is
-  reachable by anyone who can reach the server, by design.
+  (`src/lib/keep/file-access.ts`). Quotes inherit a live parent's visibility
+  in the same account/platform; orphaned retained files are never served. Shared
+  files remain reachable without sign-in but must revalidate visibility with
+  every cache use (private/no-cache + ETag; private saves use no-store).
 - **Public caches check `savePrivacyFingerprint()` on every read**, including
   warm hits. Don't replace it with TTL-only or process-local invalidation.
 - **`activity.userId` and `analytics_events.userId` are stored, never
@@ -254,7 +256,9 @@ same).
 - **Sending a file shares `files` plus `text: "via <url>"`, never `url`
   with `files`** (WhatsApp prints the link twice). `useSendFile` prefetches so
   `navigator.share` stays inside the tap on iOS, and its module-level
-  in-flight dedupe stops double downloads. Keep both.
+  in-flight dedupe stops double downloads. Keep both. Prefetch has one transfer
+  slot and a 64 MiB byte cap; release the last consumer to cancel speculation.
+  Larger attachments use the verified streaming browser-download path.
 - **Gestures that iOS guards happen inside the tap**: clipboard reads,
   `navigator.share`, and focusing the quick-search field (`openQuickSearch()`).
 - **Inputs are 16px on phones** (`text-base sm:text-xs`), or iOS Safari zooms.
@@ -381,7 +385,10 @@ Short notes on what is easy to get wrong. Each links to the full description.
   member, post and UTC year; never pruned): `src/lib/watch/` writes them from
   `POST /api/watched` and `/api/app/watched`, `src/lib/people/watch-counts.ts`
   reads them. Web, iOS and Android count by the same rules
-  (`src/lib/watch/tally.ts`); change all three together. **A member's exact
+  (`src/lib/watch/tally.ts`); change all three together. Persist each immutable
+  `{ batchId, posts }` request before dispatch and keep that UUID on every retry.
+  The server commits its account-scoped receipt and counts together; do not
+  expire receipts independently of account data or replay can double-count. **A member's exact
   counts are shown only to that member** (owner's decision): never another
   member's plays, finishes or seconds, by name or on a face. Totals across
   everyone, with no names, are fine for members who can see the post

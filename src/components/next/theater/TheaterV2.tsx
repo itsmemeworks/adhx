@@ -767,6 +767,10 @@ export function TheaterV2({
       setToast(null)
     }, PLAYER_TOAST_MS)
   }, [])
+  useEffect(() => {
+    const message = send.error || send.notice
+    if (message) flash(message)
+  }, [send.error, send.notice, flash])
   useEffect(
     () => () => {
       if (toastTimer.current !== null) window.clearTimeout(toastTimer.current)

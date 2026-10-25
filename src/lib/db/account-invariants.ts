@@ -28,6 +28,7 @@ const ACCOUNT_GUARDS: AccountGuard[] = [
   { table: 'phone_save_queue', references: [{ column: 'user_id' }] },
   { table: 'post_views', references: [{ column: 'user_id' }] },
   { table: 'post_watch_counts', references: [{ column: 'user_id' }] },
+  { table: 'watch_batch_receipts', references: [{ column: 'user_id' }] },
   { table: 'channel_visual_jobs', references: [{ column: 'user_id', nullable: true }] },
   {
     table: 'post_sends',

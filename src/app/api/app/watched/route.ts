@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { appError, withPhoneKey } from '@/lib/api/phone-auth'
-import { parseWatchedBody, recordWatched } from '@/lib/watch/record'
+import { parseWatchedBody, recordWatched, WatchBatchConflict } from '@/lib/watch/record'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { captureException } from '@/lib/sentry'
 
@@ -19,9 +19,10 @@ export const POST = withPhoneKey(async (request, { userId }) => {
     return appError(429, 'busy', 'Lots of requests just now. Give it a moment.')
   }
   try {
-    recordWatched(userId, parsed.posts)
+    recordWatched(userId, parsed.posts, new Date(), parsed.batchId)
     return new NextResponse(null, { status: 204, headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
+    if (error instanceof WatchBatchConflict) return appError(400, 'bad_posts', error.message)
     captureException(error, { endpoint: '/api/app/watched' })
     return appError(500, 'failed', 'That didn’t save just now. Try again.')
   }

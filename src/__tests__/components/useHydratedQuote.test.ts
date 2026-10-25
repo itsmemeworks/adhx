@@ -64,7 +64,7 @@ describe('useHydratedQuote', () => {
       expect(result.current.quote?.text).toBe('quoted full')
     })
     expect(result.current.quote?.bookmarkId).toBe('99')
-    expect(result.current.quote?.photoUrls).toEqual(['/api/files/twitter/99/photo-1?a=bob'])
+    expect(result.current.quote?.photoUrls).toEqual(['/api/files/twitter/99/photo-1?a=bob&v=2'])
     expect(result.current.parentVideo?.bookmarkId).toBe('1')
   })
 
@@ -116,7 +116,7 @@ describe('useHydratedQuote', () => {
         }),
       ),
     )
-    expect(result.current.parentPhotos).toEqual(['/api/files/twitter/1/photo-1?a=alice'])
+    expect(result.current.parentPhotos).toEqual(['/api/files/twitter/1/photo-1?a=alice&v=2'])
   })
 
   it('re-seeds the album when photoCount arrives on the same post', () => {
@@ -128,12 +128,12 @@ describe('useHydratedQuote', () => {
     const { result, rerender } = renderHook(({ item }) => useHydratedQuote(item), {
       initialProps: { item: stub },
     })
-    expect(result.current.parentPhotos).toEqual(['/api/files/twitter/1/photo-1?a=alice'])
+    expect(result.current.parentPhotos).toEqual(['/api/files/twitter/1/photo-1?a=alice&v=2'])
     rerender({ item: { ...stub, photoCount: 3 } })
     expect(result.current.parentPhotos).toEqual([
-      '/api/files/twitter/1/photo-1?a=alice',
-      '/api/files/twitter/1/photo-2?a=alice',
-      '/api/files/twitter/1/photo-3?a=alice',
+      '/api/files/twitter/1/photo-1?a=alice&v=2',
+      '/api/files/twitter/1/photo-2?a=alice&v=2',
+      '/api/files/twitter/1/photo-3?a=alice&v=2',
     ])
   })
 
@@ -181,7 +181,7 @@ describe('seedParentPhotos', () => {
           },
         }),
       ),
-    ).toEqual(['/api/files/twitter/1/photo-1?a=alice'])
+    ).toEqual(['/api/files/twitter/1/photo-1?a=alice&v=2'])
   })
 
   it('seeds every still on a photo album without waiting on the share API', () => {
@@ -194,9 +194,9 @@ describe('seedParentPhotos', () => {
         }),
       ),
     ).toEqual([
-      '/api/files/twitter/1/photo-1?a=alice',
-      '/api/files/twitter/1/photo-2?a=alice',
-      '/api/files/twitter/1/photo-3?a=alice',
+      '/api/files/twitter/1/photo-1?a=alice&v=2',
+      '/api/files/twitter/1/photo-2?a=alice&v=2',
+      '/api/files/twitter/1/photo-3?a=alice&v=2',
     ])
   })
 
@@ -209,6 +209,9 @@ describe('seedParentPhotos', () => {
           photoCount: 2,
         }),
       ),
-    ).toEqual(['/api/files/twitter/1/photo-1?a=alice', '/api/files/twitter/1/photo-2?a=alice'])
+    ).toEqual([
+      '/api/files/twitter/1/photo-1?a=alice&v=2',
+      '/api/files/twitter/1/photo-2?a=alice&v=2',
+    ])
   })
 })

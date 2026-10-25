@@ -54,25 +54,25 @@ describe('isReelPlayable', () => {
 describe('reelVideoSrc — per-platform stream URL in the reel', () => {
   it('TikTok → the tiktok kept-file route (id + author)', () => {
     expect(reelVideoSrc(item({ platform: 'tiktok', author: 'bob', bookmarkId: '7' }))).toBe(
-      '/api/files/tiktok/7/video-1?a=bob',
+      '/api/files/tiktok/7/video-1?a=bob&v=2',
     )
   })
 
   it('Instagram → the instagram kept-file route, never the Twitter one', () => {
     expect(reelVideoSrc(item({ platform: 'instagram', bookmarkId: 'DXVsqQ7CSXw' }))).toBe(
-      '/api/files/instagram/DXVsqQ7CSXw/video-1',
+      '/api/files/instagram/DXVsqQ7CSXw/video-1?v=2',
     )
   })
 
   it('X → the twitter kept-file route (tweetId + author)', () => {
     expect(reelVideoSrc(item({ platform: 'twitter', author: 'jack', bookmarkId: '99' }))).toBe(
-      '/api/files/twitter/99/video-1?a=jack',
+      '/api/files/twitter/99/video-1?a=jack&v=2',
     )
   })
 
   it('X album clip 2 maps to the video-2 slot', () => {
     const twitter = item({ platform: 'twitter', author: 'jack', bookmarkId: '99' })
-    expect(reelVideoSrc(twitter, 1)).toBe('/api/files/twitter/99/video-1?a=jack')
-    expect(reelVideoSrc(twitter, 2)).toBe('/api/files/twitter/99/video-2?a=jack')
+    expect(reelVideoSrc(twitter, 1)).toBe('/api/files/twitter/99/video-1?a=jack&v=2')
+    expect(reelVideoSrc(twitter, 2)).toBe('/api/files/twitter/99/video-2?a=jack&v=2')
   })
 })

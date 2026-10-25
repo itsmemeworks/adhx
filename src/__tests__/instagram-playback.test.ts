@@ -15,7 +15,7 @@ function mockRes(status: number) {
 
 describe('instagram playback URLs', () => {
   it('builds the kept-file src and official embed', () => {
-    expect(instagramVideoSrc('DXVsqQ7CSXw')).toBe('/api/files/instagram/DXVsqQ7CSXw/video-1')
+    expect(instagramVideoSrc('DXVsqQ7CSXw')).toBe('/api/files/instagram/DXVsqQ7CSXw/video-1?v=2')
     expect(instagramEmbedUrl('DXVsqQ7CSXw')).toBe(
       'https://www.instagram.com/reel/DXVsqQ7CSXw/embed/',
     )
@@ -46,7 +46,7 @@ describe('probeInstagramVideo', () => {
     const fetch = vi.fn().mockResolvedValue({ ok: false, status: 206, body: { cancel } })
     await expect(probeInstagramVideo('DXVsqQ7CSXw', { fetch })).resolves.toBe(true)
     expect(fetch).toHaveBeenCalledWith(
-      '/api/files/instagram/DXVsqQ7CSXw/video-1',
+      '/api/files/instagram/DXVsqQ7CSXw/video-1?v=2',
       expect.objectContaining({ headers: { Range: 'bytes=0-1' } }),
     )
     expect(cancel).toHaveBeenCalled()

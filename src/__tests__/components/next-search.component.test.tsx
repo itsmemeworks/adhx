@@ -39,7 +39,7 @@ function media(partial: Partial<MediaItem> = {}): MediaItem {
     width: 720,
     height: 1280,
     durationMs: 23_000,
-    url: '/api/files/twitter/1001/video-1?a=JamesMelville',
+    url: '/api/files/twitter/1001/video-1?a=JamesMelville&v=2',
     thumbnailUrl: 'https://pbs.twimg.com/thumb.jpg',
     shareUrl: '',
     ...partial,
@@ -149,7 +149,9 @@ describe('search model', () => {
   })
 
   it('streams previews only through the app’s own kept-file route', () => {
-    expect(previewVideoSrc(squirrel.post)).toBe('/api/files/twitter/1001/video-1?a=JamesMelville')
+    expect(previewVideoSrc(squirrel.post)).toBe(
+      '/api/files/twitter/1001/video-1?a=JamesMelville&v=2',
+    )
     // A raw CDN url on the row is never streamed directly — Instagram goes
     // through its own kept-file route, not the Twitter one.
     expect(
@@ -159,7 +161,7 @@ describe('search model', () => {
           media: [media({ url: 'https://scontent.cdninstagram.com/v/clip.mp4' })],
         }),
       ),
-    ).toBe('/api/files/instagram/1001/video-1')
+    ).toBe('/api/files/instagram/1001/video-1?v=2')
     expect(previewVideoSrc(post({ media: null }))).toBeNull()
   })
 })
