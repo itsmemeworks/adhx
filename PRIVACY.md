@@ -2,7 +2,7 @@
 
 ADHX is made to be **self-hosted**, for you and the people you invite. Whoever runs an ADHX server is responsible for the data on it and is its data controller. This file is the honest description of what the software stores and sends on every ADHX server, and who can see it. The separate product website in `site/` runs no ADHX account service; its hosting provider may process ordinary request logs.
 
-Last updated: 20 October 2026.
+Last updated: 25 October 2026.
 
 ## Short version
 
@@ -105,11 +105,11 @@ Members can react to any post: one of six emoji, or up to 40 characters ("Say so
 
 When a post is saved, the server downloads its video, pictures and sound once, from the network it came from, and keeps them in its media folder. One copy is kept per post, however many people saved it, Just for me saves included.
 
-**Kept files of shared posts are served without sign-in.** Anyone who can reach the server and knows a post's network and source ID can fetch them at `/api/files/…`, and browsers and proxies may cache them for up to 7 days. Those IDs come from the original networks and are not secret, so a determined stranger can tell that someone on the server shared a particular post.
+**Kept files of shared posts are served without sign-in.** Anyone who can reach the server and knows a post's network and source ID can fetch them at `/api/files/…`, and browsers must recheck access with this server before reusing a cached copy; shared proxies must not cache them. New media URLs bypass the previous seven-day cache entries, but a copy someone already downloaded cannot be recalled. Those IDs come from the original networks and are not secret, so a determined stranger can tell that someone on the server shared a particular post.
 
 A post that is only saved **Just for me** is different: its files are served only to the people who saved it (signed in, with their phone key, or through a link the server adds to their own phone's copy, which works for that post alone), and are never cached. To anyone else the server answers exactly as if nobody had saved the post. Why a file isn't available ("couldn't be downloaded", "nobody here has saved this yet") is only told to members. Kept files of hidden (moderated) posts are not served. Invites and the email allowlist control who can make an account, not who can play files: if that matters to you, run the server on a private network (LAN, VPN or tailnet).
 
-Kept files are deleted within about an hour once nobody on the server has the post saved.
+Quoted files follow a live parent save’s access in the same account. Files with no remaining save or quote parent become inaccessible immediately, while disk cleanup removes them within about an hour.
 
 ### Invites and approvals
 

@@ -6,6 +6,11 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-25 — Align the in-app privacy explanation
+
+- Match the privacy page and canonical guide to media revalidation, immediate orphan denial and watch-retry receipt retention.
+- Source documentation only; no change to access policy or live deployment.
+
 ## 2026-10-25 — Close pre-launch privacy and delivery gaps
 
 - Deny orphaned retained files; quote access follows a live, same-owner parent, including private ownership and moderation.
