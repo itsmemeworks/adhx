@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.1](https://github.com/itsmemeworks/adhx/compare/v2.8.0...v2.8.1) (2026-10-25)
+
+
+### Bug Fixes
+
+* close launch privacy and delivery gaps ([#634](https://github.com/itsmemeworks/adhx/issues/634)) ([b1aedc1](https://github.com/itsmemeworks/adhx/commit/b1aedc17e72a82883da999f6e7def285d72f8f25))
+
 ## [2.8.0](https://github.com/itsmemeworks/adhx/compare/v2.7.0...v2.8.0) (2026-10-23)
 
 
