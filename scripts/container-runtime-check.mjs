@@ -35,6 +35,29 @@ function integrity() {
 
 async function seed() {
   assert.equal(process.getuid(), 1001, 'Runtime must run as the documented non-root UID')
+  // Independent decoders: Node bundles its own, Debian serves native media
+  // dependencies, and yt-dlp loads its Python wheel. Exercise the shipped image.
+  const [major, minor, patch] = process.versions.node.split('.').map(Number)
+  assert.ok(
+    major > 26 || (major === 26 && (minor > 12 || (minor === 12 && patch >= 1))),
+    'Node must include the October 2026 security fixes',
+  )
+  const nativeBrotli = execFileSync('dpkg-query', ['-W', '-f=${Version}', 'libbrotli1'], {
+    encoding: 'utf8',
+    timeout: 10_000,
+  }).trim()
+  execFileSync('dpkg', ['--compare-versions', nativeBrotli, 'ge', '1.1.0-2+deb13u1'], {
+    timeout: 10_000,
+  })
+  const pythonBrotli = execFileSync(
+    '/opt/yt-dlp/bin/python',
+    [
+      '-c',
+      'import brotli; payload = b"adhx synthetic media"; assert brotli.decompress(brotli.compress(payload)) == payload; print(brotli.__version__)',
+    ],
+    { encoding: 'utf8', timeout: 10_000 },
+  ).trim()
+  assert.equal(pythonBrotli, '1.2.1', 'Downloader must load its patched Brotli decoder')
   for (const buildTool of [
     '/usr/local/lib/node_modules/npm',
     '/usr/local/lib/node_modules/corepack',

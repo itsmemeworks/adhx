@@ -47,7 +47,7 @@ describe('production container dependencies', () => {
   it('starts the runner from a fresh Node image and excludes package-manager toolchains', () => {
     const runner = dockerfile.match(/^FROM (\S+) AS runner\n([\s\S]*)$/m)
     expect(runner).not.toBeNull()
-    expect(runner![1]).toMatch(/^node:26-/)
+    expect(runner![1]).toMatch(/^node:26(?:\.\d+\.\d+)?-/)
     // Native SQLite dependencies must be built for the same runtime as the server.
     expect(dockerfile.match(/^FROM (\S+) AS base$/m)?.[1]).toBe(runner![1])
     expect(runner![2]).not.toMatch(/(?:corepack prepare|pnpm install|COPY --from=base)/)

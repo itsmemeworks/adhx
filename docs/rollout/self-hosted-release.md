@@ -57,6 +57,17 @@ native jobs on the current revision before recommending merge. The required
 `build` status depends on these native builds, avoiding a third app compilation.
 Release PRs use validated version/changelog checks; see [the release flow](../releasing.md).
 
+The image also enforces the October2026 Brotli fixes independently in each
+runtime: Node26.12.1, Debian `libbrotli1 >= 1.1.0-2+deb13u1`, and Python
+Brotli1.2.1 in the downloader virtual environment. The native smoke check
+verifies the installed versions and Python compression/decompression. Updating
+only the OS library does not update Node’s bundled decoder or Python’s wheel.
+See the [Node security release](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases),
+[Debian advisory](https://security-tracker.debian.org/tracker/DSA-6582-1) and
+[Python advisory](https://github.com/advisories/GHSA-9v8h-qqgm-4m35). Cached
+layers must be rebuilt when these floors change; the assembled-image scanner
+remains the gate for newly published fixable high/critical advisories.
+
 To repeat full container checks locally after building the selected revision:
 
 ```sh
