@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { putBack, takeBatch, WatchTracker, type Tally } from '@/lib/watch/tally'
+import { takeBatch, WatchTracker, type Tally, type WatchedPost } from '@/lib/watch/tally'
 
 /**
  * Watch counts from the theater (`POST /api/watched`): plays, finishes and
@@ -16,10 +16,12 @@ export const WATCHED_FLUSH_MS = 30_000
 const PER_CALL = 50
 const MAX_POSTS = 500
 const SAVE_EVERY_MS = 5_000
-const POST_KEY = /^[a-z]{1,16}:[A-Za-z0-9_-]{1,64}$/
+const POST_KEY = /^[a-z]{1,16}:[A-Za-z0-9._~-]{1,128}$/
+type PendingBatch = { batchId: string; posts: WatchedPost[] }
 
 class WatchOutbox {
   tracker = new WatchTracker()
+  pending: PendingBatch | null = null
   timer: ReturnType<typeof setTimeout> | null = null
   request: AbortController | null = null
   savedAt = 0
@@ -29,7 +31,27 @@ class WatchOutbox {
   duration = 0
   constructor(readonly account: string) {
     try {
-      const rows = JSON.parse(localStorage.getItem(this.storageKey) ?? '{}') as unknown
+      const saved = JSON.parse(localStorage.getItem(this.storageKey) ?? '{}') as Record<
+        string,
+        unknown
+      >
+      const rows = saved?.version === 2 ? saved.tallies : saved
+      const pending = saved?.pending as PendingBatch | undefined
+      if (
+        saved?.version === 2 &&
+        pending &&
+        /^[a-f0-9-]{36}$/i.test(pending.batchId) &&
+        Array.isArray(pending.posts) &&
+        pending.posts.length > 0 &&
+        pending.posts.length <= PER_CALL &&
+        pending.posts.every(
+          (p) =>
+            p &&
+            POST_KEY.test(`${p.platform}:${p.id}`) &&
+            [p.plays, p.finishes, p.seconds].every((n) => Number.isSafeInteger(n) && n >= 0),
+        )
+      )
+        this.pending = pending
       if (!rows || typeof rows !== 'object' || Array.isArray(rows)) return
       for (const [key, t] of Object.entries(rows as Record<string, Partial<Tally>>).slice(
         -MAX_POSTS,
@@ -56,15 +78,22 @@ class WatchOutbox {
     const tallies = this.tracker.tallies
     while (tallies.size > MAX_POSTS) tallies.delete(tallies.keys().next().value!)
     try {
-      if (tallies.size)
-        localStorage.setItem(this.storageKey, JSON.stringify(Object.fromEntries(tallies)))
+      if (tallies.size || this.pending)
+        localStorage.setItem(
+          this.storageKey,
+          JSON.stringify({
+            version: 2,
+            tallies: Object.fromEntries(tallies),
+            pending: this.pending,
+          }),
+        )
       else localStorage.removeItem(this.storageKey)
     } catch {
       /* Storage quota or private browsing cannot break playback. */
     }
   }
   schedule(delay = WATCHED_FLUSH_MS) {
-    if (!this.users || !this.tracker.tallies.size || document.hidden) return
+    if (!this.users || (!this.tracker.tallies.size && !this.pending) || document.hidden) return
     if (this.request || this.timer !== null) return
     this.timer = setTimeout(() => {
       this.timer = null
@@ -75,9 +104,14 @@ class WatchOutbox {
     if (this.timer !== null) clearTimeout(this.timer)
     this.timer = null
     if (this.request) return
-    const batch = takeBatch(this.tracker.tallies, PER_CALL)
+    if (!this.pending) {
+      const posts = takeBatch(this.tracker.tallies, PER_CALL)
+      if (!posts.length) return
+      this.pending = { batchId: crypto.randomUUID(), posts }
+    }
+    const batch = this.pending
+    // Persist the immutable request before sending it, including its receipt id.
     this.persist(true)
-    if (!batch.length) return
     const controller = new AbortController()
     this.request = controller
     try {
@@ -87,17 +121,17 @@ class WatchOutbox {
         keepalive: true,
         headers: { 'Content-Type': 'application/json' },
         signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)]),
-        body: JSON.stringify({ posts: batch }),
+        body: JSON.stringify(batch),
       })
       // 400 is a body this server won't take, and 404 an ADHX without
       // counts: neither gets better by sending it again.
       if (!response.ok && response.status !== 400 && response.status !== 404)
         throw new Error('Watch counts not acknowledged')
+      this.pending = null
       this.failures = 0
     } catch {
-      // Back into this account's own outbox (an abort means another account
-      // signed in: it waits here, never sent with their cookie).
-      putBack(this.tracker.tallies, batch)
+      // Keep the same durable request on an ambiguous response or scope abort.
+      // Its receipt prevents a committed request being counted twice.
       this.failures++
     } finally {
       this.request = null

@@ -31,7 +31,7 @@ test.describe('preview pages for every platform', () => {
     for (let index = 0; index < PREVIEW_IG_PHOTO.imageCount; index += 1) {
       await expect(slides.nth(index)).toHaveAttribute(
         'src',
-        `/api/files/instagram/${PREVIEW_IG_PHOTO.id}/photo-${index + 1}`,
+        `/api/files/instagram/${PREVIEW_IG_PHOTO.id}/photo-${index + 1}?v=2`,
       )
     }
     await expect(slides.first()).toBeVisible()

@@ -77,3 +77,25 @@ an older server without notification streams to check REST fallback.
 A failed row needs a reproducible issue and a rerun after the fix. Record
 physical-device results separately from automated checks in
 [friends-feed verification](friends-feed-verification.md).
+
+For the pre-launch media/watch fixes, also check on physical Safari, iPhone and
+Android using an isolated library:
+
+- Open a private post's file URL signed out, then delete its last save or
+  clear the account: retained bytes must remain unavailable before disk cleanup.
+  Repeat with a private quoted post and with a parent hidden or removed.
+- Load shared media, make its last visible save private elsewhere, then revisit
+  it. Updated clients use the versioned file URL and revalidate visibility; an
+  old file already downloaded under a previous release cannot be recalled.
+- Move through several slow videos. Obsolete web prefetches stop, and a second
+  responsive control does not cancel the first. Over 64 MiB, web Download starts
+  the browser's streaming attachment download with feedback; verify Files/Downloads
+  on Safari and memory use. Native file exports still use their disk-download path.
+- Drop a watch report's response after the isolated server commits it, restore
+  connectivity and restart the app/tab. Its UUID and posts must remain identical
+  until acknowledged, counts must increase once, new watching must remain separate,
+  and a connection switch must never submit the previous account's request.
+
+Update both server and native apps for watch-receipt protection; older phone
+builds can still report legacy batches without duplicate protection. Record the
+actual device/browser/version and results, not only simulator or JVM build status.

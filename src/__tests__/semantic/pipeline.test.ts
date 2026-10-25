@@ -147,7 +147,7 @@ describe('documents', () => {
             height: 1,
             durationMs: 1000,
             altText: null,
-            url: '/api/files/twitter/111/video-1?a=alice',
+            url: '/api/files/twitter/111/video-1?a=alice&v=2',
             thumbnailUrl: 'https://pbs.twimg.com/amplify_video_thumb/1/img/a.jpg',
             shareUrl: '',
             originalUrl: null,
@@ -156,7 +156,7 @@ describe('documents', () => {
       }),
     )
     expect(doc.image?.url).toBe('https://pbs.twimg.com/amplify_video_thumb/1/img/a.jpg')
-    expect(doc.video?.url).toBe('/api/files/twitter/111/video-1?a=alice')
+    expect(doc.video?.url).toBe('/api/files/twitter/111/video-1?a=alice&v=2')
     expect(hashFor(doc, 'video')).toBe(doc.video?.hash)
   })
 
@@ -240,7 +240,7 @@ describe('worker', () => {
     addMedia(USER_A, '2', 'video')
     await enqueuePosts([{ platform: 'twitter', postId: '2' }], PRIORITY.urgent, ['video'])
     expect(await processJob((await nextJob(new Date(Date.now() + 1000)))!)).toBe('done')
-    expect(sampleVideoFrames).toHaveBeenCalledWith('/api/files/twitter/2/video-1?a=testauthor')
+    expect(sampleVideoFrames).toHaveBeenCalledWith('/api/files/twitter/2/video-1?a=testauthor&v=2')
     await enqueuePosts([{ platform: 'twitter', postId: '2' }], PRIORITY.urgent, ['video'])
     expect(await processJob((await nextJob(new Date(Date.now() + 1000)))!)).toBe('skipped')
     expect(embedVideoFrames).toHaveBeenCalledTimes(1)

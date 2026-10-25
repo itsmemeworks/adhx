@@ -80,6 +80,17 @@ function videoStreamPath(item: FeedItemResponse, mediaIndex: number): string | n
   return url?.startsWith('/api/files/') ? url : null
 }
 
+/** Browser cache versions do not change media content. Keep existing vectors,
+ * extraction and resumable checkpoints when only that transport hint changes. */
+function mediaIdentity(url: string): string {
+  if (!url.startsWith('/api/files/')) return url
+  const [pathname, query = ''] = url.split('?', 2)
+  const params = new URLSearchParams(query)
+  if (!params.has('v')) return url
+  params.delete('v')
+  return pathname + (params.size ? `?${params.toString()}` : '')
+}
+
 /**
  * `extracted` is what was read out of the post's media on this server
  * (`extracted.ts`). It comes after the post's own words, so a long transcript
@@ -156,7 +167,9 @@ export function buildPostDocument(
             videoIndex >= 0 && media[videoIndex].durationMs
               ? media[videoIndex].durationMs! / 1000
               : null,
-          hash: sha(`screen|${screenImages.join('|')}|${videoPath ?? ''}`),
+          hash: sha(
+            `screen|${screenImages.map(mediaIdentity).join('|')}|${videoPath ? mediaIdentity(videoPath) : ''}`,
+          ),
         }
       : null
 
@@ -167,10 +180,12 @@ export function buildPostDocument(
     textHash: sha(text),
     keywords,
     hasWords,
-    image: imageUrl ? { url: imageUrl, hash: sha(imageUrl) } : null,
-    video: videoPath ? { url: videoPath, hash: sha(`${videoPath}|${VIDEO_SAMPLING}`) } : null,
+    image: imageUrl ? { url: imageUrl, hash: sha(mediaIdentity(imageUrl)) } : null,
+    video: videoPath
+      ? { url: videoPath, hash: sha(`${mediaIdentity(videoPath)}|${VIDEO_SAMPLING}`) }
+      : null,
     screen,
-    speech: videoPath ? { url: videoPath, hash: sha(`speech|${videoPath}`) } : null,
+    speech: videoPath ? { url: videoPath, hash: sha(`speech|${mediaIdentity(videoPath)}`) } : null,
   }
 }
 

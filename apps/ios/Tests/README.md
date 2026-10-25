@@ -123,3 +123,8 @@ real-device visual or accessibility pass. The full device matrix is in
 Record device and OS, text size, network conditions and what you actually saw.
 If a simulator can't display or boot, report that gap rather than calling a
 build a visual pass. Never use production keys or a household library here.
+
+Watch delivery regression: compile `App/Library/WatchTally.swift`,
+`App/Library/WatchCounts.swift` and `Tests/WatchDeliveryTests.swift` together.
+It uses isolated defaults and a fake transport to check persisted request IDs,
+restart recovery and connection changes; no live server or account is used.

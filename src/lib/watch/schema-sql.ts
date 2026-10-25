@@ -22,4 +22,12 @@ export const POST_WATCH_COUNTS_DDL = `
   );
   CREATE INDEX IF NOT EXISTS post_watch_counts_post_idx ON post_watch_counts(platform, post_id);
   CREATE INDEX IF NOT EXISTS post_watch_counts_user_year_idx ON post_watch_counts(user_id, year);
+  -- Receipts contain no post ids or viewing history. Kept with the account
+  -- so an offline retry never starts counting again after a receipt TTL.
+  CREATE TABLE IF NOT EXISTS watch_batch_receipts (
+    user_id TEXT NOT NULL,
+    batch_id TEXT NOT NULL,
+    payload_hash TEXT NOT NULL,
+    PRIMARY KEY (user_id, batch_id)
+  ) WITHOUT ROWID;
 `

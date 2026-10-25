@@ -20,6 +20,9 @@ export function keptSrc(
     params.set('a', author.replace(/^@+/, ''))
   }
   if (download) params.set('download', '1')
+  // Retire URLs that older releases allowed caches to serve for a week.
+  // Visibility is mutable, so this URL version always revalidates at origin.
+  params.set('v', '2')
   const query = params.toString()
   return `/api/files/${encodeURIComponent(platform || 'twitter')}/${encodeURIComponent(postId)}/${slot}${query ? `?${query}` : ''}`
 }

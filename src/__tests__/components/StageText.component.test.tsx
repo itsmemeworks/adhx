@@ -144,14 +144,14 @@ describe('StageText author row', () => {
           quote: {
             author: 'mark_k',
             text: 'with a photo',
-            photoUrls: ['/api/files/twitter/1/photo-1?a=mark_k'],
+            photoUrls: ['/api/files/twitter/1/photo-1?a=mark_k&v=2'],
           },
         })}
       />,
     )
     expect(screen.getByTestId('quote-photo')).toHaveAttribute(
       'src',
-      '/api/files/twitter/1/photo-1?a=mark_k',
+      '/api/files/twitter/1/photo-1?a=mark_k&v=2',
     )
   })
 
@@ -179,12 +179,12 @@ describe('StageText author row', () => {
     const parent = screen.getByTestId('parent-inline-video')
     expect(parent).toHaveAttribute(
       'src',
-      '/api/files/twitter/2091399015971864972/video-1?a=XRoboHub',
+      '/api/files/twitter/2091399015971864972/video-1?a=XRoboHub&v=2',
     )
     const quoted = screen.getByTestId('quote-inline-video')
     expect(quoted).toHaveAttribute(
       'src',
-      '/api/files/twitter/2091018327875518851/video-1?a=XRoboHub',
+      '/api/files/twitter/2091018327875518851/video-1?a=XRoboHub&v=2',
     )
     expect(screen.queryByTestId('quote-photo')).not.toBeInTheDocument()
   })
@@ -235,7 +235,7 @@ describe('StageText photo album', () => {
           author: 'ravecultur',
           bookmarkId: 'DcgAGt4ijQr',
           contentType: 'photo',
-          thumbnailUrl: '/api/files/instagram/DcgAGt4ijQr/poster?a=ravecultur',
+          thumbnailUrl: '/api/files/instagram/DcgAGt4ijQr/poster?a=ravecultur&v=2',
           photoCount: 6,
           url: 'https://www.instagram.com/p/DcgAGt4ijQr/',
         })}
@@ -249,7 +249,7 @@ describe('StageText photo album', () => {
     expect([...slides].map((slide) => slide.getAttribute('src'))).toEqual(
       Array.from(
         { length: 6 },
-        (_, index) => `/api/files/instagram/DcgAGt4ijQr/photo-${index + 1}`,
+        (_, index) => `/api/files/instagram/DcgAGt4ijQr/photo-${index + 1}?v=2`,
       ),
     )
 
@@ -285,8 +285,8 @@ describe('StageText photo album', () => {
       expect(screen.getByLabelText('Photos, 2')).toBeInTheDocument()
     })
     const srcs = [...document.querySelectorAll('img')].map((el) => el.getAttribute('src') ?? '')
-    expect(srcs).toContain('/api/files/twitter/2091475617438957808/photo-1?a=StreetFashion01')
-    expect(srcs).toContain('/api/files/twitter/2091475617438957808/photo-2?a=StreetFashion01')
+    expect(srcs).toContain('/api/files/twitter/2091475617438957808/photo-1?a=StreetFashion01&v=2')
+    expect(srcs).toContain('/api/files/twitter/2091475617438957808/photo-2?a=StreetFashion01&v=2')
     const slides = document.querySelectorAll('[aria-label="Photos, 2"] > div')
     expect(slides).toHaveLength(2)
     expect(slides[0]?.className).toContain('min-w-full')
@@ -316,9 +316,9 @@ describe('StageText photo album', () => {
     )
     const srcs = [...document.querySelectorAll('img')].map((el) => el.getAttribute('src') ?? '')
     expect(srcs.filter((s) => s.includes('/photo-')).sort()).toEqual([
-      '/api/files/twitter/2091475617438957808/photo-1?a=StreetFashion01',
-      '/api/files/twitter/2091475617438957808/photo-2?a=StreetFashion01',
-      '/api/files/twitter/2091475617438957808/photo-3?a=StreetFashion01',
+      '/api/files/twitter/2091475617438957808/photo-1?a=StreetFashion01&v=2',
+      '/api/files/twitter/2091475617438957808/photo-2?a=StreetFashion01&v=2',
+      '/api/files/twitter/2091475617438957808/photo-3?a=StreetFashion01&v=2',
     ])
     expect(screen.queryByLabelText('Photos, 3')).not.toBeInTheDocument()
   })

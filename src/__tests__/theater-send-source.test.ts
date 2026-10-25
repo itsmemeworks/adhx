@@ -37,8 +37,8 @@ describe('resolveSendSource', () => {
   it('twitter video → the twitter kept-file video route', () => {
     const result = resolveSendSource(item({ platform: 'twitter', contentType: 'video' }))
     expect(result).toEqual({
-      src: '/api/files/twitter/123/video-1?a=jack',
-      downloadSrc: '/api/files/twitter/123/video-1?a=jack&download=1',
+      src: '/api/files/twitter/123/video-1?a=jack&v=2',
+      downloadSrc: '/api/files/twitter/123/video-1?a=jack&download=1&v=2',
       filename: 'adhx-twitter-123.mp4',
       kind: 'video',
     })
@@ -48,14 +48,14 @@ describe('resolveSendSource', () => {
     const result = resolveSendSource(
       item({ platform: 'twitter', contentType: 'video', videoCount: 3 }),
     )
-    expect(result?.src).toBe('/api/files/twitter/123/video-1?a=jack')
+    expect(result?.src).toBe('/api/files/twitter/123/video-1?a=jack&v=2')
   })
 
   it('twitter photo → the kept-file download variant, first/primary photo', () => {
     const result = resolveSendSource(item({ platform: 'twitter', contentType: 'photo' }))
     expect(result).toEqual({
-      src: '/api/files/twitter/123/photo-1?a=jack&download=1',
-      downloadSrc: '/api/files/twitter/123/photo-1?a=jack&download=1',
+      src: '/api/files/twitter/123/photo-1?a=jack&download=1&v=2',
+      downloadSrc: '/api/files/twitter/123/photo-1?a=jack&download=1&v=2',
       filename: 'adhx-twitter-123.jpg',
       kind: 'photo',
     })
@@ -84,8 +84,8 @@ describe('resolveSendSource', () => {
       item({ platform: 'tiktok', author: '@bob', bookmarkId: '7', contentType: undefined }),
     )
     expect(result).toEqual({
-      src: '/api/files/tiktok/7/video-1?a=bob',
-      downloadSrc: '/api/files/tiktok/7/video-1?a=bob&download=1',
+      src: '/api/files/tiktok/7/video-1?a=bob&v=2',
+      downloadSrc: '/api/files/tiktok/7/video-1?a=bob&download=1&v=2',
       filename: 'adhx-tiktok-7.mp4',
       kind: 'video',
     })
@@ -96,8 +96,8 @@ describe('resolveSendSource', () => {
       item({ platform: 'instagram', bookmarkId: 'DXVsqQ7CSXw', contentType: undefined }),
     )
     expect(result).toEqual({
-      src: '/api/files/instagram/DXVsqQ7CSXw/video-1',
-      downloadSrc: '/api/files/instagram/DXVsqQ7CSXw/video-1?download=1',
+      src: '/api/files/instagram/DXVsqQ7CSXw/video-1?v=2',
+      downloadSrc: '/api/files/instagram/DXVsqQ7CSXw/video-1?download=1&v=2',
       filename: 'adhx-instagram-DXVsqQ7CSXw.mp4',
       kind: 'video',
     })
@@ -110,8 +110,8 @@ describe('resolveSendSource', () => {
         item({ platform: 'instagram', bookmarkId: 'DcHXej3lt5W', contentType: 'photo' }),
       ),
     ).toEqual({
-      src: '/api/files/instagram/DcHXej3lt5W/photo-1?download=1',
-      downloadSrc: '/api/files/instagram/DcHXej3lt5W/photo-1?download=1',
+      src: '/api/files/instagram/DcHXej3lt5W/photo-1?download=1&v=2',
+      downloadSrc: '/api/files/instagram/DcHXej3lt5W/photo-1?download=1&v=2',
       filename: 'adhx-instagram-DcHXej3lt5W.jpg',
       kind: 'photo',
     })

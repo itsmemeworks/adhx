@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { withAuth } from '@/lib/api/with-auth'
 import { handleRouteError } from '@/lib/api/response'
-import { parseWatchedBody, recordWatched } from '@/lib/watch/record'
+import { parseWatchedBody, recordWatched, WatchBatchConflict } from '@/lib/watch/record'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 const LIMIT = { windowMs: 60_000, max: 120 }
@@ -18,9 +18,11 @@ export const POST = withAuth(async (request: NextRequest, userId) => {
     return NextResponse.json({ error: 'Lots of requests just now.' }, { status: 429 })
   }
   try {
-    recordWatched(userId, parsed.posts)
+    recordWatched(userId, parsed.posts, new Date(), parsed.batchId)
     return new NextResponse(null, { status: 204 })
   } catch (error) {
+    if (error instanceof WatchBatchConflict)
+      return NextResponse.json({ error: error.message }, { status: 400 })
     return handleRouteError(error, {
       endpoint: '/api/watched',
       userId,

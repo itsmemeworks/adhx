@@ -164,7 +164,7 @@ describe('FxEmbed URL utilities', () => {
   describe('proxiedPhotoSrc', () => {
     it('builds the same-origin kept-file photo path', () => {
       expect(proxiedPhotoSrc(author, tweetId)).toBe(
-        '/api/files/twitter/1234567890/photo-1?a=testuser',
+        '/api/files/twitter/1234567890/photo-1?a=testuser&v=2',
       )
     })
   })

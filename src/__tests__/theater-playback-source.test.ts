@@ -33,7 +33,7 @@ describe('resolvePlaybackSource', () => {
     const result = resolvePlaybackSource(item({ platform: 'twitter', contentType: 'video' }))
     expect(result).toEqual({
       kind: 'video',
-      src: '/api/files/twitter/123/video-1?a=jack',
+      src: '/api/files/twitter/123/video-1?a=jack&v=2',
       poster: 'https://pbs.twimg.com/thumb.jpg',
     })
   })
@@ -55,7 +55,7 @@ describe('resolvePlaybackSource', () => {
       item({ platform: 'tiktok', author: 'bob', bookmarkId: '7', contentType: undefined }),
     )
     expect(result.kind).toBe('video')
-    expect(result.src).toBe('/api/files/tiktok/7/video-1?a=bob')
+    expect(result.src).toBe('/api/files/tiktok/7/video-1?a=bob&v=2')
   })
 
   it('instagram → poster only here (StageInstagram owns the probe-gated <video>), never the Twitter proxy', () => {
@@ -86,7 +86,7 @@ describe('instagramWarmSrc', () => {
       instagramWarmSrc(
         item({ platform: 'instagram', contentType: 'video', bookmarkId: 'DXVsqQ7CSXw' }),
       ),
-    ).toBe('/api/files/instagram/DXVsqQ7CSXw/video-1')
+    ).toBe('/api/files/instagram/DXVsqQ7CSXw/video-1?v=2')
   })
 
   it('does not warm the Reel video mirror for an Instagram image post', () => {

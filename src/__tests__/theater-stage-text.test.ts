@@ -58,7 +58,7 @@ describe('stagePhotoSrc', () => {
         bookmarkId: '2063962309815345268',
         thumbnailUrl: 'https://pbs.twimg.com/media/HKSqyHcXUAArUT8.jpg?name=orig',
       }),
-    ).toBe('/api/files/twitter/2063962309815345268/photo-1?a=5Pillarsuk')
+    ).toBe('/api/files/twitter/2063962309815345268/photo-1?a=5Pillarsuk&v=2')
   })
 
   it('keeps non-Twitter thumbs as-is', () => {

@@ -165,9 +165,9 @@ describe('API: /api/feed', () => {
 
       const media = await feedMedia('DXVsqQ7CSXw')
       expect(media.mediaType).toBe('video')
-      expect(media.url).toBe('/api/files/instagram/DXVsqQ7CSXw/video-1')
-      expect(media.shareUrl).toBe('/api/files/instagram/DXVsqQ7CSXw/video-1?download=1')
-      expect(media.thumbnailUrl).toBe('/api/files/instagram/DXVsqQ7CSXw/poster')
+      expect(media.url).toBe('/api/files/instagram/DXVsqQ7CSXw/video-1?v=2')
+      expect(media.shareUrl).toBe('/api/files/instagram/DXVsqQ7CSXw/video-1?download=1&v=2')
+      expect(media.thumbnailUrl).toBe('/api/files/instagram/DXVsqQ7CSXw/poster?v=2')
       expect(media.url).not.toContain('/api/files/twitter/')
     })
 
@@ -190,13 +190,13 @@ describe('API: /api/feed', () => {
 
       const media = await feedMedia('7648011069385919752')
       expect(media.url).toBe(
-        '/api/files/tiktok/7648011069385919752/video-1?a=animalsunseenofficial',
+        '/api/files/tiktok/7648011069385919752/video-1?a=animalsunseenofficial&v=2',
       )
       expect(media.shareUrl).toBe(
-        '/api/files/tiktok/7648011069385919752/video-1?a=animalsunseenofficial&download=1',
+        '/api/files/tiktok/7648011069385919752/video-1?a=animalsunseenofficial&download=1&v=2',
       )
       expect(media.thumbnailUrl).toBe(
-        '/api/files/tiktok/7648011069385919752/poster?a=animalsunseenofficial',
+        '/api/files/tiktok/7648011069385919752/poster?a=animalsunseenofficial&v=2',
       )
     })
 
@@ -219,9 +219,9 @@ describe('API: /api/feed', () => {
 
       const media = await feedMedia('photopost1')
       expect(media.mediaType).toBe('photo')
-      expect(media.url).toBe('/api/files/instagram/photopost1/photo-1')
+      expect(media.url).toBe('/api/files/instagram/photopost1/photo-1?v=2')
       expect(media.thumbnailUrl).toBe(media.url)
-      expect(media.shareUrl).toBe('/api/files/instagram/photopost1/photo-1?download=1')
+      expect(media.shareUrl).toBe('/api/files/instagram/photopost1/photo-1?download=1&v=2')
     })
 
     it('returns Instagram carousel images in numeric slide order with sendable URLs', async () => {
@@ -253,8 +253,8 @@ describe('API: /api/feed', () => {
         Array.from({ length: 11 }, (_, index) => `${id}_photo_${index}`),
       )
       expect(item.media[10]).toMatchObject({
-        url: `/api/files/instagram/${id}/photo-11`,
-        shareUrl: `/api/files/instagram/${id}/photo-11?download=1`,
+        url: `/api/files/instagram/${id}/photo-11?v=2`,
+        shareUrl: `/api/files/instagram/${id}/photo-11?download=1&v=2`,
       })
     })
   })

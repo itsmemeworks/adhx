@@ -793,13 +793,14 @@ extension ADHXClient {
     }
 
     /// Adds plays, finishes and seconds watched to your counts (at most 50 posts at a time).
-    func watched(_ posts: [WatchedPost]) async throws {
+    func watched(_ posts: [WatchedPost], batchId: String? = nil) async throws {
         #if DEBUG
         if UserDefaults.standard.bool(forKey: "adhxDryRun") { return }
         #endif
-        let body: [String: Any] = ["posts": posts.prefix(50).map {
+        var body: [String: Any] = ["posts": posts.prefix(50).map {
             ["platform": $0.platform, "id": $0.id, "plays": $0.plays, "finishes": $0.finishes, "seconds": $0.seconds]
         }]
+        if let batchId { body["batchId"] = batchId }
         let _: Nothing = try await send("POST", "/api/app/watched", body: body)
     }
 
@@ -1139,7 +1140,7 @@ extension ADHXClient {
 
 /// One post's plays, finishes and whole seconds watched since the last batch
 /// (`POST /api/app/watched`).
-struct WatchedPost: Equatable {
+struct WatchedPost: Codable, Equatable {
     let platform: String
     let id: String
     let plays: Int

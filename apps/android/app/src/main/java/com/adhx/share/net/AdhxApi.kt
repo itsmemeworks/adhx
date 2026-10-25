@@ -349,9 +349,9 @@ class AdhxApi(private val server: String, private val key: String?) {
     }
 
     /** Add plays, finishes and seconds watched to your counts (204). At most 50 posts. */
-    suspend fun watched(posts: List<WatchedPost>): ApiResult<Unit> {
+    suspend fun watched(posts: List<WatchedPost>, batchId: String? = null): ApiResult<Unit> {
         val url = url("api/app/watched") ?: return badAddress
-        val body = json.encodeToString(WatchedRequest.serializer(), WatchedRequest(posts.take(50)))
+        val body = json.encodeToString(WatchedRequest.serializer(), WatchedRequest(posts.take(50), batchId))
         return send(authed(url).post(body.toRequestBody(JSON)).build()) { _, _ -> }
     }
 

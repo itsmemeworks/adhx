@@ -75,6 +75,156 @@ function mockFetchResolvingVideo() {
 }
 
 describe('useSendFile', () => {
+  it('lets a chosen download finish, then prefetches the current video', async () => {
+    vi.stubGlobal(
+      'URL',
+      class extends URL {
+        static createObjectURL = () => 'blob:verified'
+        static revokeObjectURL = () => {}
+      },
+    )
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    let finish!: (r: Response) => void
+    const signals: AbortSignal[] = []
+    const fetcher = vi.fn((_url: unknown, init: RequestInit) => {
+      if (!String(_url).startsWith('/api/files/'))
+        return Promise.resolve(new Response(null, { status: 204 }))
+      signals.push(init.signal!)
+      return signals.length === 1
+        ? new Promise<Response>((resolve) => {
+            finish = resolve
+          })
+        : Promise.resolve(new Response('bytes', { headers: { 'content-type': 'video/mp4' } }))
+    })
+    vi.stubGlobal('fetch', fetcher)
+    const { useSendFile } = await import('@/components/theater/useSendFile')
+    const h = renderHook(({ id }) => useSendFile(videoItem({ bookmarkId: id })), {
+      initialProps: { id: 'one' },
+    })
+    await advance(2000)
+    let download!: Promise<boolean>
+    act(() => {
+      download = Promise.resolve(h.result.current.download())
+    })
+    h.rerender({ id: 'two' })
+    await advance(2000)
+    expect(signals).toHaveLength(1)
+    expect(signals[0].aborted).toBe(false)
+    await act(async () => {
+      finish(new Response('bytes', { headers: { 'content-type': 'video/mp4' } }))
+      expect(await download).toBe(true)
+    })
+    await advance(0)
+    expect(signals).toHaveLength(2)
+    expect(h.result.current.ready).toBe(true)
+    click.mockRestore()
+  })
+
+  it('aborts speculation only after its final responsive consumer leaves', async () => {
+    const signals: AbortSignal[] = []
+    const fetcher = vi.fn(
+      (_url: unknown, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          signals.push(init.signal!)
+          init.signal!.addEventListener('abort', () =>
+            reject(new DOMException('aborted', 'AbortError')),
+          )
+        }),
+    )
+    vi.stubGlobal('fetch', fetcher)
+    const { useSendFile } = await import('@/components/theater/useSendFile')
+    const a = renderHook(() => useSendFile(videoItem()))
+    const b = renderHook(() => useSendFile(videoItem()))
+    await advance(2000)
+    expect(signals).toHaveLength(1)
+    a.unmount()
+    await advance(0)
+    expect(signals[0].aborted).toBe(false)
+    b.unmount()
+    await advance(0)
+    expect(signals[0].aborted).toBe(true)
+  })
+
+  it('replaces abandoned transfers when moving through slow videos', async () => {
+    const signals: AbortSignal[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (_url: unknown, init: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            signals.push(init.signal!)
+            init.signal!.addEventListener('abort', () =>
+              reject(new DOMException('aborted', 'AbortError')),
+            )
+          }),
+      ),
+    )
+    const { useSendFile } = await import('@/components/theater/useSendFile')
+    const h = renderHook(({ id }) => useSendFile(videoItem({ bookmarkId: id })), {
+      initialProps: { id: 'one' },
+    })
+    await advance(2000)
+    h.rerender({ id: 'two' })
+    await advance(2000)
+    h.rerender({ id: 'three' })
+    await advance(2000)
+    expect(signals.map((s) => s.aborted)).toEqual([true, true, false])
+    h.unmount()
+    await advance(0)
+    expect(signals.every((s) => s.aborted)).toBe(true)
+  })
+
+  it('streams a verified large attachment to the browser instead of buffering it', async () => {
+    const { useSendFile, MAX_SEND_FILE_BYTES } = await import('@/components/theater/useSendFile')
+    const cancel = vi.fn()
+    const fetcher = vi.fn(
+      async () =>
+        new Response(new ReadableStream({ cancel }), {
+          headers: {
+            'content-type': 'video/mp4',
+            'content-length': String(MAX_SEND_FILE_BYTES + 1),
+          },
+        }),
+    )
+    vi.stubGlobal('fetch', fetcher)
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const h = renderHook(() => useSendFile(videoItem()))
+    await advance(2000)
+    expect(h.result.current.ready).toBe(false)
+    expect(cancel).toHaveBeenCalledTimes(1)
+    await act(async () => {
+      expect(await h.result.current.download()).toBe(true)
+    })
+    const anchor = click.mock.instances[0] as HTMLAnchorElement
+    expect(anchor.getAttribute('href')).toBe('/api/files/twitter/1/video-1?a=alice&download=1&v=2')
+    expect(cancel).toHaveBeenCalledTimes(2)
+    click.mockRestore()
+  })
+
+  it('caps streamed bytes even if Content-Length is missing', async () => {
+    const { useSendFile, MAX_SEND_FILE_BYTES } = await import('@/components/theater/useSendFile')
+    const cancel = vi.fn()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            new ReadableStream({
+              start(c) {
+                c.enqueue(new Uint8Array(MAX_SEND_FILE_BYTES + 1))
+              },
+              cancel,
+            }),
+            { headers: { 'content-type': 'video/mp4' } },
+          ),
+      ),
+    )
+    const h = renderHook(() => useSendFile(videoItem()))
+    await advance(2000)
+    expect(h.result.current.ready).toBe(false)
+    expect(cancel).toHaveBeenCalled()
+  })
+
   beforeEach(() => {
     vi.resetModules()
     vi.useFakeTimers()
@@ -104,7 +254,7 @@ describe('useSendFile', () => {
     expect(rendered2.result.current.ready).toBe(true)
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/files/twitter/1/video-1?a=alice',
+      '/api/files/twitter/1/video-1?a=alice&v=2',
       expect.objectContaining({ signal: expect.anything() }),
     )
   })

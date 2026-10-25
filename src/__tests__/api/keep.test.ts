@@ -86,6 +86,112 @@ describe('kept media', () => {
   })
 
   describe('GET /api/files', () => {
+    it.each(['private', 'delete', 'hide'] as const)(
+      'rechecks %s changes after waiting for a poster',
+      async (action) => {
+        save('youtube', 'waiting')
+        keep('youtube', 'waiting', 'video-1', 'private video', 'video/mp4')
+        const posters = await import('@/lib/keep/poster')
+        const files = await import('@/lib/keep/store')
+        const spy = vi.spyOn(posters, 'ensurePoster').mockImplementationOnce(async () => {
+          if (action === 'private')
+            testInstance.sqlite
+              .prepare("UPDATE bookmarks SET is_private=1 WHERE id='waiting'")
+              .run()
+          if (action === 'delete')
+            testInstance.sqlite.prepare("DELETE FROM bookmarks WHERE id='waiting'").run()
+          if (action === 'hide')
+            testInstance.sqlite
+              .prepare(
+                "INSERT INTO moderated_posts(platform,bookmark_id,hidden,created_at,created_by) VALUES('youtube','waiting',1,?,'admin')",
+              )
+              .run(now())
+          return files.keptFile('youtube', 'waiting', 'video-1')
+        })
+        try {
+          const response = await get('/api/files/youtube/waiting/poster?v=2')
+          expect(response.status).toBe(404)
+          expect(await response.text()).not.toContain('private video')
+        } finally {
+          spy.mockRestore()
+        }
+      },
+    )
+
+    it.each(['delete', 'clear'] as const)(
+      'keeps orphaned private bytes inaccessible after %s',
+      async (action) => {
+        save('youtube', 'secret', 'alice', now(), { isPrivate: true })
+        keep('youtube', 'secret', 'video-1', 'private bytes', 'video/mp4')
+        viewer = 'u1'
+        expect((await get('/api/files/youtube/secret/video-1?v=2')).status).toBe(200)
+        if (action === 'delete')
+          (await import('@/lib/bookmarks/remove')).removeSave('u1', 'youtube', 'secret')
+        else testInstance.sqlite.prepare("DELETE FROM bookmarks WHERE user_id='u1'").run()
+        viewer = null
+        const response = await get('/api/files/youtube/secret/video-1?v=2')
+        expect(response.status).toBe(404)
+        expect(await response.text()).not.toContain('private bytes')
+      },
+    )
+
+    it('quotes follow only live visible parents of the same owner and platform', async () => {
+      save('twitter', 'quote', 'author', now(), { userId: 'owner' })
+      testInstance.sqlite.prepare("UPDATE bookmarks SET source='quoted' WHERE id='quote'").run()
+      keep('twitter', 'quote', 'video-1', 'quote bytes', 'video/mp4')
+      save('twitter', 'parent', 'author', now(), { userId: 'owner', isPrivate: true })
+      testInstance.sqlite
+        .prepare("UPDATE bookmarks SET quoted_tweet_id='quote',is_quote=1 WHERE id='parent'")
+        .run()
+      expect((await get('/api/files/twitter/quote/video-1?v=2')).status).toBe(404)
+      viewer = 'owner'
+      expect(await (await get('/api/files/twitter/quote/video-1?v=2')).text()).toBe('quote bytes')
+      viewer = null
+      // A reference in another account cannot publish this owner's quoted row.
+      save('twitter', 'other-parent', 'author', now(), { userId: 'other' })
+      testInstance.sqlite
+        .prepare("UPDATE bookmarks SET quoted_tweet_id='quote' WHERE id='other-parent'")
+        .run()
+      expect((await get('/api/files/twitter/quote/video-1?v=2')).status).not.toBe(200)
+      testInstance.sqlite.prepare("UPDATE bookmarks SET is_private=0 WHERE id='parent'").run()
+      expect((await get('/api/files/twitter/quote/video-1?v=2')).status).toBe(200)
+      testInstance.sqlite
+        .prepare("INSERT INTO user_bans(user_id,created_at,created_by) VALUES('owner',?,'admin')")
+        .run(now())
+      expect((await get('/api/files/twitter/quote/video-1?v=2')).status).not.toBe(200)
+      testInstance.sqlite.prepare('DELETE FROM user_bans').run()
+      testInstance.sqlite.prepare("DELETE FROM bookmarks WHERE id='parent'").run()
+      expect((await get('/api/files/twitter/quote/video-1?v=2')).status).not.toBe(200)
+      const { fileToken } = await import('@/lib/keep/file-access')
+      expect(
+        (await get(`/api/files/twitter/quote/video-1?k=${fileToken('twitter', 'quote')}&v=2`))
+          .status,
+      ).toBe(404)
+    })
+
+    it('revalidates visibility before a cached video can return 304', async () => {
+      save('youtube', 'cache')
+      keep('youtube', 'cache', 'video-1', 'bytes', 'video/mp4')
+      const first = await get('/api/files/youtube/cache/video-1?v=2')
+      const etag = first.headers.get('etag')!
+      await first.text()
+      expect(first.headers.get('cache-control')).toBe(
+        'private, no-cache, max-age=0, must-revalidate',
+      )
+      expect(
+        (await get('/api/files/youtube/cache/video-1?v=2', { 'if-none-match': etag })).status,
+      ).toBe(304)
+      testInstance.sqlite.prepare("UPDATE bookmarks SET is_private=1 WHERE id='cache'").run()
+      expect(
+        (await get('/api/files/youtube/cache/video-1?v=2', { 'if-none-match': etag })).status,
+      ).toBe(404)
+      viewer = 'u1'
+      const own = await get('/api/files/youtube/cache/video-1?v=2', { 'if-none-match': etag })
+      expect(own.status).toBe(200)
+      expect(own.headers.get('cache-control')).toBe('private, no-store')
+      await own.text()
+    })
+
     it('avoids caching original slots while conversion is pending or has failed', async () => {
       save('youtube', 'convert')
       keep('youtube', 'convert', 'video-1', 'source', 'video/webm')
@@ -94,9 +200,9 @@ describe('kept media', () => {
           "INSERT INTO keep_jobs(platform,post_id,status,updated_at) VALUES('youtube','convert','converting',?)",
         )
         .run(now())
-      expect((await get('/api/files/youtube/convert/video-1')).headers.get('cache-control')).toBe(
-        'no-store',
-      )
+      expect(
+        (await get('/api/files/youtube/convert/video-1?v=2')).headers.get('cache-control'),
+      ).toBe('no-store')
       testInstance.sqlite
         .prepare("UPDATE keep_jobs SET status='unavailable' WHERE post_id='convert'")
         .run()
@@ -106,63 +212,67 @@ describe('kept media', () => {
         VALUES('youtube','convert','video-1','youtube/convert/video-1.bin',6,?,'generation',0,'failed',?)`,
         )
         .run(now(), now())
-      expect((await get('/api/files/youtube/convert/video-1')).headers.get('cache-control')).toBe(
-        'no-store',
-      )
+      expect(
+        (await get('/api/files/youtube/convert/video-1?v=2')).headers.get('cache-control'),
+      ).toBe('no-store')
       testInstance.sqlite
         .prepare("UPDATE media_conversions SET status='done' WHERE post_id='convert'")
         .run()
       testInstance.sqlite
         .prepare("UPDATE keep_jobs SET status='done' WHERE post_id='convert'")
         .run()
-      expect((await get('/api/files/youtube/convert/video-1')).headers.get('cache-control')).toBe(
-        'public, max-age=604800',
-      )
+      expect(
+        (await get('/api/files/youtube/convert/video-1?v=2')).headers.get('cache-control'),
+      ).toBe('private, no-cache, max-age=0, must-revalidate')
     })
 
     it('serves a kept file, with byte ranges for seeking', async () => {
+      save('youtube', 'abc')
       keep('youtube', 'abc', 'video-1', '0123456789', 'video/mp4')
-      const whole = await get('/api/files/youtube/abc/video-1')
+      const whole = await get('/api/files/youtube/abc/video-1?v=2')
       expect(whole.status).toBe(200)
       expect(whole.headers.get('content-type')).toBe('video/mp4')
       expect(whole.headers.get('accept-ranges')).toBe('bytes')
       expect(await whole.text()).toBe('0123456789')
 
-      const part = await get('/api/files/youtube/abc/video-1', { range: 'bytes=2-5' })
+      const part = await get('/api/files/youtube/abc/video-1?v=2', { range: 'bytes=2-5' })
       expect(part.status).toBe(206)
       expect(part.headers.get('content-range')).toBe('bytes 2-5/10')
       expect(await part.text()).toBe('2345')
 
-      const tail = await get('/api/files/youtube/abc/video-1', { range: 'bytes=-3' })
+      const tail = await get('/api/files/youtube/abc/video-1?v=2', { range: 'bytes=-3' })
       expect(await tail.text()).toBe('789')
 
-      const bad = await get('/api/files/youtube/abc/video-1', { range: 'bytes=50-60' })
+      const bad = await get('/api/files/youtube/abc/video-1?v=2', { range: 'bytes=50-60' })
       expect(bad.status).toBe(416)
     })
 
     it('uses the first picture as a picture post’s poster, and sound for a sound-only post', async () => {
+      save('pinterest', 'p1')
+      save('soundcloud', 'a~b')
       keep('pinterest', 'p1', 'photo-1', 'img', 'image/jpeg')
       keep('soundcloud', 'a~b', 'audio-1', 'sound', 'audio/mp4')
-      expect(await (await get('/api/files/pinterest/p1/poster')).text()).toBe('img')
-      const sound = await get('/api/files/soundcloud/a~b/video-1')
+      expect(await (await get('/api/files/pinterest/p1/poster?v=2')).text()).toBe('img')
+      const sound = await get('/api/files/soundcloud/a~b/video-1?v=2')
       expect(sound.headers.get('content-type')).toBe('audio/mp4')
     })
 
     it('offers the file as a download on request', async () => {
+      save('youtube', 'abc')
       keep('youtube', 'abc', 'video-1', 'x', 'video/mp4')
-      const res = await get('/api/files/youtube/abc/video-1?download=1')
+      const res = await get('/api/files/youtube/abc/video-1?download=1&v=2')
       expect(res.headers.get('content-disposition')).toMatch(
         /^attachment; filename="youtube-abc-video-1\./,
       )
     })
 
     it('hands off to the old proxy until an X, Instagram or TikTok file is kept', async () => {
-      const x = await get('/api/files/twitter/123/video-1?a=alice')
+      const x = await get('/api/files/twitter/123/video-1?a=alice&v=2')
       expect(x.status).toBe(307)
       expect(x.headers.get('location')).toBe('/api/media/video?author=alice&tweetId=123&quality=hd')
-      const ig = await get('/api/files/instagram/ABC/photo-2')
+      const ig = await get('/api/files/instagram/ABC/photo-2?v=2')
       expect(ig.headers.get('location')).toBe('/api/media/instagram/thumbnail?id=ABC&index=2')
-      const tt = await get('/api/files/tiktok/987/video-1?a=bob&download=1')
+      const tt = await get('/api/files/tiktok/987/video-1?a=bob&download=1&v=2')
       expect(tt.headers.get('location')).toBe(
         '/api/media/tiktok/video/download?username=bob&id=987',
       )
@@ -182,12 +292,13 @@ describe('kept media', () => {
         )
         .run(now())
       const started = Date.now()
-      const poster = await get('/api/files/twitter/456/poster?a=alice')
+      const poster = await get('/api/files/twitter/456/poster?a=alice&v=2')
       expect(Date.now() - started).toBeLessThan(500)
       expect(poster.status).toBe(307)
       expect(poster.headers.get('location')).toBe('https://pbs.twimg.com/still.jpg')
       // A photo post with no stored still: its first photo.
-      const photo = await get('/api/files/twitter/789/poster?a=alice')
+      save('twitter', '789')
+      const photo = await get('/api/files/twitter/789/poster?a=alice&v=2')
       expect(photo.headers.get('location')).toBe(
         '/api/media/image?author=alice&tweetId=789&index=1',
       )
@@ -195,11 +306,11 @@ describe('kept media', () => {
 
     it('tells the player why a video isn’t here on a network with no proxy', async () => {
       viewer = 'u1'
-      const unsaved = await get('/api/files/vimeo/1/video-1')
+      const unsaved = await get('/api/files/vimeo/1/video-1?v=2')
       expect(unsaved.status).toBe(404)
       expect((await unsaved.json()).reason).toMatch(/Nobody here has saved this yet/)
       // Pictures are plain 404s: an <img> can't show a reason.
-      expect((await get('/api/files/vimeo/1/poster')).status).toBe(404)
+      expect((await get('/api/files/vimeo/1/poster?v=2')).status).toBe(404)
 
       save('vimeo', '2')
       testInstance.sqlite
@@ -207,7 +318,7 @@ describe('kept media', () => {
           `INSERT INTO keep_jobs (platform, post_id, status, attempts, updated_at) VALUES ('vimeo', '2', 'unavailable', 9, ?)`,
         )
         .run(now())
-      const gone = await get('/api/files/vimeo/2/video-1')
+      const gone = await get('/api/files/vimeo/2/video-1?v=2')
       expect(gone.status).toBe(410)
       expect((await gone.json()).reason).toMatch(/couldn’t be downloaded/)
 
@@ -217,7 +328,7 @@ describe('kept media', () => {
           `INSERT INTO keep_jobs (platform, post_id, status, attempts, updated_at) VALUES ('vimeo', '3', 'failed', 1, ?)`,
         )
         .run(now())
-      const later = await get('/api/files/vimeo/3/video-1')
+      const later = await get('/api/files/vimeo/3/video-1?v=2')
       expect(later.status).toBe(404)
       expect((await later.json()).reason).toMatch(/will try again/)
     })
@@ -230,7 +341,7 @@ describe('kept media', () => {
         )
         .run(now())
       for (const id of ['1', '2']) {
-        const res = await get(`/api/files/vimeo/${id}/video-1`)
+        const res = await get(`/api/files/vimeo/${id}/video-1?v=2`)
         expect(res.status).toBe(404)
         expect(await res.json()).toEqual({ error: 'Not found' })
       }
@@ -245,10 +356,10 @@ describe('kept media', () => {
       // A stranger and another member get what a post nobody saved gets.
       for (const who of [null, 'u1']) {
         viewer = who
-        const video = await get('/api/files/youtube/secret/video-1')
+        const video = await get('/api/files/youtube/secret/video-1?v=2')
         expect(video.status).toBe(404)
         expect(await video.json()).toEqual({ error: 'Not found' })
-        expect((await get('/api/files/youtube/secret/poster')).status).toBe(404)
+        expect((await get('/api/files/youtube/secret/poster?v=2')).status).toBe(404)
         // A wrong or another post's token doesn't help.
         const wrong = await get(
           `/api/files/youtube/secret/video-1?k=${fileToken('youtube', 'other')}`,
@@ -258,7 +369,7 @@ describe('kept media', () => {
 
       // The owner signed in on the web.
       viewer = 'owner'
-      const web = await get('/api/files/youtube/secret/video-1')
+      const web = await get('/api/files/youtube/secret/video-1?v=2')
       expect(web.status).toBe(200)
       expect(web.headers.get('Cache-Control')).toBe('private, no-store')
       expect(await web.text()).toBe('private video')
@@ -275,9 +386,11 @@ describe('kept media', () => {
 
       // Once someone shares a save of it, it's served to anyone as before.
       save('youtube', 'secret', 'alice', now(), { userId: 'u1' })
-      const shared = await get('/api/files/youtube/secret/video-1')
+      const shared = await get('/api/files/youtube/secret/video-1?v=2')
       expect(shared.status).toBe(200)
-      expect(shared.headers.get('Cache-Control')).toBe('public, max-age=604800')
+      expect(shared.headers.get('Cache-Control')).toBe(
+        'private, no-cache, max-age=0, must-revalidate',
+      )
     })
 
     it('makes a poster for a video kept without one, once', async () => {
@@ -313,7 +426,7 @@ describe('kept media', () => {
         )
         .run(rel, now())
 
-      const poster = await get('/api/files/reddit/clip/poster')
+      const poster = await get('/api/files/reddit/clip/poster?v=2')
       expect(poster.status).toBe(200)
       expect(poster.headers.get('content-type')).toBe('image/jpeg')
       const row = testInstance.sqlite
@@ -323,19 +436,19 @@ describe('kept media', () => {
       expect(path.basename(row.path)).toMatch(/^poster-[a-f0-9-]+\.jpg$/)
       expect(fs.existsSync(path.join(mediaRoot, row.path))).toBe(true)
       // Nothing to make one from: still a plain 404.
-      expect((await get('/api/files/reddit/none/poster')).status).toBe(404)
+      expect((await get('/api/files/reddit/none/poster?v=2')).status).toBe(404)
     }, 30_000)
 
     it('rejects bad slots, ids and hidden posts', async () => {
-      expect((await get('/api/files/youtube/abc/video-x')).status).toBe(404)
-      expect((await get('/api/files/YouTube/abc/video-1')).status).toBe(404)
+      expect((await get('/api/files/youtube/abc/video-x?v=2')).status).toBe(404)
+      expect((await get('/api/files/YouTube/abc/video-1?v=2')).status).toBe(404)
       keep('youtube', 'hidden', 'video-1', 'x', 'video/mp4')
       testInstance.sqlite
         .prepare(
           `INSERT INTO moderated_posts (platform, bookmark_id, hidden, created_at, created_by) VALUES ('youtube', 'hidden', 1, ?, 'admin')`,
         )
         .run(now())
-      expect((await get('/api/files/youtube/hidden/video-1')).status).toBe(404)
+      expect((await get('/api/files/youtube/hidden/video-1?v=2')).status).toBe(404)
     })
 
     it('never serves a path outside the media folder', async () => {
@@ -344,7 +457,7 @@ describe('kept media', () => {
           `INSERT INTO kept_files (platform, post_id, slot, path, mime, bytes, created_at) VALUES ('youtube', 'evil', 'video-1', '../../etc/passwd', 'text/plain', 1, ?)`,
         )
         .run(now())
-      expect((await get('/api/files/youtube/evil/video-1')).status).toBe(404)
+      expect((await get('/api/files/youtube/evil/video-1?v=2')).status).toBe(404)
     })
   })
 
@@ -469,7 +582,7 @@ describe('kept media', () => {
       const phone = await listSaves('u2', 0, 20)
       expect(phone.items[0]).toMatchObject({
         kind: 'video',
-        media: [{ url: '/api/files/pinterest/pin/video-1' }],
+        media: [{ url: '/api/files/pinterest/pin/video-1?v=2' }],
       })
     })
 
@@ -496,8 +609,8 @@ describe('kept media', () => {
       const album = phone.items.find((p) => p.id === 'album')!
       expect(album.kind).toBe('photo')
       expect(album.media.map((m) => m.url)).toEqual([
-        '/api/files/reddit/album/photo-1',
-        '/api/files/reddit/album/photo-2',
+        '/api/files/reddit/album/photo-1?v=2',
+        '/api/files/reddit/album/photo-2?v=2',
       ])
     })
 

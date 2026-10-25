@@ -21,7 +21,7 @@ export default function PrivacyPage() {
           rows, on its own server.
         </p>
         <p className="m-0 text-[14px] text-nx-ink/55">
-          <span>Last updated 20 October 2026. The canonical copy is </span>
+          <span>Last updated 25 October 2026. The canonical copy is </span>
           <a
             href="https://github.com/itsmemeworks/adhx/blob/main/PRIVACY.md"
             className="text-nx-ink underline underline-offset-2"
@@ -86,8 +86,10 @@ export default function PrivacyPage() {
           the note and when it was seen, and only the two of you see it; while choosing, the sender
           sees who already has a shared save of the post, never a “Just for me” one. What you’ve
           watched is stored so New can leave it out and say whose saves you watch most; nobody else
-          sees it, and it is deleted after 180 days. Show more and Show less are your preferences
-          and only you see them.
+          sees it, and it is deleted after 180 days. To avoid counting retries twice, the server
+          also keeps your account ID, a random request ID and a hash of the counts until you clear
+          your data or delete your account. These receipts contain no post IDs or timestamps and are
+          never public. Show more and Show less are your preferences and only you see them.
         </Section>
 
         <Section title="Reactions">
@@ -114,14 +116,17 @@ export default function PrivacyPage() {
         <Section title="Kept media and phones">
           Each saved post’s files are downloaded once and kept on this server. A shared post’s files
           play without sign-in for anyone who can reach the server and knows the post’s network and
-          ID, and may be cached for up to 7 days. Those IDs are not secret, and invites restrict
-          accounts, not playback: private access needs a private network. A post only saved “Just
-          for me” is served only to the people who saved it, never cached, and to anyone else looks
-          like a post nobody saved; why a file is missing is only told to members. Hidden posts are
-          not served, and files go within the hour once nobody has the post saved. Pairing codes and
-          phone keys are stored only as hashes; a phone key acts as you in the phone app until you
-          remove it in Settings. Access keys for searching from Claude can only search your own
-          saves.
+          ID. Browsers must recheck access before reusing cached media; shared proxies cannot cache
+          it. New media URLs bypass previous seven-day cache entries, but a downloaded copy cannot
+          be recalled. Those IDs are not secret, and invites restrict accounts, not playback:
+          private access needs a private network. A post only saved “Just for me” is served only to
+          the people who saved it, never cached, and to anyone else looks like a post nobody saved;
+          why a file is missing is only told to members. Hidden posts are not served. Quoted files
+          follow a live parent save’s access in the same account. Files with no remaining save or
+          quote parent are inaccessible immediately and go from disk within about an hour. Pairing
+          codes and phone keys are stored only as hashes; a phone key acts as you in the phone app
+          until you remove it in Settings. Access keys for searching from Claude can only search
+          your own saves.
         </Section>
 
         <Section title="Search by meaning">

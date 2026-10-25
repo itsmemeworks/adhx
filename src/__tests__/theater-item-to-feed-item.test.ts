@@ -26,8 +26,8 @@ describe('theaterItemToFeedItem (shared previews in the new theater)', () => {
     expect(nextPostKind(post)).toBe('video')
     expect(post.media?.map((m) => m.thumbnailUrl)).toEqual(['a.jpg', 'b.jpg'])
     expect(post.media?.map((m) => m.url)).toEqual([
-      '/api/files/twitter/42/video-1?a=alice',
-      '/api/files/twitter/42/video-2?a=alice',
+      '/api/files/twitter/42/video-1?a=alice&v=2',
+      '/api/files/twitter/42/video-2?a=alice&v=2',
     ])
   })
 

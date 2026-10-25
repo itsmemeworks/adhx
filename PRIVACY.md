@@ -2,14 +2,18 @@
 
 ADHX is made to be **self-hosted**, for you and the people you invite. Whoever runs an ADHX server is responsible for the data on it and is its data controller. This file is the honest description of what the software stores and sends on every ADHX server, and who can see it. The separate product website in `site/` runs no ADHX account service; its hosting provider may process ordinary request logs.
 
-Last updated: 20 October 2026.
+Last updated: 25 October 2026.
 
 ## Short version
 
 - **Named to friends, never to strangers.** A _member_ is anyone who can sign in to your server (approved and not banned). Your saves are shared with members by default: they see the post, your username, display name, picture, when you saved it and your note.
 - **Just for me** keeps a save out of everyone else's feed, channels, search, Right now and counts, and its kept files are yours alone. One exception you should know about: admins' post and member counts include it.
 - **Strangers** (anyone not signed in) see posts and counts, never who saved them. Right now, preview pages, public channels and the sitemap do show _which posts_ people on your server shared.
-- **Kept media files of shared posts are not behind sign-in.** Anyone who can reach your server and knows a post's network and ID can fetch them. A post only saved Just for me is served to its owner alone. Keep the server on a private network if that matters to you.
+- **Kept media files of shared posts are not behind sign-in.** Anyone who can reach your server and knows a post's network and ID can fetch them. A post only saved Just for me is served to its owner alone. Quoted files follow their live parent save's access; files with no remaining
+  save or quote parent are inaccessible while disk cleanup catches up. Shared
+  media must revalidate access when reused from a browser cache. Private files
+  are not cached. A previously downloaded copy cannot be recalled. Keep the
+  server on a private network if that matters to you.
 - Your archive, tags (until you make a channel public), viewing history, Show more / less choices, bells and alerts are yours alone. A send is seen by you and the person you sent it to.
 - No ads, no advertising pixels, nothing sold. Search by meaning runs on your server (or the operator's own Mac). Only the optional search refinement service receives text, described below.
 
@@ -70,6 +74,11 @@ Saves (`bookmarks`), their media and link rows, tags, archive state and preferen
 - **What you've watched** (`post_views`): a post is marked seen after about 2 seconds on screen or when you skip it. ADHX uses it to leave watched posts out of your New and to work out which friends' saves you watch most ("You watch most of Ben's saves", shown only to you). Nobody else can see your viewing marks. They are deleted after 180 days (when the server restarts), and with Clear data or account deletion. Unsent marks wait in your browser for up to 7 days.
 - **Show more / Show less** from a friend, and **What's in your feed**, are stored as your preferences. Only you see them. Show more / less is stored by your friend's username.
 
+Watch-count requests have a random batch ID to avoid counting a retry twice.
+The server keeps the account ID, batch ID and a hash of its counts in
+`watch_batch_receipts` until Clear data or account deletion. Receipts contain
+no post IDs, names, search words or timestamps and are never public.
+
 ### Sends
 
 **Send straight to your people** stores who sent what to whom, with the optional note and when the recipient saw it (`post_sends`). Only the sender and the recipient see a send. While choosing, the sender sees which members already have a shared save of the post (never a Just for me one) and whom they already sent it to, never whether the recipient watched it. You can't send a post you only have as Just for me. Sends are kept until either person clears their data or deletes their account.
@@ -96,11 +105,11 @@ Members can react to any post: one of six emoji, or up to 40 characters ("Say so
 
 When a post is saved, the server downloads its video, pictures and sound once, from the network it came from, and keeps them in its media folder. One copy is kept per post, however many people saved it, Just for me saves included.
 
-**Kept files of shared posts are served without sign-in.** Anyone who can reach the server and knows a post's network and source ID can fetch them at `/api/files/…`, and browsers and proxies may cache them for up to 7 days. Those IDs come from the original networks and are not secret, so a determined stranger can tell that someone on the server shared a particular post.
+**Kept files of shared posts are served without sign-in.** Anyone who can reach the server and knows a post's network and source ID can fetch them at `/api/files/…`, and browsers must recheck access with this server before reusing a cached copy; shared proxies must not cache them. New media URLs bypass the previous seven-day cache entries, but a copy someone already downloaded cannot be recalled. Those IDs come from the original networks and are not secret, so a determined stranger can tell that someone on the server shared a particular post.
 
 A post that is only saved **Just for me** is different: its files are served only to the people who saved it (signed in, with their phone key, or through a link the server adds to their own phone's copy, which works for that post alone), and are never cached. To anyone else the server answers exactly as if nobody had saved the post. Why a file isn't available ("couldn't be downloaded", "nobody here has saved this yet") is only told to members. Kept files of hidden (moderated) posts are not served. Invites and the email allowlist control who can make an account, not who can play files: if that matters to you, run the server on a private network (LAN, VPN or tailnet).
 
-Kept files are deleted within about an hour once nobody on the server has the post saved.
+Quoted files follow a live parent save’s access in the same account. Files with no remaining save or quote parent become inaccessible immediately, while disk cleanup removes them within about an hour.
 
 ### Invites and approvals
 

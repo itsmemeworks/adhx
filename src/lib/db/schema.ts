@@ -278,6 +278,17 @@ export const postWatchCounts = sqliteTable(
   }),
 )
 
+// Deduplication receipts for immutable watch batches, removed with account data.
+export const watchBatchReceipts = sqliteTable(
+  'watch_batch_receipts',
+  {
+    userId: text('user_id').notNull(),
+    batchId: text('batch_id').notNull(),
+    payloadHash: text('payload_hash').notNull(),
+  },
+  (table) => ({ pk: primaryKey({ columns: [table.userId, table.batchId] }) }),
+)
+
 // "Send straight to your people" (`post_sends`): one member sent a post to
 // another. The recipient sees it first in New ("Pete sent you this") until
 // `seen_at` (set when they see the post). PK: (fromUserId, toUserId,

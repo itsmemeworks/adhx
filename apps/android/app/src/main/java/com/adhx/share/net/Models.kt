@@ -517,7 +517,7 @@ data class WatchedPost(val platform: String, val id: String, val plays: Int, val
 
 /** `POST /api/app/watched` (at most 50). */
 @Serializable
-data class WatchedRequest(val posts: List<WatchedPost>)
+data class WatchedRequest(val posts: List<WatchedPost>, val batchId: String? = null)
 
 /** Search scopes: everyone's saves on this server, or yours. */
 object SearchScope {

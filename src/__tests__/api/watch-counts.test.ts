@@ -320,3 +320,59 @@ describe('watchYear', () => {
     })
   })
 })
+
+describe('durable watch receipts', () => {
+  const batchId = '12345678-1234-1234-1234-123456789abc'
+  it('deduplicates the same committed batch across web and phone retries', async () => {
+    const body = { batchId, posts: [watched('pub', 1, 1, 10)] }
+    expect((await web(PETE, body)).status).toBe(204)
+    const key = createAccessKey(PETE, 'phone', 'phone')!.key
+    expect((await appPOST(phoneReq(key, body))).status).toBe(204)
+    expect(watchCountFor(PETE, 'twitter', 'pub')).toEqual({ plays: 1, finishes: 1, seconds: 10 })
+    expect(
+      testInstance.sqlite.prepare('SELECT count(*) AS n FROM watch_batch_receipts').get(),
+    ).toEqual({ n: 1 })
+  })
+  it('isolates receipt ids by account and refuses changed payloads', async () => {
+    const body = { batchId, posts: [watched('pub')] }
+    expect((await web(PETE, body)).status).toBe(204)
+    expect((await web(BEN, body)).status).toBe(204)
+    expect((await web(PETE, { batchId, posts: [watched('pub', 2)] })).status).toBe(400)
+    expect(watchCountFor(PETE, 'twitter', 'pub').plays).toBe(1)
+    expect(watchCountFor(BEN, 'twitter', 'pub').plays).toBe(1)
+    expect((await web(PETE, { batchId: 'bad', posts: [watched('pub')] })).status).toBe(400)
+  })
+  it('rolls back receipts with failed count writes so retry can succeed', () => {
+    testInstance.sqlite.exec(
+      "CREATE TRIGGER fail_watch BEFORE INSERT ON post_watch_counts BEGIN SELECT RAISE(ABORT,'simulated disk failure'); END",
+    )
+    expect(() => recordWatched(PETE, [watched('pub')], new Date(), batchId)).toThrow(
+      'simulated disk failure',
+    )
+    expect(
+      testInstance.sqlite.prepare('SELECT count(*) AS n FROM watch_batch_receipts').get(),
+    ).toEqual({ n: 0 })
+    testInstance.sqlite.exec('DROP TRIGGER fail_watch')
+    recordWatched(PETE, [watched('pub')], new Date(), batchId)
+    recordWatched(PETE, [watched('pub')], new Date(), batchId)
+    expect(watchCountFor(PETE, 'twitter', 'pub').plays).toBe(1)
+  })
+  it('keeps an ignored post ignored when an old receipt is replayed after publication', async () => {
+    const body = { batchId, posts: [watched('priv')] }
+    expect((await web(PETE, body)).status).toBe(204)
+    testInstance.sqlite.prepare("UPDATE bookmarks SET is_private=0 WHERE id='priv'").run()
+    expect((await web(PETE, body)).status).toBe(204)
+    expect(watchCountFor(PETE, 'twitter', 'priv').plays).toBe(0)
+  })
+  it('clears receipt metadata with account data', async () => {
+    await web(PETE, { batchId, posts: [watched('pub')] })
+    viewer = PETE
+    const { POST } = await import('@/app/api/account/clear/route')
+    expect((await POST()).status).toBe(200)
+    expect(
+      testInstance.sqlite
+        .prepare('SELECT count(*) AS n FROM watch_batch_receipts WHERE user_id=?')
+        .get(PETE),
+    ).toEqual({ n: 0 })
+  })
+})

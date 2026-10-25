@@ -133,7 +133,9 @@ function claimNext(now: Date): typeof phoneSaveQueue.$inferSelect | null {
     .where(
       and(
         eq(phoneSaveQueue.status, 'waiting'),
-        sql`EXISTS (SELECT 1 FROM ${users} WHERE ${users.id} = ${phoneSaveQueue.userId})`,
+        sql`EXISTS (SELECT 1 FROM ${users} WHERE ${users.id} = ${phoneSaveQueue.userId}
+          AND ${users.approval} = 'approved'
+          AND NOT EXISTS (SELECT 1 FROM user_bans WHERE user_id = ${users.id}))`,
         or(isNull(phoneSaveQueue.nextAttemptAt), lte(phoneSaveQueue.nextAttemptAt, iso)),
       ),
     )
@@ -162,6 +164,23 @@ function finish(
 
 /** Save one queued link now. */
 export async function runQueuedSave(row: typeof phoneSaveQueue.$inferSelect): Promise<void> {
+  const canSave = () =>
+    db
+      .select({ id: phoneSaveQueue.id })
+      .from(phoneSaveQueue)
+      .where(
+        and(
+          eq(phoneSaveQueue.id, row.id),
+          eq(phoneSaveQueue.userId, row.userId),
+          inArray(phoneSaveQueue.status, ['waiting', 'working']),
+          sql`EXISTS (SELECT 1 FROM ${users} WHERE ${users.id} = ${phoneSaveQueue.userId}
+      AND ${users.approval} = 'approved'
+      AND NOT EXISTS (SELECT 1 FROM user_bans WHERE user_id = ${users.id}))`,
+        ),
+      )
+      .get() !== undefined
+  const cancel = () =>
+    finish(row.id, { status: 'failed', errorCode: 'cancelled', error: 'This save was cancelled.' })
   let status = 0
   let data: {
     isDuplicate?: boolean
@@ -169,20 +188,10 @@ export async function runQueuedSave(row: typeof phoneSaveQueue.$inferSelect): Pr
     bookmark?: { id?: string; platform?: string }
   } = {}
   try {
-    const canSave = () =>
-      db
-        .select({ id: phoneSaveQueue.id })
-        .from(phoneSaveQueue)
-        .where(
-          and(
-            eq(phoneSaveQueue.id, row.id),
-            eq(phoneSaveQueue.userId, row.userId),
-            inArray(phoneSaveQueue.status, ['waiting', 'working']),
-            sql`EXISTS (SELECT 1 FROM ${users} WHERE ${users.id} = ${phoneSaveQueue.userId})`,
-          ),
-        )
-        .get() !== undefined
-    if (!canSave()) return
+    if (!canSave()) {
+      cancel()
+      return
+    }
     // New queued saves are staged privately. The final publication reads the
     // latest durable intent, never the stale row claimed before network I/O.
     // Repeat saves are untouched until that same atomic publication step.
@@ -193,6 +202,10 @@ export async function runQueuedSave(row: typeof phoneSaveQueue.$inferSelect): Pr
     })
     status = response.status
     data = (await response.json().catch(() => ({}))) as typeof data
+    if (!canSave()) {
+      cancel()
+      return
+    }
   } catch (error) {
     captureException(error, { endpoint: 'app.save-queue' })
   }

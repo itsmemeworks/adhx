@@ -224,8 +224,8 @@ describe('GET /api/app/saves', () => {
     const [album, video] = second.body.items
     expect(album.kind).toBe('photo')
     expect(album.media.map((m: { url: string }) => m.url)).toEqual([
-      '/api/files/twitter/200/photo-1?a=testauthor',
-      '/api/files/twitter/200/photo-2?a=testauthor',
+      '/api/files/twitter/200/photo-1?a=testauthor&v=2',
+      '/api/files/twitter/200/photo-2?a=testauthor&v=2',
     ])
     expect(video).toMatchObject({
       platform: 'twitter',
@@ -237,8 +237,8 @@ describe('GET /api/app/saves', () => {
       media: [
         {
           kind: 'video',
-          url: '/api/files/twitter/100/video-1?a=testauthor',
-          posterUrl: '/api/files/twitter/100/poster?a=testauthor',
+          url: '/api/files/twitter/100/video-1?a=testauthor&v=2',
+          posterUrl: '/api/files/twitter/100/poster?a=testauthor&v=2',
           width: 720,
           height: 1280,
         },
@@ -353,8 +353,8 @@ describe('GET /api/app/search', () => {
           height: 640,
           durationMs: 11_000,
           altText: null,
-          url: `/api/files/reddit/${id}/video-1`,
-          thumbnailUrl: `/api/files/reddit/${id}/poster`,
+          url: `/api/files/reddit/${id}/video-1?v=2`,
+          thumbnailUrl: `/api/files/reddit/${id}/poster?v=2`,
           shareUrl: '',
           originalUrl: null,
         },
@@ -391,7 +391,7 @@ describe('GET /api/app/search', () => {
       platform: 'reddit',
       id: '6rrwyj',
       kind: 'video',
-      media: [{ kind: 'video', url: '/api/files/reddit/6rrwyj/video-1' }],
+      media: [{ kind: 'video', url: '/api/files/reddit/6rrwyj/video-1?v=2' }],
       match: { strength: 'good', on: ['video'] },
     })
   })

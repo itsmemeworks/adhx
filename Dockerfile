@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 
 # Shared Node + pnpm toolchain. Keep this version aligned with packageManager.
-FROM node:26-trixie-slim AS base
+# October security floor, including Node's bundled Brotli decoder.
+FROM node:26.12.1-trixie-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 # Node 25+ no longer bundles Corepack. Bootstrap only the pinned package
@@ -59,7 +60,7 @@ COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
 COPY --from=builder /app/tsconfig.json ./
 
 # Production stage - minimal runtime image
-FROM node:26-trixie-slim AS runner
+FROM node:26.12.1-trixie-slim AS runner
 
 # Runtime only needs Node. Do not ship the build stage's pnpm/Corepack cache
 # or npm's independent dependency graph; migrations use the local tsx binary.
@@ -71,12 +72,14 @@ RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack 
 # Install sqlite3 CLI and runtime dependencies. Python runs yt-dlp, which
 # downloads each saved post's media (see src/lib/keep).
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    libbrotli1 \
     libsqlite3-0 \
     sqlite3 \
     python3 \
     python3-venv \
     ffmpeg \
     ca-certificates \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libbrotli1)" ge '1.1.0-2+deb13u1' \
     && rm -rf /var/lib/apt/lists/*
 
 # yt-dlp in its own virtualenv, pinned. Sites change often: bump this with
@@ -85,8 +88,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # [default] brings yt-dlp-ejs, the scripts YouTube's player challenges need
 # (run with the container's Node: see src/lib/keep/ytdlp.ts).
 ARG YTDLP_VERSION=2026.8.19
+# The downloader's bundled decoder is independent of Debian's libbrotli1.
+ARG BROTLI_VERSION=1.2.1
 RUN python3 -m venv /opt/yt-dlp \
-    && /opt/yt-dlp/bin/pip install --no-cache-dir "yt-dlp[default]==${YTDLP_VERSION}"
+    && /opt/yt-dlp/bin/pip install --no-cache-dir "yt-dlp[default]==${YTDLP_VERSION}" "brotli==${BROTLI_VERSION}"
 ENV YTDLP_PATH=/opt/yt-dlp/bin/yt-dlp
 
 WORKDIR /app
