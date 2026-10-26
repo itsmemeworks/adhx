@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { KeyRound, LogOut, RefreshCw, Settings } from 'lucide-react'
+import { SIGN_IN_LINKS_HREF } from '@/lib/next-ui/routes'
 import { cn } from '@/lib/utils'
 import { NxAvatar } from './primitives'
 
@@ -19,7 +20,7 @@ interface Me {
 }
 
 /** Where an admin passes sign-in links on. */
-export const SIGN_IN_LINKS_HREF = '/admin#sign-in-links'
+export { SIGN_IN_LINKS_HREF }
 
 /** How often an admin's menu looks for new sign-in links waiting. */
 const WAITING_POLL_MS = 30_000

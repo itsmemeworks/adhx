@@ -9,13 +9,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { AdminNav } from '@/components/next/admin/AdminNav'
 import { OverviewView } from '@/components/next/admin/OverviewView'
+import { InvitesView } from '@/components/next/admin/InvitesView'
 import { PeopleView } from '@/components/next/admin/PeopleView'
 import { PersonView } from '@/components/next/admin/PersonView'
 import { ProcessingView } from '@/components/next/admin/ProcessingView'
 import { PostLookup } from '@/components/next/admin/PostLookup'
+import type { InvitesBoard } from '@/lib/admin/boards/moderation'
 import type { OverviewBoard } from '@/lib/admin/boards/overview'
 import type { AdminMember, PeopleBoard, PersonBoard } from '@/lib/admin/boards/people'
 import type { ProcessingBoard } from '@/lib/admin/boards/processing'
+import { SIGN_IN_LINKS_HREF } from '@/lib/next-ui/routes'
 
 let pathname = '/admin'
 const refresh = vi.fn()
@@ -374,5 +377,38 @@ describe('PostLookup', () => {
     fireEvent.submit(field.closest('form')!)
     expect(await screen.findByText('Only kept Just for me')).toBeInTheDocument()
     expect(screen.getByText('1 save · 1 Just for me · kept')).toBeInTheDocument()
+  })
+})
+
+describe('InvitesView', () => {
+  it('holds the sign-in links card where the account menu sends an admin', () => {
+    const data: InvitesBoard = {
+      mode: 'admin',
+      admins: [face('pete', 'Pete')],
+      requests: [],
+      links: [],
+      waiting: 0,
+      used: 0,
+      signIn: {
+        delivery: 'admin',
+        links: [
+          {
+            tokenHash: 'h1',
+            face: null,
+            email: 'friend@example.com',
+            url: 'https://adhx.example.com/api/auth/email/callback?token=t',
+            createdAt: new Date(Date.now() - 2 * 60_000).toISOString(),
+            expiresAt: Date.now() + 58 * 60_000,
+          },
+        ],
+      },
+    }
+    const { container } = render(<InvitesView data={data} />)
+    const anchor = SIGN_IN_LINKS_HREF.split('#')[1]
+    const card = container.querySelector(`#${anchor}`) as HTMLElement
+    expect(card).not.toBeNull()
+    expect(card).toHaveAccessibleName('Sign-in links')
+    expect(within(card).getByText('friend@example.com asked to sign in')).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Copy link' })).toBeInTheDocument()
   })
 })

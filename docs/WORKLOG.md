@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-26 — Waiting sign-in links open the card that holds them
+
+- An admin's avatar menu ("1 sign-in link waiting") linked to `/admin#sign-in-links`, but the held links are on the Invites page, so the owner couldn't find a friend's link.
+- The menu now opens `/admin/invites#sign-in-links`; the Sign-in links card is a labelled section with that id (`SIGN_IN_LINKS_ID` / `SIGN_IN_LINKS_HREF` in `src/lib/next-ui/routes.ts`).
+- Checked in Chromium against an isolated server with `EMAIL_LINKS_TO_ADMIN=1`: the item lands on the card with the link and Copy link in view. Component tests cover the href and the card.
+- The phone app's emailed 6-digit code still needs real email (Resend or SMTP); on an admin-held server, phones connect with the pairing code.
+
 ## 2026-10-25 — Refresh all shipped Brotli decoders
 
 - The assembled ARM64 scan found fixable Debian/Python Brotli advisories in cached runtime layers.

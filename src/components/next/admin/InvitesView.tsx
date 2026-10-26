@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { InvitesBoard } from '@/lib/admin/boards/moderation'
+import { SIGN_IN_LINKS_ID } from '@/lib/next-ui/routes'
 import { cn } from '@/lib/utils'
 import { copyText, useAdminAction } from './actions'
 import {
@@ -318,8 +319,17 @@ export function InvitesView({ data }: { data: InvitesBoard }) {
             </table>
           </TableBox>
         </Card>
-        <Card className="flex flex-col gap-2.5 px-[18px] py-4">
-          <CardHead title="Sign-in links" note="held for an admin" />
+        <Card
+          as="section"
+          id={SIGN_IN_LINKS_ID}
+          labelledBy={`${SIGN_IN_LINKS_ID}-title`}
+          className="flex scroll-mt-28 flex-col gap-2.5 px-[18px] py-4"
+        >
+          <CardHead
+            title="Sign-in links"
+            note="held for an admin"
+            id={`${SIGN_IN_LINKS_ID}-title`}
+          />
           <span className="text-[13px] text-nx-ink-faint">
             {data.signIn.delivery === 'admin'
               ? 'This server has no email set up, so sign-in links wait here for you to pass on. Anyone holding one can sign in as that person.'

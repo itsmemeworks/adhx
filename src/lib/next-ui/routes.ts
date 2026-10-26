@@ -39,3 +39,7 @@ export function startHref(
   const returnTo = (query ? `${path}?${query}` : path).slice(0, 1000)
   return `/start?${new URLSearchParams({ returnTo })}`
 }
+
+/** The Invites page's Sign-in links card, where an admin passes held links on. */
+export const SIGN_IN_LINKS_ID = 'sign-in-links'
+export const SIGN_IN_LINKS_HREF = `/admin/invites#${SIGN_IN_LINKS_ID}`

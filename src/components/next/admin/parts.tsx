@@ -96,15 +96,18 @@ export function Card({
   accent,
   as: Tag = 'div',
   labelledBy,
+  id,
 }: {
   className?: string
   children: ReactNode
   accent?: boolean
   as?: 'div' | 'section'
   labelledBy?: string
+  id?: string
 }) {
   return (
     <Tag
+      id={id}
       aria-labelledby={labelledBy}
       className={cn(CARD, accent && 'border-nx-accent/40', 'min-w-0', className)}
     >
