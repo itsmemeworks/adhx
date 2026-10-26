@@ -71,6 +71,8 @@ describe('AccountMenu', () => {
       'href',
       SIGN_IN_LINKS_HREF,
     )
+    // The held links live on the Invites page, not the admin overview.
+    expect(SIGN_IN_LINKS_HREF).toBe('/admin/invites#sign-in-links')
   })
 
   it('shows no count when nobody is waiting', async () => {
