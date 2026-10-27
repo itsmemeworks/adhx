@@ -130,15 +130,16 @@ export function LikeThumb({
   )
 }
 
-const SWITCH: { mode: Exclude<BlendMode, 'new'>; label: string }[] = [
+const SWITCH: { mode: Exclude<BlendMode, 'lineup'>; label: string }[] = [
+  { mode: 'new', label: 'New' },
   { mode: 'everyone', label: 'Everyone' },
-  { mode: 'friends', label: 'Friends only' },
+  { mode: 'friends', label: 'Friends' },
   { mode: 'mine', label: 'Mine' },
 ]
 
 /**
- * Everyone · Friends only · Mine. New is everyone's saves you haven't seen,
- * so it lights Everyone.
+ * New · Everyone · Friends · Mine. New is your people's saves you
+ * haven't seen; the other three are the latest saves, newest first, seen or not.
  */
 export function FeedSwitch({
   mode,
@@ -149,7 +150,7 @@ export function FeedSwitch({
   onChange: (mode: BlendMode) => void
   className?: string
 }) {
-  const lit = mode === 'new' ? 'everyone' : mode
+  const lit = mode
   return (
     <div
       role="radiogroup"

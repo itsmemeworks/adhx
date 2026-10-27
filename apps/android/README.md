@@ -305,7 +305,7 @@ behaviour and endpoints are in
 - **Home** (`GET /api/app/feed?mode=lineup`) plays the lineup (Just saved,
   Not seen yet, For you), with a count on the tab. "Ana sent you this" and
   For you's "Like … you kept" sit over the bottom row; tap one for Why this one,
-  Everyone · Friends only · Mine, and **Show less from Ben** / **Show more
+  New · Everyone · Friends · Mine (the last three newest first), and **Show less from Ben** / **Show more
   from Ana** (`GET/PUT /api/app/feed/weights`). A post someone sent you leads
   with "Pete sent you this" and their face; a "Like … you kept" reason shows
   that post of yours as a small thumbnail. Tap Home again for What's in your

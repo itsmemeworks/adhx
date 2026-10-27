@@ -175,7 +175,7 @@ describe('modes and seen', () => {
     expect(keys.sort()).toEqual(['x:co', 'x:new'])
   })
 
-  it('everyone: seen posts drop back, your own play sparingly', () => {
+  it('everyone: seen posts and your own score lower, for why (the order is newest first)', () => {
     const picks = blend([seen, unseen, mine], ctx(), 'everyone')
     const score = (k: string) => picks.find((p) => p.key === k)!.score
     expect(picks.map((p) => p.key)).toContain('x:seen')
@@ -185,6 +185,39 @@ describe('modes and seen', () => {
 
   it('friends: what friends saved that you have not', () => {
     expect(blend([unseen, mine, coSaved], ctx(), 'friends').map((p) => p.key)).toEqual(['x:new'])
+  })
+
+  it('everyone, friends and mine: the latest saves, newest first, seen or not', () => {
+    const pool = [
+      post('x:ana-old', [save('ana', 30)]),
+      post('x:ana-new-seen', [save('ana', 1)], { seen: true }),
+      post('x:ana-mid', [save('ana', 2)]),
+      post('x:ana-3', [save('ana', 3)]),
+      post('x:ben', [save('ben', 5)]),
+      post('x:mine-new', [save('me', 0.5)]),
+    ]
+    // Seen posts and runs from one friend stay where their save time puts them.
+    expect(blend(pool, ctx(), 'everyone').map((p) => p.key)).toEqual([
+      'x:mine-new',
+      'x:ana-new-seen',
+      'x:ana-mid',
+      'x:ana-3',
+      'x:ben',
+      'x:ana-old',
+    ])
+    expect(blend(pool, ctx(), 'friends').map((p) => p.key)).toEqual([
+      'x:ana-new-seen',
+      'x:ana-mid',
+      'x:ana-3',
+      'x:ben',
+      'x:ana-old',
+    ])
+    // Mine goes by when you saved it, not when a friend saved it after you.
+    const mine = [
+      post('x:early', [save('me', 10), save('ana', 0.1)]),
+      post('x:late', [save('me', 1)]),
+    ]
+    expect(blend(mine, ctx(), 'mine').map((p) => p.key)).toEqual(['x:late', 'x:early'])
   })
 
   it('mine: your saves only, at full weight', () => {

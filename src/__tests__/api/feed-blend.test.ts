@@ -208,13 +208,25 @@ describe('GET /api/feed/blend', () => {
     expect(mine.find((i) => i.id === 'p2')).toMatchObject({ isPrivate: true })
   })
 
-  it('Everyone, Friends only and Mine', async () => {
+  it('Everyone, Friends and Mine', async () => {
     viewer = PETE
     expect(ids(await allOf('everyone'))).toEqual(['p1', 'p3', 'p8', 'p9'])
     expect(ids(await allOf('friends'))).toEqual(['p1', 'p3', 'p9'])
     const mine = await allOf('mine')
     expect(ids(mine)).toEqual(['p8'])
     expect(mine[0].why).toBe('You saved this · 1h')
+  })
+
+  it('Everyone, Friends and Mine play the latest saves first, seen or not', async () => {
+    viewer = PETE
+    save(BEN, 'n1', 0.2)
+    save(ANA, 'n2', 0.4)
+    save(PETE, 'n3', 0.3)
+    expect(await views([{ platform: 'twitter', id: 'n2' }])).toBe(204)
+    const order = (items: Item[]) => items.map((i) => i.id).slice(0, 3)
+    expect(order(await allOf('everyone'))).toEqual(['n1', 'n3', 'n2'])
+    expect(order(await allOf('friends'))).toEqual(['n1', 'n2', 'p1'])
+    expect((await allOf('mine')).map((i) => i.id)).toEqual(['n3', 'p8'])
   })
 
   it('New leaves out what you have seen, then says you are caught up', async () => {
@@ -539,6 +551,40 @@ describe('phone: /api/app/feed and /api/app/seen', () => {
     ])
     expect(body.sections).toEqual({ just: 1, unseen: 1, foryou: 1 })
     expect(body.caughtUp).toBe(true)
+  })
+
+  it('For you opens on what Pete watched longest ago, counting replays', async () => {
+    const ago = (h: number) => new Date(Date.now() - h * H).toISOString()
+    testInstance.db
+      .insert(schema.postViews)
+      .values([
+        { userId: PETE, platform: 'twitter', postId: 'p1', seenAt: ago(5) },
+        { userId: PETE, platform: 'twitter', postId: 'p3', seenAt: ago(3) },
+        { userId: PETE, platform: 'twitter', postId: 'p9', seenAt: ago(10) },
+      ])
+      .run()
+    // p9 was first seen longest ago, but Pete played it again a moment ago.
+    testInstance.db
+      .insert(schema.postWatchCounts)
+      .values({
+        userId: PETE,
+        platform: 'twitter',
+        postId: 'p9',
+        year: new Date().getUTCFullYear(),
+        plays: 2,
+        finishes: 1,
+        seconds: 30,
+        firstAt: ago(10),
+        lastAt: ago(0.1),
+      })
+      .run()
+    const res = await call(`/api/app/feed?mode=lineup&${ALL_KINDS}`, key('phone'))
+    const body = (await res.json()) as { items: { id: string; section: string }[] }
+    expect(body.items.map((i) => [i.id, i.section])).toEqual([
+      ['p1', 'foryou'],
+      ['p3', 'foryou'],
+      ['p9', 'foryou'],
+    ])
   })
 
   it('refuses no key, a search key and bad input', async () => {

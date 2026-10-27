@@ -36,7 +36,7 @@ import {
   type LineupSection,
   type WhyReason,
 } from './blend'
-import { lastLookedAt, seenKeys } from './views'
+import { lastLookedAt, lastWatchedAt, seenKeys } from './views'
 import { coverImage } from './cover'
 import { unseenSendsTo, type IncomingSend } from '@/lib/sends/sends'
 import { postKinds, readFeedTypes } from './kinds'
@@ -509,6 +509,8 @@ export async function computeBlend(
   if (gone.size) keys = keys.filter((k) => !gone.has(k))
   const saves = savesFor(keys, viewerId)
   const seen = seenKeys(viewerId, keys)
+  // For you plays what you watched longest ago first (the lineup only).
+  const watched = mode === 'lineup' ? lastWatchedAt(viewerId, keys) : new Map<string, number>()
   const kinds = await postKinds(keys)
   const { similarity, like } = tasteFor(viewerId, keys)
   const all: (BlendCandidate & { kind: FeedKind })[] = keys.flatMap((key) => {
@@ -522,6 +524,7 @@ export async function computeBlend(
         like: like.get(key) ?? null,
         // A send you haven't seen keeps it unseen, even if you saw the post before.
         seen: seen.has(key) && !sends.has(key),
+        ...(watched.has(key) ? { watchedAt: watched.get(key)! } : {}),
         ...(sends.has(key)
           ? {
               sent: sends.get(key)!.map((x) => ({

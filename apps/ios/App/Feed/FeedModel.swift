@@ -142,7 +142,7 @@ final class FeedModel: ObservableObject {
         await load(cursor: nil, replacing: true, generation: generation)
     }
 
-    /// Everyone · Friends only · Mine, or New again.
+    /// New, or the latest from Everyone · Friends · Mine.
     func setMode(_ mode: FeedMode) async {
         guard mode != self.mode || !loadedOnce else { return }
         await flushSeen()

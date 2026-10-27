@@ -2,7 +2,7 @@ import { postKeyBatches, postKeyWhere } from '@/lib/db/post-keys'
 import { and, desc, eq, sql, type SQL } from 'drizzle-orm'
 import { POST_ID_PATTERN } from '@/lib/platform/networks'
 import { db, runInTransaction } from '@/lib/db'
-import { bookmarks, postViews, userPreferences } from '@/lib/db/schema'
+import { bookmarks, postViews, postWatchCounts, userPreferences } from '@/lib/db/schema'
 import { markSendsSeen } from '@/lib/sends/sends'
 
 /**
@@ -143,6 +143,49 @@ export function seenKeys(userId: string, keys: string[]): Set<string> {
       const key = `${r.platform}:${r.postId}`
       if (wanted.has(key)) out.add(key)
     }
+  }
+  return out
+}
+
+/**
+ * When the viewer last watched each of these posts (epoch ms): the later of
+ * their seen mark and their last play (`post_watch_counts.last_at`). Posts
+ * never watched are left out. Your own rows only.
+ */
+export function lastWatchedAt(userId: string, keys: string[]): Map<string, number> {
+  const out = new Map<string, number>()
+  if (!userId || keys.length === 0) return out
+  const wanted = new Set(keys)
+  const later = (key: string, iso: string | null) => {
+    const at = iso ? Date.parse(iso) : NaN
+    if (!wanted.has(key) || !Number.isFinite(at)) return
+    out.set(key, Math.max(out.get(key) ?? 0, at))
+  }
+  for (const part of postKeyBatches(keys)) {
+    const seen = db
+      .select({ platform: postViews.platform, postId: postViews.postId, at: postViews.seenAt })
+      .from(postViews)
+      .where(
+        and(eq(postViews.userId, userId), postKeyWhere(postViews.platform, postViews.postId, part)),
+      )
+      .all()
+    for (const r of seen) later(`${r.platform}:${r.postId}`, r.at)
+    const played = db
+      .select({
+        platform: postWatchCounts.platform,
+        postId: postWatchCounts.postId,
+        at: sql<string | null>`MAX(${postWatchCounts.lastAt})`,
+      })
+      .from(postWatchCounts)
+      .where(
+        and(
+          eq(postWatchCounts.userId, userId),
+          postKeyWhere(postWatchCounts.platform, postWatchCounts.postId, part),
+        ),
+      )
+      .groupBy(postWatchCounts.platform, postWatchCounts.postId)
+      .all()
+    for (const r of played) later(`${r.platform}:${r.postId}`, r.at)
   }
   return out
 }

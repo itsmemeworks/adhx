@@ -177,7 +177,7 @@ object Copy {
     const val WHY_NOTE = "No engagement bait. These are the only reasons."
     const val OPEN_YOUR_SAVE = "Open your save"
     const val WHY_NONE = "It’s new to you. That’s the whole reason."
-    val WHOSE = listOf("Everyone", "Friends only", "Mine")
+    val WHOSE = listOf("New", "Everyone", "Friends", "Mine")
 
     /** "Show less from Ben", or "Showing less from Ben" once chosen (tap again for normal). */
     fun showLess(name: String, on: Boolean) = if (on) "Showing less from $name" else "Show less from $name"

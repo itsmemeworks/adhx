@@ -6,7 +6,7 @@ import type { WhyReason } from '@/lib/feed/blend'
 
 /**
  * New and the blended feed in the theater: the caught-up stage, the
- * Everyone · Friends only · Mine switch, why a post is here, and the seen list.
+ * New · Everyone · Friends · Mine switch, why a post is here, and the seen list.
  */
 
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }))
@@ -191,24 +191,27 @@ describe("what's in your feed", () => {
 })
 
 describe('whose saves', () => {
-  it('New lights Everyone; the others switch mode', () => {
+  it('New, Everyone, Friends and Mine each light and switch on their own', () => {
     const change = vi.fn()
     const { rerender } = render(<FeedSwitch mode="new" onChange={change} />)
     const group = screen.getByRole('radiogroup', { name: 'Whose saves' })
     const radios = within(group).getAllByRole('radio')
     expect(radios.map((r) => [r.textContent, r.getAttribute('aria-checked')])).toEqual([
-      ['Everyone', 'true'],
-      ['Friends only', 'false'],
+      ['New', 'true'],
+      ['Everyone', 'false'],
+      ['Friends', 'false'],
       ['Mine', 'false'],
     ])
     fireEvent.click(radios[0])
     expect(change).not.toHaveBeenCalled()
     fireEvent.click(radios[1])
-    expect(change).toHaveBeenCalledWith('friends')
+    expect(change).toHaveBeenCalledWith('everyone')
+    fireEvent.click(radios[2])
+    expect(change).toHaveBeenLastCalledWith('friends')
     rerender(<FeedSwitch mode="mine" onChange={change} />)
     expect(screen.getByRole('radio', { name: 'Mine' })).toHaveAttribute('aria-checked', 'true')
-    fireEvent.click(screen.getByRole('radio', { name: 'Everyone' }))
-    expect(change).toHaveBeenLastCalledWith('everyone')
+    fireEvent.click(screen.getByRole('radio', { name: 'New' }))
+    expect(change).toHaveBeenLastCalledWith('new')
   })
 })
 
@@ -485,7 +488,7 @@ describe('New in the theater', () => {
     render(<TheaterV2 source={source} />)
     await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('a'))
     const column = screen.getByRole('complementary', { name: 'Up next' })
-    fireEvent.click(within(column).getByRole('radio', { name: 'Friends only' }))
+    fireEvent.click(within(column).getByRole('radio', { name: 'Friends' }))
     expect(router.push).toHaveBeenCalledWith('/play?feed=friends')
   })
 
