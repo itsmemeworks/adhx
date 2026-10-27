@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.8.2](https://github.com/itsmemeworks/adhx/compare/v2.8.1...v2.8.2) (2026-10-27)
+
+
+### Bug Fixes
+
+* open the invites page from the waiting sign-in links item ([#636](https://github.com/itsmemeworks/adhx/issues/636)) ([c2acac6](https://github.com/itsmemeworks/adhx/commit/c2acac65bb47ca8a919b58517056208a0e5eeb0e))
+* play the latest saves in home's filters and rotate for you ([#638](https://github.com/itsmemeworks/adhx/issues/638)) ([bbd2983](https://github.com/itsmemeworks/adhx/commit/bbd2983738122f55ed4bc64b2d704d992d7cc950))
+
 ## [2.8.1](https://github.com/itsmemeworks/adhx/compare/v2.8.0...v2.8.1) (2026-10-25)
 
 
