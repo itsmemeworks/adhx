@@ -210,7 +210,7 @@ type QueueResponse = SearchResponse & {
 const FEED_TITLES: Record<BlendMode, string> = {
   new: 'Home',
   everyone: 'Everyone',
-  friends: 'Friends only',
+  friends: 'Friends',
   mine: 'Mine',
   lineup: 'Home',
 }
@@ -1601,7 +1601,7 @@ export function TheaterV2({
   }, [current, flash, next])
 
   // ——— The blended feed ———
-  /** Everyone · Friends only · Mine (and "Watch it all again" → Everyone). */
+  /** New · Everyone · Friends · Mine (and "Watch it all again" → Everyone). */
   const switchFeed = useCallback((mode: BlendMode) => router.push(feedPlayHref(mode)), [router])
 
   /** "What's in your feed": remember the choice and reload the feed with it. */

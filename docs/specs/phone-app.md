@@ -535,8 +535,9 @@ reactions?: [{ id, saver, emoji?, text?, at }] }`, reconciled after SSE changes
   - **Home** (the default) plays the lineup in the player below. "Ana sent
     you this" and For you's "Like … you kept" sit above the bottom row; they
     (and **Why this one** in More) open
-    a sheet with the reasons and **Whose saves: Everyone · Friends only ·
-    Mine** (modes `new`/`everyone`, `friends`, `mine`), and **Filter**.
+    a sheet with the reasons and **Whose saves: New · Everyone · Friends ·
+    Mine** (modes `new`, `everyone`, `friends`, `mine`; the last three are the
+    latest saves, newest first, seen or not), and **Filter**.
     Tapping Home again opens **What's in your feed**: switches for Videos,
     Photos, Text posts and Articles (videos and photos by default; one always
     stays on), Whose saves, "12 text posts and 3 articles are waiting.
@@ -624,9 +625,10 @@ it; on a server without these endpoints (404) the app falls back as noted.
   haven't seen, saved or sent to you since you last looked: the newest view
   before a 30-minute gap (including replay-only visits), at most two days back; the last day if you've never
   looked), then **Not seen yet** (the rest of the last 14 days), both newest
-  first, then **For you**: posts others saved and you didn't (older unseen
-  ones first, then ones you've watched), closest to what you keep, each with
-  its "Like … you kept" reason. Each item carries `section`
+  first, then **For you**: posts others saved and you didn't. Older unseen
+  ones come first, closest to what you keep; then ones you've watched, the one
+  you last watched (seen or played) longest ago first, so Home never opens on
+  the post you just saw. Each has its "Like … you kept" reason. Each item carries `section`
   (`just` · `unseen` · `foryou`) and the page carries
   `sections: { just, unseen, foryou }` for the whole lineup. An older server
   answers 400 `bad_query`; the apps then ask for `mode=new` from then on.
@@ -830,8 +832,8 @@ at, saver }], "watched": [{ username, name, avatarUrl, at, isYou }] }`.
   after 2 s on stage, or as soon as you swipe past it (not when you go back).
   "Ana sent you this" (with **Reply**) and For you's "Like … you kept" sit
   over the bottom row; tapping one opens **Why this one**: the
-  post, every reason, and Whose saves (Everyone · Friends only · Mine:
-  Everyone is `new`, the others switch the mode) and Filter.
+  post, every reason, and Whose saves (New · Everyone · Friends · Mine: New
+  is the lineup, the others are the latest saves, newest first) and Filter.
 - **What's in your feed**: tap Home again (or Filter in Why this one) for
   switches for Videos, Photos, Text posts and Articles (videos and photos by
   default; at least one stays on) and Whose saves. The feed starts over once,

@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-27 — Home's filters play the latest; For you stops repeating its opener
+
+- Owner: after sharing a few things they wanted everyone's (or their own) latest posts, and Home kept opening on the same video.
+- Why: Everyone, Friends and Mine were score-blended, and on web and phones Everyone was only reachable as New. Once nothing unseen was left, the lineup's For you put watched posts in a fixed taste order.
+- Everyone, Friends and Mine are now the latest saves, newest first, seen or not (Mine by your own save time; no scores or variety; why lines unchanged). The Whose saves switch is New · Everyone · Friends · Mine on web, iPhone and Android ("Friends only" is now "Friends").
+- For you: unwatched first by taste, then watched posts, the one last watched longest ago first. "Last watched" is the later of `post_views.seen_at` and `post_watch_counts.last_at` (`lastWatchedAt` in `src/lib/feed/views.ts`), so a replay counts.
+- Checked: unit and API tests, the iOS simulator and Android builds, Android unit tests, and the web switch in Chromium on an isolated server. Not checked on a phone.
+
 ## 2026-10-26 — Waiting sign-in links open the card that holds them
 
 - An admin's avatar menu ("1 sign-in link waiting") linked to `/admin#sign-in-links`, but the held links are on the Invites page, so the owner couldn't find a friend's link.

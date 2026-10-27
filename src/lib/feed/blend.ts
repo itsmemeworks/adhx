@@ -11,13 +11,18 @@
  * - close to you: how much of that friend's saves you've seen or saved too.
  * - like what you keep: closeness to the mean of your last saves, against
  *   the rest of the pool (the top tenth reads 1).
- * Then: posts you've seen drop out of `new` and are down-weighted elsewhere;
- * your own saves play sparingly outside `mine`; "Show more / less from Ana"
- * scales her posts; a small seeded jitter breaks ties per snapshot. Finally
- * the variety pass keeps one friend (or one topic) to at most 2 in a row.
+ * Then: posts you've seen drop out of `new`; your own saves play sparingly;
+ * "Show more / less from Ana" scales her posts; a small seeded jitter breaks
+ * ties per snapshot. Finally the variety pass keeps one friend (or one topic)
+ * to at most 2 in a row.
+ *
+ * Everyone, Friends and Mine skip all that: they are the latest saves,
+ * newest first, seen or not (`NEWEST_FIRST`). The scores still decide what
+ * each post says about why it's there.
  *
  * No engagement signals: nothing here counts plays, likes or time watched
- * beyond "seen" — these are the only reasons.
+ * beyond "seen", and For you's rotation reads only when you last watched a
+ * post — these are the only reasons.
  */
 
 export type BlendMode = 'new' | 'everyone' | 'friends' | 'mine' | 'lineup'
@@ -29,6 +34,9 @@ export const BLEND_MODES: readonly BlendMode[] = ['new', 'everyone', 'friends', 
  * newest first; then For you, closest to what you keep and react to.
  */
 export type LineupSection = 'just' | 'unseen' | 'foryou'
+
+/** The modes that are simply the latest saves, newest first, seen or not. */
+export const NEWEST_FIRST: readonly BlendMode[] = ['everyone', 'friends', 'mine']
 
 export function isBlendMode(value: unknown): value is BlendMode {
   return typeof value === 'string' && (BLEND_MODES as readonly string[]).includes(value)
@@ -80,6 +88,11 @@ export interface BlendCandidate {
   sent?: BlendSend[]
   /** The viewer has a `post_views` row for it. */
   seen: boolean
+  /**
+   * When the viewer last watched it (epoch ms): their seen mark or their last
+   * play, whichever is later. Lineup only; null or absent when never.
+   */
+  watchedAt?: number | null
 }
 
 export type FeedWeight = -1 | 0 | 1
@@ -434,15 +447,21 @@ export function lineup(candidates: BlendCandidate[], ctx: BlendContext): BlendPi
   const just = unseen.filter((e) => e.at > cutoff).map((e) => pick(e, 'just'))
   const notSeen = unseen.filter((e) => e.at <= cutoff).map((e) => pick(e, 'unseen'))
   const understood = rest.some((e) => e.c.similarity !== null)
-  // Unwatched first, then watched; each closest to your taste first.
-  rest.sort(
-    (a, b) =>
-      Number(a.c.seen) - Number(b.c.seen) ||
+  // Unwatched first, closest to your taste first. Then what you've watched,
+  // the one you watched longest ago first, so Home never opens on the post
+  // you just saw.
+  const watched = (e: Entry) => (e.c.seen ? (e.c.watchedAt ?? 0) : null)
+  rest.sort((a, b) => {
+    const wa = watched(a)
+    const wb = watched(b)
+    if ((wa === null) !== (wb === null)) return wa === null ? -1 : 1
+    if (wa !== null && wb !== null && wa !== wb) return wa - wb
+    return (
       (understood
         ? (b.c.similarity ?? -2) - (a.c.similarity ?? -2)
-        : b.scored.score - a.scored.score) ||
-      byNewest(a, b),
-  )
+        : b.scored.score - a.scored.score) || byNewest(a, b)
+    )
+  })
   const forYou = applyVariety(
     rest.slice(0, LINEUP.forYou).map((e) => {
       // For you always says what it's like when it knows, however close.
@@ -475,7 +494,9 @@ export function blend(
   for (const c of candidates) {
     const scored = scoreCandidate(c, ctx, mode, likes.get(c.key) ?? 0)
     if (!scored) continue
-    newest.set(c.key, Math.max(...c.saves.map((s) => s.savedAt)))
+    // Mine is when you saved it; elsewhere, the newest save anyone made.
+    const own = mode === 'mine' ? c.saves.filter((s) => s.userId === ctx.viewerId) : c.saves
+    newest.set(c.key, Math.max(...own.map((s) => s.savedAt)))
     picks.push({
       key: c.key,
       score: scored.score,
@@ -488,11 +509,14 @@ export function blend(
       ...(mode !== 'mine' && c.sent?.length ? { sentAt: c.sent[0].at } : {}),
     })
   }
+  const byKey = (a: BlendPick, b: BlendPick) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
+  if (NEWEST_FIRST.includes(mode)) {
+    // The latest saves, newest first, seen or not: no scores, no variety.
+    return picks.sort((a, b) => (newest.get(b.key) ?? 0) - (newest.get(a.key) ?? 0) || byKey(a, b))
+  }
   picks.sort(
     (a, b) =>
-      b.score - a.score ||
-      (newest.get(b.key) ?? 0) - (newest.get(a.key) ?? 0) ||
-      (a.key < b.key ? -1 : a.key > b.key ? 1 : 0),
+      b.score - a.score || (newest.get(b.key) ?? 0) - (newest.get(a.key) ?? 0) || byKey(a, b),
   )
   const varied = applyVariety(picks, mode)
   if (mode !== 'new') return varied

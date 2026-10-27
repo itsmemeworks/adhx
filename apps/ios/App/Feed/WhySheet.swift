@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// "Why this one": the reasons the feed gives for a post, and whose saves New
-/// plays (Everyone · Friends only · Mine).
+/// plays (New · Everyone · Friends · Mine).
 struct WhySheet: View {
     let post: PhonePost
     let server: URL
@@ -202,7 +202,8 @@ extension WhySheet {
     }
 }
 
-/// Everyone · Friends only · Mine: whose saves New plays.
+/// New · Everyone · Friends · Mine: New is what your people saved that
+/// you haven't seen; the other three are the latest saves, newest first.
 struct WhoseSaves: View {
     let mode: FeedMode
     /// The filter sheet labels it in small capitals, on a raised plate.
@@ -216,10 +217,9 @@ struct WhoseSaves: View {
                 .tracking(caps ? 0.78 : 0)
                 .foregroundStyle(caps ? Theme.inkFaint : Theme.inkSoft)
             HStack(spacing: 4) {
-                option("Everyone", on: mode == .new || mode == .everyone) {
-                    choose(mode == .everyone ? .everyone : .new)
-                }
-                option("Friends only", on: mode == .friends) { choose(.friends) }
+                option("New", on: mode == .new) { choose(.new) }
+                option("Everyone", on: mode == .everyone) { choose(.everyone) }
+                option("Friends", on: mode == .friends) { choose(.friends) }
                 option("Mine", on: mode == .mine) { choose(.mine) }
             }
             .padding(4)

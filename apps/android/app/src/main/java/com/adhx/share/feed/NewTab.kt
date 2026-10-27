@@ -316,20 +316,24 @@ private fun whyIcon(kind: String?, chip: Boolean = false) = when (kind) {
     else -> Glyphs.Again
 }
 
-/** The Why sheet's Everyone · Friends only · Mine, as feed modes. */
-internal val WHOSE_MODES = listOf(FeedMode.NEW, FeedMode.FRIENDS, FeedMode.MINE)
+/**
+ * The Why sheet's New · Everyone · Friends · Mine, as feed modes. New is
+ * what your people saved that you haven't seen; the others are the latest
+ * saves, newest first, seen or not.
+ */
+internal val WHOSE_MODES = listOf(FeedMode.NEW, FeedMode.EVERYONE, FeedMode.FRIENDS, FeedMode.MINE)
 
-/** Which of Everyone · Friends only · Mine a mode is (New and Everyone are both everyone's). */
+/** Which of New · Everyone · Friends · Mine a mode is. */
 internal fun whoseIndex(mode: String): Int = when (mode) {
-    FeedMode.FRIENDS -> 1
-    FeedMode.MINE -> 2
+    FeedMode.EVERYONE -> 1
+    FeedMode.FRIENDS -> 2
+    FeedMode.MINE -> 3
     else -> 0
 }
 
 /**
  * Why this one: the post, every reason the feed gave for it, and whose
- * saves to play (Everyone goes back to New; Friends only and Mine switch the
- * feed's mode).
+ * saves to play (New, or the latest from Everyone, Friends or Mine).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

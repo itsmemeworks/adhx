@@ -126,6 +126,12 @@ dependencies {
     implementation(libs.zxing.android.embedded)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
+
+    constraints {
+        implementation(libs.guava) {
+            because("GHSA-xxph-c9ww-hj94: Guava before 33.7.2 (pulled in by Media3)")
+        }
+    }
 }
 
 // Audit the actual transitive runtime graph, not only the declared version catalog.

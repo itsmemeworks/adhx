@@ -123,6 +123,24 @@ describe('the lineup', () => {
     expect(parts(picks)).toEqual(['foryou', 'foryou'])
   })
 
+  it('For you leads with what you watched longest ago, so Home never opens on the same post', () => {
+    const watched = (key: string, hoursAgo: number, similarity: number) =>
+      post(key, [save('ana', 200)], { seen: true, similarity, watchedAt: NOW - hoursAgo * H })
+    const first = blend(
+      [watched('x:close', 50, 0.95), watched('x:mid', 90, 0.5), watched('x:far', 20, 0.1)],
+      ctx({ lastLookedAt: NOW - H }),
+      'lineup',
+    )
+    expect(order(first)).toEqual(['x:mid', 'x:close', 'x:far'])
+    // Watch the opener: next time it goes to the back.
+    const next = blend(
+      [watched('x:close', 50, 0.95), watched('x:mid', 0.01, 0.5), watched('x:far', 20, 0.1)],
+      ctx({ lastLookedAt: NOW - H }),
+      'lineup',
+    )
+    expect(order(next)).toEqual(['x:close', 'x:far', 'x:mid'])
+  })
+
   it('is the same order every time for the same posts', () => {
     const candidates = [
       post('x:a', [save('ana', 1)]),
