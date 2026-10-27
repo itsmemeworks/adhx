@@ -13,6 +13,8 @@ coroutines = "1.11.0"
 coil = "3.6.3"
 zxingEmbedded = "4.3.0"
 media3 = "1.11.1"
+# Media3 brings Guava in; this floor carries the fix for GHSA-xxph-c9ww-hj94.
+guava = "33.7.2-android"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -40,6 +42,7 @@ coil-network-cache-control = { module = "io.coil-kt.coil3:coil-network-cache-con
 zxing-android-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxingEmbedded" }
 androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
 androidx-media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
