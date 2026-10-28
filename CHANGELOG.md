@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.3](https://github.com/itsmemeworks/adhx/compare/v2.8.2...v2.8.3) (2026-10-28)
+
+
+### Bug Fixes
+
+* **security:** accept the unfixable deepmerge advisory on its one path ([#640](https://github.com/itsmemeworks/adhx/issues/640)) ([9f76e39](https://github.com/itsmemeworks/adhx/commit/9f76e39a6adb61172b0d7911e2a526c9d737ec05))
+
 ## [2.8.2](https://github.com/itsmemeworks/adhx/compare/v2.8.1...v2.8.2) (2026-10-27)
 
 
