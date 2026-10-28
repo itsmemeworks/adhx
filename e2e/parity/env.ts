@@ -11,6 +11,17 @@ export const PARITY_OUT = path.join(PARITY_DIR, '.out')
 
 export const PARITY_PORT = Number(process.env.PARITY_PORT || 3600)
 export const PARITY_ORIGIN = `http://127.0.0.1:${PARITY_PORT}`
+/**
+ * Where Next listens. `0.0.0.0` (with `PARITY_PUBLIC_ORIGIN` set to this Mac's
+ * LAN address) lets real phones on the same Wi-Fi reach the test world; see
+ * `e2e/devices/README.md`. Loopback by default.
+ */
+export const PARITY_HOST = process.env.PARITY_HOST || '127.0.0.1'
+/** The address links, invites and phone pairing use. Defaults to `PARITY_ORIGIN`. */
+export const PARITY_PUBLIC_ORIGIN = (process.env.PARITY_PUBLIC_ORIGIN || PARITY_ORIGIN).replace(
+  /\/$/,
+  '',
+)
 export const PARITY_DB_PATH = path.join(PARITY_OUT, 'parity.db')
 export const PARITY_MEDIA_DIR = path.join(PARITY_OUT, 'media')
 /** Videos made from stills and the like, reused across runs. */
@@ -46,7 +57,7 @@ export function parityProcessEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessE
     SESSION_SECRET: PARITY_SESSION_SECRET,
     TWITTER_CLIENT_ID: 'parity-twitter-client',
     TWITTER_CLIENT_SECRET: 'parity-twitter-secret',
-    NEXT_PUBLIC_APP_URL: PARITY_ORIGIN,
+    NEXT_PUBLIC_APP_URL: PARITY_PUBLIC_ORIGIN,
     PORT: String(PARITY_PORT),
     NEXT_DIST_DIR: '.next-parity',
     NEXT_TELEMETRY_DISABLED: '1',

@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-28 — Drive real phones; first device run fixes five bugs
+
+- Owner connected a test iPhone 16 Pro and a Galaxy A13 and asked for every journey tested on them, with bugs fixed.
+- New `e2e/devices/`: a `DeviceDriver` UI test (own scheme) that takes commands from `hub.mjs`, `ios.sh` to build/run it, and `drive.mjs` for both phones (adb on Android). The parity server gains LAN mode (`PARITY_HOST`, `PARITY_PUBLIC_ORIGIN`) and `pnpm parity:pair <member>`.
+- An iPhone on USB reaches the Mac over the CoreDevice tunnel (`[<tunnel>::2]`); XCUITest element queries stall on live camera/video, so the driver finds elements in snapshots and taps coordinates.
+- Fixed: iOS Home playing under the welcome; iOS/Android videos skipping on while React/Send was open (Android also kept the picker over the next post); iOS IPv6 address display/round trip (`ServerAddressTests`); Android share card repeating its heading. Results: `docs/rollout/phone-device-results.md`.
+- Follow-ups: the remaining acceptance rows (channels, Live, send, original, invites, picture, rotation, offline queue, accessibility).
+
 ## 2026-10-27 — Home's filters play the latest; For you stops repeating its opener
 
 - Owner: after sharing a few things they wanted everyone's (or their own) latest posts, and Home kept opening on the same video.
