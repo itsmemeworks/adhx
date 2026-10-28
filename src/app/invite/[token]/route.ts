@@ -13,6 +13,7 @@ import {
 import { isSameOriginPost, readSmallForm } from '@/lib/auth/form-post'
 import { sanitizeUsername } from '@/lib/auth/username-rules'
 import { recordAnalytic } from '@/lib/analytics/record'
+import { appUrl } from '@/lib/routes/app-url'
 
 export const dynamic = 'force-dynamic'
 
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest, { params }: Context) {
   }
 
   recordAnalytic({ name: 'auth.complete', userId: result.userId, source: 'invite' })
-  const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const base = appUrl()
   // Joined from a member's invite with approvals on: wait for an admin.
   const next = result.approval === 'pending' ? '/invite/waiting' : '/invite/done'
   const response = NextResponse.redirect(new URL(next, base), 303)

@@ -14,8 +14,7 @@ import { claimOwnership, mayGetHeldLink, mayUseEmail } from '@/lib/auth/allowlis
 import { signInDelivery } from '@/lib/email/magic-link'
 import { loginLinkPage } from '@/lib/auth/link-page'
 import { isSameOriginPost, readSmallForm } from '@/lib/auth/form-post'
-
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+import { appUrl } from '@/lib/routes/app-url'
 
 const INVALID_LINK =
   'This link has expired or has already been used. Request a new link and open it in the browser where you want to sign in.'
@@ -52,9 +51,9 @@ export async function POST(request: NextRequest) {
     }
     const result = await linkEmailToUser(row.userId, row.email)
     if ('error' in result) {
-      return NextResponse.redirect(new URL('/settings?auth_error=email_in_use', BASE_URL), 303)
+      return NextResponse.redirect(new URL('/settings?auth_error=email_in_use', appUrl()), 303)
     }
-    return NextResponse.redirect(new URL('/settings?email_changed=1', BASE_URL), 303)
+    return NextResponse.redirect(new URL('/settings?email_changed=1', appUrl()), 303)
   }
 
   // The allowlist can change between asking for a link and using it.
@@ -83,7 +82,7 @@ export async function POST(request: NextRequest) {
   const target = !account?.user.usernameChosen
     ? `/welcome?returnTo=${encodeURIComponent(destination)}`
     : destination
-  const response = NextResponse.redirect(new URL(target, BASE_URL), 303)
+  const response = NextResponse.redirect(new URL(target, appUrl()), 303)
   response.headers.set('Cache-Control', 'no-store')
   response.headers.set('Referrer-Policy', 'no-referrer')
   await setSessionCookie(response, { userId, username })

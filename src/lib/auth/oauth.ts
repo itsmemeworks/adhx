@@ -4,6 +4,7 @@ import { oauthState, oauthTokens, userIdentities, users } from '@/lib/db/schema'
 import { and, eq, exists, gt, isNull, lte, or } from 'drizzle-orm'
 import { encryptToken, safeDecryptToken } from './token-encryption'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
+import { appUrl } from '@/lib/routes/app-url'
 
 // Retry helper for idempotent Twitter API calls (GET only).
 // Non-idempotent operations (token exchange, refresh) must NOT retry
@@ -87,12 +88,12 @@ export function generateState(): string {
  * `TWITTER_OAUTH_REDIRECT_URI`; X leaves it untouched, then the callback route
  * bounces back to the canonical origin to set the session cookie. Staging
  * (`adhx.fly.dev`) and local already have no "x.com", so the override is unset
- * and this falls back to the canonical `NEXT_PUBLIC_APP_URL` callback.
+ * and this falls back to the canonical `appUrl()` callback.
  */
 export function getOAuthRedirectUri(): string {
   const override = process.env.TWITTER_OAUTH_REDIRECT_URI
   if (override) return override
-  const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const base = appUrl()
   return `${base}/api/auth/twitter/callback`
 }
 

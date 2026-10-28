@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { bookmarks } from '@/lib/db/schema'
 import { getCurrentUserId } from '@/lib/auth/session'
+import { isFreshInstall } from '@/lib/auth/allowlist'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { StartScreen } from '@/components/next/onboarding/StartScreen'
 
@@ -22,6 +23,7 @@ export default async function StartPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>
 }) {
+  if (isFreshInstall()) redirect('/setup')
   const params = await searchParams
   const returnTo = isSafeReturnUrl(params.returnTo) ? params.returnTo : '/start'
   if (params.sync !== '1') {

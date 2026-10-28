@@ -13,11 +13,10 @@ import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { metrics, captureException } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
 import { isUserBanned } from '@/lib/admin/moderation'
+import { appUrl } from '@/lib/routes/app-url'
 
 const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
 const CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET!
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-const REDIRECT_URI = getOAuthRedirectUri()
 
 // GET /api/auth/twitter/callback - Handle OAuth callback
 export async function GET(request: NextRequest) {
@@ -29,9 +28,9 @@ export async function GET(request: NextRequest) {
   // bounce to the canonical callback first, carrying code+state untouched.
   // Nothing is consumed yet, so this is safe and runs at most once (the bounced
   // request arrives on the canonical host and skips this).
-  const canonicalOrigin = process.env.NEXT_PUBLIC_APP_URL
-  if (canonicalOrigin) {
-    const redirectHost = new URL(REDIRECT_URI).host
+  const canonicalOrigin = appUrl()
+  {
+    const redirectHost = new URL(getOAuthRedirectUri()).host
     const canonicalHost = new URL(canonicalOrigin).host
     const requestHost = request.headers.get('host')
     if (requestHost === redirectHost && redirectHost !== canonicalHost) {
@@ -53,13 +52,13 @@ export async function GET(request: NextRequest) {
     metrics.authFailed(error)
     recordAnalytic({ name: 'auth.fail', source: 'oauth' })
     return NextResponse.redirect(
-      new URL(`/?error=${encodeURIComponent(errorDescription || error)}`, BASE_URL),
+      new URL(`/?error=${encodeURIComponent(errorDescription || error)}`, appUrl()),
     )
   }
 
   // Verify required parameters
   if (!code || !state) {
-    return NextResponse.redirect(new URL('/?error=Missing%20code%20or%20state', BASE_URL))
+    return NextResponse.redirect(new URL('/?error=Missing%20code%20or%20state', appUrl()))
   }
 
   try {
@@ -68,14 +67,14 @@ export async function GET(request: NextRequest) {
     // not burn the grant.
     const existingUserId = await getCurrentUserId()
     if (!existingUserId) {
-      return NextResponse.redirect(new URL('/?auth_error=x_link_only', BASE_URL))
+      return NextResponse.redirect(new URL('/?auth_error=x_link_only', appUrl()))
     }
 
     // Atomically verify ownership + expiry and consume the one-time verifier.
     // A session switched after OAuth started cannot retarget the X link.
     const consumedState = await consumeOAuthState(state, existingUserId)
     if (!consumedState) {
-      return NextResponse.redirect(new URL('/?error=Invalid%20or%20expired%20state', BASE_URL))
+      return NextResponse.redirect(new URL('/?error=Invalid%20or%20expired%20state', appUrl()))
     }
 
     // Exchange code for tokens
@@ -84,7 +83,7 @@ export async function GET(request: NextRequest) {
       consumedState.codeVerifier,
       CLIENT_ID,
       CLIENT_SECRET,
-      REDIRECT_URI,
+      getOAuthRedirectUri(),
     )
 
     // Get user info
@@ -105,18 +104,18 @@ export async function GET(request: NextRequest) {
       // This X account is already linked to a different account than the one
       // currently signed in — don't touch the session, bounce back to
       // Settings with an error instead.
-      return NextResponse.redirect(new URL('/settings?auth_error=x_already_linked', BASE_URL))
+      return NextResponse.redirect(new URL('/settings?auth_error=x_already_linked', appUrl()))
     }
 
     if (linkResult.conflict === 'sign_in_required') {
-      return NextResponse.redirect(new URL('/?auth_error=x_link_only', BASE_URL))
+      return NextResponse.redirect(new URL('/?auth_error=x_link_only', appUrl()))
     }
 
     const appUserId = linkResult.userId
     const appUsername = linkResult.username
 
     if (isUserBanned(appUserId)) {
-      return NextResponse.redirect(new URL('/?auth_error=banned', BASE_URL))
+      return NextResponse.redirect(new URL('/?auth_error=banned', appUrl()))
     }
 
     // Check if this is a new user (for metrics) — keyed by the app userId,
@@ -139,7 +138,7 @@ export async function GET(request: NextRequest) {
     if (!tokensSaved) {
       // Disconnect (or another account-link change) won after identity
       // resolution. Do not recreate a token-only X connection.
-      return NextResponse.redirect(new URL('/settings?auth_error=x_already_linked', BASE_URL))
+      return NextResponse.redirect(new URL('/settings?auth_error=x_already_linked', appUrl()))
     }
 
     // Successfully authenticated - metrics are tracked below
@@ -157,12 +156,12 @@ export async function GET(request: NextRequest) {
     let redirectUrl: URL
     if (isSafeReturnUrl(returnUrl)) {
       // Return to the original URL (e.g. Settings, or a preview the user was on)
-      redirectUrl = new URL(returnUrl, BASE_URL)
+      redirectUrl = new URL(returnUrl, appUrl())
     } else {
       // X is a Settings link, not a sign-in. Signed-in `/` redirects to
       // `/saved` and drops query strings, so `/?firstLogin=true` never
       // reached the library sync modal. Land on Settings instead.
-      redirectUrl = new URL('/settings', BASE_URL)
+      redirectUrl = new URL('/settings', appUrl())
     }
 
     const response = NextResponse.redirect(redirectUrl)
@@ -191,6 +190,6 @@ export async function GET(request: NextRequest) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     metrics.authFailed(message)
     recordAnalytic({ name: 'auth.fail', source: 'oauth' })
-    return NextResponse.redirect(new URL(`/?error=${encodeURIComponent(message)}`, BASE_URL))
+    return NextResponse.redirect(new URL(`/?error=${encodeURIComponent(message)}`, appUrl()))
   }
 }

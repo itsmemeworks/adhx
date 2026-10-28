@@ -350,7 +350,20 @@ Short notes on what is easy to get wrong. Each links to the full description.
 - `GET /api/auth/me` is the client's source of truth for the account,
   identities, X connection and admin role.
 - Sessions are an HS256 JWT in the `adhx_session` cookie: 30 days, `httpOnly`,
-  `sameSite=lax`, `secure` in production, signed with `SESSION_SECRET`.
+  `sameSite=lax`, `secure` in production unless this ADHX's address is plain
+  `http:` (a home server by IP). Signing, phone codes, file links and token
+  encryption all use `serverSecret()` (`src/lib/auth/server-secret.ts`):
+  `SESSION_SECRET`, else a `session-secret` file ADHX makes beside the
+  database on first start. Never read the env var directly.
+- **One-click setup.** A fresh install needs no settings. `appUrl()`
+  (`src/lib/routes/app-url.ts`) is the only source of this ADHX's address:
+  the env, else the host's own (Render, Railway, Fly, Coolify), else the
+  address remembered at setup, else localhost. Production without email holds
+  links for the admin by default. With no users, `/` and `/start` open
+  `/setup`; while there's no admin, the migration logs a setup link, and its
+  code (`SETUP_CODE`, else derived from the secret) lets `POST /api/setup`
+  make the holder the owner. Install recipes: `deploy/` and `render.yaml`;
+  `scripts/container-smoke.sh` runs a nothing-configured install.
 - OAuth tokens are AES-256-GCM encrypted at rest
   (`src/lib/auth/token-encryption.ts`).
 
@@ -485,19 +498,20 @@ PARITY_DEMO=1`) daily. Never add a demo write path to the app itself.
 [`.env.example`](.env.example) lists every variable with a comment; copy it to
 `.env.local`. The ones you'll meet first:
 
-| Variable                                                     | Purpose                                                                  |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| `SESSION_SECRET`                                             | Signs sessions and file tokens. Generate with `openssl rand -base64 32`. |
-| `NEXT_PUBLIC_APP_URL`                                        | The address people use (http://localhost:3001 locally).                  |
-| `DATABASE_PATH`, `MEDIA_DIR`                                 | SQLite file and kept-media folder.                                       |
-| `RESEND_API_KEY`, `SMTP_URL`, `EMAIL_LINKS_TO_ADMIN`         | How sign-in links are delivered.                                         |
-| `ALLOWED_EMAILS`, `INVITES`, `ADMIN_USER_IDS`                | Who may join, who may invite, who is admin.                              |
-| `KEEP_MEDIA`, `KEEP_BACKFILL`, `KEEP_H264`                   | Kept-media switches (`off` to disable).                                  |
-| `SEMANTIC_SEARCH`, `SEMANTIC_SPEECH`, `SEMANTIC_SCREEN_TEXT` | Model switches (`off` to disable).                                       |
-| `PROCESSING_MODE`, `PROCESSING_WORKER_TOKEN`                 | Local processing or the Mac helper.                                      |
-| `TYPESAFE_API_KEY`                                           | Optional Jev rerank and naming. Never commit or log it.                  |
-| `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET`                 | Optional X bookmark sync.                                                |
-| `TRUST_PROXY_IP_HEADERS`                                     | `true` only behind a proxy that overwrites `X-Forwarded-For`.            |
+| Variable                                                     | Purpose                                                               |
+| ------------------------------------------------------------ | --------------------------------------------------------------------- |
+| `SESSION_SECRET`                                             | Signs sessions and file tokens. Optional: made in `/data` if unset.   |
+| `NEXT_PUBLIC_APP_URL` / `APP_URL`                            | The address people use (http://localhost:3001 locally). Optional.     |
+| `SETUP_CODE`                                                 | The code that makes the first person the owner at `/setup`. Optional. |
+| `DATABASE_PATH`, `MEDIA_DIR`                                 | SQLite file and kept-media folder.                                    |
+| `RESEND_API_KEY`, `SMTP_URL`, `EMAIL_LINKS_TO_ADMIN`         | How sign-in links are delivered.                                      |
+| `ALLOWED_EMAILS`, `INVITES`, `ADMIN_USER_IDS`                | Who may join, who may invite, who is admin.                           |
+| `KEEP_MEDIA`, `KEEP_BACKFILL`, `KEEP_H264`                   | Kept-media switches (`off` to disable).                               |
+| `SEMANTIC_SEARCH`, `SEMANTIC_SPEECH`, `SEMANTIC_SCREEN_TEXT` | Model switches (`off` to disable).                                    |
+| `PROCESSING_MODE`, `PROCESSING_WORKER_TOKEN`                 | Local processing or the Mac helper.                                   |
+| `TYPESAFE_API_KEY`                                           | Optional Jev rerank and naming. Never commit or log it.               |
+| `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET`                 | Optional X bookmark sync.                                             |
+| `TRUST_PROXY_IP_HEADERS`                                     | `true` only behind a proxy that overwrites `X-Forwarded-For`.         |
 
 ## Testing
 

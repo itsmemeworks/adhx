@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { serverSecret } from './server-secret'
 import { and, eq, gt, isNull, lt, sql } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
 import { loginTokens, userIdentities, users } from '@/lib/db/schema'
@@ -23,7 +24,7 @@ export const PHONE_CODE_MAX_ATTEMPTS = 5
 const CODE = /^\d{6}$/
 
 function secret(): string {
-  return process.env.SESSION_SECRET || process.env.TWITTER_CLIENT_SECRET || 'adhx-phone-sign-in'
+  return serverSecret()
 }
 
 /** What's stored for this address's code (the code can't be read back from it). */

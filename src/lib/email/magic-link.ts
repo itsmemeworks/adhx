@@ -7,13 +7,16 @@ import { adminSignInLinks, loginTokens, userIdentities, users } from '@/lib/db/s
 import { captureException } from '@/lib/sentry'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 import { ADMIN_LOGIN_TOKEN_TTL_MS } from '@/lib/auth/login-token-policy'
+import { appUrl } from '@/lib/routes/app-url'
 
 /**
  * How a sign-in link reaches someone:
  * - `email`: sent through Resend (`RESEND_API_KEY`) or your own mail server
  *   (`SMTP_URL`, e.g. `smtps://user:pass@mail.example.com:465`).
- * - `admin`: no email service (`EMAIL_LINKS_TO_ADMIN=1`). The link waits on
- *   the admin page for whoever runs ADHX to hand over.
+ * - `admin`: no email service. The link waits on the admin page for whoever
+ *   runs ADHX to hand over. The default in production without email, so a
+ *   one-click install works; `EMAIL_LINKS_TO_ADMIN=off` turns sign-in links
+ *   off instead.
  * - `log`: local development with neither, the link is printed to the console.
  */
 export type SignInDelivery = 'email' | 'admin' | 'log'
@@ -27,17 +30,20 @@ export interface SendMagicLinkResult {
 
 const SEND_TIMEOUT_MS = 10_000
 
-function flag(name: string): boolean {
-  const v = process.env[name]
-  return v === '1' || v === 'true' || v === 'on'
+function flag(name: string): boolean | null {
+  const v = process.env[name]?.trim().toLowerCase()
+  if (v === '1' || v === 'true' || v === 'on') return true
+  if (v === '0' || v === 'false' || v === 'off') return false
+  return null
 }
 
 /** Which way links go on this server (also shown to admins). */
 export function signInDelivery(): SignInDelivery | null {
   if (process.env.RESEND_API_KEY || process.env['SMTP_URL']) return 'email'
-  if (flag('EMAIL_LINKS_TO_ADMIN')) return 'admin'
+  const held = flag('EMAIL_LINKS_TO_ADMIN')
+  if (held) return 'admin'
   if (process.env.NODE_ENV !== 'production') return 'log'
-  return null
+  return held === false ? null : 'admin'
 }
 
 async function renderEmail(url: string, intent: 'signin' | 'change') {
@@ -253,7 +259,7 @@ export async function sendSignInCodeEmail(params: {
   }
   if (delivery !== 'email') return { ok: false }
   try {
-    const origin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const origin = appUrl()
     const { SignInCodeEmail } = await import('@/emails/sign-in-code')
     const html = await render(SignInCodeEmail({ code, origin }))
     const message = { subject: `Your ADHX code: ${code}`, html, text: toPlainText(html) }

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUserId } from '@/lib/auth/session'
+import { isFreshInstall } from '@/lib/auth/allowlist'
 import { getTheaterFeed } from '@/lib/theater/feed'
 import { TheaterStaticList } from '@/components/theater/TheaterStaticList'
 import { PublicHome } from '@/components/next/moments/PublicHome'
@@ -36,6 +37,7 @@ export default async function HomePage({
     const addedId = params.added ? (params.id ?? params.tweetId) : null
     redirect(addedId ? savedToPlay(addedId, params.platform) : feedPlayHref('new'))
   }
+  if (isFreshInstall()) redirect('/setup')
 
   const seed = await getTheaterFeed()
   metrics.theaterOpened('home')
