@@ -6,7 +6,7 @@ import { NetworkIcon } from './NetworkIcon'
 import { ALL_PLATFORMS, networkLabel } from './networks'
 import { Face, type PersonId } from './People'
 import { PhoneFrame, PlayerScreen, ShareCardScreen, WebFrame, u } from './frames'
-import { Arrow, Check, Chat, GitHubMark, Menu } from './icons'
+import { Arrow, Check, Chat, Download, GitHubMark, Menu } from './icons'
 import { NavMenu } from './NavMenu'
 import { Credit, PostMedia, creditedPosts } from './Post'
 import {
@@ -41,18 +41,19 @@ docker build -t adhx:local .
 docker compose config --quiet
 docker compose up -d`
 
-const WRAP = 'mx-auto w-full max-w-[1264px] px-4 md:px-8'
+export const WRAP = 'mx-auto w-full max-w-[1264px] px-4 md:px-8'
 
 const NAV = [
   { href: '#how', label: 'How it works' },
   { href: '#features', label: 'Features' },
   { href: '#apps', label: 'Apps' },
   { href: '#self-host', label: 'Self-host' },
+  { href: '/install/', label: 'Install' },
 ]
 
 /* ——— Bits ——— */
 
-function Kicker({ children }: { children: ReactNode }) {
+export function Kicker({ children }: { children: ReactNode }) {
   return (
     <span className="flex items-center gap-2 whitespace-nowrap text-[12px] font-extrabold uppercase leading-[1.3] tracking-[0.16em] text-nx-accent md:text-[13px]">
       {children}
@@ -60,7 +61,7 @@ function Kicker({ children }: { children: ReactNode }) {
   )
 }
 
-function Dot({ className }: { className?: string }) {
+export function Dot({ className }: { className?: string }) {
   return <span aria-hidden className={cn('shrink-0 rounded-full bg-nx-accent', className)} />
 }
 
@@ -112,20 +113,22 @@ function Reaction({
 
 /* ——— Header ——— */
 
-function Header() {
+/** On another page (`home` is `/`), the section links go back to the home page. */
+export function Header({ home = '' }: { home?: string }) {
+  const nav = NAV.map((n) => ({ ...n, href: n.href.startsWith('#') ? home + n.href : n.href }))
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-nx-ink/90 shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur-lg">
       <div className={cn(WRAP, 'flex h-[63px] items-center gap-3 md:h-[71px] md:gap-12')}>
         <a
-          href="#top"
-          aria-label="adhx, back to the top"
+          href={home || '#top'}
+          aria-label={home ? 'adhx, the home page' : 'adhx, back to the top'}
           className="gob-host flex items-center gap-2.5 text-nx-cream"
         >
           <Gob size={34} />
           <span className="font-nx-serif text-[28px] leading-none md:text-[30px]">adhx</span>
         </a>
         <nav aria-label="Sections" className="hidden gap-8 md:flex">
-          {NAV.map((n) => (
+          {nav.map((n) => (
             <a
               key={n.href}
               href={n.href}
@@ -153,7 +156,7 @@ function Header() {
             </summary>
           }
         >
-          {NAV.map((n) => (
+          {nav.map((n) => (
             <a
               key={n.href}
               href={n.href}
@@ -720,28 +723,19 @@ function Apps() {
               </li>
             ))}
           </ul>
-          <p className="m-0 mt-1 text-[13px] leading-[1.5] text-nx-muted md:text-[14px]">
-            <span className="md:hidden">No store downloads yet: build from the </span>
-            <span className="hidden md:inline">
-              The apps are build-from-source for now: there are no store downloads in this release.
-              Follow the{' '}
-            </span>
+          <div className="mt-2 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-4">
             <a
-              href={`${GITHUB_URL}/blob/main/apps/ios/README.md`}
-              className="text-nx-accent underline underline-offset-2 hover:text-white"
+              href="/install/"
+              className="flex min-h-[52px] items-center justify-center gap-2.5 whitespace-nowrap rounded-full bg-nx-accent px-6 text-[16px] font-extrabold text-black hover:bg-white"
             >
-              iPhone
+              <Download size={20} />
+              <span>Install the apps</span>
             </a>
-            <span> or </span>
-            <a
-              href={`${GITHUB_URL}/blob/main/apps/android/README.md`}
-              className="text-nx-accent underline underline-offset-2 hover:text-white"
-            >
-              Android
-            </a>
-            <span className="md:hidden"> guide.</span>
-            <span className="hidden md:inline"> setup guide on GitHub.</span>
-          </p>
+            <p className="m-0 text-[13px] leading-[1.5] text-nx-muted md:text-[14px]">
+              Not in the stores. Android installs from GitHub; iPhone through AltStore PAL in the
+              EU, or SideStore everywhere else.
+            </p>
+          </div>
         </div>
         <Mock
           label="Two phones: the ADHX share card keeping a copy of four X photos from the film Sorcerer, posted by @CinemaTweets1, 40 percent done, shared with your people with Just for me off; and Home playing a video Mum sent you: a colourful piano roll transcribed by MuScriptor, posted on X by @kyutai_labs."
@@ -927,62 +921,69 @@ export function ProductSite() {
         <Band />
         <SelfHost />
       </main>
-      <footer className="border-t border-white/10 bg-black">
-        <div
-          className={cn(
-            WRAP,
-            'flex flex-col gap-2.5 py-[23px] md:min-h-[111px] md:flex-row md:items-center md:gap-[18px] md:py-6',
-          )}
-        >
-          <span className="gob-host flex items-center gap-2">
-            <Gob size={28} />
-            <span className="font-nx-serif text-[22px] leading-none md:text-[24px]">adhx</span>
-          </span>
-          <span className="text-[13px] text-nx-muted md:text-[14px]">
-            Your friends have better taste than the algorithm.
-          </span>
-          <span className="hidden flex-1 md:block" />
-          <nav
-            aria-label="Footer"
-            className="-my-[13px] flex flex-wrap gap-x-[22px] gap-y-1 md:my-0 md:gap-7"
-          >
-            {[
-              { href: GITHUB_URL, label: 'GitHub' },
-              { href: `${GITHUB_URL}/blob/main/PRIVACY.md`, label: 'Privacy' },
-              { href: `${GITHUB_URL}/blob/main/LICENSE`, label: 'MIT licence' },
-            ].map((l) => (
-              <a
-                key={l.label}
-                href={l.href}
-                className="flex min-h-[44px] items-center whitespace-nowrap text-[14px] font-semibold text-nx-soft hover:text-white"
-              >
-                {l.label}
-              </a>
-            ))}
-          </nav>
-        </div>
-        <div className={cn(WRAP, 'pb-6 md:pb-7')}>
-          <p className="m-0 border-t border-white/10 pt-4 text-[12px] leading-[1.7] text-nx-muted md:text-[13px]">
-            <span>The posts shown are real saves, each from its original poster: </span>
-            {creditedPosts().map((p, i, all) => (
-              <span key={p.url}>
-                <span className="whitespace-nowrap">
-                  <a
-                    href={p.url}
-                    className="inline-flex min-h-[24px] items-center gap-1 font-semibold text-nx-soft underline-offset-2 hover:text-white hover:underline"
-                  >
-                    <NetworkIcon platform={p.network} className="h-3 w-3" />
-                    <span>{`@${p.author}`}</span>
-                    <span className="sr-only">{` on ${networkLabel(p.network)}`}</span>
-                  </a>
-                  <span>{i < all.length - 1 ? ',' : '.'}</span>
-                </span>
-                {i < all.length - 1 && <span> </span>}
-              </span>
-            ))}
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
+  )
+}
+
+/** The footer, shared with the install page. */
+export function Footer() {
+  return (
+    <footer className="border-t border-white/10 bg-black">
+      <div
+        className={cn(
+          WRAP,
+          'flex flex-col gap-2.5 py-[23px] md:min-h-[111px] md:flex-row md:items-center md:gap-[18px] md:py-6',
+        )}
+      >
+        <span className="gob-host flex items-center gap-2">
+          <Gob size={28} />
+          <span className="font-nx-serif text-[22px] leading-none md:text-[24px]">adhx</span>
+        </span>
+        <span className="text-[13px] text-nx-muted md:text-[14px]">
+          Your friends have better taste than the algorithm.
+        </span>
+        <span className="hidden flex-1 md:block" />
+        <nav
+          aria-label="Footer"
+          className="-my-[13px] flex flex-wrap gap-x-[22px] gap-y-1 md:my-0 md:gap-7"
+        >
+          {[
+            { href: GITHUB_URL, label: 'GitHub' },
+            { href: `${GITHUB_URL}/blob/main/PRIVACY.md`, label: 'Privacy' },
+            { href: `${GITHUB_URL}/blob/main/LICENSE`, label: 'MIT licence' },
+          ].map((l) => (
+            <a
+              key={l.label}
+              href={l.href}
+              className="flex min-h-[44px] items-center whitespace-nowrap text-[14px] font-semibold text-nx-soft hover:text-white"
+            >
+              {l.label}
+            </a>
+          ))}
+        </nav>
+      </div>
+      <div className={cn(WRAP, 'pb-6 md:pb-7')}>
+        <p className="m-0 border-t border-white/10 pt-4 text-[12px] leading-[1.7] text-nx-muted md:text-[13px]">
+          <span>The posts shown are real saves, each from its original poster: </span>
+          {creditedPosts().map((p, i, all) => (
+            <span key={p.url}>
+              <span className="whitespace-nowrap">
+                <a
+                  href={p.url}
+                  className="inline-flex min-h-[24px] items-center gap-1 font-semibold text-nx-soft underline-offset-2 hover:text-white hover:underline"
+                >
+                  <NetworkIcon platform={p.network} className="h-3 w-3" />
+                  <span>{`@${p.author}`}</span>
+                  <span className="sr-only">{` on ${networkLabel(p.network)}`}</span>
+                </a>
+                <span>{i < all.length - 1 ? ',' : '.'}</span>
+              </span>
+              {i < all.length - 1 && <span> </span>}
+            </span>
+          ))}
+        </p>
+      </div>
+    </footer>
   )
 }

@@ -6,6 +6,21 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-28 — Attach a sideloadable iPhone IPA to every release
+
+- New `.github/workflows/ios-sideload.yml`, called by Release Please (and by hand): builds `adhx-<version>.ipa` at the tag with `make-sideload-ipa.sh`, bundle id `com.adhx.share` like Android. It checks the signature, version and App Group entitlement, then attaches it with a SHA-256. No secrets.
+- The script now passes extra `SETTING=value` arguments to xcodebuild. `native.yml` builds the IPA on every app PR so the script can't rot.
+- The install guide, adhx.com/install, the iOS README and `docs/releasing.md` now point at the release asset. Tags up to 2.8.2 lack the script, so the first IPA comes with the next release.
+- Checked locally: the job's build and checks pass and actionlint is clean. It can only be dispatched once it's on main, so the first real run is the next release.
+
+## 2026-10-28 — Guide to installing the phone apps without a store
+
+- New `docs/install-phone-apps.md` and adhx.com `/install/`: Android APK from Releases; iPhone via TestFlight, AltStore PAL in the EU, SideStore elsewhere; then connecting. Linked from README, both app READMEs, docs index, the site's nav and Apps section, and Settings → Phone app's fallback links.
+- EU: Apple's Web Distribution needs financial-standing proof a self-hosted project usually lacks, so AltStore PAL (notarized, 5% only on sales). Rest of world: SideStore (free Apple ID, one-time computer, on-phone weekly refresh) over AltStore Classic, paid certificates and Xcode.
+- SideStore/AltStore rename the App Group to `group.<prefix>.<TEAMID>`; `AppGroup.id` now falls back to the signed group (`ALTAppGroups` or the embedded profile) so the share card still sees the connection. swiftc suite added to CI; simulator build passes. Not yet tried on a phone through SideStore.
+- `apps/ios/Config/make-sideload-ipa.sh` builds an ad-hoc-signed `.ipa` keeping the App Group entitlement (verified locally).
+- Still missing: releases attach no `.ipa`, TestFlight secrets aren't set, and nobody has published an AltStore PAL source. The guide says so and lists the owner steps.
+
 ## 2026-10-28 — Accept the unfixable deepmerge advisory on its one path
 
 - The dependency audit started failing every branch on GHSA-gcqx-w48m-w2h4 (low, `deepmerge` prototype poisoning). No release fixes it, and it arrives in production through `react-email` → `@react-email/render` → `html-to-text`, which `render` imports at the top, so it can't be dropped.

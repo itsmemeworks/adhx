@@ -17,10 +17,9 @@ It only ever talks to your own ADHX, and it never opens the ADHX website.
   <img src="../../docs/images/phone-send.jpg" width="240" alt="The send sheet: Sending the video itself, Send via WhatsApp, Copy, Files, Save to Photos or More, and faces to send it straight to your people">
 </p>
 
-> **Just want the app?** If someone sent you here from their ADHX's Settings,
-> ask them for a TestFlight invite: each release uploads itself to TestFlight
-> once the server owner has set it up ([how](../../docs/releasing.md#iphone-app-on-testflight)).
-> Otherwise you can build it yourself with the quick start below.
+> **Just want the app?** [Install the phone apps](../../docs/install-phone-apps.md#iphone)
+> covers TestFlight, AltStore PAL in the EU and SideStore everywhere else,
+> step by step. Or build it yourself with the quick start below.
 
 ## Quick start
 
@@ -256,6 +255,17 @@ A phone build never keeps the key outside the Keychain.
 With a free developer account, remove the App Groups capability from both
 targets. The app still connects, but the Share Extension can't see the
 connection.
+
+SideStore and AltStore can make App Groups on a free account, but they rename
+the group to `group.<prefix>.<TEAMID>` when they sign the app. `AppGroup.id`
+uses the declared group when it works, and otherwise the signed group that
+starts with it (from AltStore's `ALTAppGroups` or the embedded provisioning
+profile), so the app and the extension still meet. Every release attaches
+`adhx-<version>.ipa` for them (`.github/workflows/ios-sideload.yml`, bundle id
+`com.adhx.share`). To make one yourself, run `Config/make-sideload-ipa.sh`: an
+unsigned Release build, signed locally with the App Group entitlement so the
+sideloading app knows to make the group. CI builds it on every app PR.
+Installing it is in [Install the phone apps](../../docs/install-phone-apps.md#iphone-everywhere-else).
 
 ## When your ADHX can't be reached
 
