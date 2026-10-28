@@ -1,0 +1,24 @@
+#cloud-config
+# ADHX on a new server, with nothing to do once it boots.
+#
+# Paste this whole file into the "User data" or "Cloud config" box when you
+# create the server (Hetzner, DigitalOcean, Vultr, Linode and most others
+# have one). Choose Ubuntu or Debian, at least 2 GB of memory (4 GB is
+# comfortable) and disk for your media: 1,000 mixed saves come to 10-30 GB.
+#
+# Fill in the two lines under `content:` first:
+#   ADHX_DOMAIN  your domain, with a DNS record pointing at the server, for
+#                HTTPS. Leave it empty for http://<server address>:3000.
+#   SETUP_CODE   any phrase you like. You type it once, on the first screen,
+#                to become the owner. Leave it empty and one is made for you:
+#                read it with `ssh root@<server> cat /opt/adhx/setup.txt`.
+#
+# A few minutes after the server starts, open your address.
+write_files:
+  - path: /opt/adhx/.env
+    permissions: '0600'
+    content: |
+      ADHX_DOMAIN=
+      SETUP_CODE=
+runcmd:
+  - curl -fsSL https://raw.githubusercontent.com/itsmemeworks/adhx/main/deploy/install.sh | sh

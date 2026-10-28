@@ -1,0 +1,32 @@
+# ADHX as a CapRover one-click app. In CapRover: Apps → One-Click Apps/Databases,
+# choose ">> TEMPLATE <<" at the bottom of the list, paste this file and deploy.
+captainVersion: 4
+services:
+  $$cap_appname:
+    image: ghcr.io/itsmemeworks/adhx:latest
+    restart: unless-stopped
+    volumes:
+      - $$cap_appname-data:/data
+    environment:
+      SETUP_CODE: $$cap_setup_code
+    caproverExtra:
+      containerHttpPort: '3000'
+caproverOneClickApp:
+  variables:
+    - id: $$cap_setup_code
+      label: Setup code
+      defaultValue: $$cap_gen_random_hex(12)
+      description: You type this once, on the first screen, to become the owner.
+  instructions:
+    start: |-
+      ADHX keeps the posts you and your friends love from X, Instagram, TikTok,
+      YouTube and ten more networks, and finds any of them by describing what
+      you remember. It needs about 2 GB of memory, and disk for your media.
+    end: |-
+      ADHX is starting. Turn on HTTPS under the app's HTTP Settings, then open
+      https://$$cap_appname.$$cap_root_domain and enter the setup code
+      $$cap_setup_code to make it yours.
+  displayName: ADHX
+  isOfficial: false
+  description: Save the posts your friends love and find them by meaning.
+  documentation: https://github.com/itsmemeworks/adhx#run-your-own

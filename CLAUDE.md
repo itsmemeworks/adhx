@@ -357,13 +357,17 @@ Short notes on what is easy to get wrong. Each links to the full description.
   database on first start. Never read the env var directly.
 - **One-click setup.** A fresh install needs no settings. `appUrl()`
   (`src/lib/routes/app-url.ts`) is the only source of this ADHX's address:
-  the env, else the host's own (Render, Railway, Fly, Coolify), else the
+  the env, else the host's own (Render, Railway, Fly, Coolify, Zeabur), else the
   address remembered at setup, else localhost. Production without email holds
   links for the admin by default. With no users, `/` and `/start` open
   `/setup`; while there's no admin, the migration logs a setup link, and its
   code (`SETUP_CODE`, else derived from the secret) lets `POST /api/setup`
   make the holder the owner. Install recipes: `deploy/` and `render.yaml`;
   `scripts/container-smoke.sh` runs a nothing-configured install.
+  `deploy/install.sh` is the one-command server install (`cloud-init.yaml`
+  runs it at first boot); `install-recipes.yml` runs it on a fresh runner and
+  `scripts/check-install-templates.rb` keeps the Portainer, CapRover, Zeabur
+  and Render templates in line with the app.
 - OAuth tokens are AES-256-GCM encrypted at rest
   (`src/lib/auth/token-encryption.ts`).
 
@@ -551,6 +555,7 @@ PARITY_DEMO=1`) daily. Never add a demo write path to the app itself.
 | `ci.yml`              | Pull requests                 | Format, lint, typecheck, tests, e2e, build, extension, container smoke, site, audit.     |
 | `native.yml`          | Pull requests                 | Android and iOS builds and tests.                                                        |
 | `pr-title.yml`        | Pull requests                 | Conventional Commit PR title.                                                            |
+| `install-recipes.yml` | Pull requests to `deploy/`    | Runs the server installer on a fresh runner and checks the one-click templates.          |
 | `codeql.yml`          | Pull requests, weekly         | Code scanning.                                                                           |
 | `release-please.yml`  | Push to `main`                | Opens the release PR; on release, publishes the image, Android APK and TestFlight build. |
 | `image-publish.yml`   | Called by release, or by hand | AMD64 and ARM64 images to `ghcr.io/itsmemeworks/adhx`.                                   |
