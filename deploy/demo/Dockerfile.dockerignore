@@ -1,0 +1,7 @@
+# Only what the demo adds to the published image (BuildKit reads this next to
+# deploy/demo/Dockerfile; fly.toml names it as its ignorefile).
+*
+!e2e/parity
+e2e/parity/.out
+!site/public/media
+!deploy/demo

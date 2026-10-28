@@ -64,7 +64,12 @@ export async function getSession(): Promise<Session | null> {
  */
 async function sessionAccount(): Promise<{ userId: string; approval: Approval } | null> {
   const session = await getSession()
-  if (!session?.userId) return null
+  if (!session?.userId) {
+    // The public demo: everyone without a session is its demo person.
+    const { demoVisitorId } = await import('@/lib/demo/visitor')
+    const visitor = demoVisitorId()
+    return visitor ? { userId: visitor, approval: 'approved' } : null
+  }
   const approval = await accountApproval(session.userId)
   if (!approval) return null
   const { readUserBan } = await import('@/lib/admin/moderation')
