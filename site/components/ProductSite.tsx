@@ -5,23 +5,11 @@ import { Gob } from './Gob'
 import { NetworkIcon } from './NetworkIcon'
 import { ALL_PLATFORMS, networkLabel } from './networks'
 import { Face, type PersonId } from './People'
-import { PhoneFrame, PlayerScreen, ShareCardScreen, WebFrame, u } from './frames'
 import { Arrow, Check, Chat, Download, GitHubMark, Menu } from './icons'
 import { NavMenu } from './NavMenu'
 import { Credit, PostMedia, creditedPosts } from './Post'
-import {
-  ChannelsMock,
-  FacesMock,
-  InvitesMock,
-  LiveMock,
-  Mock,
-  NewMock,
-  SearchMock,
-  StepFeed,
-  StepKeep,
-  StepShare,
-  VaultMock,
-} from './mocks'
+import { PhonePair, PhoneShot, WebShot } from './Shots'
+import { Mock, StepFeed, StepKeep, StepShare } from './mocks'
 
 /**
  * adhx.com: the product site (static, on GitHub Pages). What ADHX does, shown
@@ -183,15 +171,21 @@ export function Header({ home = '' }: { home?: string }) {
 function HeroComposition() {
   return (
     <Mock
-      label="ADHX on a laptop, playing a video you, Ana and two others saved: a pixel-art cat whose belly is a toy piano, from the game Offbeat, posted on X by @nexindie. Next to it, ADHX on a phone playing a video Ana and Ben saved (Ana's face, +1, on the bottom row), a copper ribbon of sound twisting in 3D from Aurora, posted on X by @joecroskey, with reactions floating up from Jo, Ben and Ana, and a note that Mum just saved the RC808 drum synth photos by @XWAVEart."
+      label="ADHX on a laptop: Home, playing a video Ana sent you, a pixel-art cat whose belly is a toy piano, from the game Offbeat, posted on X by @nexindie, with Up next and the New, Everyone, Friends and Mine switch beside it. Next to it, ADHX on an iPhone playing Aurora, a copper ribbon of sound twisting in 3D, posted on X by @joecroskey, with reactions floating up from Jo, Ben and Ana, and a note that Mum just saved the RC808 drum synth photos by @XWAVEart."
       className="mx-auto w-full max-w-[740px]"
     >
       <div className="relative aspect-[358/300] md:aspect-[740/488]">
         <div className="pointer-events-none absolute -left-[10%] top-[40%] h-[120%] w-[130%] rounded-full bg-[radial-gradient(rgba(255,210,63,0.13),rgba(255,210,63,0)_62%)] md:left-[20%] md:top-[30%] md:w-[110%]" />
-        <WebFrame className="absolute left-0 top-[6.7%] w-[67%] md:top-[7.4%] md:w-[83.8%]" />
-        <PhoneFrame className="absolute left-[64%] top-0 w-[36%] md:left-[68.6%] md:w-[31.4%]">
-          <PlayerScreen post="aurora" savers={['ana', 'ben']} newCount={12} count="2 of 6" saved />
-        </PhoneFrame>
+        <WebShot
+          src="web-home"
+          alt=""
+          className="absolute left-0 top-[6.7%] w-[67%] md:top-[7.4%] md:w-[83.8%]"
+        />
+        <PhoneShot
+          src="iphone-home"
+          alt=""
+          className="absolute left-[64%] top-0 w-[36%] md:left-[68.6%] md:w-[31.4%]"
+        />
         <div className="absolute left-[40%] top-[47%] flex flex-col items-start gap-2 md:left-[70.6%] md:top-[36%] md:gap-2.5">
           <Reaction who="jo" text="who sent this" className="hidden opacity-40 md:inline-flex" />
           <Reaction who="ben" text="again" className="opacity-60" delay={700} />
@@ -271,13 +265,6 @@ function Hero() {
                 </li>
               ))}
             </ul>
-            <a
-              href="/adhx-reel.mp4"
-              download
-              className="self-center text-[14px] font-bold text-nx-soft underline underline-offset-4 hover:text-white md:self-start"
-            >
-              Download the 30-second tour (MP4)
-            </a>
           </div>
           <div className="min-w-0 flex-1 lg:pt-0">
             <HeroComposition />
@@ -516,7 +503,16 @@ function Features() {
             why it’s next.
           </p>
         }
-        mock={<NewMock />}
+        mock={
+          <PhonePair
+            shots={[
+              {
+                src: 'iphone-up-next',
+                alt: 'ADHX on iPhone: Up next over Home. Just saved first, in the order it will play, each with whose save it is: Color palette inspiration, Aurora, the Audio-to-MIDI model playing now, Sound Lab, a synth that becomes whatever you type.',
+              },
+            ]}
+          />
+        }
       >
         <p className="m-0">
           Home starts playing the moment you open the app, in an order you can predict: what your
@@ -524,6 +520,10 @@ function Features() {
           then For you, more like what you keep. Every post says why it’s next, and Up next shows
           the whole lineup. Videos and photos by default; text posts and articles when you want
           them. No algorithm guessing, no endless scroll.
+        </p>
+        <p className="m-0">
+          Just want the latest? Switch Home to Everyone, Friends or Mine: the newest saves first,
+          seen or not.
         </p>
       </Feature>
 
@@ -538,7 +538,16 @@ function Features() {
             <span> to keep one to yourself.</span>
           </p>
         }
-        mock={<FacesMock />}
+        mock={
+          <PhonePair
+            shots={[
+              {
+                src: 'android-share',
+                alt: 'The ADHX share card on Android: Saved for your people, kept a copy at 600p. Jo, Ben, Ana and Mum will see it, a note field, and the Just for me switch, off.',
+              },
+            ]}
+          />
+        }
         flip
         dark
       >
@@ -567,7 +576,16 @@ function Features() {
             </p>
           </>
         }
-        mock={<VaultMock />}
+        mock={
+          <PhonePair
+            shots={[
+              {
+                src: 'iphone-send',
+                alt: 'Sending from ADHX on iPhone: the video itself, 540p, 219 KB, not a link that dies next month. Send via WhatsApp, Copy, Files, Save to Photos, or straight to Pete, Jo, Ben or Mum.',
+              },
+            ]}
+          />
+        }
       >
         <p className="m-0">
           ADHX keeps a real copy of every save, in the best quality the network offers, and plays it
@@ -589,7 +607,12 @@ function Features() {
             the adhx skill.
           </p>
         }
-        mock={<SearchMock />}
+        mock={
+          <WebShot
+            src="web-search"
+            alt="ADHX search on the web for colour palettes for a website: two strong matches, the best one playing, a colour palette inspiration site posted on X by @AdhamDannaway, saved by Jo and Mum."
+          />
+        }
         flip
         dark
       >
@@ -620,7 +643,12 @@ function Features() {
             what’s new to you on top.
           </p>
         }
-        mock={<ChannelsMock />}
+        mock={
+          <WebShot
+            src="web-channels"
+            alt="ADHX Channels on the web: From everyone (Synths you can play, Pixel-art games, Plugins worth a look, Colour and type), Your people (Jo, Ben, Ana and Mum’s saves, with how many are new) and Made for you."
+          />
+        }
       >
         <p className="m-0">
           ADHX sorts everyone’s saves into channels by what they’re about, and names them. Every
@@ -643,7 +671,16 @@ function Features() {
             See who’s watching with you, who saved the next one, and every “ha” as it floats past.
           </p>
         }
-        mock={<LiveMock />}
+        mock={
+          <PhonePair
+            shots={[
+              {
+                src: 'iphone-live',
+                alt: 'Tuned in to a Live moment on iPhone: LIVE, Pete watching with you, and Pete’s reaction, who sent this, floating up over a pixel-art game.',
+              },
+            ]}
+          />
+        }
         flip
         dark
       >
@@ -663,7 +700,16 @@ function Features() {
             It signs a friend in and pairs their phone in one go. Approve who joins, if you like.
           </p>
         }
-        mock={<InvitesMock />}
+        mock={
+          <PhonePair
+            shots={[
+              {
+                src: 'iphone-connected',
+                alt: 'ADHX on iPhone just after joining: This phone is connected. Connected to Pete’s ADHX, with you, Pete, Jo, Ben and one other, what your people saved this week, and Start watching.',
+              },
+            ]}
+          />
+        }
       >
         <p className="m-0">
           Send a friend one link. It signs them in and pairs their phone in the same go. It works
@@ -715,6 +761,7 @@ function Apps() {
             {[
               'Save from any app’s share button',
               'The full-screen player, one after another',
+              'Send a post straight to a friend’s Home',
               'Home · Channels · Live, a tap apart',
             ].map((t) => (
               <li key={t} className="flex items-center gap-2.5 text-[16px] font-semibold">
@@ -737,31 +784,18 @@ function Apps() {
             </p>
           </div>
         </div>
-        <Mock
-          label="Two phones: the ADHX share card keeping a copy of four X photos from the film Sorcerer, posted by @CinemaTweets1, 40 percent done, shared with your people with Just for me off; and Home playing a video Mum sent you: a colourful piano roll transcribed by MuScriptor, posted on X by @kyutai_labs."
-          className="mx-auto w-full max-w-[620px]"
-        >
-          <div className="flex items-center justify-center gap-3.5 py-2 md:gap-10 md:py-6">
-            <PhoneFrame className="w-[42%] max-w-[246px] md:-translate-y-3.5">
-              <ShareCardScreen />
-            </PhoneFrame>
-            <PhoneFrame className="w-[42%] max-w-[246px] md:translate-y-3.5">
-              <PlayerScreen
-                post="muscriptor"
-                savers={['mum']}
-                newCount={8}
-                count="1 of 8"
-                progress={0.28}
-                reason={
-                  <>
-                    <Face who="mum" size={u(24)} />
-                    <span>Mum sent you this</span>
-                  </>
-                }
-              />
-            </PhoneFrame>
-          </div>
-        </Mock>
+        <PhonePair
+          shots={[
+            {
+              src: 'android-home',
+              alt: 'ADHX on Android: Home playing a video Mum saved, a pixel-art cat whose belly is a toy piano, from the game Offbeat, posted on X by @nexindie. Just saved, Not seen yet and For you along the top.',
+            },
+            {
+              src: 'iphone-send',
+              alt: 'Sending from ADHX on iPhone: the video itself, 540p, 219 KB. Send via WhatsApp, Copy, Files, Save to Photos, or straight to Pete, Jo, Ben or Mum.',
+            },
+          ]}
+        />
       </div>
     </section>
   )

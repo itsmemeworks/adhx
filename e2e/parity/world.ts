@@ -8,6 +8,8 @@
  * descriptions, never copied captions. Times are minutes before seeding.
  */
 
+import { renameChannels, reskin, showcaseEnabled } from './showcase'
+
 export type PersonKey = 'pete' | 'ana' | 'ben' | 'mum' | 'jo'
 
 export interface Person {
@@ -186,7 +188,7 @@ const copyVideo = (platform: string, id: string): MediaSpec[] => [
   { slot: 'poster', copy: src(platform, id, 'poster.jpg') },
 ]
 
-export const POSTS: WorldPost[] = [
+const WORLD_POSTS: WorldPost[] = [
   {
     key: 'zoo',
     platform: 'youtube',
@@ -606,6 +608,9 @@ export const POSTS: WorldPost[] = [
   },
 ]
 
+/** The posts; in showcase mode each wears a post credited on adhx.com (showcase.ts). */
+export const POSTS: WorldPost[] = showcaseEnabled() ? reskin(WORLD_POSTS) : WORLD_POSTS
+
 export const post = (key: string): WorldPost => {
   const found = POSTS.find((p) => p.key === key)
   if (!found) throw new Error(`No world post ${key}`)
@@ -666,7 +671,7 @@ export const GROUP_CHANNELS: Array<{
   /** Who saves this channel's filler posts. */
   fillBy: PersonKey[]
   topic: Topic
-}> = [
+}> = renameChannels([
   {
     slug: 'cats-with-opinions',
     name: 'Cats with opinions',
@@ -699,7 +704,7 @@ export const GROUP_CHANNELS: Array<{
     fillBy: ['ana', 'ben', 'jo', 'pete'],
     topic: 'babies',
   },
-]
+])
 
 /** Pete's "Made for you" (board 6.1), stored directly for the same reason. */
 export const MADE_FOR_PETE: Array<{
@@ -708,7 +713,7 @@ export const MADE_FOR_PETE: Array<{
   heroes: string[]
   fill: number
   topic: Topic
-}> = [
+}> = renameChannels([
   {
     slug: 'space-mostly-control-rooms',
     name: 'Space, mostly control rooms',
@@ -737,7 +742,7 @@ export const MADE_FOR_PETE: Array<{
     fill: 6,
     topic: 'work',
   },
-]
+])
 
 /**
  * Pictures filler posts borrow (a hero post's kept still, by topic), so

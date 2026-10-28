@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-28 — adhx.com shows the real apps
+
+- Owner: update the site with the latest web and phone app shots and drop the "Download the 30-second tour (MP4)" link; the promo film goes in the README.
+- `PARITY_SHOWCASE=1` re-skins the parity world with the site's credited posts (`e2e/parity/showcase.ts`), names channels to fit and skips the boards' in-flight jobs. Ten shots (web, iPhone 16 Pro, Galaxy A13) are in `site/public/shots`.
+- The hero, every feature and the apps section now show those shots (`site/components/Shots.tsx`); the drawn feature mock-ups and unused frames are gone. Home's copy mentions the Everyone, Friends and Mine switch; the apps list, sending to a friend.
+- Moment naming no longer picks prepositions ("Across") as a moment's name.
+- README: the promo film (exported, re-encoded to 8.3 MB at 720p30 for GitHub's 10 MB limit) plays inline at the top as a user-attachments video; the web screenshot moved into More screenshots. The site is not published.
+
 ## 2026-10-28 — Android Connect: the button and the other ways in, both in view
 
 - Fix 9 (PR 639) hid "Use a pairing code instead" while the keyboard was up; a fresh install opens Connect with the keyboard up, so pairing by code was hidden at first sight.

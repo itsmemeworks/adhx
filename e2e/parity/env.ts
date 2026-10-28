@@ -40,6 +40,8 @@ export const PARITY_REF_DIR = process.env.PARITY_REF_DIR || '/private/tmp/claude
 
 /** Where the real kept media for the boards' posts lives. Missing → placeholders. */
 export function parityMediaSource(): string | null {
+  // Showcase mode: the credited posts from site/public/media (showcase.ts).
+  if (process.env.PARITY_SHOWCASE === '1') return path.join(PARITY_OUT, 'showcase-media')
   const raw = process.env.PARITY_MEDIA_SRC
   return raw ? path.resolve(raw) : null
 }

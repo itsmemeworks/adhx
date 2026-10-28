@@ -12,9 +12,7 @@ Each of you saves the good stuff from whatever app you're in. ADHX downloads a r
 
 No ads. No strangers. No engagement metrics. Nobody in a growth meeting deciding what you see. One Docker container, one folder of data, and an invite list for the people you'd actually let in your house.
 
-<p align="center">
-  <img src="docs/images/web-new.jpg" alt="The ADHX web app playing New: a video fills the centre with a friend's note, 'making this Sunday', the faces of who saved it, and a column of buttons (react, save, send, download, the network's logo, more). A list of what's up next runs down the left." width="820" />
-</p>
+https://github.com/user-attachments/assets/56130b2a-1e79-4d70-85e9-177de0efdb91
 
 ## Contents
 
@@ -58,6 +56,10 @@ No ads. No strangers. No engagement metrics. Nobody in a growth meeting deciding
 
 <details>
 <summary>More screenshots</summary>
+
+<p align="center">
+  <img src="docs/images/web-new.jpg" alt="The ADHX web app playing New: a video fills the centre with a friend's note, 'making this Sunday', the faces of who saved it, and a column of buttons (react, save, send, download, the network's logo, more). A list of what's up next runs down the left." width="820" />
+</p>
 
 | Right now                                                                                                                                                                                  | Channels                                                                                                                                                    | Search                                                                                                                                                 |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
