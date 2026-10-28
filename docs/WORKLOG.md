@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-28 — Accept the unfixable deepmerge advisory on its one path
+
+- The dependency audit started failing every branch on GHSA-gcqx-w48m-w2h4 (low, `deepmerge` prototype poisoning). No release fixes it, and it arrives in production through `react-email` → `@react-email/render` → `html-to-text`, which `render` imports at the top, so it can't be dropped.
+- `html-to-text` only merges its own options for the plain-text sign-in emails, so no request data reaches the flaw. Owner chose a narrow exception.
+- `check-dependencies.mjs` now keeps its exceptions in one `EXCEPTIONS` list. The deepmerge one applies only on that exact path, only while no fix exists, and until 31 Dec 2026. Tests cover another path, no paths, a released fix and expiry.
+- Follow-up: drop it when deepmerge or html-to-text ships a fix, or when react-email stops depending on it.
+
 ## 2026-10-27 — Home's filters play the latest; For you stops repeating its opener
 
 - Owner: after sharing a few things they wanted everyone's (or their own) latest posts, and Home kept opening on the same video.
