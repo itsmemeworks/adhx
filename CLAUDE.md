@@ -485,6 +485,14 @@ Short notes on what is easy to get wrong. Each links to the full description.
   in one transaction. Banning writes `user_bans`; the account's sessions,
   phone keys and invites stop working.
 
+### The public demo
+
+`DEMO_MODE=1` (`src/lib/demo/`) makes every visitor without a session the
+demo person (`DEMO_USER`, default `sam`) and shows `DemoBar`. It is never
+the only guard: `deploy/demo/gate.ts` refuses every change before the app
+sees it. `deploy/demo/start.sh` reseeds the showcase world (`PARITY_SHOWCASE=1
+PARITY_DEMO=1`) daily. Never add a demo write path to the app itself.
+
 ## Environment variables
 
 [`.env.example`](.env.example) lists every variable with a comment; copy it to

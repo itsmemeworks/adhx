@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-28 — A public read-only demo at demo.adhx.com
+
+- Owner: a hosted example so people can try ADHX before installing, on Fly at demo.adhx.com, led by someone other than Pete.
+- `deploy/demo`: the ADHX image plus the showcase world (credited posts, renamed lead Sam via `PARITY_DEMO=1`), reseeded at every start and every 24 hours by `start.sh`. `gate.ts` in front of the app refuses every non-GET and the GETs that start X sign-in or sync; network fetches point at a dead origin, so the demo can't download anyone's videos.
+- `DEMO_MODE=1` (`src/lib/demo/`): visitors without a session are the demo person; `DemoBar` shows a pill and, only after your own tap, a "saving is off" note.
+- Search is words only in the demo (no models); real vectors for search by meaning are a follow-up.
+- Links: README top and the adhx.com hero (site not republished).
+
 ## 2026-10-28 — One-click installs: ADHX sets itself up
 
 - Owner: make installing as quick as possible, one-click on Docker hosts and elsewhere, plus a hosted demo (the demo is a separate PR).

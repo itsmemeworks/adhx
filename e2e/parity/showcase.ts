@@ -30,7 +30,10 @@ interface Credit {
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '../..')
 const SITE_MEDIA = path.join(ROOT, 'site/public/media')
-export const SHOWCASE_MEDIA = path.join(HERE, '.out', 'showcase-media')
+export const SHOWCASE_MEDIA = path.join(
+  process.env.PARITY_OUT_DIR || path.join(HERE, '.out'),
+  'showcase-media',
+)
 
 export const showcaseEnabled = () => process.env.PARITY_SHOWCASE === '1'
 
@@ -115,4 +118,19 @@ const NAMES: Record<string, string> = {
 export function renameChannels<T extends { slug: string; name: string }>(list: T[]): T[] {
   if (!showcaseEnabled()) return list
   return list.map((c) => ({ ...c, name: NAMES[c.slug] ?? c.name }))
+}
+
+/**
+ * The public demo (`PARITY_DEMO=1`) is led by Sam, not Pete: Pete is a real
+ * person. The key stays `pete`, so the world's story is unchanged.
+ */
+export function demoLead<
+  T extends { key: string; id: string; username: string; displayName: string; phones: string[] },
+>(people: T[]): T[] {
+  if (process.env.PARITY_DEMO !== '1') return people
+  return people.map((p) =>
+    p.key === 'pete'
+      ? { ...p, id: 'u_parity_sam', username: 'sam', displayName: 'Sam', phones: ["Sam's iPhone"] }
+      : p,
+  )
 }

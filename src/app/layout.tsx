@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
 import { AppShell } from '@/components/AppShell'
+import { DemoBar } from '@/components/next/demo/DemoBar'
+import { demoMode } from '@/lib/demo/mode'
 import { jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 import { getCurrentUserId } from '@/lib/auth/session'
@@ -232,6 +234,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         className={`${ibmPlex.variable} ${inter.variable} ${lexend.variable} ${atkinson.variable} ${indieFlower.variable} ${newsreader.variable} ${robotoMono.variable} ${instrumentSerif.variable} ${hankenGrotesk.variable}`}
       >
         <AppShell serverAccountId={serverAccountId}>{children}</AppShell>
+        {demoMode() && <DemoBar />}
       </body>
     </html>
   )
