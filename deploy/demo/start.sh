@@ -18,7 +18,8 @@ export FXTWITTER_API_BASE=http://127.0.0.1:9 INSTAGRAM_OG_BASE=http://127.0.0.1:
 tsx=./node_modules/.bin/tsx
 # PID 1 in the container: take the gate, the app and the timer down with it.
 trap 'kill 0; exit 0' INT TERM
-PORT="${PORT:-8080}" APP_PORT="$APP_PORT" "$tsx" deploy/demo/gate.ts &
+# The image sets PORT=3000 for the app; the gate has its own.
+PORT="${GATE_PORT:-8080}" APP_PORT="$APP_PORT" "$tsx" deploy/demo/gate.ts &
 
 while true; do
   rm -rf "$PARITY_OUT_DIR" && mkdir -p "$PARITY_OUT_DIR"
