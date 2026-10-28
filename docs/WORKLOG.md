@@ -14,6 +14,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Moment naming no longer picks prepositions ("Across") as a moment's name.
 - README: the promo film (exported, re-encoded to 8.3 MB at 720p30 for GitHub's 10 MB limit) plays inline at the top as a user-attachments video; the web screenshot moved into More screenshots. The site is not published.
 
+## 2026-10-28 — Android Connect: the button and the other ways in, both in view
+
+- Fix 9 (PR 639) hid "Use a pairing code instead" while the keyboard was up; a fresh install opens Connect with the keyboard up, so pairing by code was hidden at first sight.
+- The other ways in stay pinned again; each form's main button (Email me a code, Sign in, Connect) scrolls into view once the keyboard has slid in (`inViewAboveKeyboard`, `ConnectScreen.kt`).
+- Checked on the Galaxy A13: email and type-the-code forms with the keyboard up, then a real pairing.
+
 ## 2026-10-28 — Attach a sideloadable iPhone IPA to every release
 
 - New `.github/workflows/ios-sideload.yml`, called by Release Please (and by hand): builds `adhx-<version>.ipa` at the tag with `make-sideload-ipa.sh`, bundle id `com.adhx.share` like Android. It checks the signature, version and App Group entitlement, then attaches it with a SHA-256. No secrets.
