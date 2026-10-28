@@ -291,6 +291,30 @@ describe('API: /api/auth/email/*', () => {
       try {
         const response = await POST(confirmRequest(`/api/auth/email/callback?token=${token}`))
         const cookie = response.headers.getSetCookie().join(';')
+        for (const flag of ['HttpOnly', 'SameSite=lax', 'Path=/']) expect(cookie).toContain(flag)
+        // Over plain HTTP (localhost, a home server by IP) a Secure cookie is dropped.
+        expect(cookie).not.toContain('Secure')
+      } finally {
+        vi.unstubAllEnvs()
+      }
+    })
+
+    it('marks the session cookie Secure when this ADHX is on HTTPS', async () => {
+      const token = await requestToken('https@example.com')
+      const { POST } = await import('@/app/api/auth/email/callback/route')
+      vi.stubEnv('NODE_ENV', 'production')
+      vi.stubEnv('SESSION_SECRET', 'isolated-production-cookie-test')
+      vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://adhx.example.com')
+      try {
+        const request = new NextRequest('https://adhx.example.com/api/auth/email/callback', {
+          method: 'POST',
+          headers: {
+            Origin: 'https://adhx.example.com',
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({ token }),
+        })
+        const cookie = (await POST(request)).headers.getSetCookie().join(';')
         for (const flag of ['HttpOnly', 'Secure', 'SameSite=lax', 'Path=/'])
           expect(cookie).toContain(flag)
       } finally {

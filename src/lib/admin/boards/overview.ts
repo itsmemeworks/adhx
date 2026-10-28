@@ -19,6 +19,7 @@ import {
   type Face,
   type PostCard,
 } from '../shared'
+import { appUrl } from '@/lib/routes/app-url'
 
 /**
  * Admin → Overview (board 10.1). Counts include Just for me saves; "Most
@@ -65,8 +66,7 @@ export interface OverviewBoard {
 export function serverInfo(): ServerInfo {
   let name = 'adhx'
   try {
-    const url = process.env.NEXT_PUBLIC_APP_URL
-    if (url) name = new URL(url).hostname
+    name = new URL(appUrl()).hostname
   } catch {
     // Keep the default.
   }

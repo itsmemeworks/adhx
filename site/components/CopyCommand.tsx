@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import { Check, Copy } from 'lucide-react'
 
 /** Commands that start a line, picked out in the accent colour. */
-const COMMAND = /^(git clone|docker build|docker compose)\b/
+const COMMAND = /^(git clone|docker build|docker compose|docker run|docker logs)\b/
 
 /** One line of shell: comments muted, the leading command in yellow. */
 function Line({ line }: { line: string }) {

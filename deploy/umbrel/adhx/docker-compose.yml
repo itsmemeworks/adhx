@@ -1,0 +1,21 @@
+# Umbrel app store entry, ready to copy into a getumbrel/umbrel-apps PR.
+# Before submitting: pin `image` to a release's tag@digest (one made after
+# one-click setup landed) and set the same version in umbrel-app.yml.
+version: '3.7'
+
+services:
+  app_proxy:
+    environment:
+      APP_HOST: adhx_web_1
+      APP_PORT: 3000
+      # ADHX has its own accounts; Umbrel's sign-in would block the phone apps.
+      PROXY_AUTH_ADD: 'false'
+
+  web:
+    image: ghcr.io/itsmemeworks/adhx:latest
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+    environment:
+      SEMANTIC_THREADS: '1'

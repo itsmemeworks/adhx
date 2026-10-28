@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<!--
+  Unraid Community Applications template for ADHX.
+  Until it is listed in Community Applications: Docker → Add Container →
+  Template repositories, or save this file as
+  /boot/config/plugins/dockerMan/templates-user/my-adhx.xml and pick it.
+  Then open the WebUI and make it yours with the setup code from the log.
+-->
+<Container version="2">
+  <Name>adhx</Name>
+  <Repository>ghcr.io/itsmemeworks/adhx:latest</Repository>
+  <Registry>https://github.com/itsmemeworks/adhx/pkgs/container/adhx</Registry>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/itsmemeworks/adhx/issues</Support>
+  <Project>https://github.com/itsmemeworks/adhx</Project>
+  <Overview>Your friends have better taste than the algorithm. A private feed of the best posts from X, Instagram, TikTok, YouTube, Reddit and nine more networks, saved by your friends and family. ADHX keeps a real copy of every post, finds them by what you remember, and sends the actual video to the group chat. First start: open the WebUI and enter the setup code from the container log (docker logs adhx | grep setup). Needs about 2 GB of memory.</Overview>
+  <Category>MediaServer:Video MediaServer:Photos Social:</Category>
+  <WebUI>http://[IP]:[PORT:3000]/</WebUI>
+  <Icon>https://raw.githubusercontent.com/itsmemeworks/adhx/main/public/icon-512.png</Icon>
+  <ExtraParams>--memory=4g</ExtraParams>
+  <Config Name="WebUI port" Target="3000" Default="3000" Mode="tcp" Description="Port for the ADHX web app." Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/adhx" Mode="rw" Description="The database, the search models and every kept file. Put it on a share with room for your media." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/adhx</Config>
+  <Config Name="Address (optional)" Target="APP_URL" Default="" Mode="" Description="How people reach ADHX, e.g. https://adhx.example.com. Leave empty to use the address you set it up from." Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="Setup code (optional)" Target="SETUP_CODE" Default="" Mode="" Description="Choose the code that makes you the owner. Leave empty and read it from the log." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="SMTP URL (optional)" Target="SMTP_URL" Default="" Mode="" Description="Email sign-in links, e.g. smtps://user:pass@mail.example.com:465. Without it, links wait on the admin page for you to pass on." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="From address (optional)" Target="EMAIL_FROM" Default="" Mode="" Description="From address for sign-in emails." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Search threads" Target="SEMANTIC_THREADS" Default="2" Mode="" Description="CPU threads for search by meaning. 1 on a busy NAS." Type="Variable" Display="advanced" Required="false" Mask="false">2</Config>
+</Container>

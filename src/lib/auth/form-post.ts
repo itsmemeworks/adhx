@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server'
+import { appUrl } from '@/lib/routes/app-url'
 
 /**
  * A form posted from one of our own pages: the browser says it came from this
@@ -7,8 +8,7 @@ import type { NextRequest } from 'next/server'
  */
 export function isSameOriginPost(request: NextRequest): boolean {
   return (
-    request.headers.get('origin') ===
-      new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').origin &&
+    request.headers.get('origin') === appUrl() &&
     request.headers.get('sec-fetch-site') !== 'cross-site'
   )
 }

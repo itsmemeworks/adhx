@@ -1,0 +1,37 @@
+# ADHX on any server with a domain, with HTTPS from Caddy. On a fresh VPS
+# with Docker, point a DNS record at it, then:
+#
+#   curl -fsSLO https://raw.githubusercontent.com/itsmemeworks/adhx/main/deploy/vps/docker-compose.yml
+#   ADHX_DOMAIN=adhx.example.com docker compose up -d
+#   docker compose logs adhx | grep setup
+#
+# Open the link it prints. Ports 80 and 443 must reach the server (Caddy gets
+# the certificate). Give the server at least 2 GB of memory; 4 GB is comfortable.
+services:
+  adhx:
+    image: ghcr.io/itsmemeworks/adhx:latest
+    restart: unless-stopped
+    environment:
+      APP_URL: 'https://${ADHX_DOMAIN:?Set ADHX_DOMAIN to your domain}'
+      SETUP_CODE: '${SETUP_CODE:-}'
+      # Caddy replaces X-Forwarded-For with the real visitor address.
+      TRUST_PROXY_IP_HEADERS: 'true'
+    volumes:
+      - adhx_data:/data
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    command: caddy reverse-proxy --from ${ADHX_DOMAIN} --to adhx:3000
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - caddy_data:/data
+    depends_on:
+      - adhx
+
+volumes:
+  adhx_data:
+  caddy_data:

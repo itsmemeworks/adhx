@@ -1,0 +1,24 @@
+# Deploy to Render: https://render.com/deploy?repo=https://github.com/itsmemeworks/adhx
+# Runs the published image with a disk for the database and every kept file.
+# Render sets RENDER_EXTERNAL_URL, so the address needs no setting; the setup
+# code is generated here and shown under the service's Environment tab.
+# Search by meaning needs 2 GB of memory, so this uses the Standard plan.
+services:
+  - type: web
+    name: adhx
+    runtime: image
+    image:
+      url: ghcr.io/itsmemeworks/adhx:latest
+    plan: standard
+    healthCheckPath: /api/health
+    disk:
+      name: adhx-data
+      mountPath: /data
+      sizeGB: 20
+    envVars:
+      - key: SETUP_CODE
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: SEMANTIC_THREADS
+        value: '1'

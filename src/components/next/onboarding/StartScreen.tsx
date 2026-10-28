@@ -33,7 +33,7 @@ const RESEND_SECONDS = 60
  * 24 px corners and 18 px padding (26 and 30 px from md): fields, buttons and
  * panels in it sit at the 8 px floor, and so does what those panels hold.
  */
-function Card({ label, children }: { label: string; children: React.ReactNode }) {
+export function Card({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div
       role="dialog"

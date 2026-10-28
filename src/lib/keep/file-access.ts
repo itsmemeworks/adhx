@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { serverSecret } from '@/lib/auth/server-secret'
 import { sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { visibleSave } from '@/lib/people/savers'
@@ -66,10 +67,7 @@ export function ownsSave(userId: string, platform: string, id: string): boolean 
 }
 
 function secret(): string {
-  const value = process.env.SESSION_SECRET || process.env.TWITTER_CLIENT_SECRET
-  if (value) return value
-  if (process.env.NODE_ENV === 'test') return 'test-secret-for-vitest-only'
-  throw new Error('SESSION_SECRET or TWITTER_CLIENT_SECRET is required to sign file links.')
+  return serverSecret()
 }
 
 /** The post's file token: covers every slot of that one post, never another. */

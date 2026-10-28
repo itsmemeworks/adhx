@@ -4,6 +4,7 @@ import { db, runInTransaction } from '@/lib/db'
 import { invites, userIdentities, usernameAliases, users } from '@/lib/db/schema'
 import { readServerSetting, writeServerSetting } from '@/lib/settings/server'
 import { sanitizeUsername } from './username-rules'
+import { appUrl } from '@/lib/routes/app-url'
 
 /**
  * Invite links: the easy way in. An admin (or, when "Who can invite" allows
@@ -28,7 +29,7 @@ const hash = (token: string) => crypto.createHash('sha256').update(token).digest
 
 /** The join link people open (`/invite/<token>`), on this ADHX's address. */
 export function inviteUrl(token: string): string {
-  const base = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '')
+  const base = appUrl()
   return `${base}/invite/${token}`
 }
 

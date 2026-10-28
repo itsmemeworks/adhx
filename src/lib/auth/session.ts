@@ -2,27 +2,19 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { SignJWT, jwtVerify } from 'jose'
 import { accountApproval, type Approval } from './account-state'
+import { serverSecret } from './server-secret'
+import { appUrl } from '@/lib/routes/app-url'
 
 const SESSION_COOKIE_NAME = 'adhx_session'
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60 // 30 days in seconds
 
-// Get session secret - fails fast if not configured in production
-const getSecretKey = () => {
-  const secret = process.env.SESSION_SECRET || process.env.TWITTER_CLIENT_SECRET
+const getSecretKey = () => new TextEncoder().encode(serverSecret())
 
-  if (!secret) {
-    // Allow missing secret in test environment only
-    if (process.env.NODE_ENV === 'test') {
-      return new TextEncoder().encode('test-secret-for-vitest-only')
-    }
-    throw new Error(
-      'SESSION_SECRET or TWITTER_CLIENT_SECRET environment variable is required. ' +
-        'Set one of these in your .env file to enable secure session handling.',
-    )
-  }
-
-  return new TextEncoder().encode(secret)
-}
+/**
+ * Secure cookies need HTTPS. A home server reached at http://192.168.1.10:3000
+ * (or http://localhost) would otherwise never keep anyone signed in.
+ */
+const secureCookies = () => process.env.NODE_ENV === 'production' && !appUrl().startsWith('http:')
 
 export interface Session {
   userId: string
@@ -117,7 +109,7 @@ export async function setSessionCookie(response: NextResponse, session: Session)
 
   response.cookies.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: secureCookies(),
     sameSite: 'lax',
     maxAge: SESSION_MAX_AGE,
     path: '/',
@@ -159,7 +151,7 @@ export async function renewSessionCookie(response: NextResponse): Promise<boolea
 export function clearSessionCookie(response: NextResponse): void {
   response.cookies.set(SESSION_COOKIE_NAME, '', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: secureCookies(),
     sameSite: 'lax',
     maxAge: 0,
     path: '/',

@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { decodeHtmlEntities } from '@/lib/utils/html-entities'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
+import { appUrl } from '@/lib/routes/app-url'
 
 interface OgTags {
   title: string | null
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Fetch the page HTML
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const baseUrl = appUrl()
     const url = `${baseUrl}${path}`
 
     const response = await fetchWithTimeout(url, 10_000, {

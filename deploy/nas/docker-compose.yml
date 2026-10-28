@@ -6,7 +6,9 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_PATH: '/data/adhx.db'
-      SESSION_SECRET: '${SESSION_SECRET:?Set SESSION_SECRET before starting ADHX}'
+      # Optional: without it ADHX makes one in /data on first start.
+      SESSION_SECRET: '${SESSION_SECRET:-}'
+      SETUP_CODE: '${SETUP_CODE:-}'
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?Set the external HTTPS address}
       ALLOWED_EMAILS: '${ALLOWED_EMAILS:-}'
       EMAIL_LINKS_TO_ADMIN: '${EMAIL_LINKS_TO_ADMIN:-1}'

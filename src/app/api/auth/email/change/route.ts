@@ -7,6 +7,7 @@ import { isValidEmail } from '@/lib/utils/email'
 import { db } from '@/lib/db'
 import { userIdentities } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
+import { appUrl } from '@/lib/routes/app-url'
 
 // POST /api/auth/email/change (authed) - request confirmation for a new
 // email on the current account. Unlike /request, this is authenticated so
@@ -47,7 +48,7 @@ export const POST = withAuth(async (req: NextRequest, userId: string) => {
     userId,
     ttlMs: loginTokenTtlMs(signInDelivery()),
   })
-  const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const base = appUrl()
   const url = new URL('/api/auth/email/callback', base)
   url.searchParams.set('token', token)
 
