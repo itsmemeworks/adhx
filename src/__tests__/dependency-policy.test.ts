@@ -44,4 +44,41 @@ describe('dependency advisory policy', () => {
       rejectedAdvisories({ metadata: { vulnerabilities: { high: -1 } }, advisories: {} }, { now }),
     ).toThrow('severity totals')
   })
+
+  describe('deepmerge through react-email', () => {
+    const path = '.>react-email>@react-email/render>html-to-text>deepmerge'
+    const deepmerge = {
+      module_name: 'deepmerge',
+      github_advisory_id: 'GHSA-gcqx-w48m-w2h4',
+      patched_versions: '<0.0.0',
+      severity: 'low',
+      findings: [{ version: '4.3.1', paths: [path] }],
+    }
+    const low = (value: object) => ({
+      metadata: { vulnerabilities: { info: 0, low: 1, moderate: 0, high: 0, critical: 0 } },
+      advisories: { one: value },
+    })
+
+    it('accepts the unpatched advisory on its one known path, in production too', () => {
+      expect(rejectedAdvisories(low(deepmerge), { now })).toEqual([])
+      expect(rejectedAdvisories(low(deepmerge), { production: true, now })).toEqual([])
+    })
+    it('rejects it on any other path, or with no paths', () => {
+      const elsewhere = {
+        ...deepmerge,
+        findings: [{ version: '4.3.1', paths: [path, '.>other>deepmerge'] }],
+      }
+      expect(rejectedAdvisories(low(elsewhere), { production: true, now })).toHaveLength(1)
+      expect(rejectedAdvisories(low({ ...deepmerge, findings: [] }), { now })).toHaveLength(1)
+      expect(rejectedAdvisories(low({ ...deepmerge, findings: undefined }), { now })).toHaveLength(
+        1,
+      )
+    })
+    it('requires review at expiry, or when a fix is released', () => {
+      expect(rejectedAdvisories(low(deepmerge), { now: new Date('2026-12-31') })).toHaveLength(1)
+      expect(
+        rejectedAdvisories(low({ ...deepmerge, patched_versions: '>=4.3.2' }), { now }),
+      ).toHaveLength(1)
+    })
+  })
 })
