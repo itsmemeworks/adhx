@@ -40,6 +40,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.Icons
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -171,6 +174,20 @@ fun SendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDis
                 .padding(start = 16.dp, end = 16.dp, bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
+            // The board's ×, so the sheet can be closed without knowing to swipe it.
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                Box(
+                    Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(AdhxColors.Raised)
+                        .clickable(onClickLabel = "Close") { close() }
+                        .semantics { contentDescription = "Close" },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Filled.Close, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(18.dp))
+                }
+            }
             Sending(post, server, progress, read, total, done = ready != null)
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Label("SEND VIA")
@@ -326,7 +343,7 @@ private fun Sending(post: PhonePost, server: String, progress: Float?, read: Lon
                     modifier = Modifier.weight(1f),
                 )
                 if (total != null && !done) {
-                    Text("${megabytes(read, unit = false)} of ${megabytes(total)}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.InkFaint)
+                    Text("${megabytes(read, unit = false, scale = total)} of ${megabytes(total)}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.InkFaint)
                 }
             }
             val fraction by animateFloatAsState(if (done) 1f else (progress ?: 0f), label = "send")
@@ -379,8 +396,15 @@ private fun Choice(icon: ImageVector, label: String, waiting: Boolean, onClick: 
     }
 }
 
-/** "12 MB", "9.6 MB" (or without the unit). */
-internal fun megabytes(bytes: Long, unit: Boolean = true): String {
+/**
+ * "12 MB", "9.6 MB", "47 KB" (or without the unit). [scale] picks the unit, so
+ * "12 of 47 KB" counts in the total's unit; under a megabyte it's kilobytes.
+ */
+internal fun megabytes(bytes: Long, unit: Boolean = true, scale: Long = bytes): String {
+    if (scale < 1_000_000) {
+        val kb = maxOf(if (scale == bytes) 1L else 0L, Math.round(bytes / 1000.0))
+        return if (unit) "$kb KB" else "$kb"
+    }
     val mb = bytes / 1_000_000.0
     val n = if (mb >= 10) "%.0f".format(mb) else "%.1f".format(mb).removeSuffix(".0")
     return if (unit) "$n MB" else n

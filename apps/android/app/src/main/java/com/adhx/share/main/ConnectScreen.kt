@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -50,6 +52,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -117,6 +120,9 @@ fun ConnectScreen(vm: MainViewModel) {
         if (mode == ConnectMode.Email) vm.emailBack() else modeName = ConnectMode.Email.name
     }
 
+    // While the keyboard is up the other ways in step aside, so the main button stays in view.
+    val keyboardUp = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+
     Column(
         Modifier
             .fillMaxSize()
@@ -181,7 +187,7 @@ fun ConnectScreen(vm: MainViewModel) {
             }
         }
 
-        Column(
+        if (!keyboardUp) Column(
             Modifier
                 .fillMaxWidth()
                 .padding(top = 16.dp),

@@ -13,6 +13,22 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - `check-dependencies.mjs` now keeps its exceptions in one `EXCEPTIONS` list. The deepmerge one applies only on that exact path, only while no fix exists, and until 31 Dec 2026. Tests cover another path, no paths, a released fix and expiry.
 - Follow-up: drop it when deepmerge or html-to-text ships a fix, or when react-email stops depending on it.
 
+## 2026-10-28 — Device run, part two: the remaining journeys
+
+- Ran the rest of the phone journeys on both devices (send, original post, Up next, whose-saves filter, invites, picture, offline share, rotation, labels, IPv6 reconnect). Rows in `docs/rollout/phone-device-results.md`.
+- Fixed: no × on the Send sheet (both apps); Android saying "0 MB" for files under a megabyte (`SendSizeTest`); iPhone Connect and email fields read by VoiceOver as their placeholder.
+- Driver: XCUITest's wait-for-idle is skipped (a playing video never idles); fields are found by placeholder too, and `clear`/`type` tap a field's end so the cursor follows its text.
+- Then email sign-in on both (the dev server logs the code), Android rotation and Safari share passed; email sign-in found one more: Android's keyboard hid "Email me a code" (the other ways in now step aside).
+- Driver can't open a share extension from the share sheet (the card needs a real tap); `drive.mjs` keeps typed values as text so 6-digit codes survive.
+
+## 2026-10-28 — Drive real phones; first device run fixes five bugs
+
+- Owner connected a test iPhone 16 Pro and a Galaxy A13 and asked for every journey tested on them, with bugs fixed.
+- New `e2e/devices/`: a `DeviceDriver` UI test (own scheme) that takes commands from `hub.mjs`, `ios.sh` to build/run it, and `drive.mjs` for both phones (adb on Android). The parity server gains LAN mode (`PARITY_HOST`, `PARITY_PUBLIC_ORIGIN`) and `pnpm parity:pair <member>`.
+- An iPhone on USB reaches the Mac over the CoreDevice tunnel (`[<tunnel>::2]`); XCUITest element queries stall on live camera/video, so the driver finds elements in snapshots and taps coordinates.
+- Fixed: iOS Home playing under the welcome; iOS/Android videos skipping on while React/Send was open (Android also kept the picker over the next post); iOS IPv6 address display/round trip (`ServerAddressTests`); Android share card repeating its heading. Results: `docs/rollout/phone-device-results.md`.
+- Follow-ups: the remaining acceptance rows (channels, Live, send, original, invites, picture, rotation, offline queue, accessibility).
+
 ## 2026-10-27 — Home's filters play the latest; For you stops repeating its opener
 
 - Owner: after sharing a few things they wanted everyone's (or their own) latest posts, and Home kept opening on the same video.

@@ -252,7 +252,8 @@ private struct TypeAddressForm: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             field(label: "Your ADHX address") {
-                TextField("", text: $address, prompt: Text("adhx.example.com").foregroundColor(Theme.inkFaint))
+                TextField("Your ADHX address", text: $address, prompt: Text("adhx.example.com").foregroundColor(Theme.inkFaint))
+                    .accessibilityLabel("Your ADHX address")
                     .keyboardType(.URL)
                     .textContentType(.URL)
                     .textInputAutocapitalization(.never)
@@ -262,7 +263,8 @@ private struct TypeAddressForm: View {
                     .onSubmit { focus = .code }
             }
             field(label: "Code") {
-                TextField("", text: $code, prompt: Text("ABCD-EFGH").foregroundColor(Theme.inkFaint.opacity(0.55)))
+                TextField("Code", text: $code, prompt: Text("ABCD-EFGH").foregroundColor(Theme.inkFaint.opacity(0.55)))
+                    .accessibilityLabel("Code")
                     .textInputAutocapitalization(.characters)
                     .autocorrectionDisabled()
                     .font(Theme.sans(17, .bold).monospaced())

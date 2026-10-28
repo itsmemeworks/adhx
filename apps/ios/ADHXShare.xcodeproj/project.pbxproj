@@ -18,6 +18,13 @@
 			remoteGlobalIDString = AD0000000000000000000041;
 			remoteInfo = ShareExtension;
 		};
+		AD0000000000000000000063 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AD0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AD0000000000000000000040;
+			remoteInfo = "ADHX Share";
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -37,6 +44,7 @@
 /* Begin PBXFileReference section */
 		AD0000000000000000000020 /* ADHX Share.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ADHX Share.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AD0000000000000000000021 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		AD0000000000000000000022 /* DeviceDriver.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DeviceDriver.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AD0000000000000000000030 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		AD0000000000000000000031 /* App-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "App-Info.plist"; sourceTree = "<group>"; };
 		AD0000000000000000000032 /* ShareExtension-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "ShareExtension-Info.plist"; sourceTree = "<group>"; };
@@ -61,6 +69,11 @@
 			path = Shared;
 			sourceTree = "<group>";
 		};
+		AD0000000000000000000013 /* DeviceDriver */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = DeviceDriver;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -78,6 +91,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AD0000000000000000000059 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -88,6 +108,7 @@
 				AD0000000000000000000010 /* App */,
 				AD0000000000000000000011 /* ShareExtension */,
 				AD0000000000000000000012 /* Shared */,
+				AD0000000000000000000013 /* DeviceDriver */,
 				AD0000000000000000000004 /* Config */,
 				AD0000000000000000000003 /* Products */,
 			);
@@ -98,6 +119,7 @@
 			children = (
 				AD0000000000000000000020 /* ADHX Share.app */,
 				AD0000000000000000000021 /* ShareExtension.appex */,
+				AD0000000000000000000022 /* DeviceDriver.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -166,6 +188,29 @@
 			productReference = AD0000000000000000000021 /* ShareExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		AD0000000000000000000042 /* DeviceDriver */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AD0000000000000000000073 /* Build configuration list for PBXNativeTarget "DeviceDriver" */;
+			buildPhases = (
+				AD0000000000000000000058 /* Sources */,
+				AD0000000000000000000059 /* Frameworks */,
+				AD000000000000000000005A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AD0000000000000000000064 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AD0000000000000000000013 /* DeviceDriver */,
+			);
+			name = DeviceDriver;
+			packageProductDependencies = (
+			);
+			productName = DeviceDriver;
+			productReference = AD0000000000000000000022 /* DeviceDriver.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -181,6 +226,10 @@
 					};
 					AD0000000000000000000041 = {
 						CreatedOnToolsVersion = 27.0;
+					};
+					AD0000000000000000000042 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = AD0000000000000000000040;
 					};
 				};
 			};
@@ -200,6 +249,7 @@
 			targets = (
 				AD0000000000000000000040 /* ADHX Share */,
 				AD0000000000000000000041 /* ShareExtension */,
+				AD0000000000000000000042 /* DeviceDriver */,
 			);
 		};
 /* End PBXProject section */
@@ -213,6 +263,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		AD0000000000000000000056 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AD000000000000000000005A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -260,6 +317,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AD0000000000000000000058 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -267,6 +331,11 @@
 			isa = PBXTargetDependency;
 			target = AD0000000000000000000041 /* ShareExtension */;
 			targetProxy = AD0000000000000000000061 /* PBXContainerItemProxy */;
+		};
+		AD0000000000000000000064 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AD0000000000000000000040 /* ADHX Share */;
+			targetProxy = AD0000000000000000000063 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -426,6 +495,44 @@
 			};
 			name = Release;
 		};
+		AD0000000000000000000086 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "To take test commands from the Mac driving this phone.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ADHX_BUNDLE_PREFIX).DeviceDriver";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = "ADHX Share";
+			};
+			name = Debug;
+		};
+		AD0000000000000000000087 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "To take test commands from the Mac driving this phone.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ADHX_BUNDLE_PREFIX).DeviceDriver";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = "ADHX Share";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -452,6 +559,15 @@
 			buildConfigurations = (
 				AD0000000000000000000084 /* Debug */,
 				AD0000000000000000000085 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AD0000000000000000000073 /* Build configuration list for PBXNativeTarget "DeviceDriver" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AD0000000000000000000086 /* Debug */,
+				AD0000000000000000000087 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
