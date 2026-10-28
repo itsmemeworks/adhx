@@ -22,6 +22,7 @@ final class DeviceDriverTests: XCTestCase {
             throw XCTSkip("Set TEST_RUNNER_ADHX_DRIVER_URL to drive the phone.")
         }
         base = url
+        Self.skipWaitingForIdle()
         continueAfterFailure = true
         executionTimeAllowance = 6 * 60 * 60
         post("/hello", ["device": UIDevice.current.name, "system": UIDevice.current.systemVersion])
@@ -40,6 +41,18 @@ final class DeviceDriverTests: XCTestCase {
                 result = ["ok": false, "error": "\(error)"]
             }
             reply(command, result)
+        }
+    }
+
+    /// XCUITest waits for the app to go idle before every action, up to a
+    /// minute; a playing video never does. Skip that wait, as WebDriverAgent
+    /// does: the driver reads the screen afresh for every step anyway.
+    private static func skipWaitingForIdle() {
+        guard let process = NSClassFromString("XCUIApplicationProcess") else { return }
+        let skip: @convention(block) (AnyObject, Bool, Bool) -> Void = { _, _, _ in }
+        for name in ["waitForQuiescenceIncludingAnimationsIdle:", "waitForQuiescenceIncludingAnimationsIdle:isPreEvent:"] {
+            guard let method = class_getInstanceMethod(process, NSSelectorFromString(name)) else { continue }
+            method_setImplementation(method, imp_implementationWithBlock(skip))
         }
     }
 
@@ -93,17 +106,18 @@ final class DeviceDriverTests: XCTestCase {
         case "type":
             let text = c["text"] as? String ?? ""
             if c["label"] != nil || c["id"] != nil || c["contains"] != nil {
-                center(of: try find(c).frame).tap()
-                Thread.sleep(forTimeInterval: 0.4)
+                end(of: try find(c).frame).tap()
+                Thread.sleep(forTimeInterval: 0.6)
             }
             current.typeText(text)
             return [:]
         case "clear":
             let field = try find(c)
-            center(of: field.frame).tap()
-            Thread.sleep(forTimeInterval: 0.4)
-            let length = field.value?.count ?? 40
-            current.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: max(length, 1)))
+            // Tap the field's end: a tap in the middle lands the cursor inside the text.
+            end(of: field.frame).tap()
+            Thread.sleep(forTimeInterval: 0.6)
+            let length = (field.value as? String)?.count ?? 40
+            current.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: length + 2))
             return [:]
         case "swipe":
             // A drag across the middle of the element (or the screen), by coordinates.
@@ -187,11 +201,13 @@ final class DeviceDriverTests: XCTestCase {
                 var matches: [Found] = []
                 func walk(_ node: XCUIElementSnapshot) {
                     let value = node.value as? String
+                    // A field with no label goes by its placeholder, as `elements` shows it.
+                    let name = node.label.isEmpty ? (node.placeholderValue ?? "") : node.label
                     let hit: Bool
-                    if let label { hit = node.label == label || node.identifier == label }
+                    if let label { hit = name == label || node.identifier == label }
                     else if let id { hit = node.identifier == id }
                     else {
-                        hit = node.label.lowercased().contains(part!) || (value?.lowercased().contains(part!) ?? false)
+                        hit = name.lowercased().contains(part!) || (value?.lowercased().contains(part!) ?? false)
                     }
                     if hit, wanted == nil || typeName(node.elementType) == wanted,
                        node.frame.width > 0, node.frame.height > 0 {
@@ -209,6 +225,11 @@ final class DeviceDriverTests: XCTestCase {
 
     private func center(of frame: CGRect) -> XCUICoordinate {
         point(Double(frame.midX), Double(frame.midY))
+    }
+
+    /// Just inside a field's trailing edge, so the cursor lands after its text.
+    private func end(of frame: CGRect) -> XCUICoordinate {
+        point(Double(frame.maxX - 6), Double(frame.midY))
     }
 
     private func coordinate(_ c: [String: Any]) -> XCUICoordinate? {

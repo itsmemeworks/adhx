@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-28 — Device run, part two: the remaining journeys
+
+- Ran the rest of the phone journeys on both devices (send, original post, Up next, whose-saves filter, invites, picture, offline share, rotation, labels, IPv6 reconnect). Rows in `docs/rollout/phone-device-results.md`.
+- Fixed: no × on the Send sheet (both apps); Android saying "0 MB" for files under a megabyte (`SendSizeTest`); iPhone Connect and email fields read by VoiceOver as their placeholder.
+- Driver: XCUITest's wait-for-idle is skipped (a playing video never idles); fields are found by placeholder too, and `clear`/`type` tap a field's end so the cursor follows its text.
+- Not run: Safari share (ADHX must first be switched on in the share sheet), email sign-in (the test world sends no email), Android rotation.
+
 ## 2026-10-28 — Drive real phones; first device run fixes five bugs
 
 - Owner connected a test iPhone 16 Pro and a Galaxy A13 and asked for every journey tested on them, with bugs fixed.

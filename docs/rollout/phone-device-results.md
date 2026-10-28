@@ -15,18 +15,30 @@ with the fix named. How to drive the phones: [`e2e/devices`](../../e2e/devices/R
 - **Samsung Galaxy A13** (SM-A137F), Android 14, Debug build from this branch,
   as Pete. Reached the server over Wi-Fi. Driven over adb.
 
-| Journey                                                  | Row | iPhone                                          | Android                                  |
-| -------------------------------------------------------- | --- | ----------------------------------------------- | ---------------------------------------- |
-| Pair with a typed code, Connected, Home                  | P01 | Pass after fixes 1 and 4                        | Pass                                     |
-| A removed key on the server                              | P16 | –                                               | Pass: "This phone was removed…"          |
-| Remove this phone (online)                               | P16 | Pass                                            | –                                        |
-| React on a playing post outside Live                     | P19 | Pass after fix 2                                | Pass after fix 3                         |
-| Share a saved post, a non-post and a new one             | P02 | –                                               | Pass after fix 5                         |
-| Search by words                                          | P01 | –                                               | Pass                                     |
-| Channels: From everyone, Your people, a friend's channel | –   | –                                               | Pass                                     |
-| Live: a moment, Tune in                                  | P07 | Pass                                            | Pass                                     |
-| Watch together from both phones (names, a live reaction) | P07 | Pass: "Pete · watching with you"                | Pass: Ana's 🔥 arrived in about a second |
-| Send straight to a friend                                | –   | Pass: Ben's feed leads with "Ana sent you this" | –                                        |
+| Journey                                                  | Row | iPhone                                                                  | Android                                   |
+| -------------------------------------------------------- | --- | ----------------------------------------------------------------------- | ----------------------------------------- |
+| Pair with a typed code, Connected, Home                  | P01 | Pass after fixes 1 and 4                                                | Pass                                      |
+| A removed key on the server                              | P16 | –                                                                       | Pass: "This phone was removed…"           |
+| Remove this phone (online)                               | P16 | Pass                                                                    | –                                         |
+| React on a playing post outside Live                     | P19 | Pass after fix 2                                                        | Pass after fix 3                          |
+| Share a saved post, a non-post and a new one             | P02 | –                                                                       | Pass after fix 5                          |
+| Search by words                                          | P01 | Pass: "zoo" finds the zoo clip                                          | Pass                                      |
+| Channels: From everyone, Your people, a friend's channel | –   | –                                                                       | Pass                                      |
+| Live: a moment, Tune in                                  | P07 | Pass                                                                    | Pass                                      |
+| Watch together from both phones (names, a live reaction) | P07 | Pass: "Pete · watching with you"                                        | Pass: Ana's 🔥 arrived in about a second  |
+| Send straight to a friend                                | –   | Pass: Ben's feed leads with "Ana sent you this"                         | –                                         |
+| Close the Send sheet; its file size                      | –   | Pass after fix 6                                                        | Pass after fixes 6 and 7                  |
+| The original post: Open on X, Copy link                  | –   | Pass: "Link copied"                                                     | Pass                                      |
+| Up next: jump to a post                                  | –   | –                                                                       | Pass                                      |
+| Whose saves: New, Everyone, Friends, Mine                | –   | –                                                                       | Pass: newest first, checked on the server |
+| Invites: make, share, take back                          | –   | –                                                                       | Pass: checked on the server               |
+| Change your picture                                      | –   | Pass: the new face reached Android                                      | Pass                                      |
+| Share while offline, then online                         | P02 | –                                                                       | Pass: queued, then saved                  |
+| Turn the phone                                           | –   | Pass: media goes sideways, Settings stays up                            | Not run (needs the phone turned by hand)  |
+| Labels a screen reader reads                             | –   | Pass after fix 8                                                        | –                                         |
+| Reconnect with an IPv6 address                           | P01 | Pass: Settings shows `[fd87:…::2]:3600`                                 | –                                         |
+| Share from Safari                                        | P02 | Not run: ADHX first has to be switched on under More in the share sheet | –                                         |
+| Sign in with email                                       | –   | Not run: the test world sends no email                                  | Not run                                   |
 
 Bugs found and fixed:
 
@@ -49,6 +61,13 @@ Bugs found and fixed:
 5. **Android: the share card repeated its heading.** "That's not one post"
    (and "Couldn't save this") showed the heading again as the explanation.
    The card now says what to do.
+6. **Both: the Send sheet had no ×.** Only a swipe closed it. Both apps now
+   have the close button the design shows.
+7. **Android: "0 MB" for small files.** The Send sheet rounded anything under
+   a megabyte to 0 MB; it now says KB, like the iPhone. `SendSizeTest` covers it.
+8. **iPhone: unlabelled fields.** VoiceOver read the address, code and email
+   fields by their placeholder ("adhx.example.com"), because their visible
+   labels sit above them. Each field now carries its label.
 
 Noted, not changed: on Android, a share opened over ADHX itself leaves Home
 playing behind the share card; sharing from another app (the usual way) isn't
