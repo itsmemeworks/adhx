@@ -28,6 +28,8 @@ const ADB =
     (p) => p === 'adb' || fs.existsSync(p),
   )
 
+const TEXT_KEYS = new Set(['text', 'label', 'contains', 'id', 'desc', 'into', 'value', 'url'])
+
 function parseArgs(list) {
   const out = {}
   for (const arg of list) {
@@ -39,7 +41,9 @@ function parseArgs(list) {
     const key = arg.slice(0, at)
     const raw = arg.slice(at + 1)
     let value = raw
-    if (/^-?\d+(\.\d+)?$/.test(raw)) value = Number(raw)
+    // What you type or match by is always text: a 6-digit code isn't a number.
+    if (TEXT_KEYS.has(key)) value = raw
+    else if (/^-?\d+(\.\d+)?$/.test(raw)) value = Number(raw)
     else if (raw === 'true' || raw === 'false') value = raw === 'true'
     else if (/^[[{]/.test(raw)) {
       try {
@@ -349,17 +353,16 @@ async function android(op, args) {
         `${PACKAGE}/.share.ShareActivity`,
       )
       return console.log('✓')
-    case 'rotate':
-      adb('shell', 'settings', 'put', 'system', 'accelerometer_rotation', '0')
-      adb(
-        'shell',
-        'settings',
-        'put',
-        'system',
-        'user_rotation',
-        args.to === 'landscape' ? '1' : '0',
-      )
+    case 'rotate': {
+      // Sideways locks the screen turned; portrait gives the phone its auto-rotate back.
+      const sideways = args.to === 'landscape'
+      adb('shell', 'settings', 'put', 'system', 'user_rotation', sideways ? '1' : '0')
+      adb('shell', 'settings', 'put', 'system', 'accelerometer_rotation', sideways ? '0' : '1')
+      // Samsung locks rotation again just after user_rotation changes; set it once more.
+      await sleep(1000)
+      adb('shell', 'settings', 'put', 'system', 'accelerometer_rotation', sideways ? '0' : '1')
       return console.log('✓')
+    }
     case 'wait':
       await sleep((args.seconds ?? 1) * 1000)
       return console.log('✓')

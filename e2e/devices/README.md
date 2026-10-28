@@ -75,4 +75,10 @@ like numbers or `true`/`false` are parsed; `[…]` and `{…}` are JSON.
 
 The iPhone driver finds elements in a snapshot of the screen and taps their
 middle, so a live camera or a playing video never stops it. If it does stop,
-`ios.sh` starts it again.
+`ios.sh` starts it again. A field with no label goes by its placeholder.
+
+Two things need a hand on the phone. On the iPhone, choosing ADHX Share in the
+share sheet from the driver closes the sheet without opening the card; tap it
+yourself, then the driver can read and tap the card. Android's `rotate`
+turns auto-rotate off to hold the screen sideways; `rotate to=portrait` turns
+it back on.
