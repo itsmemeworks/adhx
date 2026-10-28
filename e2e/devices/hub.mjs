@@ -74,8 +74,13 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && url.pathname === '/result') {
     const body = await readBody(req)
     lastSeen = Date.now()
-    waiting.get(body.cid)?.(body)
-    waiting.delete(body.cid)
+    // Only answers to a command still waiting here resolve anything.
+    const done =
+      typeof body.cid === 'string' && waiting.has(body.cid) ? waiting.get(body.cid) : null
+    if (typeof done === 'function') {
+      waiting.delete(body.cid)
+      done(body)
+    }
     return json(res, 200, { ok: true })
   }
   if (req.method === 'GET' && url.pathname === '/status') {
