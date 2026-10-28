@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url'
 
 export const PARITY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 export const PARITY_DIR = path.join(PARITY_ROOT, 'e2e/parity')
-export const PARITY_OUT = path.join(PARITY_DIR, '.out')
+/** `PARITY_OUT_DIR` moves it (the public demo uses a scratch folder). */
+export const PARITY_OUT = process.env.PARITY_OUT_DIR || path.join(PARITY_DIR, '.out')
 
 export const PARITY_PORT = Number(process.env.PARITY_PORT || 3600)
 export const PARITY_ORIGIN = `http://127.0.0.1:${PARITY_PORT}`

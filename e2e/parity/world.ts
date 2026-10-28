@@ -8,7 +8,7 @@
  * descriptions, never copied captions. Times are minutes before seeding.
  */
 
-import { renameChannels, reskin, showcaseEnabled } from './showcase'
+import { demoLead, renameChannels, reskin, showcaseEnabled } from './showcase'
 
 export type PersonKey = 'pete' | 'ana' | 'ben' | 'mum' | 'jo'
 
@@ -24,7 +24,7 @@ export interface Person {
   totalSaves: number
 }
 
-export const PEOPLE: Person[] = [
+export const PEOPLE: Person[] = demoLead([
   {
     key: 'pete',
     id: 'u_parity_pete',
@@ -70,7 +70,7 @@ export const PEOPLE: Person[] = [
     phones: ["Jo's Pixel"],
     totalSaves: 31,
   },
-]
+])
 
 export const person = (key: PersonKey): Person => PEOPLE.find((p) => p.key === key)!
 
@@ -1468,5 +1468,5 @@ export const ADMIN = {
     { by: 'pete', action: 'make_admin', target: { username: 'ana' }, daysAgo: 29.5 },
   ] satisfies { by: PersonKey; action: string; target: Record<string, unknown>; daysAgo: number }[],
   /** The Mac helper's name, from a conversion it finished. */
-  convertedBy: { post: 'zoo', worker: 'Petes MacBook Pro' },
+  convertedBy: { post: 'zoo', worker: `${PEOPLE[0].displayName}s MacBook Pro` },
 } as const

@@ -14,6 +14,8 @@ No ads. No strangers. No engagement metrics. Nobody in a growth meeting deciding
 
 https://github.com/user-attachments/assets/56130b2a-1e79-4d70-85e9-177de0efdb91
 
+**Look around first:** [demo.adhx.com](https://demo.adhx.com) is a live ADHX where you're Sam and your friends have been busy. Nothing to install, nothing saved.
+
 ## Contents
 
 - [What it does](#what-it-does)

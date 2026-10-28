@@ -248,6 +248,13 @@ function Hero() {
                 <span>Start a feed for your people</span>
                 <Arrow size={18} className="hidden md:block" />
               </a>
+              <a
+                href="https://demo.adhx.com"
+                className="flex min-h-[44px] items-center justify-center gap-1.5 whitespace-nowrap text-[15px] font-bold text-nx-accent hover:text-white lg:justify-start"
+              >
+                <span>Or look around the live demo</span>
+                <Arrow size={16} />
+              </a>
             </div>
             <ul className="m-0 hidden list-none flex-col gap-2.5 p-0 text-[15px] text-nx-muted md:flex">
               {[
