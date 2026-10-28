@@ -62,7 +62,7 @@ async function pinKeeping(): Promise<void> {
   }
   await new Promise((r) => setTimeout(r, 1_000))
   const choc = POSTS.find((p) => p.key === DOING.keeping)
-  if (!choc) return
+  if (!choc || process.env.PARITY_SHOWCASE === '1') return
   const db = new Database(PARITY_DB_PATH)
   try {
     db.prepare(

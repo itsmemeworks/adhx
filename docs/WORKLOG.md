@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-28 — adhx.com shows the real apps
+
+- Owner: update the site with the latest web and phone app shots and drop the "Download the 30-second tour (MP4)" link; the promo film goes in the README.
+- `PARITY_SHOWCASE=1` re-skins the parity world with the site's credited posts (`e2e/parity/showcase.ts`), names channels to fit and skips the boards' in-flight jobs. Ten shots (web, iPhone 16 Pro, Galaxy A13) are in `site/public/shots`.
+- The hero, every feature and the apps section now show those shots (`site/components/Shots.tsx`); the drawn feature mock-ups and unused frames are gone. Home's copy mentions the Everyone, Friends and Mine switch; the apps list, sending to a friend.
+- Moment naming no longer picks prepositions ("Across") as a moment's name.
+- Not published; the promo video in the README waits on an exported MP4.
+
 ## 2026-10-28 — Attach a sideloadable iPhone IPA to every release
 
 - New `.github/workflows/ios-sideload.yml`, called by Release Please (and by hand): builds `adhx-<version>.ipa` at the tag with `make-sideload-ipa.sh`, bundle id `com.adhx.share` like Android. It checks the signature, version and App Group entitlement, then attaches it with a SHA-256. No secrets.

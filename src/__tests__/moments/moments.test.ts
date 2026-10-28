@@ -260,6 +260,14 @@ describe('naming a moment', () => {
     expect(tellingWord(['a cat on a roof', 'the cat and the dog', 'you and the shelf'])?.word).toBe(
       'Cat',
     )
+    // Nor a preposition three captions happen to share.
+    expect(
+      tellingWord([
+        'Sound across a plugin, the synth',
+        'Text across the screen, a synth',
+        'A walk across a bridge with a synth',
+      ])?.word,
+    ).toBe('Synth')
     const name = await nameMoment(new Float32Array(256), ['frog one', 'frog two'], new Set())
     expect(name).toBe('Frog')
   })
