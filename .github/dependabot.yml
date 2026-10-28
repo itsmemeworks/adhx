@@ -1,50 +1,51 @@
 version: 2
+# Dependency updates come once a month, grouped. Every PR runs the whole CI,
+# and with strict branch protection each merge to main makes Dependabot rebase
+# (and re-run) every other open PR, so a handful of grouped PRs cost far less
+# than one per package. Security updates are not on this schedule: they open
+# as soon as an advisory lands.
 updates:
+  # The app and the browser extension share one PR for minor and patch updates
+  # and one for majors. A group regenerates each lockfile coherently, so
+  # merging one never invalidates the other.
   - package-ecosystem: 'npm'
-    directory: '/'
+    directories: ['/', '/extension']
     schedule:
-      interval: 'weekly'
+      interval: 'monthly'
     target-branch: 'main'
-    open-pull-requests-limit: 10
-    # Grouped updates: one PR per group instead of one per package — separate
-    # per-package PRs all edit pnpm-lock.yaml from the same base, so merging
-    # one invalidates the rest (each then needs a rebase + CI round). A group
-    # regenerates a single coherent lockfile. Majors for production deps stay
-    # individual PRs so breaking changes get their own review.
+    # Skip releases replaced within days of shipping.
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
     groups:
-      dev-dependencies:
-        dependency-type: 'development'
+      npm-minor-patch:
         update-types: ['minor', 'patch']
-      production-minor-patch:
-        dependency-type: 'production'
-        update-types: ['minor', 'patch']
+      npm-major:
+        update-types: ['major']
+
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
-      interval: 'weekly'
+      interval: 'monthly'
     target-branch: 'main'
-    open-pull-requests-limit: 10
     groups:
       actions:
         patterns: ['*']
 
-  - package-ecosystem: 'npm'
-    directory: '/extension'
-    schedule:
-      interval: 'weekly'
-    groups:
-      extension-tooling:
-        patterns: ['*']
-        update-types: ['minor', 'patch']
   - package-ecosystem: 'gradle'
     directory: '/apps/android'
     schedule:
-      interval: 'weekly'
+      interval: 'monthly'
+    target-branch: 'main'
     groups:
       android-libraries:
         patterns: ['*']
-        update-types: ['minor', 'patch']
+
   - package-ecosystem: 'docker'
     directory: '/'
     schedule:
-      interval: 'weekly'
+      interval: 'monthly'
+    target-branch: 'main'
+    groups:
+      docker-images:
+        patterns: ['*']

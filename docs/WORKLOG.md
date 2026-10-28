@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-28 — Fewer dependency PRs, less CI per PR
+
+- Owner: Dependabot PRs used too much CI. Five ecosystems on weekly schedules, majors kept separate, made about nine PRs a week; each ran the whole CI (two native image builds, e2e, tests), and strict branch protection made every merge rebase and re-run the rest (one PR ran 9 times).
+- `dependabot.yml`: monthly; the app and extension npm updates share one minor/patch PR and one major PR (`directories`), with a 7-day cooldown; Actions, Gradle and Docker get one grouped PR each. Security updates are unaffected.
+- `ci.yml`: a `changes` job reads the PR's files; PRs only under `apps/` or `extension/` skip the image builds, e2e, tests and site build (the extension job still runs for extension changes). `build` always runs and fails if `changes` failed. CodeQL ignores `apps/**`.
+- Follow-up: the skip path first runs on the next app- or extension-only PR after merge.
+
 ## 2026-10-28 — One-click installs: ADHX sets itself up
 
 - Owner: make installing as quick as possible, one-click on Docker hosts and elsewhere, plus a hosted demo (the demo is a separate PR).

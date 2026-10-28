@@ -67,8 +67,8 @@ describe('production container dependencies', () => {
 describe('production container CI smoke test', () => {
   it('releases cancelled workflows instead of holding up newer PR revisions', () => {
     const gate = ciWorkflow.slice(
-      ciWorkflow.indexOf('  build:'),
-      ciWorkflow.indexOf('  extension:'),
+      ciWorkflow.indexOf('\n  build:\n'),
+      ciWorkflow.indexOf('\n  extension:\n'),
     )
     // always() survives workflow cancellation and can hold its concurrency slot
     // while the obsolete gate waits for a runner. Failures must still run it.
@@ -76,6 +76,10 @@ describe('production container CI smoke test', () => {
     expect(gate).not.toContain('always()')
     expect(gate).toContain('timeout-minutes: 5')
     expect(gate).toContain('test "$RESULT" = success')
+    // App- and extension-only PRs skip the image, but a broken `changes` job
+    // must fail the required check rather than skip it.
+    expect(gate).toContain('needs: [changes, container-smoke]')
+    expect(gate).toContain('test "$CHANGES" = success')
   })
 
   it('builds the real runner under the normal CI guards', () => {

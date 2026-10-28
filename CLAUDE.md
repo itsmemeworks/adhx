@@ -551,6 +551,13 @@ Short notes on what is easy to get wrong. Each links to the full description.
 | `site.yml`            | By hand                       | Publishes `site/` to GitHub Pages.                                                       |
 | `deploy.yml`          | By hand                       | Legacy hosted Fly apps. Never run it unless the owner asks.                              |
 
+A PR that only touches `apps/` or `extension/` skips the image builds, e2e,
+tests and site build in `ci.yml` (its `changes` job decides). `build` still
+runs and fails if `changes` failed, so the required checks stay meaningful.
+Dependabot (`.github/dependabot.yml`) is monthly and grouped: one npm
+minor/patch PR and one major PR covering the app and the extension, and one
+each for Actions, Gradle and Docker. Security updates still arrive at once.
+
 Merging to `main` never deploys anything. The owner merges the Release Please
 PR; installing a release on a server is a separate step. Release mechanics,
 secrets and the Release Please quirks are in
