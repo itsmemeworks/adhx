@@ -8,9 +8,6 @@ primary_region = 'lhr'
   dockerfile = 'Dockerfile'
   ignorefile = 'Dockerfile.dockerignore'
 
-[build.args]
-  ADHX_IMAGE = 'ghcr.io/itsmemeworks/adhx:latest'
-
 [env]
   NODE_ENV = 'production'
   NEXT_PUBLIC_APP_URL = 'https://demo.adhx.com'

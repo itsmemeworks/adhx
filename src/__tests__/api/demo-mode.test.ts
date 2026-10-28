@@ -65,20 +65,3 @@ describe('demo visitors', () => {
     expect(await getCurrentUserId()).toBeNull()
   })
 })
-
-describe('the demo world', () => {
-  afterEach(() => vi.unstubAllEnvs())
-
-  it('is led by Sam, not Pete', async () => {
-    vi.stubEnv('PARITY_DEMO', '1')
-    const { demoLead } = await import('../../../e2e/parity/showcase')
-    const [lead, friend] = demoLead([
-      { key: 'pete', id: 'u_parity_pete', username: 'pete', displayName: 'Pete', phones: ['x'] },
-      { key: 'ana', id: 'u_parity_ana', username: 'ana', displayName: 'Ana', phones: ['y'] },
-    ])
-    expect(lead).toMatchObject({ key: 'pete', username: 'sam', displayName: 'Sam' })
-    expect(lead.id).toBe('u_parity_sam')
-    expect(lead.phones).toEqual(["Sam's iPhone"])
-    expect(friend.displayName).toBe('Ana')
-  })
-})

@@ -24,7 +24,7 @@ the demo on top. From the repository root:
 
 ```bash
 # Optional: the app from this checkout instead of a release.
-fly deploy . --config deploy/demo/fly.toml --dockerfile Dockerfile \
+fly deploy . --config deploy/demo/base.fly.toml --dockerfile Dockerfile \
   --build-only --push --image-label base-$(git rev-parse --short HEAD) --app adhx-demo
 
 fly deploy . --config deploy/demo/fly.toml --dockerfile deploy/demo/Dockerfile \

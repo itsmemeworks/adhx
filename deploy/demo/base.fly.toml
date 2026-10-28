@@ -1,0 +1,3 @@
+# Only for building the ADHX image itself for the demo (README.md here):
+# no [build] section, so --dockerfile Dockerfile is honoured.
+app = 'adhx-demo'
