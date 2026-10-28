@@ -15,14 +15,18 @@ with the fix named. How to drive the phones: [`e2e/devices`](../../e2e/devices/R
 - **Samsung Galaxy A13** (SM-A137F), Android 14, Debug build from this branch,
   as Pete. Reached the server over Wi-Fi. Driven over adb.
 
-| Journey                                      | Row | iPhone                   | Android                         |
-| -------------------------------------------- | --- | ------------------------ | ------------------------------- |
-| Pair with a typed code, Connected, Home      | P01 | Pass after fixes 1 and 4 | Pass                            |
-| A removed key on the server                  | P16 | –                        | Pass: "This phone was removed…" |
-| Remove this phone (online)                   | P16 | Pass                     | –                               |
-| React on a playing post outside Live         | P19 | Pass after fix 2         | Pass after fix 3                |
-| Share a saved post, a non-post and a new one | P02 | –                        | Pass after fix 5                |
-| Search by words                              | P01 | –                        | Pass                            |
+| Journey                                                  | Row | iPhone                                          | Android                                  |
+| -------------------------------------------------------- | --- | ----------------------------------------------- | ---------------------------------------- |
+| Pair with a typed code, Connected, Home                  | P01 | Pass after fixes 1 and 4                        | Pass                                     |
+| A removed key on the server                              | P16 | –                                               | Pass: "This phone was removed…"          |
+| Remove this phone (online)                               | P16 | Pass                                            | –                                        |
+| React on a playing post outside Live                     | P19 | Pass after fix 2                                | Pass after fix 3                         |
+| Share a saved post, a non-post and a new one             | P02 | –                                               | Pass after fix 5                         |
+| Search by words                                          | P01 | –                                               | Pass                                     |
+| Channels: From everyone, Your people, a friend's channel | –   | –                                               | Pass                                     |
+| Live: a moment, Tune in                                  | P07 | Pass                                            | Pass                                     |
+| Watch together from both phones (names, a live reaction) | P07 | Pass: "Pete · watching with you"                | Pass: Ana's 🔥 arrived in about a second |
+| Send straight to a friend                                | –   | Pass: Ben's feed leads with "Ana sent you this" | –                                        |
 
 Bugs found and fixed:
 
