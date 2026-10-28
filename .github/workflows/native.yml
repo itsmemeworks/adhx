@@ -92,3 +92,8 @@ jobs:
           xcodebuild -project apps/ios/ADHXShare.xcodeproj -scheme "ADHX Share"
           -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'
           -derivedDataPath "$RUNNER_TEMP/adhx-ios" CODE_SIGNING_ALLOWED=NO build
+      - name: Build the sideload IPA and check it keeps the App Group
+        run: |
+          apps/ios/Config/make-sideload-ipa.sh "$RUNNER_TEMP/adhx.ipa"
+          unzip -q "$RUNNER_TEMP/adhx.ipa" -d "$RUNNER_TEMP/ipa"
+          codesign -d --entitlements - --xml "$RUNNER_TEMP/ipa/Payload/ADHX Share.app/PlugIns/ShareExtension.appex" | grep -q "group\."

@@ -260,9 +260,11 @@ SideStore and AltStore can make App Groups on a free account, but they rename
 the group to `group.<prefix>.<TEAMID>` when they sign the app. `AppGroup.id`
 uses the declared group when it works, and otherwise the signed group that
 starts with it (from AltStore's `ALTAppGroups` or the embedded provisioning
-profile), so the app and the extension still meet. To make an `.ipa` for them,
-run `Config/make-sideload-ipa.sh`: an unsigned Release build, signed locally
-with the App Group entitlement so the sideloading app knows to make the group.
+profile), so the app and the extension still meet. Every release attaches
+`adhx-<version>.ipa` for them (`.github/workflows/ios-sideload.yml`, bundle id
+`com.adhx.share`). To make one yourself, run `Config/make-sideload-ipa.sh`: an
+unsigned Release build, signed locally with the App Group entitlement so the
+sideloading app knows to make the group. CI builds it on every app PR.
 Installing it is in [Install the phone apps](../../docs/install-phone-apps.md#iphone-everywhere-else).
 
 ## When your ADHX can't be reached

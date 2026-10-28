@@ -14,7 +14,7 @@ and then, so the words on yours may differ a little.
 | Android    | Anywhere                                 | [The APK from GitHub](#android)      | Nothing   | Yes                                  |
 | iPhone     | Anywhere, if your ADHX's owner offers it | [TestFlight](#testflight)            | Nothing   | Not yet ([owner steps](#testflight)) |
 | iPhone     | The EU                                   | [AltStore PAL](#iphone-in-the-eu)    | Nothing   | Not yet ([owner steps](#owner-eu))   |
-| iPhone     | Everywhere else                          | [SideStore](#iphone-everywhere-else) | Nothing   | Yes, with a Mac to make the file     |
+| iPhone     | Everywhere else                          | [SideStore](#iphone-everywhere-else) | Nothing   | From the next release                |
 
 "Your ADHX's owner" is whoever runs the server you use. If that's you, the
 owner steps are yours too.
@@ -203,21 +203,26 @@ has pictures.
 
 #### 2. Get the ADHX Share file
 
-Releases don't include an iPhone file (`.ipa`) yet. Until they do, someone
-with a Mac and Xcode makes it from this repository in one command (no Apple
-account needed), and sends it to you:
+1. On the phone, open the
+   [latest release](https://github.com/itsmemeworks/adhx/releases/latest).
+2. Under **Assets**, tap `adhx-<version>.ipa` and download it. It lands in
+   Files → Downloads.
+
+The file isn't signed for anyone yet. SideStore signs it as yours when it
+installs it. The `.sha256` beside it is only for checking.
+
+Releases carry this file from the one after 2.8.2. Before that (or to build
+your own changes), anyone with a Mac and Xcode can make it in one command, no
+Apple account needed, and AirDrop it to you:
 
 ```bash
 apps/ios/Config/make-sideload-ipa.sh adhx-share.ipa
 ```
 
-It's signed only on that Mac, so SideStore can sign it again as yours. Save
-`adhx-share.ipa` to Files on the phone (AirDrop works).
-
 #### 3. Install ADHX Share
 
 1. Make sure LocalDevVPN is connected.
-2. In SideStore, go to **My Apps**, tap **+** and pick `adhx-share.ipa`.
+2. In SideStore, go to **My Apps**, tap **+** and pick `adhx-<version>.ipa`.
 3. If SideStore asks about the app's extensions, choose **Keep All**. That's
    the share card. Removing it takes **ADHX** out of the share menu.
 4. Open ADHX Share and [connect it](#connect-it-to-your-adhx).

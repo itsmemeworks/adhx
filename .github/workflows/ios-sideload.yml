@@ -1,0 +1,117 @@
+name: iOS sideload IPA
+
+# Builds the iPhone app (ADHX Share and its Share Extension) for a published
+# release and attaches `adhx-<version>.ipa` (plus its SHA-256) to that GitHub
+# release, for SideStore or AltStore to sign with the installer's own Apple
+# Account (docs/install-phone-apps.md → iPhone everywhere else). Release Please
+# calls this after it creates a release; run it by hand to (re)attach the IPA
+# to an existing release that has apps/ios/Config/make-sideload-ipa.sh.
+#
+# No secrets: the IPA is signed only "ad hoc" on the runner, which keeps the
+# App Group entitlement so the sideloading app knows to make the group.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Existing release version (after 2.8.2), for example 2.9.0'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-sideload-${{ inputs.version }}
+  cancel-in-progress: false
+
+env:
+  # Same id as the Android app. SideStore and AltStore add the installer's
+  # Team ID to it, so it never clashes with anyone's own build.
+  BUNDLE_PREFIX: com.adhx.share
+
+jobs:
+  ipa:
+    runs-on: macos-26
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - name: Check the version
+        id: plan
+        run: |
+          set -euo pipefail
+          VERSION="${VERSION#v}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must look like 2.9.0, got '$VERSION'"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "name=adhx-$VERSION.ipa" >> "$GITHUB_OUTPUT"
+
+      # Full history and tags: Config/stamp-version.sh runs `git describe` so
+      # Settings shows the release ("2.9.0") on the tag itself.
+      - uses: actions/checkout@v7
+        with:
+          ref: v${{ steps.plan.outputs.version }}
+          fetch-depth: 0
+
+      - name: Use the newest stable Xcode
+        run: |
+          set -euo pipefail
+          xcode=$(ls -d /Applications/Xcode_*.app | grep -E '/Xcode_[0-9]+(\.[0-9]+)*\.app$' | sort -V | tail -n 1)
+          sudo xcode-select --switch "$xcode/Contents/Developer"
+          xcodebuild -version
+
+      - name: Build the IPA
+        run: |
+          set -euo pipefail
+          script=apps/ios/Config/make-sideload-ipa.sh
+          if [[ ! -x "$script" ]]; then
+            echo "::error::v${{ steps.plan.outputs.version }} has no $script, so it can't make an IPA. Releases after it was added can."
+            exit 1
+          fi
+          mkdir -p dist
+          "$script" "$PWD/dist/${{ steps.plan.outputs.name }}" \
+            ADHX_BUNDLE_PREFIX="$BUNDLE_PREFIX" \
+            MARKETING_VERSION="${{ steps.plan.outputs.version }}" \
+            CURRENT_PROJECT_VERSION="${{ github.run_id }}"
+
+      - name: Check the IPA
+        run: |
+          set -euo pipefail
+          check="$RUNNER_TEMP/ipa-check"
+          rm -rf "$check" && mkdir -p "$check"
+          unzip -q "dist/${{ steps.plan.outputs.name }}" -d "$check"
+          app="$check/Payload/ADHX Share.app"
+          codesign --verify --deep --strict "$app"
+          plist() { /usr/libexec/PlistBuddy -c "Print :$1" "$2"; }
+          for bundle in "$app" "$app/PlugIns/ShareExtension.appex"; do
+            id=$(plist CFBundleIdentifier "$bundle/Info.plist")
+            version=$(plist CFBundleShortVersionString "$bundle/Info.plist")
+            echo "$id $version"
+            [[ "$version" == "${{ steps.plan.outputs.version }}" ]]
+            codesign -d --entitlements - --xml "$bundle" 2>/dev/null | grep -q "group.$BUNDLE_PREFIX" || {
+              echo "::error::$id lost its App Group entitlement"
+              exit 1
+            }
+          done
+          (cd dist && shasum -a 256 "${{ steps.plan.outputs.name }}" > "${{ steps.plan.outputs.name }}.sha256")
+          cat "dist/${{ steps.plan.outputs.name }}.sha256"
+
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release upload "v${{ steps.plan.outputs.version }}" \
+            "dist/${{ steps.plan.outputs.name }}" "dist/${{ steps.plan.outputs.name }}.sha256" \
+            --repo "$GITHUB_REPOSITORY" --clobber
+          echo "Attached ${{ steps.plan.outputs.name }} to v${{ steps.plan.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"

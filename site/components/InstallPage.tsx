@@ -289,9 +289,11 @@ export function InstallPage() {
                 <span>, about 15 minutes).</span>
               </span>,
               <span key="2">
-                <span>Save </span>
-                <B>adhx-share.ipa</B>
-                <span> to Files on the phone.</span>
+                <span>From the </span>
+                <Link href={RELEASES}>latest release</Link>
+                <span>, download </span>
+                <B>adhx-&lt;version&gt;.ipa</B>
+                <span> under Assets.</span>
               </span>,
               <span key="3">
                 <span>In SideStore, </span>
@@ -311,9 +313,8 @@ export function InstallPage() {
           </Steps>
           <Note>
             <span>
-              Releases don’t include the iPhone file yet: someone with a Mac makes it with one
-              command from the repository. A free Apple Account allows 3 sideloaded apps at once,
-              SideStore included.{' '}
+              The iPhone file comes with releases after 2.8.2. SideStore signs it as yours. A free
+              Apple Account allows 3 sideloaded apps at once, SideStore included.{' '}
             </span>
             <Link href={`${GUIDE}#iphone-everywhere-else`}>Every step, and why SideStore</Link>
           </Note>

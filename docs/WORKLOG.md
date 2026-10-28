@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-28 — Attach a sideloadable iPhone IPA to every release
+
+- New `.github/workflows/ios-sideload.yml`, called by Release Please (and by hand): builds `adhx-<version>.ipa` at the tag with `make-sideload-ipa.sh`, bundle id `com.adhx.share` like Android. It checks the signature, version and App Group entitlement, then attaches it with a SHA-256. No secrets.
+- The script now passes extra `SETTING=value` arguments to xcodebuild. `native.yml` builds the IPA on every app PR so the script can't rot.
+- The install guide, adhx.com/install, the iOS README and `docs/releasing.md` now point at the release asset. Tags up to 2.8.2 lack the script, so the first IPA comes with the next release.
+- Checked locally: the job's build and checks pass and actionlint is clean. It can only be dispatched once it's on main, so the first real run is the next release.
+
 ## 2026-10-28 — Guide to installing the phone apps without a store
 
 - New `docs/install-phone-apps.md` and adhx.com `/install/`: Android APK from Releases; iPhone via TestFlight, AltStore PAL in the EU, SideStore elsewhere; then connecting. Linked from README, both app READMEs, docs index, the site's nav and Apps section, and Settings → Phone app's fallback links.
