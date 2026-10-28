@@ -97,4 +97,7 @@ jobs:
 
       - name: Show the logs
         if: failure()
-        run: cd /opt/adhx && sudo docker compose logs --no-color --tail 200
+        run: |
+          if [ -f /opt/adhx/docker-compose.yml ]; then
+            cd /opt/adhx && sudo docker compose logs --no-color --tail 200
+          fi

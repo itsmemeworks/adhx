@@ -35,7 +35,9 @@ mkdir -p "$ADHX_DIR"
 cd "$ADHX_DIR"
 
 # A value from the environment wins; otherwise keep the one saved last time.
-saved() { [ -f .env ] && sed -n "s/^$1=//p" .env | tail -n 1 || true; }
+saved() {
+  if [ -f .env ]; then sed -n "s/^$1=//p" .env | tail -n 1; fi
+}
 ADHX_DOMAIN="${ADHX_DOMAIN:-$(saved ADHX_DOMAIN)}"
 SETUP_CODE="${SETUP_CODE:-$(saved SETUP_CODE)}"
 if [ -z "$SETUP_CODE" ]; then
