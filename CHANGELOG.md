@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.4](https://github.com/itsmemeworks/adhx/compare/v2.8.3...v2.8.4) (2026-10-28)
+
+
+### Bug Fixes
+
+* **android:** keep the pairing route visible while typing on connect ([#644](https://github.com/itsmemeworks/adhx/issues/644)) ([984df81](https://github.com/itsmemeworks/adhx/commit/984df813a9db467ae7183fe55194425820500553))
+
 ## [2.8.3](https://github.com/itsmemeworks/adhx/compare/v2.8.2...v2.8.3) (2026-10-28)
 
 
