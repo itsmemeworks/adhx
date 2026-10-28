@@ -3,8 +3,49 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
-// No upstream fix exists. Only trusted repository globs reach these dev tools.
-// Production audits never accept this exception; new advisories fail closed.
+// Advisories with no upstream fix, each accepted only as written here and only
+// until its review date. Anything else, including a new path or a released fix,
+// fails closed.
+const EXCEPTIONS = [
+  {
+    // Only trusted repository globs reach these dev tools. Never in production.
+    module: 'braces',
+    advisory: 'GHSA-vfj7-8cjw-p6xm',
+    production: false,
+    until: '2026-11-19T00:00:00Z',
+  },
+  {
+    // Prototype poisoning when merging attacker-controlled objects. html-to-text
+    // merges only its own options (react-email's plain-text sign-in emails);
+    // no request data reaches it.
+    module: 'deepmerge',
+    advisory: 'GHSA-gcqx-w48m-w2h4',
+    production: true,
+    paths: ['.>react-email>@react-email/render>html-to-text>deepmerge'],
+    until: '2026-12-31T00:00:00Z',
+  },
+]
+
+function excepted(advisory, production, now) {
+  return EXCEPTIONS.some(
+    (rule) =>
+      advisory.module_name === rule.module &&
+      advisory.github_advisory_id === rule.advisory &&
+      advisory.patched_versions === '<0.0.0' &&
+      (rule.production || !production) &&
+      (!rule.paths ||
+        (Array.isArray(advisory.findings) &&
+          advisory.findings.length > 0 &&
+          advisory.findings.every(
+            (finding) =>
+              Array.isArray(finding?.paths) &&
+              finding.paths.length > 0 &&
+              finding.paths.every((path) => rule.paths.includes(path)),
+          ))) &&
+      now < new Date(rule.until),
+  )
+}
+
 export function rejectedAdvisories(report, { production = false, now = new Date() } = {}) {
   const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
   const levels = ['info', 'low', 'moderate', 'high', 'critical']
@@ -40,15 +81,7 @@ export function rejectedAdvisories(report, { production = false, now = new Date(
     })
   )
     throw new Error('Dependency audit severity totals disagree with advisory details')
-  return Object.values(report.advisories).filter((advisory) => {
-    const allowed =
-      !production &&
-      advisory.module_name === 'braces' &&
-      advisory.github_advisory_id === 'GHSA-vfj7-8cjw-p6xm' &&
-      advisory.patched_versions === '<0.0.0' &&
-      now < new Date('2026-11-19T00:00:00Z')
-    return !allowed
-  })
+  return Object.values(report.advisories).filter((advisory) => !excepted(advisory, production, now))
 }
 
 function check(directory, production) {
@@ -68,9 +101,7 @@ function check(directory, production) {
     console.error(`${directory}: ${advisory.severity} ${advisory.module_name}: ${advisory.url}`)
   const accepted = Object.keys(report.advisories).length - rejected.length
   if (accepted)
-    console.warn(
-      `${directory}: ${accepted} time-limited dev-only braces exception; expires 2026-11-19`,
-    )
+    console.warn(`${directory}: accepted ${accepted} time-limited exception(s); see EXCEPTIONS`)
   if (rejected.length) throw new Error(`Dependency audit rejected ${rejected.length} advisories`)
   console.log(`${directory}: ${production ? 'production' : 'full'} dependency audit passed`)
 }

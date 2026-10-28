@@ -8,14 +8,21 @@ audit covers only the packages sent to that audit.
 
 - `pnpm check:dependencies` audits both production and full dependency graphs
   for the application, browser extension and isolated pinned release-compatibility tools. Registry errors fail the check.
-- The only temporary JavaScript exception is
-  [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm),
-  an unpatched `braces` stack-exhaustion issue used by build tooling. Only
-  trusted repository glob patterns reach it. The exception never applies to
-  production dependencies, expires on **19 November 2026**, and stops applying
-  when the registry advertises a fixed version. No general severity waiver is
-  used. Reassess exposure and remove the dependency or apply the upstream fix
-  when available.
+- Two temporary JavaScript exceptions, both for advisories with no fixed
+  release, are listed in `EXCEPTIONS` in
+  `scripts/security/check-dependencies.mjs`. Each stops applying when the
+  registry advertises a fixed version or at its review date. No general
+  severity waiver is used. Reassess exposure and remove the dependency or
+  apply the upstream fix when available.
+  - [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm):
+    an unpatched `braces` stack-exhaustion issue used by build tooling. Only
+    trusted repository glob patterns reach it. Never applies to production
+    dependencies. Expires on **19 November 2026**.
+  - [GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4):
+    `deepmerge` prototype poisoning, low. It reaches production only through
+    `react-email` → `@react-email/render` → `html-to-text`, which merges its
+    own options for the plain-text sign-in emails; no request data reaches
+    it. Accepted only on that exact path. Expires on **31 December 2026**.
 - Android exports its resolved runtime graph with
   `./gradlew exportRuntimeDependencies`. Run
   `node scripts/security/check-android.mjs apps/android/app/build/reports/runtime-dependencies.json`
