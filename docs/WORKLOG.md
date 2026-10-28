@@ -12,7 +12,7 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - `PARITY_SHOWCASE=1` re-skins the parity world with the site's credited posts (`e2e/parity/showcase.ts`), names channels to fit and skips the boards' in-flight jobs. Ten shots (web, iPhone 16 Pro, Galaxy A13) are in `site/public/shots`.
 - The hero, every feature and the apps section now show those shots (`site/components/Shots.tsx`); the drawn feature mock-ups and unused frames are gone. Home's copy mentions the Everyone, Friends and Mine switch; the apps list, sending to a friend.
 - Moment naming no longer picks prepositions ("Across") as a moment's name.
-- Not published; the promo video in the README waits on an exported MP4.
+- README: the promo film (exported, re-encoded to 8.3 MB at 720p30 for GitHub's 10 MB limit) plays inline at the top as a user-attachments video; the web screenshot moved into More screenshots. The site is not published.
 
 ## 2026-10-28 — Attach a sideloadable iPhone IPA to every release
 
