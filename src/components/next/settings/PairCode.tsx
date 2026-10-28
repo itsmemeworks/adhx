@@ -23,20 +23,18 @@ export interface PairCode {
 const IOS_SET = !!process.env.NEXT_PUBLIC_IOS_APP_URL
 const ANDROID_SET = !!process.env.NEXT_PUBLIC_ANDROID_APP_URL
 
-/** Where to get the apps. `configured` is false for the build-it-yourself READMEs. */
+const INSTALL_GUIDE = 'https://github.com/itsmemeworks/adhx/blob/main/docs/install-phone-apps.md'
+
+/** Where to get the apps. `configured` is false for the step-by-step install guide. */
 export const APP_DOWNLOADS = {
   ios: {
-    url:
-      process.env.NEXT_PUBLIC_IOS_APP_URL ||
-      'https://github.com/itsmemeworks/adhx/blob/main/apps/ios/README.md',
-    label: IOS_SET ? 'iPhone (TestFlight)' : 'iPhone (build it)',
+    url: process.env.NEXT_PUBLIC_IOS_APP_URL || `${INSTALL_GUIDE}#iphone`,
+    label: IOS_SET ? 'iPhone (TestFlight)' : 'iPhone (how to install)',
     configured: IOS_SET,
   },
   android: {
-    url:
-      process.env.NEXT_PUBLIC_ANDROID_APP_URL ||
-      'https://github.com/itsmemeworks/adhx/blob/main/apps/android/README.md',
-    label: ANDROID_SET ? 'Android (APK)' : 'Android (build it)',
+    url: process.env.NEXT_PUBLIC_ANDROID_APP_URL || `${INSTALL_GUIDE}#android`,
+    label: ANDROID_SET ? 'Android (APK)' : 'Android (how to install)',
     configured: ANDROID_SET,
   },
 }

@@ -19,13 +19,14 @@ Every doc in the repository, sorted by what you're trying to do. New here? Start
 
 ## I want to use the apps
 
-| Doc                                           | What's in it                                                     |
-| --------------------------------------------- | ---------------------------------------------------------------- |
-| [README: Phone apps](../README.md#phone-apps) | Connecting and installing, in short                              |
-| [iPhone app](../apps/ios/README.md)           | Building, signing, TestFlight and how the app is put together    |
-| [Android app](../apps/android/README.md)      | Building, the signed release APK and how the app is put together |
-| [Browser extension](../extension/README.md)   | Save to ADHX from Chrome and other Chromium browsers             |
-| [The adhx skill](../skills/adhx/SKILL.md)     | Letting Claude and other agents search your saves                |
+| Doc                                             | What's in it                                                       |
+| ----------------------------------------------- | ------------------------------------------------------------------ |
+| [README: Phone apps](../README.md#phone-apps)   | Connecting and installing, in short                                |
+| [Install the phone apps](install-phone-apps.md) | Android, TestFlight, AltStore PAL (EU) and SideStore, step by step |
+| [iPhone app](../apps/ios/README.md)             | Building, signing, TestFlight and how the app is put together      |
+| [Android app](../apps/android/README.md)        | Building, the signed release APK and how the app is put together   |
+| [Browser extension](../extension/README.md)     | Save to ADHX from Chrome and other Chromium browsers               |
+| [The adhx skill](../skills/adhx/SKILL.md)       | Letting Claude and other agents search your saves                  |
 
 ## I want to change ADHX
 

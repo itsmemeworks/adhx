@@ -65,6 +65,10 @@ jobs:
         run: |
           swiftc -D ADHX_HISTORY_TEST apps/ios/Shared/API.swift apps/ios/Shared/FriendsAPI.swift apps/ios/Shared/Network.swift apps/ios/Shared/NetworkPaths.swift apps/ios/Shared/SVGPath.swift apps/ios/Shared/ResumeStore.swift apps/ios/Shared/Storage.swift apps/ios/Tests/QueuedPrivacyTests.swift -o "$RUNNER_TEMP/adhx-privacy-tests"
           "$RUNNER_TEMP/adhx-privacy-tests"
+      - name: Test finding the App Group in a sideloaded build
+        run: |
+          swiftc -D ADHX_HISTORY_TEST apps/ios/Shared/API.swift apps/ios/Shared/FriendsAPI.swift apps/ios/Shared/Network.swift apps/ios/Shared/NetworkPaths.swift apps/ios/Shared/SVGPath.swift apps/ios/Shared/ResumeStore.swift apps/ios/Shared/Storage.swift apps/ios/Tests/SideloadGroupTests.swift -o "$RUNNER_TEMP/adhx-sideload-tests"
+          "$RUNNER_TEMP/adhx-sideload-tests"
       - name: Test reaction cache isolation and late connection responses
         run: |
           swiftc apps/ios/App/Library/PostReactionsModel.swift apps/ios/Tests/ReactionConnectionTests.swift -o "$RUNNER_TEMP/adhx-reaction-connections"

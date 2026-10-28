@@ -23,7 +23,8 @@ Google services (the QR scanner is ZXing, not ML Kit).
 > attached. Open [the latest release](https://github.com/itsmemeworks/adhx/releases/latest)
 > on your phone, tap the `.apk`, and allow installs from your browser once.
 > Then sign in with your email. No Android Studio required, no store, no
-> account with anyone but your friend's server.
+> account with anyone but your friend's server. Every tap is in
+> [Install the phone apps](../../docs/install-phone-apps.md#android).
 
 ## Quick start (building it yourself)
 

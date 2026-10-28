@@ -11,8 +11,41 @@ enum AppGroup {
     static let id: String? = {
         guard let value = Bundle.main.object(forInfoDictionaryKey: "ADHXAppGroup") as? String,
               !value.isEmpty, !value.contains("$(") else { return nil }
-        return value
+        return resolve(declared: value, signed: signedGroups()) {
+            FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: $0) != nil
+        }
     }()
+
+    /// SideStore and AltStore re-sign the app with the installer's own Apple
+    /// ID and rename the group to `group.<prefix>.<TEAMID>`. When the declared
+    /// group can't be used, take the signed group that starts with it, so the
+    /// app and the Share Extension still meet in the same place.
+    static func resolve(declared: String, signed: [String], usable: (String) -> Bool) -> String {
+        if usable(declared) { return declared }
+        return signed
+            .filter { $0.hasPrefix(declared + ".") && usable($0) }
+            .min { $0.count < $1.count } ?? declared
+    }
+
+    /// The groups this build was signed with. AltStore lists them under
+    /// `ALTAppGroups`; otherwise they're in the embedded provisioning profile.
+    private static func signedGroups() -> [String] {
+        if let listed = Bundle.main.object(forInfoDictionaryKey: "ALTAppGroups") as? [String] { return listed }
+        guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
+              let data = try? Data(contentsOf: url) else { return [] }
+        return profileGroups(data)
+    }
+
+    /// The App Groups in a provisioning profile: a signed wrapper around a
+    /// plain plist, so read the plist out of the middle.
+    static func profileGroups(_ profile: Data) -> [String] {
+        guard let start = profile.range(of: Data("<?xml".utf8)),
+              let end = profile.range(of: Data("</plist>".utf8), in: start.lowerBound..<profile.endIndex),
+              let plist = try? PropertyListSerialization.propertyList(
+                  from: profile[start.lowerBound..<end.upperBound], format: nil) as? [String: Any],
+              let entitlements = plist["Entitlements"] as? [String: Any] else { return [] }
+        return entitlements["com.apple.security.application-groups"] as? [String] ?? []
+    }
 
     /// Group defaults when the group is usable, else this process's own
     /// defaults (unsigned simulator builds).

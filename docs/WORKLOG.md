@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-28 — Guide to installing the phone apps without a store
+
+- New `docs/install-phone-apps.md` and adhx.com `/install/`: Android APK from Releases; iPhone via TestFlight, AltStore PAL in the EU, SideStore elsewhere; then connecting. Linked from README, both app READMEs, docs index, the site's nav and Apps section, and Settings → Phone app's fallback links.
+- EU: Apple's Web Distribution needs financial-standing proof a self-hosted project usually lacks, so AltStore PAL (notarized, 5% only on sales). Rest of world: SideStore (free Apple ID, one-time computer, on-phone weekly refresh) over AltStore Classic, paid certificates and Xcode.
+- SideStore/AltStore rename the App Group to `group.<prefix>.<TEAMID>`; `AppGroup.id` now falls back to the signed group (`ALTAppGroups` or the embedded profile) so the share card still sees the connection. swiftc suite added to CI; simulator build passes. Not yet tried on a phone through SideStore.
+- `apps/ios/Config/make-sideload-ipa.sh` builds an ad-hoc-signed `.ipa` keeping the App Group entitlement (verified locally).
+- Still missing: releases attach no `.ipa`, TestFlight secrets aren't set, and nobody has published an AltStore PAL source. The guide says so and lists the owner steps.
+
 ## 2026-10-27 — Home's filters play the latest; For you stops repeating its opener
 
 - Owner: after sharing a few things they wanted everyone's (or their own) latest posts, and Home kept opening on the same video.

@@ -195,10 +195,12 @@ ADHX Share for iPhone and Android puts ADHX in your phone's share menu and plays
 - **Sign in with email:** type your ADHX's address and your email, then the 6-digit code it sends you. This needs [sign-in emails](docs/self-hosting.md#sign-in-links) to be set up.
 - **Pairing code:** on your computer, open **Settings → Phone app → Show the code** and scan it, or type the address and the 8-character code. Joining from an invite link? The code is on the "You're in." screen.
 
-**Install it:**
+**Install it.** The apps aren't in the stores, so [Install the phone apps](docs/install-phone-apps.md) walks you through it, step by step:
 
-- **Android:** download `adhx-<version>.apk` from the [latest release](https://github.com/itsmemeworks/adhx/releases/latest) and open it on the phone. [Obtainium](https://github.com/ImranR98/Obtainium) can watch the releases for updates.
-- **iPhone:** there's no App Store version. If whoever runs your ADHX has set up TestFlight, use their invite link (Settings → Phone app shows it). Otherwise build it with Xcode and an Apple Developer account: see the [iPhone app guide](apps/ios/README.md).
+- **Android:** download `adhx-<version>.apk` from the [latest release](https://github.com/itsmemeworks/adhx/releases/latest), allow your browser to install it, done. [Obtainium](https://github.com/ImranR98/Obtainium) can watch for updates.
+- **iPhone, anywhere:** TestFlight, once whoever runs your ADHX sets it up (Settings → Phone app shows the link).
+- **iPhone in the EU:** [AltStore PAL](docs/install-phone-apps.md#iphone-in-the-eu), Apple's own install prompts, no weekly refresh. Needs a one-time listing by the owner.
+- **iPhone everywhere else:** [SideStore](docs/install-phone-apps.md#iphone-everywhere-else) with your free Apple Account. It refreshes the app every week for you.
 
 Code: [`apps/ios`](apps/ios/README.md) and [`apps/android`](apps/android/README.md). The API they use: [phone app spec](docs/specs/phone-app.md).
 
@@ -254,15 +256,16 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm format:check
 
 ## Documentation map
 
-| Doc                                               | For                                                            |
-| ------------------------------------------------- | -------------------------------------------------------------- |
-| [docs/README.md](docs/README.md)                  | Every other doc, sorted by what you're trying to do            |
-| [ARCHITECTURE.md](ARCHITECTURE.md)                | How the pieces fit together, with diagrams                     |
-| [Live updates and presence](docs/realtime.md)     | Streaming, reconnect recovery, packages and polling boundaries |
-| [CONTRIBUTING.md](CONTRIBUTING.md)                | Setting up, testing, and getting a pull request merged         |
-| [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md) | Coding agents: read these first                                |
-| [PRIVACY.md](PRIVACY.md)                          | What your server stores and who can see it                     |
-| [SECURITY.md](SECURITY.md)                        | How to report a vulnerability privately                        |
+| Doc                                                  | For                                                            |
+| ---------------------------------------------------- | -------------------------------------------------------------- |
+| [docs/README.md](docs/README.md)                     | Every other doc, sorted by what you're trying to do            |
+| [ARCHITECTURE.md](ARCHITECTURE.md)                   | How the pieces fit together, with diagrams                     |
+| [Install the phone apps](docs/install-phone-apps.md) | Android, and iPhone in and outside the EU, step by step        |
+| [Live updates and presence](docs/realtime.md)        | Streaming, reconnect recovery, packages and polling boundaries |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                   | Setting up, testing, and getting a pull request merged         |
+| [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md)    | Coding agents: read these first                                |
+| [PRIVACY.md](PRIVACY.md)                             | What your server stores and who can see it                     |
+| [SECURITY.md](SECURITY.md)                           | How to report a vulnerability privately                        |
 
 ## Use it kindly
 
