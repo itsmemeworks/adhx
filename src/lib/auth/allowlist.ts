@@ -51,6 +51,11 @@ export function hasAdmin(): boolean {
   return !!admin
 }
 
+/** A brand-new ADHX: nobody has an account yet, so it opens on `/setup`. */
+export function isFreshInstall(): boolean {
+  return db.select({ id: users.id }).from(users).limit(1).all().length === 0
+}
+
 /**
  * With links handed over by an admin, nobody can see the admin page until
  * there is one, so a link opened before then was read from the server log:

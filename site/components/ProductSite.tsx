@@ -20,14 +20,10 @@ import { Mock, StepFeed, StepKeep, StepShare } from './mocks'
 
 export const GITHUB_URL = 'https://github.com/itsmemeworks/adhx'
 
-const SETUP = `git clone https://github.com/itsmemeworks/adhx && cd adhx
-cp .env.example .env
-openssl rand -base64 32
-# Edit .env: keep that secret, set your HTTPS address,
-# invited emails, EMAIL_LINKS_TO_ADMIN=1, ADHX_IMAGE=adhx:local
-docker build -t adhx:local .
-docker compose config --quiet
-docker compose up -d`
+const SETUP = `docker run -d --name adhx -p 3000:3000 \\
+  -v adhx:/data ghcr.io/itsmemeworks/adhx
+docker logs adhx | grep setup
+# Open the link it prints. That's it.`
 
 export const WRAP = 'mx-auto w-full max-w-[1264px] px-4 md:px-8'
 
@@ -926,14 +922,18 @@ function SelfHost() {
           </ul>
         </div>
         <div className="flex min-w-0 flex-col gap-3 md:gap-4">
-          <CopyCommand text={SETUP} title="Set it up" note="on your server" />
+          <CopyCommand text={SETUP} title="Try it in a minute" note="anywhere with Docker" />
           <a
-            href={`${GITHUB_URL}/blob/main/deploy/nas/README.md`}
+            href={`${GITHUB_URL}#one-click-wherever-you-host`}
             className="flex min-h-[52px] items-center justify-center gap-2.5 whitespace-nowrap rounded-full bg-nx-accent px-6 text-[16px] font-extrabold text-black hover:bg-white"
           >
             <GitHubMark className="h-5 w-5" />
-            <span>Read the setup guide on GitHub</span>
+            <span>One-click installs</span>
           </a>
+          <p className="m-0 text-center text-[13px] leading-[1.45] text-nx-muted md:text-[14px]">
+            Render, Fly, Railway, a VPS with HTTPS, Unraid, Umbrel, Portainer, Coolify, Synology and
+            TrueNAS.
+          </p>
         </div>
       </div>
     </section>

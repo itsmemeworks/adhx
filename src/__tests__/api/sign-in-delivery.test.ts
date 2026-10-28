@@ -263,8 +263,15 @@ describe('getting sign-in links to people without Resend', () => {
     expect(await hasRecentLoginToken('emailed@example.com')).toBe(false)
   })
 
-  it('refuses in production with no way to deliver links', async () => {
+  it('holds links for the admin in production when no email is set up', async () => {
     vi.stubEnv('NODE_ENV', 'production')
+    const { signInDelivery } = await import('@/lib/email/magic-link')
+    expect(signInDelivery()).toBe('admin')
+  })
+
+  it('refuses in production when held links are turned off', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('EMAIL_LINKS_TO_ADMIN', 'off')
     const { signInDelivery } = await import('@/lib/email/magic-link')
     expect(signInDelivery()).toBeNull()
     expect((await ask('friend@example.com')).status).toBe(503)

@@ -1,0 +1,36 @@
+# ADHX with nothing to fill in. Paste this into Portainer (Stacks), Dokploy,
+# Coolify, CasaOS (Import), Synology Container Manager (Project) or TrueNAS
+# (Custom App → Install via YAML), or run `docker compose up -d` next to it.
+#
+# Then open http://<this machine>:3000 and make it yours with the setup code
+# from the log: `docker compose logs adhx | grep setup`.
+#
+# Needs about 2 GB of memory (4 GB is comfortable) for search by meaning.
+# Panels with their own HTTPS proxy (Coolify, Dokploy) can drop `ports:` and
+# point a domain at port 3000 instead.
+services:
+  adhx:
+    image: ghcr.io/itsmemeworks/adhx:latest
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      # All optional. The address and the session secret work themselves out;
+      # set SETUP_CODE to choose the setup code instead of reading the log.
+      APP_URL: '${APP_URL:-}'
+      SETUP_CODE: '${SETUP_CODE:-}'
+    volumes:
+      - adhx_data:/data
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(5000)}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
+
+volumes:
+  adhx_data:

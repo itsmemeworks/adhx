@@ -129,39 +129,46 @@ In words: you save a link from your phone, the web or the extension. Your server
 
 ## Run your own
 
-ADHX isn't a hosted service: you run it. You need somewhere to run a container with a persistent folder (a home server, a NAS, a small VPS or [Fly.io](docs/self-hosting.md#flyio)), and some disk space (1,000 mixed saves come to roughly 10–30 GB).
+ADHX isn't a hosted service: you run it. Any machine with Docker will do, with about 2 GB of memory to spare and some disk (1,000 mixed saves come to roughly 10–30 GB).
 
-1. Get the code and an environment file:
+### Try it in a minute
 
-   ```bash
-   git clone https://github.com/itsmemeworks/adhx && cd adhx
-   cp .env.example .env
-   openssl rand -base64 32
-   ```
+```bash
+docker run -d --name adhx -p 3000:3000 -v adhx:/data ghcr.io/itsmemeworks/adhx
+docker logs adhx | grep setup
+```
 
-2. Edit `.env`:
-   - `SESSION_SECRET`: the value you just generated. Keep it stable; a new one signs everybody out.
-   - `NEXT_PUBLIC_APP_URL`: your final HTTPS address, e.g. `https://adhx.example.com`.
-   - `ALLOWED_EMAILS`: your own email, so strangers can't sign up.
-   - `EMAIL_LINKS_TO_ADMIN=1`, unless you set up [SMTP or Resend](docs/self-hosting.md#sign-in-links) for sign-in emails.
+Open the link it prints, add your email and pick your name: you're the owner. Then invite your people from **Settings → Your people → Make a link**. There's nothing to configure: ADHX makes its own secret and works out its own address. The first start also downloads the search models (about 800 MB) in the background.
 
-3. Build and start it:
+### One click, wherever you host
 
-   ```bash
-   docker build -t adhx:local .
-   echo "ADHX_IMAGE=adhx:local" >> .env
-   docker compose up -d
-   ```
+| Where                                                  | How                                                                                                                                                                      |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A server with a domain, HTTPS included                 | [`deploy/vps`](deploy/vps/docker-compose.yml): `ADHX_DOMAIN=adhx.example.com docker compose up -d`                                                                       |
+| Render                                                 | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/itsmemeworks/adhx) (Standard plan + disk) |
+| Railway                                                | [Two-minute recipe](deploy/railway/README.md)                                                                                                                            |
+| Fly.io                                                 | [`deploy/fly`](deploy/fly/fly.toml): four commands                                                                                                                       |
+| Portainer, Dokploy, Coolify, CasaOS, Synology, TrueNAS | Paste [`deploy/one-click/docker-compose.yml`](deploy/one-click/docker-compose.yml)                                                                                       |
+| Unraid                                                 | [Container template](deploy/unraid/adhx.xml)                                                                                                                             |
+| Umbrel                                                 | [App folder](deploy/umbrel/adhx) (not in the Umbrel store yet)                                                                                                           |
+| UGREEN NAS                                             | [UGOS Pro walkthrough](deploy/nas/ugreen.md)                                                                                                                             |
 
-4. Find your first sign-in link and open it (that makes you the admin):
+Wherever it runs, the first screen asks for a setup code. It's in the server log, or in the host's dashboard when the template made one (`SETUP_CODE`). That way, reaching a fresh server first isn't enough to take it over.
 
-   ```bash
-   docker compose logs adhx | grep sign-in
-   ```
+Sign-in has no passwords. Until you set up [email](docs/self-hosting.md#sign-in-links), sign-in links wait on the admin page for you to pass on; invite links need no email at all.
 
-5. Put it behind your usual reverse proxy for HTTPS, then invite your people from **Settings → Your people → Make a link**.
+### From source
 
-ADHX listens on `127.0.0.1:3000` (`ADHX_PORT` changes it). Everything lives in one volume at `/data`: the database, the search models and every kept file. Migrations run on start. To use a published image instead of building one, pin `ADHX_IMAGE=ghcr.io/itsmemeworks/adhx@sha256:<digest>` from a [release](https://github.com/itsmemeworks/adhx/releases).
+```bash
+git clone https://github.com/itsmemeworks/adhx && cd adhx
+cp .env.example .env
+docker build -t adhx:local .
+echo "ADHX_IMAGE=adhx:local" >> .env
+docker compose up -d
+docker compose logs adhx | grep setup
+```
+
+This [`docker-compose.yml`](docker-compose.yml) listens on `127.0.0.1:3000` (`ADHX_PORT` changes it), for your usual reverse proxy to put HTTPS in front. Everything lives in one volume at `/data`: the database, the search models, every kept file and the secret ADHX made for itself. Migrations run on start. To run a published image instead, pin `ADHX_IMAGE=ghcr.io/itsmemeworks/adhx@sha256:<digest>` from a [release](https://github.com/itsmemeworks/adhx/releases).
 
 Where next:
 

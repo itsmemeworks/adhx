@@ -1,0 +1,33 @@
+manifestVersion: 1
+id: adhx
+category: media
+name: ADHX
+version: '2.8.4'
+tagline: Your friends have better taste than the algorithm
+description: >-
+  A private feed of the best posts from X, Instagram, TikTok, YouTube, Reddit
+  and nine more networks, saved by your friends and family instead of picked by
+  a recommendation engine.
+
+
+  ADHX downloads a real copy of every post, in the best quality the network
+  offers, and plays it from your Umbrel. Deleted on X? Still here. Describe what
+  you remember ("the baby arguing with a hamster") and ADHX finds it. Then send
+  the actual video to the group chat.
+
+
+  First start: open ADHX and enter the setup code shown in the app's logs
+  (Settings → Troubleshoot → ADHX). Search by meaning needs about 2 GB of memory.
+releaseNotes: ''
+developer: ADHX
+website: https://adhx.com
+dependencies: []
+repo: https://github.com/itsmemeworks/adhx
+support: https://github.com/itsmemeworks/adhx/issues
+port: 4150
+gallery: []
+path: ''
+defaultUsername: ''
+defaultPassword: ''
+submitter: ADHX
+submission: https://github.com/itsmemeworks/adhx

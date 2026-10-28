@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-28 — One-click installs: ADHX sets itself up
+
+- Owner: make installing as quick as possible, one-click on Docker hosts and elsewhere, plus a hosted demo (the demo is a separate PR).
+- A fresh install needs no settings: `serverSecret()` makes and keeps `/data/session-secret`; `appUrl()` takes the address from the env, the host (Render/Railway/Fly/Coolify) or the one the owner set up from; production without email holds sign-in links for the admin; session cookies drop Secure on plain-HTTP addresses so home servers by IP work.
+- `/setup` ("Make this ADHX yours"): the setup code from the log (or `SETUP_CODE`) plus an email makes the owner and signs them in. A fresh `/` and `/start` go there.
+- Installs: `docker run` one-liner (README and adhx.com), `deploy/vps` (Caddy HTTPS), `render.yaml` button, `deploy/fly`, `deploy/railway` recipe, `deploy/one-click` Compose for Portainer/Dokploy/Coolify/CasaOS/Synology/TrueNAS, Unraid template, Umbrel app folder. Container smoke now runs a nothing-configured install through setup and a restart.
+- Checked: a production build on an empty folder went setup → owner → name → admin console; a wrong code was refused; setup closed afterwards.
+- Follow-ups: the one-liner, buttons and site command need a release first (2.8.4 still requires `SESSION_SECRET`), so publish the site after it. The Railway template and Umbrel/Unraid store listings are owner submissions.
+
 ## 2026-10-28 — adhx.com shows the real apps
 
 - Owner: update the site with the latest web and phone app shots and drop the "Download the 30-second tour (MP4)" link; the promo film goes in the README.

@@ -18,6 +18,9 @@ import { CHANNEL_VISUAL_DDL } from '../channels/visual-schema'
 import { ADMIN_COUNTS_DDL } from '../admin/schema-sql'
 import { POST_REACTIONS_DDL } from '../reactions/schema-sql'
 import { POST_WATCH_COUNTS_DDL } from '../watch/schema-sql'
+import { serverSecret } from '../auth/server-secret'
+import { setupAnnouncement } from '../auth/setup-code'
+import { cleanOrigin, configuredAppUrl } from '../routes/configured-url'
 
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
 const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH || './drizzle'
@@ -1323,5 +1326,15 @@ db.transaction(() => db.exec(QUERY_INDEX_DDL))()
 db.pragma('optimize=0x10002')
 
 console.log(`[migrate] Database ready at: ${path.resolve(DB_PATH)}`)
+
+// A one-click install sets no SESSION_SECRET: make it now, before the server
+// and its workers start, then tell whoever installed ADHX how to take it over.
+serverSecret()
+if (!db.prepare(`SELECT 1 FROM users WHERE role = 'admin' LIMIT 1`).get()) {
+  const stored = db.prepare(`SELECT value FROM server_settings WHERE key = 'app_url'`).get() as
+    { value?: string } | undefined
+  const address = configuredAppUrl() ?? cleanOrigin(stored?.value) ?? 'http://localhost:3000'
+  for (const line of setupAnnouncement(address)) console.log(line)
+}
 
 db.close()

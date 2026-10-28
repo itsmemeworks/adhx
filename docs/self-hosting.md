@@ -12,9 +12,9 @@ Invites (below) get people in. Sign-in links get them back in: on a new browser,
 | -------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Your own mail server | `SMTP_URL=smtps://user:pass@mail.example.com:465` (or `smtp://…:587`) and `EMAIL_FROM` | Any mail account that allows SMTP, e.g. Fastmail or your domain's mail                           |
 | Resend               | `RESEND_API_KEY` and `EMAIL_FROM` on a domain you verified there                       | Sending from your own domain without running mail                                                |
-| No email             | `EMAIL_LINKS_TO_ADMIN=1`                                                               | A handful of friends. Links wait on the admin page and you pass them on, by message or in person |
+| No email             | Nothing (the default). `EMAIL_LINKS_TO_ADMIN=off` turns sign-in links off instead      | A handful of friends. Links wait on the admin page and you pass them on, by message or in person |
 
-With no email, sign in first yourself: your link is printed in the server log (`docker compose logs adhx | grep sign-in`), and confirming it makes you the admin. Your own email doesn't need to be on `ALLOWED_EMAILS` for this. After that, links show up under **Sign-in links** on the admin page. Admins' own links are also printed in the server log, so you can sign back in without another admin. Only invited emails (`ALLOWED_EMAILS`) and people who already have an account get later links, so strangers can't fill the list. Treat those logs as credentials.
+**The first sign-in is setup.** A fresh ADHX opens on **Make this ADHX yours**: enter the setup code and your email, and you're signed in as its owner (admin), with or without email set up. The code is printed in the server log on every start until then (`docker compose logs adhx | grep setup`, which also prints a ready-made link), or set your own with `SETUP_CODE` (the Render template generates one and shows it with the service's environment). Your own email doesn't need to be on `ALLOWED_EMAILS`. With no email, after that, links show up under **Sign-in links** on the admin page. Admins' own links are also printed in the server log, so you can sign back in without another admin. Only invited emails (`ALLOWED_EMAILS`) and people who already have an account get later links, so strangers can't fill the list. Treat those logs as credentials.
 
 The phone apps can sign in the same way, with a 6-digit code instead of a link (**Sign in with email** on the app's first screen). That needs real email delivery: with `EMAIL_LINKS_TO_ADMIN=1` the app says so and points people at the pairing code instead.
 
@@ -28,40 +28,41 @@ People who joined by invite have no email until they add one in **Settings → Y
 
 Email sign-up works too. By default, anyone who can reach your server can make an account with their email. For a private group, set `ALLOWED_EMAILS` to a comma-separated list of emails and/or `@domain` entries. Everyone else gets "This ADHX is for invited people". Accounts that already exist can always sign in. Invite links work whatever `ALLOWED_EMAILS` says: the invite is the permission.
 
-The admin page has invites, sign-in links, numbers, hiding posts and banning accounts. With no email you get it on your first sign-in (see above). With email, sign up first, open `/api/auth/me` while signed in, put your `user.id` in `ADMIN_USER_IDS` and restart once. (`ADMIN_USERNAMES` is only a bridge for older installs.)
+The admin page has invites, sign-in links, numbers, hiding posts and banning accounts. Whoever finishes setup gets it. To make someone else an admin later, have them sign up, open `/api/auth/me` while signed in, put their `user.id` in `ADMIN_USER_IDS` and restart once. (`ADMIN_USERNAMES` is only a bridge for older installs.)
 
 Kept media and shared post previews do not require sign-in for anyone who can reach the server. Media URLs contain source post IDs, not secret tokens. Use private LAN/VPN access if that is your intended privacy boundary; invites and the email allowlist protect account creation, not playback.
 
 ## Settings
 
-| Setting                                      | What it does                                                                                                                                     |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `NEXT_PUBLIC_APP_URL`                        | The address people use, e.g. `https://adhx.example.com`. Sign-in links point here.                                                               |
-| `SESSION_SECRET`                             | Signs sessions. `openssl rand -base64 32`.                                                                                                       |
-| `RESEND_API_KEY`, `EMAIL_FROM`               | Sign-in emails. `EMAIL_FROM` must be on a domain you verified with Resend.                                                                       |
-| `ALLOWED_EMAILS`                             | Who may sign up (see above).                                                                                                                     |
-| `INVITES=members`                            | Start with **Who can invite: Anyone** (Settings → Your people changes it later).                                                                 |
-| `MOMENT_MIN_SAVERS`                          | How many people must save the same kind of thing before it shows in Right now. `1` if it's just you, `2`–`3` for friends.                        |
-| `MEDIA_DIR`                                  | Where kept files live. Default: `media/` next to the database (`/data/media` in Docker).                                                         |
-| `KEEP_BACKFILL=off`                          | Only download posts saved from now on, leaving older saves on the networks' own links.                                                           |
-| `KEEP_H264=off`                              | Keep videos in whatever format the network sent (see [Video formats](#video-formats)).                                                           |
-| `KEEP_MAX_FILESIZE`                          | Largest single download, default `4G`.                                                                                                           |
-| `KEEP_CONCURRENCY`                           | Posts downloaded at once, default `2`.                                                                                                           |
-| `KEEP_MEDIA=off`                             | Stop downloading altogether. Files already kept still play.                                                                                      |
-| `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET` | Optional: lets people connect X and bring in their bookmarks (see below).                                                                        |
-| `AUTO_SYNC_EVERY_MINUTES`                    | Minutes between automatic X bookmark syncs per person, default `50`; `0` turns it off.                                                           |
-| `SYNC_COOLDOWN_MINUTES`                      | Wait between manual X syncs. Set `1` for a one-minute cooldown; this does not set the automatic interval.                                        |
-| `SEMANTIC_SEARCH=off`                        | Stop model workers; keyword search still indexes new saves and catches up missing entries on startup.                                            |
-| `SEMANTIC_THREADS`                           | CPU threads the search model may use, default `2`.                                                                                               |
-| `SEMANTIC_CACHE_DIR`                         | Where the search model is kept. Default: `models/` next to the database (`/data/models` in Docker).                                              |
-| `SEMANTIC_SPEECH=off`                        | Stop transcribing what's said in videos. Transcripts already made stay searchable.                                                               |
-| `SEMANTIC_SCREEN_TEXT=off`                   | Stop reading text on pictures and video frames. Text already read stays searchable.                                                              |
-| `KEEP_MIN_FREE_GB`                           | Pause downloads while the disk has less free than this, default `2`.                                                                             |
-| `TRUST_PROXY_IP_HEADERS=true`                | Use `X-Forwarded-For` for the visitor's address (for rate limits). Only when a proxy you run is the only way in.                                 |
-| `TYPESAFE_API_KEY`                           | Optional: refines search order and chooses names for automatic channels and moments, using search text and public post text.                     |
-| `TYPESAFE_CHANNEL_IMAGES=on`                 | Separate opt-in: experimental background channel naming, membership checks, repeat spacing and covers using public-post thumbnails. Default off. |
-| `NEXT_PUBLIC_IOS_APP_URL`                    | Optional: your TestFlight invite link, shown in Settings → Phone app.                                                                            |
-| `NEXT_PUBLIC_ANDROID_APP_URL`                | Optional: where people download the Android app. Default: the Android build guide in this repo.                                                  |
+| Setting                                      | What it does                                                                                                                                                                               |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `NEXT_PUBLIC_APP_URL` (or `APP_URL`)         | The address people use, e.g. `https://adhx.example.com`. Sign-in links point here. Optional: Render, Railway, Fly and Coolify give it; otherwise the address you set ADHX up from is kept. |
+| `SESSION_SECRET`                             | Signs sessions and file links and keys stored X tokens. Optional: without it ADHX makes one in `/data/session-secret` on first start. Back it up with the database.                        |
+| `SETUP_CODE`                                 | The code that makes the first person the owner (`/setup`). Optional: without it, read the code from the server log.                                                                        |
+| `RESEND_API_KEY`, `EMAIL_FROM`               | Sign-in emails. `EMAIL_FROM` must be on a domain you verified with Resend.                                                                                                                 |
+| `ALLOWED_EMAILS`                             | Who may sign up (see above).                                                                                                                                                               |
+| `INVITES=members`                            | Start with **Who can invite: Anyone** (Settings → Your people changes it later).                                                                                                           |
+| `MOMENT_MIN_SAVERS`                          | How many people must save the same kind of thing before it shows in Right now. `1` if it's just you, `2`–`3` for friends.                                                                  |
+| `MEDIA_DIR`                                  | Where kept files live. Default: `media/` next to the database (`/data/media` in Docker).                                                                                                   |
+| `KEEP_BACKFILL=off`                          | Only download posts saved from now on, leaving older saves on the networks' own links.                                                                                                     |
+| `KEEP_H264=off`                              | Keep videos in whatever format the network sent (see [Video formats](#video-formats)).                                                                                                     |
+| `KEEP_MAX_FILESIZE`                          | Largest single download, default `4G`.                                                                                                                                                     |
+| `KEEP_CONCURRENCY`                           | Posts downloaded at once, default `2`.                                                                                                                                                     |
+| `KEEP_MEDIA=off`                             | Stop downloading altogether. Files already kept still play.                                                                                                                                |
+| `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET` | Optional: lets people connect X and bring in their bookmarks (see below).                                                                                                                  |
+| `AUTO_SYNC_EVERY_MINUTES`                    | Minutes between automatic X bookmark syncs per person, default `50`; `0` turns it off.                                                                                                     |
+| `SYNC_COOLDOWN_MINUTES`                      | Wait between manual X syncs. Set `1` for a one-minute cooldown; this does not set the automatic interval.                                                                                  |
+| `SEMANTIC_SEARCH=off`                        | Stop model workers; keyword search still indexes new saves and catches up missing entries on startup.                                                                                      |
+| `SEMANTIC_THREADS`                           | CPU threads the search model may use, default `2`.                                                                                                                                         |
+| `SEMANTIC_CACHE_DIR`                         | Where the search model is kept. Default: `models/` next to the database (`/data/models` in Docker).                                                                                        |
+| `SEMANTIC_SPEECH=off`                        | Stop transcribing what's said in videos. Transcripts already made stay searchable.                                                                                                         |
+| `SEMANTIC_SCREEN_TEXT=off`                   | Stop reading text on pictures and video frames. Text already read stays searchable.                                                                                                        |
+| `KEEP_MIN_FREE_GB`                           | Pause downloads while the disk has less free than this, default `2`.                                                                                                                       |
+| `TRUST_PROXY_IP_HEADERS=true`                | Use `X-Forwarded-For` for the visitor's address (for rate limits). Only when a proxy you run is the only way in.                                                                           |
+| `TYPESAFE_API_KEY`                           | Optional: refines search order and chooses names for automatic channels and moments, using search text and public post text.                                                               |
+| `TYPESAFE_CHANNEL_IMAGES=on`                 | Separate opt-in: experimental background channel naming, membership checks, repeat spacing and covers using public-post thumbnails. Default off.                                           |
+| `NEXT_PUBLIC_IOS_APP_URL`                    | Optional: your TestFlight invite link, shown in Settings → Phone app.                                                                                                                      |
+| `NEXT_PUBLIC_ANDROID_APP_URL`                | Optional: where people download the Android app. Default: the Android build guide in this repo.                                                                                            |
 
 Every setting is in [`.env.example`](../.env.example).
 
@@ -129,20 +130,17 @@ Back up the `/data` volume consistently: stop ADHX before copying it, or use SQL
 
 ## Fly.io
 
-A starter [`fly.toml`](../fly.toml) is included. Size the volume for your media:
+[`deploy/fly/fly.toml`](../deploy/fly/fly.toml) runs the published image. Size the volume for your media:
 
 ```bash
-fly apps create your-adhx
-fly volumes create adhx_data --region lhr --size 50 --app your-adhx
-fly secrets set --app your-adhx \
-  SESSION_SECRET=$(openssl rand -base64 32) \
-  NEXT_PUBLIC_APP_URL=https://your-adhx.fly.dev \
-  EMAIL_LINKS_TO_ADMIN=1 \
-  ALLOWED_EMAILS='you@example.com'
+curl -fsSLO https://raw.githubusercontent.com/itsmemeworks/adhx/main/deploy/fly/fly.toml
+fly launch --copy-config --no-deploy --name your-adhx
+fly volumes create adhx_data --size 50 --app your-adhx
 fly deploy --app your-adhx
+fly logs --app your-adhx | grep setup
 ```
 
-Keep `min_machines_running = 1`. The download queue, the hourly X sync and Right now all run inside the app. For your first sign-in link without email, run `fly logs --app your-adhx | grep sign-in`.
+Fly gives the app its address (`https://your-adhx.fly.dev`); set `NEXT_PUBLIC_APP_URL` once you put your own domain on it. Keep `min_machines_running = 1`. The download queue, the hourly X sync and Right now all run inside the app.
 
 ## X bookmark sync (optional)
 

@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { serverSecret } from './server-secret'
 
 /**
  * Token encryption utilities for securing OAuth tokens at rest.
@@ -11,10 +12,7 @@ const AUTH_TAG_LENGTH = 16
 
 // Derive encryption key from SESSION_SECRET
 function getEncryptionKey(): Buffer {
-  const secret = process.env.SESSION_SECRET || process.env.TWITTER_CLIENT_SECRET
-  if (!secret) {
-    throw new Error('SESSION_SECRET or TWITTER_CLIENT_SECRET must be set for token encryption')
-  }
+  const secret = serverSecret()
   // Use scrypt for key derivation (OWASP recommended)
   return crypto.scryptSync(secret, 'oauth-token-encryption-salt', 32)
 }

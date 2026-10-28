@@ -3,8 +3,10 @@ import HomePage from '@/app/page'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { getTheaterFeed } from '@/lib/theater/feed'
 import { redirect } from 'next/navigation'
+import { isFreshInstall } from '@/lib/auth/allowlist'
 
 vi.mock('@/lib/auth/session', () => ({ getCurrentUserId: vi.fn() }))
+vi.mock('@/lib/auth/allowlist', () => ({ isFreshInstall: vi.fn(() => false) }))
 vi.mock('@/lib/theater/feed', () => ({
   getTheaterFeed: vi.fn(async () => ({ items: [], savedToday: 0 })),
 }))
@@ -42,5 +44,11 @@ describe('home destination', () => {
     await HomePage({ searchParams: Promise.resolve({}) })
     expect(redirect).not.toHaveBeenCalled()
     expect(getTheaterFeed).toHaveBeenCalledOnce()
+  })
+
+  it('opens a brand-new ADHX on setup', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    vi.mocked(isFreshInstall).mockReturnValueOnce(true)
+    await expect(HomePage({ searchParams: Promise.resolve({}) })).rejects.toThrow('REDIRECT:/setup')
   })
 })
