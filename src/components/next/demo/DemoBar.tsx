@@ -45,7 +45,7 @@ export function DemoBar() {
   }, [])
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[200] flex flex-col items-center gap-2 px-4 font-nx-sans md:bottom-4 md:left-auto md:right-4 md:items-end">
+    <div className="pointer-events-none fixed inset-x-0 top-[calc(64px+env(safe-area-inset-top))] z-[200] flex flex-col items-center gap-2 px-4 font-nx-sans md:bottom-4 md:left-auto md:right-4 md:top-auto md:flex-col-reverse md:items-end">
       {refused && (
         <p
           role="status"
