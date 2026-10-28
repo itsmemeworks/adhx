@@ -621,7 +621,8 @@ enum Links {
         if !text.lowercased().hasPrefix("http://") && !text.lowercased().hasPrefix("https://") {
             let host = text.split(separator: "/").first.map(String.init) ?? text
             let bare = host.split(separator: ":").first.map(String.init)?.lowercased() ?? host
-            let local = bare == "localhost" || bare.hasSuffix(".local")
+            // A bracketed IPv6 address ("[fd00::2]:3000") is local like an IPv4 one.
+            let local = bare == "localhost" || bare.hasSuffix(".local") || host.hasPrefix("[")
                 || bare.allSatisfy { $0.isNumber || $0 == "." }
             text = (local ? "http://" : "https://") + text
         }
@@ -633,9 +634,11 @@ enum Links {
         return comps.url
     }
 
-    /// "host" or "host:port" for showing a server.
+    /// "host" or "host:port" for showing a server; an IPv6 host in brackets,
+    /// so the port can't be read as part of it and it can be typed back.
     static func displayHost(_ url: URL?) -> String {
-        guard let url, let host = url.host else { return "" }
+        guard let url, var host = url.host else { return "" }
+        if host.contains(":") { host = "[\(host)]" }
         if let port = url.port { return "\(host):\(port)" }
         return host
     }

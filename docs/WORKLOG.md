@@ -6,12 +6,43 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-28 — Attach a sideloadable iPhone IPA to every release
+
+- New `.github/workflows/ios-sideload.yml`, called by Release Please (and by hand): builds `adhx-<version>.ipa` at the tag with `make-sideload-ipa.sh`, bundle id `com.adhx.share` like Android. It checks the signature, version and App Group entitlement, then attaches it with a SHA-256. No secrets.
+- The script now passes extra `SETTING=value` arguments to xcodebuild. `native.yml` builds the IPA on every app PR so the script can't rot.
+- The install guide, adhx.com/install, the iOS README and `docs/releasing.md` now point at the release asset. Tags up to 2.8.2 lack the script, so the first IPA comes with the next release.
+- Checked locally: the job's build and checks pass and actionlint is clean. It can only be dispatched once it's on main, so the first real run is the next release.
+
+## 2026-10-28 — Guide to installing the phone apps without a store
+
+- New `docs/install-phone-apps.md` and adhx.com `/install/`: Android APK from Releases; iPhone via TestFlight, AltStore PAL in the EU, SideStore elsewhere; then connecting. Linked from README, both app READMEs, docs index, the site's nav and Apps section, and Settings → Phone app's fallback links.
+- EU: Apple's Web Distribution needs financial-standing proof a self-hosted project usually lacks, so AltStore PAL (notarized, 5% only on sales). Rest of world: SideStore (free Apple ID, one-time computer, on-phone weekly refresh) over AltStore Classic, paid certificates and Xcode.
+- SideStore/AltStore rename the App Group to `group.<prefix>.<TEAMID>`; `AppGroup.id` now falls back to the signed group (`ALTAppGroups` or the embedded profile) so the share card still sees the connection. swiftc suite added to CI; simulator build passes. Not yet tried on a phone through SideStore.
+- `apps/ios/Config/make-sideload-ipa.sh` builds an ad-hoc-signed `.ipa` keeping the App Group entitlement (verified locally).
+- Still missing: releases attach no `.ipa`, TestFlight secrets aren't set, and nobody has published an AltStore PAL source. The guide says so and lists the owner steps.
+
 ## 2026-10-28 — Accept the unfixable deepmerge advisory on its one path
 
 - The dependency audit started failing every branch on GHSA-gcqx-w48m-w2h4 (low, `deepmerge` prototype poisoning). No release fixes it, and it arrives in production through `react-email` → `@react-email/render` → `html-to-text`, which `render` imports at the top, so it can't be dropped.
 - `html-to-text` only merges its own options for the plain-text sign-in emails, so no request data reaches the flaw. Owner chose a narrow exception.
 - `check-dependencies.mjs` now keeps its exceptions in one `EXCEPTIONS` list. The deepmerge one applies only on that exact path, only while no fix exists, and until 31 Dec 2026. Tests cover another path, no paths, a released fix and expiry.
 - Follow-up: drop it when deepmerge or html-to-text ships a fix, or when react-email stops depending on it.
+
+## 2026-10-28 — Device run, part two: the remaining journeys
+
+- Ran the rest of the phone journeys on both devices (send, original post, Up next, whose-saves filter, invites, picture, offline share, rotation, labels, IPv6 reconnect). Rows in `docs/rollout/phone-device-results.md`.
+- Fixed: no × on the Send sheet (both apps); Android saying "0 MB" for files under a megabyte (`SendSizeTest`); iPhone Connect and email fields read by VoiceOver as their placeholder.
+- Driver: XCUITest's wait-for-idle is skipped (a playing video never idles); fields are found by placeholder too, and `clear`/`type` tap a field's end so the cursor follows its text.
+- Then email sign-in on both (the dev server logs the code), Android rotation and Safari share passed; email sign-in found one more: Android's keyboard hid "Email me a code" (the other ways in now step aside).
+- Driver can't open a share extension from the share sheet (the card needs a real tap); `drive.mjs` keeps typed values as text so 6-digit codes survive.
+
+## 2026-10-28 — Drive real phones; first device run fixes five bugs
+
+- Owner connected a test iPhone 16 Pro and a Galaxy A13 and asked for every journey tested on them, with bugs fixed.
+- New `e2e/devices/`: a `DeviceDriver` UI test (own scheme) that takes commands from `hub.mjs`, `ios.sh` to build/run it, and `drive.mjs` for both phones (adb on Android). The parity server gains LAN mode (`PARITY_HOST`, `PARITY_PUBLIC_ORIGIN`) and `pnpm parity:pair <member>`.
+- An iPhone on USB reaches the Mac over the CoreDevice tunnel (`[<tunnel>::2]`); XCUITest element queries stall on live camera/video, so the driver finds elements in snapshots and taps coordinates.
+- Fixed: iOS Home playing under the welcome; iOS/Android videos skipping on while React/Send was open (Android also kept the picker over the next post); iOS IPv6 address display/round trip (`ServerAddressTests`); Android share card repeating its heading. Results: `docs/rollout/phone-device-results.md`.
+- Follow-ups: the remaining acceptance rows (channels, Live, send, original, invites, picture, rotation, offline queue, accessibility).
 
 ## 2026-10-27 — Home's filters play the latest; For you stops repeating its opener
 

@@ -229,6 +229,10 @@ struct LibraryHome: View {
                     .frame(maxHeight: .infinity, alignment: .top)
             } else if feed.items.isEmpty {
                 caughtUp(server, topInset: headerHeight + 40)
+            } else if model.welcome {
+                // "Connected to your ADHX" covers Home: nothing plays, moves on
+                // or counts as seen until Start watching.
+                Theme.stage.ignoresSafeArea()
             } else {
                 PlayerView(posts: feed.items, server: server, clean: $clean, scrubbing: $scrubbing,
                            jumpTo: $jumpTo, start: feed.currentKey,

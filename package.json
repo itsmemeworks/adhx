@@ -20,6 +20,7 @@
     "parity:serve": "tsx e2e/parity/serve.ts",
     "parity:capture": "playwright test --config e2e/parity/playwright.config.ts",
     "parity:compare": "tsx e2e/parity/compare.ts",
+    "parity:pair": "tsx e2e/parity/pair.ts",
     "extension:dev": "pnpm --dir extension dev",
     "extension:build": "pnpm --dir extension build",
     "typecheck": "tsc --noEmit",

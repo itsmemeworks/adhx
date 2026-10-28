@@ -180,7 +180,8 @@ fun ShareSheetScreen(
                     Phase.NotAPost -> MessageContent(
                         ui = ui,
                         title = Copy.NOT_A_POST_TITLE,
-                        body = ui.message ?: Copy.NOT_A_POST_BODY,
+                        // The saved reason is the title again; say what to do instead.
+                        body = Copy.NOT_A_POST_BODY,
                         button = "OK",
                         onButton = close,
                     )
@@ -195,7 +196,7 @@ fun ShareSheetScreen(
                     Phase.Failed -> MessageContent(
                         ui = ui,
                         title = Copy.FAILED_TITLE,
-                        body = ui.message ?: Copy.FAILED_BODY,
+                        body = ui.message?.takeIf { it != Copy.FAILED_TITLE } ?: Copy.FAILED_BODY,
                         button = "OK",
                         onButton = close,
                     )

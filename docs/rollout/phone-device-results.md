@@ -1,0 +1,79 @@
+# Phone device results
+
+Results of the [phone acceptance checks](phone-device-acceptance.md) on real
+phones, newest run first. Each run says what was tested on which device and
+build. A row not listed was not run. Bugs found are fixed in the same change,
+with the fix named. How to drive the phones: [`e2e/devices`](../../e2e/devices/README.md).
+
+## 28 October 2026
+
+- **Server:** the parity test world (`pnpm parity:serve`, LAN mode) from this
+  branch, on a Mac. No real accounts or data.
+- **iPhone 16 Pro**, iOS 27.2, Debug build from this branch, as Ana. Reached
+  the server over the USB tunnel (`http://[fd87:…::2]:3600`). Driven by the
+  `DeviceDriver` UI test.
+- **Samsung Galaxy A13** (SM-A137F), Android 14, Debug build from this branch,
+  as Pete (as Ben for email sign-in: Pete has no email in the test world).
+  Reached the server over Wi-Fi. Driven over adb.
+
+| Journey                                                  | Row | iPhone                                                               | Android                                   |
+| -------------------------------------------------------- | --- | -------------------------------------------------------------------- | ----------------------------------------- |
+| Pair with a typed code, Connected, Home                  | P01 | Pass after fixes 1 and 4                                             | Pass                                      |
+| A removed key on the server                              | P16 | –                                                                    | Pass: "This phone was removed…"           |
+| Remove this phone (online)                               | P16 | Pass                                                                 | Pass                                      |
+| React on a playing post outside Live                     | P19 | Pass after fix 2                                                     | Pass after fix 3                          |
+| Share a saved post, a non-post and a new one             | P02 | –                                                                    | Pass after fix 5                          |
+| Search by words                                          | P01 | Pass: "zoo" finds the zoo clip                                       | Pass                                      |
+| Channels: From everyone, Your people, a friend's channel | –   | –                                                                    | Pass                                      |
+| Live: a moment, Tune in                                  | P07 | Pass                                                                 | Pass                                      |
+| Watch together from both phones (names, a live reaction) | P07 | Pass: "Pete · watching with you"                                     | Pass: Ana's 🔥 arrived in about a second  |
+| Send straight to a friend                                | –   | Pass: Ben's feed leads with "Ana sent you this"                      | –                                         |
+| Close the Send sheet; its file size                      | –   | Pass after fix 6                                                     | Pass after fixes 6 and 7                  |
+| The original post: Open on X, Copy link                  | –   | Pass: "Link copied"                                                  | Pass                                      |
+| Up next: jump to a post                                  | –   | –                                                                    | Pass                                      |
+| Whose saves: New, Everyone, Friends, Mine                | –   | –                                                                    | Pass: newest first, checked on the server |
+| Invites: make, share, take back                          | –   | –                                                                    | Pass: checked on the server               |
+| Change your picture                                      | –   | Pass: the new face reached Android                                   | Pass                                      |
+| Share while offline, then online                         | P02 | –                                                                    | Pass: queued, then saved                  |
+| Turn the phone                                           | –   | Pass: media goes sideways, Settings stays up                         | Pass: the video goes full screen sideways |
+| Labels a screen reader reads                             | –   | Pass after fix 8                                                     | –                                         |
+| Reconnect with an IPv6 address                           | P01 | Pass: Settings shows `[fd87:…::2]:3600`                              | –                                         |
+| Share from Safari                                        | P02 | Pass: "That’s not one post", then OK back to Safari (opened by hand) | –                                         |
+| Sign in with email                                       | –   | Pass: the code connects on its own                                   | Pass after fix 9                          |
+
+Bugs found and fixed:
+
+1. **iPhone: Home played under the welcome.** After connecting, Home played
+   behind "Connected to your ADHX", moved on and counted posts as seen, so
+   Start watching opened on the fourth post. `LibraryHome` now holds the
+   player while the welcome is up.
+2. **iPhone: a video ending while you reacted skipped on.** With the React
+   picker (or the Send sheet) open, the video's end moved to the next post
+   and closed the picker, losing what you'd typed. `PlayerView` now waits at
+   the end and moves on when the picker or sheet closes.
+3. **Android: the same, and the picker followed you.** The video moved on with
+   React, Send, More, the original or Read open, and the picker stayed open
+   over the next post. `PlayerScreen` now waits at the end until they close,
+   and moving off a post closes its picker.
+4. **iPhone: IPv6 addresses.** Settings showed `fd87:…::2:3600` (the port read
+   as part of the address), and Connect filled that back in and refused it.
+   Addresses now show in brackets, and a bracketed address without a scheme
+   is local (http), like a LAN IPv4 one. `ServerAddressTests` covers it.
+5. **Android: the share card repeated its heading.** "That's not one post"
+   (and "Couldn't save this") showed the heading again as the explanation.
+   The card now says what to do.
+6. **Both: the Send sheet had no ×.** Only a swipe closed it. Both apps now
+   have the close button the design shows.
+7. **Android: "0 MB" for small files.** The Send sheet rounded anything under
+   a megabyte to 0 MB; it now says KB, like the iPhone. `SendSizeTest` covers it.
+8. **iPhone: unlabelled fields.** VoiceOver read the address, code and email
+   fields by their placeholder ("adhx.example.com"), because their visible
+   labels sit above them. Each field now carries its label.
+9. **Android: the keyboard hid "Email me a code".** With the keyboard up, the
+   button scrolled out of view under "Use a pairing code instead", so only the
+   keyboard's Send key worked. The other ways in now step aside while the
+   keyboard is up.
+
+Noted, not changed: on Android, a share opened over ADHX itself leaves Home
+playing behind the share card; sharing from another app (the usual way) isn't
+affected.

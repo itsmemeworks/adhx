@@ -42,7 +42,7 @@ import { networkSourceUrl } from '../../src/lib/platform/networks'
 import {
   PARITY_CREDENTIALS,
   PARITY_MEDIA_DIR,
-  PARITY_ORIGIN,
+  PARITY_PUBLIC_ORIGIN,
   PARITY_OUT,
   PARITY_SESSION_SECRET,
   parityMediaSource,
@@ -631,7 +631,7 @@ async function writeCredentials(placeholders: Record<string, string[]>) {
     }
   }
   const credentials = {
-    server: PARITY_ORIGIN,
+    server: PARITY_PUBLIC_ORIGIN,
     cookieName: 'adhx_session',
     seededAt: new Date(NOW).toISOString(),
     mediaSource: usingMediaSource() ? parityMediaSource() : null,

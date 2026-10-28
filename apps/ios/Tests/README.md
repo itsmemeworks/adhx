@@ -24,7 +24,7 @@ the output says which one.
 ## The suites
 
 CI (`.github/workflows/native.yml`) runs **Live reliability**, **Live updates** and **Queued
-privacy**, plus **Reaction connections**, **Playback recovery**, **Feed seen sessions** and **Watch tally**, on every PR that touches the apps, then builds the app for the
+privacy**, plus **Reaction connections**, **Playback recovery**, **Feed seen sessions**, **Watch tally** and **Sideload group**, on every PR that touches the apps, then builds the app for the
 simulator. Run the rest by hand when you change what they cover.
 
 | Suite                | What it checks                                                                                                                           | Files to compile (all under `apps/ios/`), plus `Tests/<Suite>.swift`                                                                                                              |
@@ -32,6 +32,7 @@ simulator. Run the rest by hand when you change what they cover.
 | Live reliability     | Compact saver and privacy updates, explicit removals, keeping the playing post, the 200-post cache bound, 40-code-point message clipping | `Shared/API.swift Shared/FriendsAPI.swift Shared/LiveQueue.swift`                                                                                                                 |
 | Live updates         | Bounded SSE framing, burst coalescing, serial refreshes, reconnect recovery, fallback, cancellation and quiet account changes            | `Shared/API.swift Shared/FriendsAPI.swift Shared/LiveUpdates.swift`                                                                                                               |
 | Queued privacy       | Restoring a queued privacy choice, intent versions, history written by app and extension at once, keeping unfinished entries             | `-D ADHX_HISTORY_TEST Shared/API.swift Shared/FriendsAPI.swift Shared/Network.swift Shared/NetworkPaths.swift Shared/SVGPath.swift Shared/ResumeStore.swift Shared/Storage.swift` |
+| Sideload group       | Finding the App Group after SideStore or AltStore rename it, reading groups out of a provisioning profile                                | `-D ADHX_HISTORY_TEST Shared/API.swift Shared/FriendsAPI.swift Shared/Network.swift Shared/NetworkPaths.swift Shared/SVGPath.swift Shared/ResumeStore.swift Shared/Storage.swift` |
 | Friends parity       | Feed weights, a channel's new marks and notes, Live's busy line, forming groups                                                          | `Shared/API.swift Shared/FriendsAPI.swift`                                                                                                                                        |
 | Board features       | Sending straight to your people, the sent reason, forming faces and alerts, the like thumbnail, keeping a group channel                  | `Shared/API.swift Shared/FriendsAPI.swift`                                                                                                                                        |
 | Decouple             | Your picture's answers and the crop sums, invites, email sign-in codes, the reactions feed, the share card opening the app               | `Shared/API.swift Shared/FriendsAPI.swift Shared/AccountAPI.swift App/Settings/AvatarCrop.swift`                                                                                  |
@@ -41,6 +42,7 @@ simulator. Run the rest by hand when you change what they cover.
 | Playback recovery    | Scoped/bounded resume history, rejected late writes, renewed/cancelled loading deadlines and Reply pause restoration                     | `Shared/ResumeStore.swift App/Library/PlaybackRecovery.swift`                                                                                                                     |
 | Feed seen sessions   | Fresh sends of watched posts are acknowledged again and update the lineup badge                                                          | `App/Feed/FeedModel.swift`                                                                                                                                                        |
 | Watch tally          | Watch counts: plays from the top, finishes, loops, resume and seeks not counted, batches keeping fractions of a second                   | `App/Library/WatchTally.swift`                                                                                                                                                    |
+| Server addresses     | What you type becomes the server: https or local http, IPv6 in brackets, the shown address typed back                                    | `Shared/API.swift Shared/FriendsAPI.swift`                                                                                                                                        |
 | Player polish        | The 10-second photo timer, and links in captions shown short and tappable                                                                | `App/Library/PhotoTimer.swift App/Library/LinkedText.swift`                                                                                                                       |
 
 For example, the queued privacy suite:
@@ -70,6 +72,7 @@ t reactions $I/Shared/API.swift $I/Shared/FriendsAPI.swift $I/Tests/PostReaction
 t recovery $I/Shared/ResumeStore.swift $I/App/Library/PlaybackRecovery.swift $I/Tests/PlaybackRecoveryTests.swift
 t seen $I/App/Feed/FeedModel.swift $I/Tests/FeedSeenSessionTests.swift
 t watch    $I/App/Library/WatchTally.swift $I/Tests/WatchTallyTests.swift
+t address  $I/Shared/API.swift $I/Shared/FriendsAPI.swift $I/Tests/ServerAddressTests.swift
 t polish   $I/App/Library/PhotoTimer.swift $I/App/Library/LinkedText.swift $I/Tests/PlayerPolishTests.swift
 ```
 
