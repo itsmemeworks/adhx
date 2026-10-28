@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.9.0](https://github.com/itsmemeworks/adhx/compare/v2.8.4...v2.9.0) (2026-10-28)
+
+
+### Features
+
+* add a public read-only demo at demo.adhx.com ([#656](https://github.com/itsmemeworks/adhx/issues/656)) ([64f21dc](https://github.com/itsmemeworks/adhx/commit/64f21dca25a56f725aab178d625ac186adf1f236))
+* set adhx up in one click with no settings ([#655](https://github.com/itsmemeworks/adhx/issues/655)) ([234c53f](https://github.com/itsmemeworks/adhx/commit/234c53f0b7fb447f9451adf9ab294520cc5665e8))
+
 ## [2.8.4](https://github.com/itsmemeworks/adhx/compare/v2.8.3...v2.8.4) (2026-10-28)
 
 
