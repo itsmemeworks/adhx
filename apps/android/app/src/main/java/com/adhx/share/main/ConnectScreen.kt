@@ -8,6 +8,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -120,9 +122,6 @@ fun ConnectScreen(vm: MainViewModel) {
         if (mode == ConnectMode.Email) vm.emailBack() else modeName = ConnectMode.Email.name
     }
 
-    // While the keyboard is up the other ways in step aside, so the main button stays in view.
-    val keyboardUp = WindowInsets.ime.getBottom(LocalDensity.current) > 0
-
     Column(
         Modifier
             .fillMaxSize()
@@ -187,7 +186,7 @@ fun ConnectScreen(vm: MainViewModel) {
             }
         }
 
-        if (!keyboardUp) Column(
+        Column(
             Modifier
                 .fillMaxWidth()
                 .padding(top = 16.dp),
@@ -316,7 +315,7 @@ private fun TypeForm(vm: MainViewModel, busy: Boolean) {
             "Connect",
             onClick = { submit() },
             enabled = !busy && address.isNotBlank() && codeReady,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().inViewAboveKeyboard(),
         )
     }
 }
@@ -360,7 +359,7 @@ private fun EmailForm(vm: MainViewModel, ui: EmailSignInUi) {
             EmailSignIn.SEND,
             onClick = { submit() },
             enabled = !ui.busy && ready,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().inViewAboveKeyboard(),
         )
     }
 }
@@ -416,7 +415,7 @@ private fun CodeForm(vm: MainViewModel, ui: EmailSignInUi) {
             EmailSignIn.SIGN_IN,
             onClick = { submit() },
             enabled = !ui.busy && EmailSignIn.codeReady(code),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().inViewAboveKeyboard(),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlineButton(
@@ -435,6 +434,23 @@ private fun CodeForm(vm: MainViewModel, ui: EmailSignInUi) {
             )
         }
     }
+}
+
+/**
+ * Scrolls a form's button into view once the keyboard is up, so it isn't left
+ * under the keyboard (or under the other ways in, pinned below the form).
+ */
+@Composable
+private fun Modifier.inViewAboveKeyboard(): Modifier {
+    val requester = remember { BringIntoViewRequester() }
+    val keyboardUp = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    LaunchedEffect(keyboardUp) {
+        if (keyboardUp) {
+            delay(350) // Let the keyboard finish sliding in, so the space left is final.
+            requester.bringIntoView()
+        }
+    }
+    return bringIntoViewRequester(requester)
 }
 
 @Composable

@@ -71,8 +71,10 @@ Bugs found and fixed:
    labels sit above them. Each field now carries its label.
 9. **Android: the keyboard hid "Email me a code".** With the keyboard up, the
    button scrolled out of view under "Use a pairing code instead", so only the
-   keyboard's Send key worked. The other ways in now step aside while the
-   keyboard is up.
+   keyboard's Send key worked. The button now scrolls into view once the
+   keyboard is up. (A first try hid the other ways in while typing, which hid
+   "Use a pairing code instead" on a fresh install, where the keyboard opens
+   straight away; the follow-up keeps them.)
 
 Noted, not changed: on Android, a share opened over ADHX itself leaves Home
 playing behind the share card; sharing from another app (the usual way) isn't
