@@ -21,7 +21,8 @@ const NAMING_TIMEOUT_MS = 4_000
 const STOP = new Set(
   (
     'the and for you are but not was app apps all any can had her his one our out get has him how its may new now old see two way who did let say she too use lol omg wtf idk yes why got put own off via per lot bit big day man men guy ' +
-    'about after again also been before being both could does doing down each even ever every from have here into just like look made make many more most much must only other over really same should since some such than that their them then there these they this those through very want were what when where which while with would your yours just thats dont cant wont youre im ive its it’s http https www com status video photo post posts thread today going gonna watch every still never always thing things people time year years good great best first last know need think right make well back'
+    'about after again also been before being both could does doing down each even ever every from have here into just like look made make many more most much must only other over really same should since some such than that their them then there these they this those through very want were what when where which while with would your yours just thats dont cant wont youre im ive its it’s http https www com status video photo post posts thread today going gonna watch every still never always thing things people time year years good great best first last know need think right make well back ' +
+    'across along among around against above below behind beside between beyond inside outside onto upon under within without toward towards near'
   ).split(' '),
 )
 

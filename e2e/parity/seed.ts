@@ -49,6 +49,7 @@ import {
 } from './env'
 import { prepareMedia, usingMediaSource } from './media'
 import { seedAdminPhones, seedAdminWorld } from './seed-admin'
+import { buildShowcaseMedia, showcaseEnabled } from './showcase'
 import {
   DOING,
   FILLER_STILLS,
@@ -379,37 +380,40 @@ async function seedKept(): Promise<Record<string, string[]>> {
     const newest = Math.min(...w.saves.map((s) => s.minutesAgo))
     job(w.key, { status: 'done', updatedAt: iso(Math.max(0, newest - 1)) })
   }
-  job(DOING.ready, { status: 'done', updatedAt: iso(2) })
-  // Its files are here, but the job is still running at 62% (the percent the
-  // worker last wrote): /doing shows it being kept and the theater shows
-  // "Getting it ready" over it (board j1-4).
-  job(DOING.keeping, { status: 'running', progress: 62, updatedAt: iso(1) })
-  job(DOING.converting, { status: 'converting', updatedAt: iso(5) })
-  job(DOING.needsYou, {
-    status: 'unavailable',
-    attempts: 1,
-    lastError: 'This post is private (login required)',
-    updatedAt: iso(19),
-  })
-  job(DOING.waiting, {
-    status: 'failed',
-    attempts: 1,
-    lastError: 'Read timed out while asking Instagram',
-    nextAttemptAt: new Date(NOW + 20 * 60_000).toISOString(),
-    updatedAt: iso(2),
-  })
-  const listening = post(DOING.listening)
-  db.insert(understandingQueue)
-    .values({
-      platform: listening.platform,
-      postId: listening.id,
-      kind: 'speech',
-      priority: 10,
-      attempts: 0,
-      enqueuedAt: iso(3),
-      nextAttemptAt: iso(3),
+  // Showcase screenshots show a settled server: none of the boards' jobs in flight.
+  if (!showcaseEnabled()) {
+    job(DOING.ready, { status: 'done', updatedAt: iso(2) })
+    // Its files are here, but the job is still running at 62% (the percent the
+    // worker last wrote): /doing shows it being kept and the theater shows
+    // "Getting it ready" over it (board j1-4).
+    job(DOING.keeping, { status: 'running', progress: 62, updatedAt: iso(1) })
+    job(DOING.converting, { status: 'converting', updatedAt: iso(5) })
+    job(DOING.needsYou, {
+      status: 'unavailable',
+      attempts: 1,
+      lastError: 'This post is private (login required)',
+      updatedAt: iso(19),
     })
-    .run()
+    job(DOING.waiting, {
+      status: 'failed',
+      attempts: 1,
+      lastError: 'Read timed out while asking Instagram',
+      nextAttemptAt: new Date(NOW + 20 * 60_000).toISOString(),
+      updatedAt: iso(2),
+    })
+    const listening = post(DOING.listening)
+    db.insert(understandingQueue)
+      .values({
+        platform: listening.platform,
+        postId: listening.id,
+        kind: 'speech',
+        priority: 10,
+        attempts: 0,
+        enqueuedAt: iso(3),
+        nextAttemptAt: iso(3),
+      })
+      .run()
+  }
   return placeholders
 }
 
@@ -655,6 +659,7 @@ async function writeCredentials(placeholders: Record<string, string[]>) {
 }
 
 export async function seedParityDb(): Promise<void> {
+  if (showcaseEnabled()) await buildShowcaseMedia()
   seedPeople()
   planFillers()
   seedSaves()

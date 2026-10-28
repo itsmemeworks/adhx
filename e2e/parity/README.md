@@ -152,6 +152,19 @@ are `{platform}/{id}-{sha1(id)[0:8]}`, see `postDir` in `src/lib/keep/store.ts`)
 Without it (CI), every file is a generated ffmpeg placeholder and
 `credentials.json` lists them under `placeholders`. No media is committed.
 
+### Showcase mode (screenshots for adhx.com)
+
+`PARITY_SHOWCASE=1 pnpm parity:serve` keeps the same people, channels and
+story, but every post wears one of the posts credited on adhx.com
+(`site/public/media/credits.json`, see `showcase.ts`), channels get names that
+fit them, and none of the boards' jobs are left in flight. Screenshots from it
+can go on the site: `site/public/shots` came from it (web at 1440 × 900 through
+`http://localhost:3600`, since the dev server serves its scripts to localhost
+only; phones as in [`e2e/devices`](../devices/README.md)). It ignores
+`PARITY_MEDIA_SRC`. The server's own saves land in the understanding queue
+while it starts, so clear `understanding_queue` before capturing if the
+"on their way" pill shows.
+
 ## Captures never change the server
 
 `/api/views`, `/api/app/seen` and `/api/understanding/prioritize` are answered
