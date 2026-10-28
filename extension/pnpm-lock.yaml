@@ -9,11 +9,11 @@ importers:
   .:
     devDependencies:
       '@types/chrome':
-        specifier: ^0.1.43
-        version: 0.1.43
+        specifier: ^0.3.6
+        version: 0.3.6
       extension:
-        specifier: ^4.1.34
-        version: 4.1.34(svelte@5.56.10)(typescript@5.9.3)(webpack@5.109.2(postcss@8.5.23))
+        specifier: ^4.1.35
+        version: 4.1.35(svelte@5.56.10)(typescript@5.9.3)(webpack@5.109.2(postcss@8.5.23))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -90,8 +90,8 @@ packages:
     resolution: {integrity: sha512-brcMGQaVzIeUb+6/bs1Av0f8YuNNjKY2JyvfRCsFuFsdKccEQ5Ges2y74D74NZ1Rz8lKJ9ksJkfqwQFJ/iNEyQ==}
     engines: {node: '>=6.9.0'}
 
-  '@babel/helper-string-parser@7.29.7':
-    resolution: {integrity: sha512-Pb5ijPrZ89GDH8223L4UP8i6QApWxs04RbPQJTeWDV0/keR2E36MeKnyr6LYmUUvqRRI+Iv87SuF1W6ErINzYw==}
+  '@babel/helper-string-parser@7.29.11':
+    resolution: {integrity: sha512-snZbO7MEDOof+hvNa97EjEY7qD7h2kwvQr5AJC3ZhQudKW5dnej6k3kP9NQV88hJwaS8vDqRLFo9rivLEhle2g==}
     engines: {node: '>=6.9.0'}
 
   '@babel/helper-validator-identifier@7.29.7':
@@ -106,8 +106,8 @@ packages:
     resolution: {integrity: sha512-EMCx3AGZ3WfAl6ht7AyQoPm2Lh+BGYEMdc4Q6Hf7uSCDOZFuLq44qNwL+iaim8VlyYhRAo4X43+weadK8ZB4Yg==}
     engines: {node: '>=6.9.0'}
 
-  '@babel/parser@7.29.9':
-    resolution: {integrity: sha512-CjXrNHTnvqBVqHgdBysY3vk2T8tpJHb5/RMeHJBTyVa9xgugCB0CJTx/3oO8RV2QRQP391RWpB7D6hLjm8V9uA==}
+  '@babel/parser@7.29.11':
+    resolution: {integrity: sha512-OZ6+oaK7GMyg3IfCpj8JOmn8n+w2rJbDT0LLfVDTLb1ZFeKDh3AiNELgCMUw175IJHSkLl74hG0M0VLsvx+gag==}
     engines: {node: '>=6.0.0'}
     hasBin: true
 
@@ -149,8 +149,8 @@ packages:
     resolution: {integrity: sha512-B3lYAs2nkKskbgQ1nfy8Ma9ao9Q1rntTAQHrzzyDuj+TSO+X3le6PfWwqDvodsb+OumE10eMFfuMCTQSQ5iuIQ==}
     engines: {node: '>=6.9.0'}
 
-  '@babel/types@7.29.8':
-    resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
+  '@babel/types@7.29.11':
+    resolution: {integrity: sha512-WCsemW40Cpc6gouC1SrY6PBaZ+oLRlEVY9XBvZBI7il/HyUrb2nJ505wE1MHEFyDZNnrWDEuy4jL50WVHfTTSQ==}
     engines: {node: '>=6.9.0'}
 
   '@csstools/cascade-layer-name-parser@3.0.2':
@@ -599,8 +599,8 @@ packages:
       '@swc/helpers':
         optional: true
 
-  '@rspack/dev-middleware@2.0.5':
-    resolution: {integrity: sha512-e8296ZqjWTn4f8MnJmnq5Al94hxMgPEiMmwyMvbCNM6kMvFbfnG5UMOTwUljTBxiwBd6yLysGma1VDnYQaB8zg==}
+  '@rspack/dev-middleware@2.0.6':
+    resolution: {integrity: sha512-Rcx7dlDZQ9ddUJGuutFvnSeAKl+ZOc1fnC3htibs8yew3zMD9VgvSUe4MAwEn94Gb390l5heA+s/j5KhoSG5MQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
       '@rspack/core': ^2.0.0
@@ -645,17 +645,11 @@ packages:
   '@tybys/wasm-util@0.10.4':
     resolution: {integrity: sha512-W3c4gRigFS0T/Ma4qIYF3GDAc5AQdHb1yL5znJT1Zv1YaD9Kitx656wBjvr19qbiosmZT8lWDM5BEMynUqX65A==}
 
-  '@types/chrome@0.1.43':
-    resolution: {integrity: sha512-ukH/HhmR6ht+UTX3PLUWJxgJ/RQcK2Foj4lBzsF24SIWsXgqhGuXqjd8FFuwioPP7d/JUKLM4g8GZxw3F4HTcA==}
+  '@types/chrome@0.3.6':
+    resolution: {integrity: sha512-NXCrCBefCHCKMVbkaxfBQqyP766Wg85S2FQhixCCxq7AtjJwoEaja2y5NSqCzpihIi9mPqhaF5RuybTnrdYD2Q==}
 
   '@types/estree@1.0.9':
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
-
-  '@types/filesystem@0.0.36':
-    resolution: {integrity: sha512-vPDXOZuannb9FZdxgHnqSwAG/jvdGM8Wq+6N4D/d80z+D4HWH+bItqsZaVRQykAn6WEVeEkLm2oQigyHtgb0RA==}
-
-  '@types/filewriter@0.0.33':
-    resolution: {integrity: sha512-xFU8ZXTw4gd358lb2jw25nxY9QAgqn2+bKKjKOYfNCzN4DKCFetK7sPtrlpg66Ywe3vWY9FNxprZawAh9wfJ3g==}
 
   '@types/har-format@1.2.16':
     resolution: {integrity: sha512-fluxdy7ryD3MV6h8pTfTYpy/xQzCFC7m89nOH9y94cNqJ1mDIDPut7MnRHI3F6qRmh/cT2fUjG1MLdCNb4hE9A==}
@@ -833,8 +827,8 @@ packages:
       solid-js:
         optional: true
 
-  baseline-browser-mapping@2.11.30:
-    resolution: {integrity: sha512-YJs6Pz17RMNv8HoyKREtCY38E3BV1nPkWVmIb+XN1uHC1Vqt3KZCH/uJH9ZKRoiKb/icZ6tvehyee6RZNbFfRA==}
+  baseline-browser-mapping@2.11.32:
+    resolution: {integrity: sha512-UvuxFU9P3hM29LrQdwu0cD6w6/+SFr+UlB9s/knI7+O2rK9xFxKUwSDWxGdbbqQ9/V7BJ5s0NI5nQAE4uJp3gQ==}
     engines: {node: '>=6.0.0'}
     hasBin: true
 
@@ -866,8 +860,8 @@ packages:
     resolution: {integrity: sha512-P8BjAsXvZS+VIDUI11hHCQEv74YT67YUi5JJFNWIqL235sBmjX4+qx9Muvls5ivyNENctx46xQLQ3aTuE7ssaQ==}
     engines: {node: '>=6'}
 
-  caniuse-lite@1.0.30001816:
-    resolution: {integrity: sha512-+8Yx7BXCoqk6IF8yTicjfUR6D/ldJzdlsodlEOiOSPmhK844WIgk67/zIQaGAOxNkZyyvBlrRFnLvqKIoqbAFw==}
+  caniuse-lite@1.0.30001819:
+    resolution: {integrity: sha512-LFUqIIAwpzsIuevnKnsR9qnStBcgzPShTX61lBwN9uFkkf8o8zLiebEjbW8AYtZiF+1YKDWfdt/pWDtMuG8Xwg==}
 
   case-sensitive-paths-webpack-plugin@2.4.0:
     resolution: {integrity: sha512-roIFONhcxog0JSSWbvVAh3OocukmSgpqOH6YpMkCvav/ySIV3JKg4Dc8vYtQjYi/UxpNE36r/9v+VqTQqgkYmw==}
@@ -1006,8 +1000,8 @@ packages:
   devalue@5.9.4:
     resolution: {integrity: sha512-sPAT4pztbu6586/hrhOnMKS17IJrvg12mXiSPSS3W5qDeN2RGgvZ0diZCm31dBbnevfVmujNO3IM2wrS4Y2Rhg==}
 
-  dotenv@18.0.8:
-    resolution: {integrity: sha512-2KDeoFoK/zRtcnbunCDlLG5VWVMcyqeQc6iK65o231nfNAcuGrKoqUQfJFUtBI+QlShk5HKIHxwebBtUl3rEfA==}
+  dotenv@18.0.9:
+    resolution: {integrity: sha512-3fVOW4cB02R066PUSwn8O4TJyz9NckQl7F81blIbaq9jKBm2tSmOKky7ZHIXzGvkVPXCSn6jkpziBPZdGFs8Tw==}
     engines: {node: '>=12'}
     hasBin: true
 
@@ -1020,8 +1014,8 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
-  electron-to-chromium@1.5.459:
-    resolution: {integrity: sha512-4SC9HHSFjO/liAhifpdOL5hG9b4BP7/5G3y3UPZVO8trlAXr1CaUEEJL0gWK3kOcYcZrOA5rkwG45Gra/lTIgg==}
+  electron-to-chromium@1.5.464:
+    resolution: {integrity: sha512-nRa65aFge40viPAKxMKULIY8tcXKwKboJWNn4RoKwyWXJ6SP7BnrDGKUTzc64818jIciH0PK7LSF8QzZes19GA==}
 
   emojis-list@3.0.0:
     resolution: {integrity: sha512-/kyM18EfinwXZbno9FyUGeFh87KC8HRQBQGildHZbEuRyWFOmv1U10o9BBp8XVZDVNNuQKyIGIu5ZYAAXJ0V2Q==}
@@ -1114,12 +1108,12 @@ packages:
     resolution: {integrity: sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==}
     engines: {node: '>=0.8.x'}
 
-  extension-create@4.1.34:
-    resolution: {integrity: sha512-DEg/vdNDRQTWfj40ds+OTYd9w39N31hooj8yei9L1M/y02Mz9yuJEQODXGPaW93OHkn9PV//Fkr+6DbPxrkscg==}
+  extension-create@4.1.35:
+    resolution: {integrity: sha512-dhWSHwmBdgzGWPinukQBaCbXxQXFOn/3bXgjPjH5l4kmBBW7NSJCWiWZGovJnnpLR/M/8i76195lFQ2pmMsb3w==}
     engines: {node: '>=22.12'}
 
-  extension-develop@4.1.34:
-    resolution: {integrity: sha512-ZzKMenl2v6h1kpQpAcq/5l81AnFdJ065UE7xk2oFIIuo4PFERSAhRBZFH2ulPR1b6IUhiAxNzI8T0VQJSTL3jQ==}
+  extension-develop@4.1.35:
+    resolution: {integrity: sha512-ZvNN5uVqLy614KX8owUee5oUg269NolCOBY//PBqaxXZMpL4X1iDRwh/4zuQlWoAkZtVpmsLFK8/600qfR2jxg==}
     engines: {node: '>=22.12'}
 
   extension-from-store@0.2.5:
@@ -1127,12 +1121,12 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
-  extension-install@4.1.34:
-    resolution: {integrity: sha512-hSmIXVZFBCt/I9XtqRzRGHY7ZnUiGLy6Wo+jo28HigaFMt/tdWcW/ChCo8JOcXGzPSUwg82772cT6s7WkHV3rA==}
+  extension-install@4.1.35:
+    resolution: {integrity: sha512-xuhbGlMiGtjtFR4aKbmuQ2+7dD0gVhtQ7qYMqsVTGTZTnVIboUkXOpvoA25Rz/QlHUYWUiul4+WV04QO0m1iww==}
     engines: {node: '>=22.12'}
 
-  extension@4.1.34:
-    resolution: {integrity: sha512-9aSFjyUq4FT22F80F91UWMtc3xiwNCi4EOAIqg1DcG0G4EJTQynK81J6x0Ee6HHyj2mWURbP/D6NSA2yGyDllQ==}
+  extension@4.1.35:
+    resolution: {integrity: sha512-ZY/GnNJugy8ZwFwWfHirUsFQhSRjsqAGC63TiEmTN0O4cHLnViJCMc7gW27jXQPdGcCjwrlRoJ8t059T3csplg==}
     engines: {node: '>=22.12'}
     hasBin: true
 
@@ -1246,8 +1240,8 @@ packages:
     resolution: {integrity: sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==}
     engines: {node: '>=0.10.0'}
 
-  ignore@7.0.13:
-    resolution: {integrity: sha512-2E8Q6rh+1RRSq/YdaGsNfXsEZy9FVqv6BSSrkmZJP7BnaoPnRfKL+YaofPvP+5rzdk144qSm6i4+hvPgUcbV4Q==}
+  ignore@7.0.14:
+    resolution: {integrity: sha512-wCBiZ77u1tuWde6G/nfOtLaCTYcFDU5yCzARzK10y+rLhzYoL7a7yEemcopcc2Mzow7gZOIjnV2ym1NYmdiJOQ==}
     engines: {node: '>= 4'}
 
   import-fresh@3.3.1:
@@ -1473,8 +1467,8 @@ packages:
   neo-async@2.6.2:
     resolution: {integrity: sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==}
 
-  node-releases@2.0.59:
-    resolution: {integrity: sha512-5qr2okC4ItAI0hG5SaV0HoYMpnM/Y6+Oqr7AmPYy/2uEoGvS+GbSKLeRxSS1uAdu59yz0ouzcuXievSgg///WA==}
+  node-releases@2.0.60:
+    resolution: {integrity: sha512-OmO8+GM1JUZqXET720VrJCwkjUCXmCMQm0Z3UDDRbfNLHS4NEAvY60j5jiFv0tkKw2PNNlqOLhahVmwJIOLDIQ==}
     engines: {node: '>=18'}
 
   opera-location2@2.1.1:
@@ -1703,8 +1697,8 @@ packages:
     peerDependencies:
       postcss: ^8.4
 
-  postcss-selector-parser@7.1.6:
-    resolution: {integrity: sha512-7qASPzhKF2l2KLboRZux8CCTRMdGiV08vWmyKzPz22qZ7ZjQBOeY7rNzNoCLSUiftJ7HUq0GERHmxw/t0dCdMw==}
+  postcss-selector-parser@7.1.7:
+    resolution: {integrity: sha512-wWBro/7hJ40ye6TPiXkUQoXKCw23xSsjriUvqd7Uls9Sso3oLiON1flc18cCdnjgCRXw4fBVqUJJeOdDTh3P3g==}
     engines: {node: '>=4'}
 
   postcss-value-parser@4.2.0:
@@ -2040,10 +2034,10 @@ snapshots:
       '@babel/helper-compilation-targets': 7.29.7
       '@babel/helper-module-transforms': 7.29.7(@babel/core@7.29.7)
       '@babel/helpers': 7.29.10
-      '@babel/parser': 7.29.9
+      '@babel/parser': 7.29.11
       '@babel/template': 7.29.7
       '@babel/traverse': 7.29.10
-      '@babel/types': 7.29.8
+      '@babel/types': 7.29.11
       '@jridgewell/remapping': 2.3.5
       convert-source-map: 2.0.0
       debug: 4.4.3
@@ -2055,15 +2049,15 @@ snapshots:
 
   '@babel/generator@7.29.8':
     dependencies:
-      '@babel/parser': 7.29.9
-      '@babel/types': 7.29.8
+      '@babel/parser': 7.29.11
+      '@babel/types': 7.29.11
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
       jsesc: 3.1.0
 
   '@babel/helper-annotate-as-pure@7.29.7':
     dependencies:
-      '@babel/types': 7.29.8
+      '@babel/types': 7.29.11
 
   '@babel/helper-compilation-targets@7.29.7':
     dependencies:
@@ -2091,18 +2085,18 @@ snapshots:
   '@babel/helper-member-expression-to-functions@7.29.7':
     dependencies:
       '@babel/traverse': 7.29.10
-      '@babel/types': 7.29.8
+      '@babel/types': 7.29.11
     transitivePeerDependencies:
       - supports-color
 
   '@babel/helper-module-imports@7.18.6':
     dependencies:
-      '@babel/types': 7.29.8
+      '@babel/types': 7.29.11
 
   '@babel/helper-module-imports@7.29.7':
     dependencies:
       '@babel/traverse': 7.29.10
-      '@babel/types': 7.29.8
+      '@babel/types': 7.29.11
     transitivePeerDependencies:
       - supports-color
 
@@ -2117,7 +2111,7 @@ snapshots:
 
   '@babel/helper-optimise-call-expression@7.29.7':
     dependencies:
-      '@babel/types': 7.29.8
+      '@babel/types': 7.29.11
 
   '@babel/helper-plugin-utils@7.29.7': {}
 
@@ -2133,11 +2127,11 @@ snapshots:
   '@babel/helper-skip-transparent-expression-wrappers@7.29.7':
     dependencies:
       '@babel/traverse': 7.29.10
-      '@babel/types': 7.29.8
+      '@babel/types': 7.29.11
     transitivePeerDependencies:
       - supports-color
 
-  '@babel/helper-string-parser@7.29.7': {}
+  '@babel/helper-string-parser@7.29.11': {}
 
   '@babel/helper-validator-identifier@7.29.7': {}
 
@@ -2146,11 +2140,11 @@ snapshots:
   '@babel/helpers@7.29.10':
     dependencies:
       '@babel/template': 7.29.7
-      '@babel/types': 7.29.8
+      '@babel/types': 7.29.11
 
-  '@babel/parser@7.29.9':
+  '@babel/parser@7.29.11':
     dependencies:
-      '@babel/types': 7.29.8
+      '@babel/types': 7.29.11
 
   '@babel/plugin-syntax-jsx@7.29.7(@babel/core@7.29.7)':
     dependencies:
@@ -2195,24 +2189,24 @@ snapshots:
   '@babel/template@7.29.7':
     dependencies:
       '@babel/code-frame': 7.29.7
-      '@babel/parser': 7.29.9
-      '@babel/types': 7.29.8
+      '@babel/parser': 7.29.11
+      '@babel/types': 7.29.11
 
   '@babel/traverse@7.29.10':
     dependencies:
       '@babel/code-frame': 7.29.7
       '@babel/generator': 7.29.8
       '@babel/helper-globals': 7.29.7
-      '@babel/parser': 7.29.9
+      '@babel/parser': 7.29.11
       '@babel/template': 7.29.7
-      '@babel/types': 7.29.8
+      '@babel/types': 7.29.11
       debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
-  '@babel/types@7.29.8':
+  '@babel/types@7.29.11':
     dependencies:
-      '@babel/helper-string-parser': 7.29.7
+      '@babel/helper-string-parser': 7.29.11
       '@babel/helper-validator-identifier': 7.29.7
 
   '@csstools/cascade-layer-name-parser@3.0.2(@csstools/css-parser-algorithms@4.0.2(@csstools/css-tokenizer@4.0.2))(@csstools/css-tokenizer@4.0.2)':
@@ -2256,9 +2250,9 @@ snapshots:
 
   '@csstools/postcss-cascade-layers@6.0.2(postcss@8.5.23)':
     dependencies:
-      '@csstools/selector-specificity': 6.0.1(postcss-selector-parser@7.1.6)
+      '@csstools/selector-specificity': 6.0.1(postcss-selector-parser@7.1.7)
       postcss: 8.5.23
-      postcss-selector-parser: 7.1.6
+      postcss-selector-parser: 7.1.7
 
   '@csstools/postcss-color-function-display-p3-linear@2.0.15(postcss@8.5.23)':
     dependencies:
@@ -2364,9 +2358,9 @@ snapshots:
 
   '@csstools/postcss-is-pseudo-class@6.0.3(postcss@8.5.23)':
     dependencies:
-      '@csstools/selector-specificity': 6.0.1(postcss-selector-parser@7.1.6)
+      '@csstools/selector-specificity': 6.0.1(postcss-selector-parser@7.1.7)
       postcss: 8.5.23
-      postcss-selector-parser: 7.1.6
+      postcss-selector-parser: 7.1.7
 
   '@csstools/postcss-light-dark-function@3.0.7(postcss@8.5.23)':
     dependencies:
@@ -2482,7 +2476,7 @@ snapshots:
   '@csstools/postcss-scope-pseudo-class@5.0.0(postcss@8.5.23)':
     dependencies:
       postcss: 8.5.23
-      postcss-selector-parser: 7.1.6
+      postcss-selector-parser: 7.1.7
 
   '@csstools/postcss-sign-functions@2.0.9(postcss@8.5.23)':
     dependencies:
@@ -2526,13 +2520,13 @@ snapshots:
     dependencies:
       postcss: 8.5.23
 
-  '@csstools/selector-resolve-nested@4.0.2(postcss-selector-parser@7.1.6)':
+  '@csstools/selector-resolve-nested@4.0.2(postcss-selector-parser@7.1.7)':
     dependencies:
-      postcss-selector-parser: 7.1.6
+      postcss-selector-parser: 7.1.7
 
-  '@csstools/selector-specificity@6.0.1(postcss-selector-parser@7.1.6)':
+  '@csstools/selector-specificity@6.0.1(postcss-selector-parser@7.1.7)':
     dependencies:
-      postcss-selector-parser: 7.1.6
+      postcss-selector-parser: 7.1.7
 
   '@csstools/utilities@3.0.0(postcss@8.5.23)':
     dependencies:
@@ -2658,14 +2652,14 @@ snapshots:
     dependencies:
       '@rspack/binding': 2.2.3
 
-  '@rspack/dev-middleware@2.0.5(@rspack/core@2.2.3)':
+  '@rspack/dev-middleware@2.0.6(@rspack/core@2.2.3)':
     optionalDependencies:
       '@rspack/core': 2.2.3
 
   '@rspack/dev-server@2.1.0(@rspack/core@2.2.3)':
     dependencies:
       '@rspack/core': 2.2.3
-      '@rspack/dev-middleware': 2.0.5(@rspack/core@2.2.3)
+      '@rspack/dev-middleware': 2.0.6(@rspack/core@2.2.3)
 
   '@rspack/plugin-preact-refresh@2.0.1(@prefresh/core@1.5.9(preact@11.0.0))(@prefresh/utils@1.2.1)(@rspack/core@2.2.3)':
     dependencies:
@@ -2689,18 +2683,11 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@types/chrome@0.1.43':
+  '@types/chrome@0.3.6':
     dependencies:
-      '@types/filesystem': 0.0.36
       '@types/har-format': 1.2.16
 
   '@types/estree@1.0.9': {}
-
-  '@types/filesystem@0.0.36':
-    dependencies:
-      '@types/filewriter': 0.0.33
-
-  '@types/filewriter@0.0.33': {}
 
   '@types/har-format@1.2.16': {}
 
@@ -2718,7 +2705,7 @@ snapshots:
 
   '@vue/compiler-core@3.5.43':
     dependencies:
-      '@babel/parser': 7.29.9
+      '@babel/parser': 7.29.11
       '@vue/shared': 3.5.43
       entities: 7.0.1
       estree-walker: 2.0.2
@@ -2731,7 +2718,7 @@ snapshots:
 
   '@vue/compiler-sfc@3.5.43':
     dependencies:
-      '@babel/parser': 7.29.9
+      '@babel/parser': 7.29.11
       '@vue/compiler-core': 3.5.43
       '@vue/compiler-dom': 3.5.43
       '@vue/compiler-ssr': 3.5.43
@@ -2887,7 +2874,7 @@ snapshots:
   autoprefixer@10.6.1(postcss@8.5.23):
     dependencies:
       browserslist: 4.29.4
-      caniuse-lite: 1.0.30001816
+      caniuse-lite: 1.0.30001819
       fraction.js: 5.3.4
       picocolors: 1.1.1
       postcss: 8.5.23
@@ -2918,7 +2905,7 @@ snapshots:
       '@babel/core': 7.29.7
       '@babel/helper-module-imports': 7.18.6
       '@babel/plugin-syntax-jsx': 7.29.7(@babel/core@7.29.7)
-      '@babel/types': 7.29.8
+      '@babel/types': 7.29.11
       html-entities: 2.3.3
       parse5: 7.3.0
 
@@ -2927,7 +2914,7 @@ snapshots:
       '@babel/core': 7.29.7
       babel-plugin-jsx-dom-expressions: 0.40.11(@babel/core@7.29.7)
 
-  baseline-browser-mapping@2.11.30: {}
+  baseline-browser-mapping@2.11.32: {}
 
   big.js@5.2.2: {}
 
@@ -2939,10 +2926,10 @@ snapshots:
 
   browserslist@4.29.4:
     dependencies:
-      baseline-browser-mapping: 2.11.30
-      caniuse-lite: 1.0.30001816
-      electron-to-chromium: 1.5.459
-      node-releases: 2.0.59
+      baseline-browser-mapping: 2.11.32
+      caniuse-lite: 1.0.30001819
+      electron-to-chromium: 1.5.464
+      node-releases: 2.0.60
       update-browserslist-db: 1.3.4(browserslist@4.29.4)
 
   buffer-from@1.1.2: {}
@@ -2954,7 +2941,7 @@ snapshots:
 
   callsites@3.1.0: {}
 
-  caniuse-lite@1.0.30001816: {}
+  caniuse-lite@1.0.30001819: {}
 
   case-sensitive-paths-webpack-plugin@2.4.0: {}
 
@@ -3024,13 +3011,13 @@ snapshots:
   css-blank-pseudo@8.0.2(postcss@8.5.23):
     dependencies:
       postcss: 8.5.23
-      postcss-selector-parser: 7.1.6
+      postcss-selector-parser: 7.1.7
 
   css-has-pseudo@8.0.2(postcss@8.5.23):
     dependencies:
-      '@csstools/selector-specificity': 6.0.1(postcss-selector-parser@7.1.6)
+      '@csstools/selector-specificity': 6.0.1(postcss-selector-parser@7.1.7)
       postcss: 8.5.23
-      postcss-selector-parser: 7.1.6
+      postcss-selector-parser: 7.1.7
       postcss-value-parser: 4.2.0
 
   css-prefers-color-scheme@11.0.1(postcss@8.5.23):
@@ -3063,7 +3050,7 @@ snapshots:
 
   devalue@5.9.4: {}
 
-  dotenv@18.0.8: {}
+  dotenv@18.0.9: {}
 
   dunder-proto@1.0.1:
     dependencies:
@@ -3075,7 +3062,7 @@ snapshots:
     dependencies:
       which: 6.0.1
 
-  electron-to-chromium@1.5.459: {}
+  electron-to-chromium@1.5.464: {}
 
   emojis-list@3.0.0: {}
 
@@ -3145,7 +3132,7 @@ snapshots:
 
   events@3.3.0: {}
 
-  extension-create@4.1.34:
+  extension-create@4.1.35:
     dependencies:
       axios: 1.20.0
       cross-spawn: 7.0.6
@@ -3157,7 +3144,7 @@ snapshots:
       - debug
       - supports-color
 
-  extension-develop@4.1.34(svelte@5.56.10)(typescript@5.9.3)(webpack@5.109.2(postcss@8.5.23)):
+  extension-develop@4.1.35(svelte@5.56.10)(typescript@5.9.3)(webpack@5.109.2(postcss@8.5.23)):
     dependencies:
       '@babel/core': 7.29.7
       '@babel/preset-typescript': 7.29.7(@babel/core@7.29.7)
@@ -3175,12 +3162,12 @@ snapshots:
       case-sensitive-paths-webpack-plugin: 2.4.0
       content-security-policy-parser: 0.6.0
       cross-spawn: 7.0.6
-      dotenv: 18.0.8
+      dotenv: 18.0.9
       es-module-lexer: 3.0.4
       extension-from-store: 0.2.5
       fflate: 0.8.3
       go-git-it: 5.1.7
-      ignore: 7.0.13
+      ignore: 7.0.14
       less: 4.9.1
       less-loader: 13.0.0(@rspack/core@2.2.3)(less@4.9.1)(webpack@5.109.2(postcss@8.5.23))
       parse5-utilities: 1.0.4
@@ -3221,14 +3208,14 @@ snapshots:
     dependencies:
       fflate: 0.8.3
 
-  extension-install@4.1.34:
+  extension-install@4.1.35:
     dependencies:
       cross-spawn: 7.0.6
       pintor: 0.3.0
 
-  extension@4.1.34(svelte@5.56.10)(typescript@5.9.3)(webpack@5.109.2(postcss@8.5.23)):
+  extension@4.1.35(svelte@5.56.10)(typescript@5.9.3)(webpack@5.109.2(postcss@8.5.23)):
     dependencies:
-      '@types/chrome': 0.1.43
+      '@types/chrome': 0.3.6
       '@types/node': 26.6.5
       '@types/webextension-polyfill': 0.12.6
       brave-location: 3.1.1
@@ -3236,9 +3223,9 @@ snapshots:
       chromium-location: 2.1.2
       commander: 15.0.0
       edge-location: 2.3.1
-      extension-create: 4.1.34
-      extension-develop: 4.1.34(svelte@5.56.10)(typescript@5.9.3)(webpack@5.109.2(postcss@8.5.23))
-      extension-install: 4.1.34
+      extension-create: 4.1.35
+      extension-develop: 4.1.35(svelte@5.56.10)(typescript@5.9.3)(webpack@5.109.2(postcss@8.5.23))
+      extension-install: 4.1.35
       firefox-location2: 3.2.0
       floorp-location: 1.0.0
       librewolf-location: 1.2.1
@@ -3370,7 +3357,7 @@ snapshots:
       safer-buffer: 2.1.2
     optional: true
 
-  ignore@7.0.13: {}
+  ignore@7.0.14: {}
 
   import-fresh@3.3.1:
     dependencies:
@@ -3527,7 +3514,7 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  node-releases@2.0.59: {}
+  node-releases@2.0.60: {}
 
   opera-location2@2.1.1:
     dependencies:
@@ -3579,7 +3566,7 @@ snapshots:
   postcss-attribute-case-insensitive@8.0.2(postcss@8.5.23):
     dependencies:
       postcss: 8.5.23
-      postcss-selector-parser: 7.1.6
+      postcss-selector-parser: 7.1.7
 
   postcss-clamp@4.1.0(postcss@8.5.23):
     dependencies:
@@ -3630,12 +3617,12 @@ snapshots:
       '@csstools/css-parser-algorithms': 4.0.2(@csstools/css-tokenizer@4.0.2)
       '@csstools/css-tokenizer': 4.0.2
       postcss: 8.5.23
-      postcss-selector-parser: 7.1.6
+      postcss-selector-parser: 7.1.7
 
   postcss-dir-pseudo-class@10.0.0(postcss@8.5.23):
     dependencies:
       postcss: 8.5.23
-      postcss-selector-parser: 7.1.6
+      postcss-selector-parser: 7.1.7
 
   postcss-double-position-gradients@7.0.5(postcss@8.5.23):
     dependencies:
@@ -3647,12 +3634,12 @@ snapshots:
   postcss-focus-visible@11.0.0(postcss@8.5.23):
     dependencies:
       postcss: 8.5.23
-      postcss-selector-parser: 7.1.6
+      postcss-selector-parser: 7.1.7
 
   postcss-focus-within@10.0.1(postcss@8.5.23):
     dependencies:
       postcss: 8.5.23
-      postcss-selector-parser: 7.1.6
+      postcss-selector-parser: 7.1.7
 
   postcss-font-variant@5.0.0(postcss@8.5.23):
     dependencies:
@@ -3696,10 +3683,10 @@ snapshots:
 
   postcss-nesting@14.0.3(postcss@8.5.23):
     dependencies:
-      '@csstools/selector-resolve-nested': 4.0.2(postcss-selector-parser@7.1.6)
-      '@csstools/selector-specificity': 6.0.1(postcss-selector-parser@7.1.6)
+      '@csstools/selector-resolve-nested': 4.0.2(postcss-selector-parser@7.1.7)
+      '@csstools/selector-specificity': 6.0.1(postcss-selector-parser@7.1.7)
       postcss: 8.5.23
-      postcss-selector-parser: 7.1.6
+      postcss-selector-parser: 7.1.7
 
   postcss-opacity-percentage@3.0.0(postcss@8.5.23):
     dependencies:
@@ -3798,7 +3785,7 @@ snapshots:
   postcss-pseudo-class-any-link@11.0.1(postcss@8.5.23):
     dependencies:
       postcss: 8.5.23
-      postcss-selector-parser: 7.1.6
+      postcss-selector-parser: 7.1.7
 
   postcss-replace-overflow-wrap@4.0.0(postcss@8.5.23):
     dependencies:
@@ -3811,9 +3798,9 @@ snapshots:
   postcss-selector-not@9.0.0(postcss@8.5.23):
     dependencies:
       postcss: 8.5.23
-      postcss-selector-parser: 7.1.6
+      postcss-selector-parser: 7.1.7
 
-  postcss-selector-parser@7.1.6:
+  postcss-selector-parser@7.1.7:
     dependencies:
       cssesc: 3.0.0
       util-deprecate: 1.0.2
