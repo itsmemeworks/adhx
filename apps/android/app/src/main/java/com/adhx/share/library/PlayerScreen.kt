@@ -604,11 +604,21 @@ fun PlayerScreen(
     // Where a post that's done moves on to: the next save, or the end page after the last one.
     fun following(): Int? = step(1) ?: pager.settledPage.plus(1).takeIf { end != null && !inPip && it == posts.size }
 
-    // With Repeat off, a video that ends moves on to the next save.
+    // With Repeat off, a video that ends moves on to the next save. Not while
+    // something is open over it (React, Reply, Send, More, the original, Read,
+    // Up next): then it waits at the end and moves on when that closes.
     var ended by remember { mutableIntStateOf(0) }
+    val overVideo = replyTo != null || queueOpen || reactingNow || sendingPost != null ||
+        more != null || original != null || reading != null
     LaunchedEffect(ended) {
-        // Not while you're answering it or looking through Up next.
-        if (ended > 0 && !repeat && replyTo == null && !queueOpen) following()?.let { goTo(it) }
+        if (ended > 0 && !repeat && !overVideo) following()?.let { goTo(it) }
+    }
+    // The picker belongs to the post it was opened on: moving off that post closes it.
+    LaunchedEffect(pager.settledPage) {
+        if (picking != null && picking?.key != posts.getOrNull(pager.settledPage)?.key) picking = null
+    }
+    LaunchedEffect(overVideo) {
+        if (!overVideo && !repeat && player?.playbackState == Player.STATE_ENDED) following()?.let { goTo(it) }
     }
 
     // A video on screen can go in a small window.

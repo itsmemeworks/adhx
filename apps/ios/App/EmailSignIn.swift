@@ -40,7 +40,8 @@ struct EmailSignInForm: View {
     private var emailStep: some View {
         Group {
             field(label: "Your ADHX address") {
-                TextField("", text: $address, prompt: Text("adhx.example.com").foregroundColor(Theme.inkFaint))
+                TextField("Your ADHX address", text: $address, prompt: Text("adhx.example.com").foregroundColor(Theme.inkFaint))
+                    .accessibilityLabel("Your ADHX address")
                     .keyboardType(.URL)
                     .textContentType(.URL)
                     .textInputAutocapitalization(.never)
@@ -50,7 +51,8 @@ struct EmailSignInForm: View {
                     .onSubmit { focus = .email }
             }
             field(label: "Your email") {
-                TextField("", text: $email, prompt: Text("you@example.com").foregroundColor(Theme.inkFaint))
+                TextField("Your email", text: $email, prompt: Text("you@example.com").foregroundColor(Theme.inkFaint))
+                    .accessibilityLabel("Your email")
                     .keyboardType(.emailAddress)
                     .textContentType(.emailAddress)
                     .textInputAutocapitalization(.never)

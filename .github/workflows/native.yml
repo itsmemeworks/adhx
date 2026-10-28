@@ -87,6 +87,10 @@ jobs:
         run: |
           swiftc apps/ios/App/Library/WatchTally.swift apps/ios/Tests/WatchTallyTests.swift -o "$RUNNER_TEMP/adhx-watch-tally"
           "$RUNNER_TEMP/adhx-watch-tally"
+      - name: Test server addresses (typed, shown, typed back)
+        run: |
+          swiftc apps/ios/Shared/API.swift apps/ios/Shared/FriendsAPI.swift apps/ios/Tests/ServerAddressTests.swift -o "$RUNNER_TEMP/adhx-server-address"
+          "$RUNNER_TEMP/adhx-server-address"
       - name: Build unsigned app and share extension for the simulator
         run: >-
           xcodebuild -project apps/ios/ADHXShare.xcodeproj -scheme "ADHX Share"

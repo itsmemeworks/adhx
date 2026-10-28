@@ -14,7 +14,9 @@ import {
   PARITY_CREDENTIALS,
   PARITY_DB_PATH,
   PARITY_MEDIA_DIR,
+  PARITY_HOST,
   PARITY_ORIGIN,
+  PARITY_PUBLIC_ORIGIN,
   PARITY_OUT,
   PARITY_PORT,
   PARITY_ROOT,
@@ -191,11 +193,11 @@ async function main() {
   if (process.env.PARITY_SEED_ONLY === '1') return
 
   const env = parityProcessEnv()
-  console.log(`[parity] next dev on ${PARITY_ORIGIN} (MEDIA_DIR=${PARITY_MEDIA_DIR})`)
+  console.log(`[parity] next dev on ${PARITY_PUBLIC_ORIGIN} (MEDIA_DIR=${PARITY_MEDIA_DIR})`)
   console.log(`[parity] credentials: ${PARITY_CREDENTIALS}`)
   const next = spawn(
     'pnpm',
-    ['exec', 'next', 'dev', '-p', String(PARITY_PORT), '-H', '127.0.0.1'],
+    ['exec', 'next', 'dev', '-p', String(PARITY_PORT), '-H', PARITY_HOST],
     { cwd: PARITY_ROOT, env, stdio: 'inherit' },
   )
   const shutdown = () => {

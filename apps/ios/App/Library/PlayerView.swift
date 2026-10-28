@@ -76,6 +76,8 @@ struct PlayerView: View {
     @State private var covered = false
     /// `extras.startRepeating` has been applied.
     @State private var startedRepeating = false
+    /// The video ended while you were reacting or sending: it moves on when you're done.
+    @State private var endedWhileHeld = false
     @Environment(\.scenePhase) private var scenePhase
 
     init(posts: [PhonePost], server: URL, clean: Binding<Bool>,
@@ -216,7 +218,14 @@ struct PlayerView: View {
             covered = false
         }
         .onAppear {
-            playback.onEnded = { next() }
+            playback.onEnded = {
+                if sending != nil || picking { endedWhileHeld = true } else { next() }
+            }
+        }
+        .onChange(of: sending == nil && !picking) { _, free in
+            guard free, endedWhileHeld else { return }
+            endedWhileHeld = false
+            next()
         }
         .onAppear {
             // Once: coming back from a friend's channel mustn't switch it on again.
@@ -234,6 +243,7 @@ struct PlayerView: View {
     }
 
     private func showCurrent(_ key: String?) {
+        endedWhileHeld = false
         if ownReact {
             picking = false
             typing = false

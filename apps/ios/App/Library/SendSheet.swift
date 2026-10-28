@@ -131,6 +131,12 @@ struct SendSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
+            // The board's ×, so the sheet can be closed without knowing to swipe it.
+            HStack {
+                Spacer(minLength: 0)
+                CloseButton { dismiss() }
+            }
+            .padding(.bottom, -6)
             card
             Text("SEND VIA")
                 .font(Theme.sans(12, .heavy))
