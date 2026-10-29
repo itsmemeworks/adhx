@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og'
 import type { NextRequest } from 'next/server'
 import { getPublicTagCollection, type TagCollection, type TagItem } from '@/lib/tags/query'
-import { PUBLIC_BASE_URL, PUBLIC_HOST } from '@/lib/routes/base-url'
+import { appUrl } from '@/lib/routes/app-url'
 import { fetchWithAllowlistedRedirects, readResponseBodyWithLimit } from '@/lib/media/proxy'
 
 export const runtime = 'nodejs'
@@ -23,9 +23,8 @@ const SAME_ORIGIN_THUMBNAIL_PATHS = new Set([
   '/api/media/instagram/thumbnail',
   '/api/media/tiktok/thumbnail',
 ])
-const PUBLIC_BASE_HOST = new URL(PUBLIC_BASE_URL).hostname
+// Plus this server's own host, read per request (see thumbnailDataUrl).
 const IMAGE_HOSTS = [
-  PUBLIC_BASE_HOST,
   'd.fixupx.com',
   'd.fxtwitter.com',
   'pbs.twimg.com',
@@ -182,7 +181,7 @@ function privateCard(fontData: ArrayBuffer | null): ImageResponse {
           color: '#b3a893',
         }}
       >
-        {PUBLIC_HOST}
+        {new URL(appUrl()).host}
       </div>
     </div>,
     fontData,
@@ -237,15 +236,17 @@ function identifiedFallback(data: TagCollection, fontData: ArrayBuffer | null): 
 }
 
 async function thumbnailDataUrl(rawUrl: string): Promise<string | null> {
-  const absoluteUrl = rawUrl.startsWith('/') ? new URL(rawUrl, PUBLIC_BASE_URL).toString() : rawUrl
+  const baseUrl = appUrl()
+  const ownHost = new URL(baseUrl).hostname
+  const absoluteUrl = rawUrl.startsWith('/') ? new URL(rawUrl, baseUrl).toString() : rawUrl
 
   try {
     const parsed = new URL(absoluteUrl)
-    if (parsed.hostname === PUBLIC_BASE_HOST && !SAME_ORIGIN_THUMBNAIL_PATHS.has(parsed.pathname)) {
+    if (parsed.hostname === ownHost && !SAME_ORIGIN_THUMBNAIL_PATHS.has(parsed.pathname)) {
       return null
     }
     const upstream = await fetchWithAllowlistedRedirects(absoluteUrl, {
-      hosts: IMAGE_HOSTS,
+      hosts: [ownHost, ...IMAGE_HOSTS],
       timeoutMs: 8_000,
       init: {
         headers: {

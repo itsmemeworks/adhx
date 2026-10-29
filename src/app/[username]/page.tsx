@@ -10,7 +10,7 @@ import {
   SECONDARY_ACTION,
 } from '@/components/next/profile/ProfileParts'
 import { jsonLdScriptContent } from '@/lib/utils/structured-data'
-import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { appUrl } from '@/lib/routes/app-url'
 
 /**
  * `/{username}` — public author hub. Catches X handle-name search queries
@@ -27,8 +27,6 @@ interface Props {
   params: Promise<{ username: string }>
 }
 
-const BASE_URL = PUBLIC_BASE_URL
-
 async function loadProfile(usernameParam: string) {
   // Next may hand us a percent-encoded segment (e.g. a stray %40) — decode
   // before validating/querying.
@@ -43,6 +41,7 @@ async function loadProfile(usernameParam: string) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const baseUrl = appUrl()
   const { username } = await params
   const profile = await loadProfile(username)
   if (!profile) {
@@ -57,7 +56,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : `@${profile.handle}`
   const title = `@${profile.handle} — saved posts`
   const description = `${profile.totalCount} public post${profile.totalCount === 1 ? '' : 's'} by ${displayName}, saved and previewed on ADHX — X posts, videos, photos and articles.`
-  const canonicalUrl = `${BASE_URL}/${profile.handle}`
+  const canonicalUrl = `${baseUrl}/${profile.handle}`
 
   return {
     title,
@@ -71,24 +70,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: canonicalUrl,
       images: profile.avatarUrl
         ? [{ url: profile.avatarUrl, alt: displayName }]
-        : [{ url: `${BASE_URL}/og-logo.png`, width: 1200, height: 630, alt: 'ADHX' }],
+        : [{ url: `${baseUrl}/og-logo.png`, width: 1200, height: 630, alt: 'ADHX' }],
     },
     twitter: {
       card: 'summary',
       title,
       description,
-      images: profile.avatarUrl ? [profile.avatarUrl] : [`${BASE_URL}/og-logo.png`],
+      images: profile.avatarUrl ? [profile.avatarUrl] : [`${baseUrl}/og-logo.png`],
     },
   }
 }
 
 export default async function AuthorHubPage({ params }: Props) {
+  const baseUrl = appUrl()
   const { username } = await params
   const profile = await loadProfile(username)
   if (!profile) notFound()
 
   const displayName = profile.authorName || `@${profile.handle}`
-  const profileUrl = `${BASE_URL}/${profile.handle}`
+  const profileUrl = `${baseUrl}/${profile.handle}`
   const xProfileUrl = `https://x.com/${profile.handle}`
 
   const jsonLd = {
@@ -109,7 +109,7 @@ export default async function AuthorHubPage({ params }: Props) {
             itemListElement: profile.items.map((item, index) => ({
               '@type': 'ListItem',
               position: index + 1,
-              url: `${BASE_URL}${item.url}`,
+              url: `${baseUrl}${item.url}`,
               ...(item.text ? { name: item.text } : {}),
             })),
           },

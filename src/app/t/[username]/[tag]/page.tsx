@@ -11,7 +11,7 @@ import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structur
 import { recordCollectionEvent } from '@/lib/discovery/record'
 import { isLikelyBot } from '@/lib/activity/bot'
 import { recordAnalytic } from '@/lib/analytics/record'
-import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { appUrl } from '@/lib/routes/app-url'
 import { ChannelPage } from '@/components/next/channels/ChannelPage'
 
 /**
@@ -31,13 +31,11 @@ interface Props {
   params: Promise<{ username: string; tag: string }>
 }
 
-const BASE_URL = PUBLIC_BASE_URL
-
 function playlistSocialCardUrl(username: string, tag: string): string {
-  return `${BASE_URL}/api/og/playlist/${encodeURIComponent(username)}/${encodeURIComponent(tag)}`
+  return `${appUrl()}/api/og/playlist/${encodeURIComponent(username)}/${encodeURIComponent(tag)}`
 }
 
-const ANONYMOUS_PLAYLIST_CARD_URL = `${playlistSocialCardUrl('brand', 'card')}?generic=1`
+const anonymousPlaylistCardUrl = () => `${playlistSocialCardUrl('brand', 'card')}?generic=1`
 
 type CollectionLoadResult =
   TagCollectionResult | { status: 'redirect'; username: string; tag: string }
@@ -91,9 +89,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: `This ${noun} is private.`,
       robots: { index: false, follow: false },
       openGraph: {
-        images: [{ url: ANONYMOUS_PLAYLIST_CARD_URL, width: 1200, height: 630, alt: 'ADHX' }],
+        images: [{ url: anonymousPlaylistCardUrl(), width: 1200, height: 630, alt: 'ADHX' }],
       },
-      twitter: { card: 'summary_large_image', images: [ANONYMOUS_PLAYLIST_CARD_URL] },
+      twitter: { card: 'summary_large_image', images: [anonymousPlaylistCardUrl()] },
     }
   }
 
@@ -102,9 +100,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `ADHX ${noun}`,
       description: 'Your friends have better taste than the algorithm.',
       openGraph: {
-        images: [{ url: ANONYMOUS_PLAYLIST_CARD_URL, width: 1200, height: 630, alt: 'ADHX' }],
+        images: [{ url: anonymousPlaylistCardUrl(), width: 1200, height: 630, alt: 'ADHX' }],
       },
-      twitter: { card: 'summary_large_image', images: [ANONYMOUS_PLAYLIST_CARD_URL] },
+      twitter: { card: 'summary_large_image', images: [anonymousPlaylistCardUrl()] },
     }
   }
 
@@ -119,7 +117,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = previewTexts
     ? `${data.tweetCount} bookmark${data.tweetCount === 1 ? '' : 's'} curated by @${data.username}. ${truncate(previewTexts, 200)}`
     : `${data.tweetCount} bookmark${data.tweetCount === 1 ? '' : 's'} curated by @${data.username}.`
-  const canonicalUrl = `${BASE_URL}/t/${data.username}/${data.tag}`
+  const canonicalUrl = `${appUrl()}/t/${data.username}/${data.tag}`
   const socialCardUrl = playlistSocialCardUrl(data.username, data.tag)
 
   return {
@@ -151,6 +149,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function SharedTagPage({ params }: Props) {
+  const baseUrl = appUrl()
   const { username, tag } = await params
   const [result, viewerUserId] = await Promise.all([
     loadCollection(username, tag),
@@ -206,8 +205,8 @@ export default async function SharedTagPage({ params }: Props) {
   const jsonLd = buildCollectionPageLd({
     name: `#${data.tag} — @${data.username}'s channel on ADHX`,
     description: `${data.tweetCount} bookmark${data.tweetCount === 1 ? '' : 's'} curated by @${data.username} on ADHX.`,
-    url: `${BASE_URL}/t/${data.username}/${data.tag}`,
-    baseUrl: BASE_URL,
+    url: `${baseUrl}/t/${data.username}/${data.tag}`,
+    baseUrl,
     items: data.items.map((item) => ({
       url: item.url,
       name: item.text || `A post by @${item.author}`,

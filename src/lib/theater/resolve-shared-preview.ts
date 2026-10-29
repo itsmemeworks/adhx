@@ -27,7 +27,7 @@ import { previewPath, recordActivity } from '@/lib/activity/record'
 import { isLikelyBot } from '@/lib/activity/bot'
 import { metrics } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
-import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { appUrl } from '@/lib/routes/app-url'
 import { getInstagramMetadataStatus } from '@/lib/media/instafix'
 import { resolveInstagramVideo } from '@/lib/media/mirrors'
 import { getTikTokMetadataStatus } from '@/lib/media/tnktok'
@@ -189,7 +189,7 @@ export async function resolveTweetShared(
     ok: true,
     item,
     seoEligible: true,
-    jsonLd: buildTweetJsonLd(tweet, PUBLIC_BASE_URL, username, id),
+    jsonLd: buildTweetJsonLd(tweet, appUrl(), username, id),
     staticPost: {
       kind: 'tweet',
       username: previewAuthor,
@@ -273,7 +273,7 @@ export async function resolveInstagramShared(
     return { ok: true, item, seoEligible: false, related: null }
   }
 
-  const baseUrl = PUBLIC_BASE_URL
+  const baseUrl = appUrl()
   const ldAuthorName = authorName || author
   const authorHandle = author?.replace(/^@/, '')
   const sourcePath = contentType === 'photo' ? 'p' : 'reel'
@@ -394,7 +394,7 @@ export async function resolveTikTokShared(
     return { ok: true, item, seoEligible: false, related: null }
   }
 
-  const baseUrl = PUBLIC_BASE_URL
+  const baseUrl = appUrl()
   return {
     ok: true,
     item,

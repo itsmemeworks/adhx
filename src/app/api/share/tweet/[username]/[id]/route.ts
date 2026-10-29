@@ -7,7 +7,7 @@ import { db } from '@/lib/db'
 import { bookmarks, bookmarkTags, tagShares, users } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { publicReadRateLimit } from '@/lib/rate-limit'
-import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { appUrl } from '@/lib/routes/app-url'
 import { readBannedUserIds, readPostModeration } from '@/lib/admin/moderation'
 
 export const dynamic = 'force-dynamic'
@@ -309,7 +309,7 @@ export async function GET(
     if (adhxContext) {
       response.adhxContext = {
         ...adhxContext,
-        previewUrl: `${PUBLIC_BASE_URL}/${username}/status/${id}`,
+        previewUrl: `${appUrl()}/${username}/status/${id}`,
       }
     }
 

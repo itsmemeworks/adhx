@@ -103,8 +103,8 @@ vi.mock('@/lib/analytics/record', () => ({
   recordAnalytic: vi.fn(),
 }))
 
-vi.mock('@/lib/routes/base-url', () => ({
-  PUBLIC_BASE_URL: 'https://adhx.com',
+vi.mock('@/lib/routes/app-url', () => ({
+  appUrl: () => 'https://adhx.example.org',
 }))
 
 vi.mock('@/components/theater/SharedPostStatic', () => ({
@@ -239,9 +239,9 @@ describe('non-X shared preview SEO eligibility', () => {
           url: 'https://www.instagram.com/creator/',
         },
         image: [
-          'https://adhx.com/api/media/instagram/thumbnail?id=carousel123&index=1',
-          'https://adhx.com/api/media/instagram/thumbnail?id=carousel123&index=2',
-          'https://adhx.com/api/media/instagram/thumbnail?id=carousel123&index=3',
+          'https://adhx.example.org/api/media/instagram/thumbnail?id=carousel123&index=1',
+          'https://adhx.example.org/api/media/instagram/thumbnail?id=carousel123&index=2',
+          'https://adhx.example.org/api/media/instagram/thumbnail?id=carousel123&index=3',
         ],
       },
     })
@@ -271,12 +271,12 @@ describe('non-X shared preview SEO eligibility', () => {
       },
       jsonLd: {
         image: [
-          'https://adhx.com/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=1',
-          'https://adhx.com/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=2',
-          'https://adhx.com/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=3',
-          'https://adhx.com/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=4',
-          'https://adhx.com/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=5',
-          'https://adhx.com/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=6',
+          'https://adhx.example.org/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=1',
+          'https://adhx.example.org/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=2',
+          'https://adhx.example.org/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=3',
+          'https://adhx.example.org/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=4',
+          'https://adhx.example.org/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=5',
+          'https://adhx.example.org/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=6',
         ],
       },
     })

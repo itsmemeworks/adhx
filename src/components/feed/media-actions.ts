@@ -8,7 +8,7 @@ import { fileFromMediaUrl, shareFileWithLink } from '@/lib/share/web-share'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 import { isTouchDevice } from './device'
 
-/** The on-ADHX preview URL for a saved item (absolute). */
+/** The on-ADHX preview URL for a saved item (absolute in the browser). */
 export function previewUrlForItem(
   item: Pick<FeedItem, 'platform' | 'author' | 'id' | 'category'>,
 ): string {

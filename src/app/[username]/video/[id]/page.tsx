@@ -18,7 +18,7 @@ import {
 } from '@/lib/theater/shared-preview'
 import { readPostModeration } from '@/lib/admin/moderation'
 import { getSavedPreviewDisplay } from '@/lib/theater/saved-preview'
-import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { appUrl } from '@/lib/routes/app-url'
 
 interface Props {
   params: Promise<{ username: string; id: string }>
@@ -72,7 +72,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const moderation = readPostModeration('tiktok', id)
   if (!moderation.ok || moderation.value) return MODERATED_PAGE_METADATA
 
-  const baseUrl = PUBLIC_BASE_URL
+  const baseUrl = appUrl()
   const canonicalUrl = `${baseUrl}/@${handle}/video/${id}`
   const saved = getSavedPreviewDisplay('tiktok', id)
   const metadataStatus = saved ? null : await getTikTokMetadataStatus(handle, id)

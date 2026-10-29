@@ -6,7 +6,7 @@ import { findPosts } from '@/lib/semantic/find'
 import type { SearchItem } from '@/lib/semantic/items'
 import type { SearchType } from '@/lib/semantic/search'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
-import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { appUrl } from '@/lib/routes/app-url'
 
 const MAX_QUERY = 200
 const TYPES: readonly SearchType[] = ['all', 'videos', 'photos', 'text', 'articles']
@@ -20,7 +20,7 @@ function json(body: unknown, init?: ResponseInit): NextResponse {
 }
 
 const absolute = (url: string | null | undefined) =>
-  !url ? null : url.startsWith('/') ? `${PUBLIC_BASE_URL}${url}` : url
+  !url ? null : url.startsWith('/') ? `${appUrl()}${url}` : url
 
 /** One result, in the shape an assistant reads: what it is, where it lives, why it matched. */
 function toResult({ post, matched, strength, learning }: SearchItem) {
@@ -36,7 +36,7 @@ function toResult({ post, matched, strength, learning }: SearchItem) {
     platform: post.platform,
     kind,
     url: sourceUrl(post.platform, post.author, post.id, post.category) ?? post.tweetUrl,
-    adhxUrl: `${PUBLIC_BASE_URL}${previewPath(post.platform, post.author, post.id, post.category)}`,
+    adhxUrl: `${appUrl()}${previewPath(post.platform, post.author, post.id, post.category)}`,
     author: { handle: post.author, name: post.authorName },
     text: post.text,
     postedAt: post.createdAt,

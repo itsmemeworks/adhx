@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-29 — Absolute links use this server's address, not adhx.com
+
+- Every self-hosted ADHX put `https://adhx.com` in canonicals, og:url/image/video, JSON-LD, the playlist card's host line, `previewUrl`/`adhxUrl` and the layout's `metadataBase`: `PUBLIC_BASE_URL` was a build-time constant and the published image is built without `NEXT_PUBLIC_APP_URL`, so chat unfurls pointed at adhx.com and their image 404'd.
+- Server code now calls `appUrl()` per request (env, then host platform, then the address remembered at `/setup`). Layout metadata and JSON-LD are built inside `generateMetadata()`/the component; the OG card's own-host allowlist is per request too.
+- `base-url.ts` is client-only now: the compiled-in `NEXT_PUBLIC_APP_URL` or empty, never adhx.com (`useSiteHost` and `previewUrlForItem` already prefer `window.location`).
+- Regression: `src/__tests__/public-base-url.test.ts` (no env, stored owner address → status-page metadata, layout `metadataBase`, share-tweet `previewUrl`).
+
 ## 2026-10-29 — adhx.com app screenshots recaptured with the avatars
 
 - The ten `site/public/shots` WebPs still showed letter initials after the meme-style avatars landed; recaptured all of them from `PARITY_SHOWCASE=1 pnpm parity:serve`, same names, sizes, framing and story. No alt text changed.

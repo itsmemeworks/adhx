@@ -56,8 +56,8 @@ vi.mock('@/lib/theater/shared-preview', () => ({
   sharedPreviewSeed: vi.fn(),
 }))
 
-vi.mock('@/lib/routes/base-url', () => ({
-  PUBLIC_BASE_URL: 'https://adhx.com',
+vi.mock('@/lib/routes/app-url', () => ({
+  appUrl: () => 'https://adhx.example.org',
 }))
 
 const REEL_ID = 'Cwnj8o6pKbn'
@@ -80,7 +80,7 @@ describe('non-X preview metadata status', () => {
       expect(metadata).toMatchObject({
         title: 'Instagram Reel unavailable - ADHX',
         robots: { index: false },
-        alternates: { canonical: `https://adhx.com/reels/${REEL_ID}` },
+        alternates: { canonical: `https://adhx.example.org/reels/${REEL_ID}` },
       })
       expect(metadata.openGraph).toBeNull()
       expect(metadata.twitter).toBeNull()
@@ -95,7 +95,9 @@ describe('non-X preview metadata status', () => {
       expect(metadata.robots).toEqual({ index: false })
       expect(metadata.openGraph).toBeNull()
       expect(metadata.twitter).toBeNull()
-      expect(metadata.alternates).toEqual({ canonical: `https://adhx.com/reels/${REEL_ID}` })
+      expect(metadata.alternates).toEqual({
+        canonical: `https://adhx.example.org/reels/${REEL_ID}`,
+      })
     })
 
     it('indexes resolved Instagram metadata with rich preview claims', async () => {
@@ -159,10 +161,10 @@ describe('non-X preview metadata status', () => {
 
       expect(metadata.openGraph).toMatchObject({
         type: 'article',
-        images: [{ url: `https://adhx.com/api/media/instagram/thumbnail?id=${postId}` }],
+        images: [{ url: `https://adhx.example.org/api/media/instagram/thumbnail?id=${postId}` }],
       })
       expect(metadata.twitter).toMatchObject({
-        images: [`https://adhx.com/api/media/instagram/thumbnail?id=${postId}`],
+        images: [`https://adhx.example.org/api/media/instagram/thumbnail?id=${postId}`],
       })
       expect(mocks.getInstagramMetadataStatus).not.toHaveBeenCalled()
     })
@@ -186,23 +188,23 @@ describe('non-X preview metadata status', () => {
 
       const metadata = await generateMetadata({ params: Promise.resolve({ id: postId }) })
 
-      expect(metadata.alternates).toEqual({ canonical: `https://adhx.com/p/${postId}` })
+      expect(metadata.alternates).toEqual({ canonical: `https://adhx.example.org/p/${postId}` })
       expect(metadata.openGraph).toMatchObject({
         type: 'article',
         description: metadata.description,
         images: [
-          { url: `https://adhx.com/api/media/instagram/thumbnail?id=${postId}&index=1` },
-          { url: `https://adhx.com/api/media/instagram/thumbnail?id=${postId}&index=2` },
-          { url: `https://adhx.com/api/media/instagram/thumbnail?id=${postId}&index=3` },
+          { url: `https://adhx.example.org/api/media/instagram/thumbnail?id=${postId}&index=1` },
+          { url: `https://adhx.example.org/api/media/instagram/thumbnail?id=${postId}&index=2` },
+          { url: `https://adhx.example.org/api/media/instagram/thumbnail?id=${postId}&index=3` },
         ],
       })
       expect(metadata.description).not.toContain('An image carousel')
       expect(metadata.openGraph).not.toHaveProperty('videos')
       expect(metadata.twitter).toMatchObject({
         images: [
-          `https://adhx.com/api/media/instagram/thumbnail?id=${postId}&index=1`,
-          `https://adhx.com/api/media/instagram/thumbnail?id=${postId}&index=2`,
-          `https://adhx.com/api/media/instagram/thumbnail?id=${postId}&index=3`,
+          `https://adhx.example.org/api/media/instagram/thumbnail?id=${postId}&index=1`,
+          `https://adhx.example.org/api/media/instagram/thumbnail?id=${postId}&index=2`,
+          `https://adhx.example.org/api/media/instagram/thumbnail?id=${postId}&index=3`,
         ],
       })
     })
@@ -221,7 +223,7 @@ describe('non-X preview metadata status', () => {
       expect(metadata.openGraph).toBeNull()
       expect(metadata.twitter).toBeNull()
       expect(metadata.alternates).toEqual({
-        canonical: `https://adhx.com/@creator/video/${TIKTOK_ID}`,
+        canonical: `https://adhx.example.org/@creator/video/${TIKTOK_ID}`,
       })
     })
 

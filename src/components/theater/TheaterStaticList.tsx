@@ -4,7 +4,7 @@ import { PlatformGlyph, TypeBadge } from '@/components/matter'
 import { inferType } from '@/lib/trending/filter'
 import { previewPath } from '@/lib/activity/preview-path'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
-import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { appUrl } from '@/lib/routes/app-url'
 
 /**
  * Server-rendered, crawlable content behind the signed-out `/` theater
@@ -28,8 +28,6 @@ import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 const PLATFORM_LABEL: Record<string, string> = NETWORK_LABELS
 
-const BASE_URL = PUBLIC_BASE_URL
-
 function itemHref(item: TheaterItem): string {
   if (item.bookmarkId) {
     return previewPath(item.platform, item.author, item.bookmarkId, item.contentType)
@@ -44,12 +42,13 @@ export function TheaterStaticList({
   items: TheaterItem[]
   savedToday: number
 }) {
+  const baseUrl = appUrl()
   const jsonLd = buildCollectionPageLd({
     name: 'ADHX — save it, lose it, find it',
     description:
       'What people here are saving right now, from X, Instagram, TikTok, YouTube and more. Save any post to your own collection and find it again later.',
-    url: BASE_URL,
-    baseUrl: BASE_URL,
+    url: baseUrl,
+    baseUrl,
     items: items.map((item) => ({
       url: itemHref(item),
       name: item.authorName || item.text || item.author || undefined,
