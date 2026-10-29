@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-29 — Release-candidate run: production build, real posts, both phones
+
+- Owner asked for full web and USB phone testing before launch. Ran a production build of `main` (2.13.0) the way the image starts it, on an empty data folder with no email service, models on and real posts from X, YouTube, Vimeo and TikTok; owner via the setup code, a group link, two friends joining from phone browsers. iPhone 16 Pro (Ana, `DeviceDriver`) and Galaxy A13 (owner, then Ben, `adb reverse`); a sub-agent swept every page as signed out, owner and member at desktop and phone sizes. Results: `docs/rollout/phone-device-results.md`.
+- Fixed: a TikTok marked kept with nothing kept (non-yt-dlp failures now retry); others' failed saves counted as "needs you"/"on its way" for everyone; a new ADHX opening on "Nothing new yet" (Play my saves on web, iPhone, Android); the owner not told their sign-in link is in the log; setup link ignoring `PORT`; shared links pointing at adhx.com (`appUrl()` per request); blank X thumbnails (site-wide `same-origin` referrer policy: X refuses another site's referrer and the browser caches the refusal); signed-out Sign in pushed off phone screens; X import offered on servers without X; Invites badge counting open links; Links table clipped; doubled brand in titles; a given-up picture failing forever.
+- Not run: the iPhone share sheet (needs a hand), offline sharing, Live moments, release-signed builds. Android release builds have shrinking off, so no R8-only risk.
+- Follow-ups (polish from the sweep, not done): `/favicon.ico` 404; phone tabs say Live where the bottom nav says Right now; signed-out `/` shows Play my saves/Browse channels that bounce to sign-in; signed-out Save POSTs once (401) before going to sign-in; the Share icon is a camera on videos; "JUST SAVED" repeats a post per saver.
+
 ## 2026-10-29 — Absolute links use this server's address, not adhx.com
 
 - Every self-hosted ADHX put `https://adhx.com` in canonicals, og:url/image/video, JSON-LD, the playlist card's host line, `previewUrl`/`adhxUrl` and the layout's `metadataBase`: `PUBLIC_BASE_URL` was a build-time constant and the published image is built without `NEXT_PUBLIC_APP_URL`, so chat unfurls pointed at adhx.com and their image 404'd.
