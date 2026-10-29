@@ -12,6 +12,7 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - `site/public/avatars/*.svg` (by username). The site's `Face` draws them; `og.png` redrawn. Showcase/demo seeding stores each as an uploaded picture (`seedShowcaseAvatars` in `e2e/parity/showcase.ts`, after `seedKept` resets the media folder); the demo image copies the folder. Parity design runs (no showcase) are unchanged.
 - Checked: a local demo world (start.sh's env) shows them on Home's "Ana saved this", Channels → Your people and the account menu.
 - Follow-up: the site's app screenshots (`site/public/shots`, incl. native iPhone/Android) still show initials until they're recaptured from the showcase world. The demo needs a redeploy to pick this up.
+
 ## 2026-10-29 — Fresh-install run-through and launch copy
 
 - Owner asked for a simulated fresh install: an admin sets up, makes an invite link and onboards four friends. Ran the production build against an empty data folder (migrate, then start, as the image does; `SEMANTIC_SEARCH=off`). Setup code from the log, then owner email and name, then Admin → Invites → Make a group link. Ana, Ben and Mum (phones) and Jojo (desktop) each joined in their own browser and waited; a taken name was refused without using a place. The admin let all four in ("4 of 25 joined"), each opened straight into Home signed in, and Ana's save played on the others' Home as "ana saved this".
