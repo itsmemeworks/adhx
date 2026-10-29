@@ -10,7 +10,7 @@ import {
   postDurationLabel,
   postText,
 } from '../post'
-import { AuthorLine, MediaChip, NxImage, Scrim } from '../primitives'
+import { AuthorLine, MediaChip, NxImage, Scrim, TILE_SIZES } from '../primitives'
 import { TileFrame, type TileProps } from './TileFrame'
 
 export interface VideoTileProps extends TileProps {
@@ -47,6 +47,7 @@ export function VideoTile({ item, playing = false, layout = 'auto', ...frame }: 
     <NxImage
       src={postCoverSrc(item)}
       fallbackSrc={mediaFallbackSrc(item)}
+      sizes={TILE_SIZES}
       alt=""
       className="absolute inset-0 h-full w-full object-cover"
     />

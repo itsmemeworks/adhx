@@ -3,6 +3,7 @@ import os from 'os'
 import path from 'path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+import sharp from 'sharp'
 import { createTestDb, type TestDbInstance } from './setup'
 
 let testInstance: TestDbInstance
@@ -190,6 +191,64 @@ describe('kept media', () => {
       expect(own.status).toBe(200)
       expect(own.headers.get('cache-control')).toBe('private, no-store')
       await own.text()
+    })
+
+    it('serves a small copy of a kept picture for a tile (?w=) and reuses it', async () => {
+      save('reddit', 'pic')
+      const rel = path.join('reddit', 'pic', 'photo-1.jpg')
+      fs.mkdirSync(path.join(mediaRoot, 'reddit', 'pic'), { recursive: true })
+      await sharp({
+        create: { width: 2400, height: 1600, channels: 3, background: { r: 200, g: 90, b: 40 } },
+      })
+        .jpeg({ quality: 95 })
+        .toFile(path.join(mediaRoot, rel))
+      const bytes = fs.statSync(path.join(mediaRoot, rel)).size
+      testInstance.sqlite
+        .prepare(
+          `INSERT INTO kept_files (platform, post_id, slot, path, mime, bytes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run('reddit', 'pic', 'photo-1', rel, 'image/jpeg', bytes, now())
+
+      // Asked widths snap up to the widths that are made.
+      const small = await get('/api/files/reddit/pic/photo-1?v=2&w=300')
+      expect(small.status).toBe(200)
+      expect(small.headers.get('content-type')).toBe('image/webp')
+      expect(small.headers.get('cache-control')).toBe(
+        'private, no-cache, max-age=0, must-revalidate',
+      )
+      const etag = small.headers.get('etag')!
+      expect(etag).toMatch(/-w320"$/)
+      const body = Buffer.from(await small.arrayBuffer())
+      expect(body.length).toBeLessThan(bytes)
+      expect((await sharp(body).metadata()).width).toBe(320)
+      expect(fs.readdirSync(path.join(mediaRoot, 'reddit', 'pic', '.thumbs'))).toEqual([
+        'photo-1.jpg-w320.webp',
+      ])
+      expect(
+        (await get('/api/files/reddit/pic/photo-1?v=2&w=300', { 'if-none-match': etag })).status,
+      ).toBe(304)
+
+      // The original and downloads are untouched; a poster falls back to the photo's copy.
+      const original = await get('/api/files/reddit/pic/photo-1?v=2')
+      expect(original.headers.get('content-type')).toBe('image/jpeg')
+      await original.arrayBuffer()
+      const download = await get('/api/files/reddit/pic/photo-1?v=2&w=300&download=1')
+      expect(download.headers.get('content-type')).toBe('image/jpeg')
+      await download.arrayBuffer()
+      const poster = await get('/api/files/reddit/pic/poster?v=2&w=640')
+      expect((await sharp(Buffer.from(await poster.arrayBuffer())).metadata()).width).toBe(640)
+
+      // Visibility is checked the same way for the copy.
+      testInstance.sqlite.prepare("UPDATE bookmarks SET is_private=1 WHERE id='pic'").run()
+      expect((await get('/api/files/reddit/pic/photo-1?v=2&w=300')).status).toBe(404)
+    })
+
+    it('leaves GIFs whole (a copy would lose the motion)', async () => {
+      save('reddit', 'gif')
+      keep('reddit', 'gif', 'photo-1', 'GIF89a', 'image/gif')
+      const response = await get('/api/files/reddit/gif/photo-1?v=2&w=320')
+      expect(response.headers.get('content-type')).toBe('image/gif')
+      expect(await response.text()).toBe('GIF89a')
     })
 
     it('avoids caching original slots while conversion is pending or has failed', async () => {

@@ -463,6 +463,7 @@ export function ResultTile({
       >
         <NxImage
           src={cover}
+          sizes="(max-width: 768px) 50vw, (max-width: 1536px) 33vw, 25vw"
           fallbackSrc={mediaFallbackSrc(post)}
           alt=""
           className="absolute inset-0 h-full w-full object-cover"

@@ -59,7 +59,12 @@ function Tile({
       style={fresh ? { boxShadow: `0 0 0 3px ${hue}, 0 0 36px ${hue}80` } : undefined}
     >
       {src ? (
-        <NxImage src={src} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <NxImage
+          src={src}
+          sizes="(max-width: 768px) 50vw, 25vw"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+        />
       ) : (
         <span className="absolute inset-0 overflow-hidden bg-nx-cream px-3 pb-3 pt-11 font-nx-serif text-[16px] leading-[1.15] text-nx-bg">
           {text}

@@ -161,6 +161,34 @@ const TOAST_COPY: Record<PasteToastState, string> = {
   failed: 'That link isn’t a post we can save',
 }
 
+/**
+ * The paste toast's spinner: a ring drawn once on its own layer
+ * (`will-change`), so only the compositor turns it and busy page work
+ * (a save landing, pictures decoding) can't hold its frames back.
+ */
+function Spinner() {
+  return (
+    <span
+      aria-hidden
+      className="block h-[22px] w-[22px] shrink-0 animate-nx-spin will-change-transform"
+    >
+      <svg viewBox="0 0 22 22" className="block h-full w-full">
+        <circle cx="11" cy="11" r="9.5" fill="none" stroke="#333" strokeWidth="3" />
+        <circle
+          cx="11"
+          cy="11"
+          r="9.5"
+          fill="none"
+          stroke="rgb(var(--nx-accent))"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray="15 45"
+        />
+      </svg>
+    </span>
+  )
+}
+
 /** Feedback after a paste: grabbing → saved, or the face shuts its eyes when it can't help. */
 export function PasteToast({
   state,
@@ -192,7 +220,12 @@ export function PasteToast({
       {state === 'saved' && thumbSrc ? (
         // In the toast's corner: 16 − 10 leaves the 8 px floor (its button too).
         <span className="relative block h-11 w-11 shrink-0 overflow-hidden rounded-[8px] bg-nx-placeholder">
-          <NxImage src={thumbSrc} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <NxImage
+            src={thumbSrc}
+            sizes="44px"
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+          />
         </span>
       ) : (
         <AdhxFace size={44} mood={state === 'failed' ? 'shut' : 'look'} />
@@ -210,12 +243,7 @@ export function PasteToast({
           </span>
         )}
       </span>
-      {state === 'grabbing' && (
-        <span
-          aria-hidden
-          className="block h-[22px] w-[22px] shrink-0 animate-nx-spin rounded-full border-[3px] border-[#333] border-t-nx-accent"
-        />
-      )}
+      {state === 'grabbing' && <Spinner />}
       {state === 'saved' && action && (
         <button
           type="button"

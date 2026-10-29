@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { mediaFallbackSrc, photoSources, postAuthor, postCoverSrc, postText } from '../post'
-import { AuthorLine, MediaChip, NxImage, Scrim } from '../primitives'
+import { AuthorLine, MediaChip, NxImage, Scrim, TILE_SIZES } from '../primitives'
 import { TileFrame, type TileProps } from './TileFrame'
 
 /**
@@ -29,7 +29,13 @@ export function PhotoTile({ item, ...frame }: TileProps) {
             i === 0 ? 'inset-x-4 top-0 opacity-50' : 'inset-x-2 top-2 opacity-75',
           )}
         >
-          <NxImage src={src} alt="" reveal="none" className="h-[120px] w-full object-cover" />
+          <NxImage
+            src={src}
+            sizes={TILE_SIZES}
+            alt=""
+            reveal="none"
+            className="h-[120px] w-full object-cover"
+          />
         </span>
       ))}
       <span
@@ -41,6 +47,7 @@ export function PhotoTile({ item, ...frame }: TileProps) {
         <NxImage
           src={postCoverSrc(item)}
           fallbackSrc={mediaFallbackSrc(item)}
+          sizes={TILE_SIZES}
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
         />

@@ -27,6 +27,28 @@ export function keptSrc(
   return `/api/files/${encodeURIComponent(platform || 'twitter')}/${encodeURIComponent(postId)}/${slot}${query ? `?${query}` : ''}`
 }
 
+/** Widths `/api/files` makes smaller copies of pictures at (`?w=`, see `thumb.ts`). */
+export const THUMB_WIDTHS = [160, 320, 640, 960, 1280] as const
+
+/** A post's kept picture or poster (not an avatar, a video or a download). */
+function shrinkable(src: string): boolean {
+  if (!src.startsWith('/api/files/') || src.startsWith('/api/files/avatar/')) return false
+  const [pathPart, query = ''] = src.split('?')
+  return /\/(?:photo-\d+|poster)$/.test(pathPart) && !/(?:^|&)(?:download=1|w=)/.test(query)
+}
+
+/** The same kept picture, at most `width` px wide; any other address unchanged. */
+export function sizedSrc(src: string, width: number): string {
+  if (!shrinkable(src)) return src
+  return `${src}${src.includes('?') ? '&' : '?'}w=${width}`
+}
+
+/** A `srcset` of a kept picture's smaller copies, or null when it has none. */
+export function keptSrcSet(src: string): string | null {
+  if (!shrinkable(src)) return null
+  return THUMB_WIDTHS.map((w) => `${sizedSrc(src, w)} ${w}w`).join(', ')
+}
+
 /** Legacy proxy for a slot that isn't kept yet, or null when there's none. */
 export function proxySrc(
   platform: string,

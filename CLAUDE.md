@@ -250,7 +250,8 @@ same).
   `theater-set-volume`, `theater-seek`, …). Don't fork the Stage.
 - **Build every media URL with `keptSrc()`** (`src/lib/keep/src.ts`). Never
   hand-write `/api/media/*`; those proxies are only the fallback until a file
-  is kept.
+  is kept. Tiles and covers pass `sizes` to `NxImage`, so they load a small
+  `?w=` copy (`src/lib/keep/thumb.ts`), never the multi-megabyte original.
 - **Instagram video: don't attach `<video src>` until a Range probe answers
   200 or 206** (`probeInstagramVideo`).
 - **Sending a file shares `files` plus `text: "via <url>"`, never `url`
@@ -455,7 +456,9 @@ Short notes on what is easy to get wrong. Each links to the full description.
 - **Right now** is an in-memory engine in the web process
   (`src/lib/moments/engine.ts`). It is anonymous; names are added per request
   for members only (`people.ts`), and signed-out responses keep their old
-  shape.
+  shape. It groups once at server start; after that, requests answer from the
+  last regroup while a due one runs behind them. Never make a request wait
+  for naming or the model.
 - **Reactions** (`post_reactions`) show only to members who can see the post,
   never from banned members, never on hidden posts.
 - **A channel is a tag or a derived group**, never a second system: From

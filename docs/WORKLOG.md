@@ -15,6 +15,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - README "The admin area" + "point your AI agent at the repo"; site `#admin` section (a drawing, not a screenshot) and an agent line in Self-host. Site not republished.
 - Follow-ups: backlog history is lost on restart (persist samples if wanted); other env settings (keep, indexing) stay environment-only because they need a restart.
 
+## 2026-10-29 — Make Right now and thumbnails fast
+
+- Owner: Right now took ~15 s and every thumbnail 10 s+. Measured on a synthetic bench library (400 posts, 1,599 saves, 4–5 MB kept photos; never the owner's DB), production builds.
+- Right now: the first naming pass embedded ~130 topic names through the query model and requests waited for it (6.1 s on an M-series Mac 15 s after boot; longer on a NAS). Now the engine groups at server start, answers from the last regroup while a due one runs behind (`snapshot` event), and names new groups in parallel. First visit 15 s after boot: 6.08 s → 0.016 s.
+- Thumbnails were the originals: 68 covers on /now = 271 MB. `/api/files?w=` serves sharp-made WebP copies (cached in `.thumbs/`), requested via `NxImage sizes` + `srcset`. A real 4032 px picture: 1.5 MB → 4–9 KB (320/640 px), made once in 20–80 ms. A tile waiting on a running download now gives up after 4 s, not 25 s.
+- Strip: the fresh pill's ring was an outer box-shadow clipped by the list's overflow; now inset.
+- Paste spinner: no remount or animation restart found (one element, clock never reset, on /now and in the theater). Made it an SVG ring on its own layer; the jank measured came from decoding full-size images, which the thumbnails remove.
+- Follow-ups: pre-make the common widths when a file is kept; avatars and link-card images aren't resized.
+
 ## 2026-10-29 — The small dependency majors; Tailwind 4 and TypeScript 7 wait
 
 - Owner chose to take the small majors from Dependabot's grouped major PR (#665) and hold the migrations.

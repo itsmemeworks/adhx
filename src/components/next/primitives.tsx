@@ -3,6 +3,7 @@
 import { useCallback, useState, type CSSProperties, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+import { keptSrcSet, sizedSrc } from '@/lib/keep/src'
 import { faceColour, faceInitial } from './faces'
 import { GobShape } from './GobShape'
 import type { PostAuthor } from './post'
@@ -25,7 +26,18 @@ export interface NxImageProps {
   /** Pop in once loaded (rows/grids); stages fade instead. */
   reveal?: 'pop' | 'fade' | 'none'
   loading?: 'lazy' | 'eager'
+  /**
+   * How wide the picture is drawn (an `<img sizes>` value). Given, a kept
+   * picture loads one of its smaller copies instead of the original (tiles,
+   * covers); left out, the original (stages).
+   */
+  sizes?: string
+  /** First on screen: fetch it before the rest (eager, high priority). */
+  priority?: boolean
 }
+
+/** `sizes` for a row or grid tile (340 px tall, up to about 600 wide). */
+export const TILE_SIZES = '(max-width: 640px) 70vw, 480px'
 
 /**
  * An `<img>` that shows a shimmer until it loads, swaps to `fallbackSrc` once
@@ -43,8 +55,12 @@ function NxImageInner({
   className,
   reveal = 'pop',
   loading = 'lazy',
+  sizes,
+  priority = false,
 }: NxImageProps) {
   const [current, setCurrent] = useState(src)
+  // A smaller copy for its box; the fallback (another address) stays whole.
+  const srcSet = sizes && current && current === src ? keptSrcSet(current) : null
   const [state, setState] = useState<'loading' | 'loaded' | 'failed'>(src ? 'loading' : 'failed')
 
   // A cached image can finish before hydration attaches onLoad.
@@ -60,9 +76,13 @@ function NxImageInner({
       {current && state !== 'failed' && (
         <img
           ref={ref}
-          src={current}
+          // srcset and sizes before src, so the browser picks once.
+          srcSet={srcSet ?? undefined}
+          sizes={srcSet ? sizes : undefined}
+          src={srcSet && current ? sizedSrc(current, 640) : current}
           alt={alt}
-          loading={loading}
+          loading={priority ? 'eager' : loading}
+          fetchPriority={priority ? 'high' : undefined}
           decoding="async"
           referrerPolicy="no-referrer"
           draggable={false}
