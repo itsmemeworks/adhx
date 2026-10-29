@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-29 — adhx.com app screenshots recaptured with the avatars
+
+- The ten `site/public/shots` WebPs still showed letter initials after the meme-style avatars landed; recaptured all of them from `PARITY_SHOWCASE=1 pnpm parity:serve`, same names, sizes, framing and story. No alt text changed.
+- Web: Playwright at 1440 × 900, 2× (hide `nextjs-portal`, the dev badge). Home needs a click on the Offbeat row (a forming save now leads New) and a seek to 0:01.
+- iPhone: an iPhone 16 Pro simulator with the debug launch arguments, driven by the `DeviceDriver` UI test (`e2e/devices`) pointed at the simulator with `TEST_RUNNER_ADHX_DRIVER_URL=http://127.0.0.1:3700/`. Retake when the Dynamic Island flickers into a capture. Live: Pete holds `/api/app/live/<slug>/stream` open and posts the "who sent this" text reaction.
+- Android: the USB Galaxy A13 (matches the old status bar). The Offbeat clip moves on within about a second, so burst `adb exec-out screencap` after tapping it in Up next. The share card closes itself about two seconds after saving; share a 600p post Pete hasn't saved (joecroskey's).
+- Disk filled mid-run (emulator image plus both app builds) and crashed the Turbopack dev server; check free space before booting emulators.
+- Follow-up: republish the site (manual `site.yml`) after this and the avatars PR merge.
+
 ## 2026-10-29 — Meme-style avatars on adhx.com and in the demo
 
 - Owner: use fun meme-based avatars for the people on the site and in the demo. Drawn originals in the spirit of internet animals, not copies of real memes (those are someone's photo, character or trademark): Ana a smug cat loaf, Ben a shiba in pixel "deal with it" shades, Mum a capybara with an orange on her head, Jo a raccoon in a tiny crown, Pete a goose up to something, Sam (the demo's visitor) a delighted axolotl. Each on that person's existing colour.
