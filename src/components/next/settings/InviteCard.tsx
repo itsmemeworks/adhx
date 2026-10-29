@@ -11,6 +11,10 @@ export interface PendingInvite {
   createdAt: string
   expiresAt: string
   nameHint: string | null
+  /** A group link an admin made on the Invites page: many people, each waiting for an admin. */
+  group?: boolean
+  uses?: number
+  maxUses?: number | null
   createdBy: string
   /** The maker's display name, when set. */
   createdByName?: string | null
@@ -273,7 +277,11 @@ export function InviteCard() {
               >
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate font-bold">
-                    {invite.nameHint ? `For ${invite.nameHint}` : 'Invite link'}
+                    {invite.group
+                      ? `Group link · ${invite.uses ?? 0} of ${invite.maxUses ?? 0} joined`
+                      : invite.nameHint
+                        ? `For ${invite.nameHint}`
+                        : 'Invite link'}
                   </span>
                   <span className="text-xs text-nx-ink/55">
                     {`${invite.mine ? '' : `From @${invite.createdBy} · `}${daysLeft(invite.expiresAt)}`}
@@ -283,7 +291,7 @@ export function InviteCard() {
                   type="button"
                   onClick={() => void inv.revoke(invite)}
                   className={SECONDARY}
-                  aria-label={`Revoke ${invite.nameHint ? `the invite for ${invite.nameHint}` : 'this invite'}`}
+                  aria-label={`Revoke ${invite.group ? 'this group link' : invite.nameHint ? `the invite for ${invite.nameHint}` : 'this invite'}`}
                 >
                   <X aria-hidden className="h-4 w-4" />
                   <span>Revoke</span>

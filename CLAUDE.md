@@ -344,7 +344,9 @@ Short notes on what is easy to get wrong. Each links to the full description.
 ### Accounts, invites and sign-in
 
 - Two ways in: an **invite link** (`/invite/{token}`, 7 days, single use, only
-  the token's SHA-256 stored; it makes an account with no email) or an
+  the token's SHA-256 stored; it makes an account with no email; an admin's
+  **group link** lets up to 25 people in, each `pending` until an admin
+  approves, each with its own spent invite row via `group_id`) or an
   **email magic link** (15 minutes; 60 when links are held for an admin with
   `EMAIL_LINKS_TO_ADMIN`). Email sign-up is invite-only by default:
   `ALLOWED_EMAILS` unset or `none` lets nobody new in by email, a list lets

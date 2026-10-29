@@ -348,9 +348,13 @@ export const FULL_SCHEMA_SQL = `
     used_by TEXT,
     used_at TEXT,
     revoked_at TEXT,
-    name_hint TEXT
+    name_hint TEXT,
+    max_uses INTEGER,
+    uses INTEGER NOT NULL DEFAULT 0,
+    group_id TEXT
   );
   CREATE INDEX invites_created_by_idx ON invites(created_by);
+  CREATE INDEX invites_group_idx ON invites(group_id);
   CREATE TABLE post_views (
     user_id TEXT NOT NULL,
     platform TEXT NOT NULL,

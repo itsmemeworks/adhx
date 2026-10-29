@@ -203,18 +203,18 @@ A new ADHX stays out of search engines: robots.txt turns crawlers away, the site
 
 The first person to set ADHX up is its admin, and **Admin** (in Settings, or `/admin`) is where you run the place. Admin is attached to the account, never to a username, and you can make other people admins from **People**.
 
-| Section        | What it's for                                                                                                                  |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **Overview**   | Saves, people and disk at a glance.                                                                                            |
-| **People**     | Who's here, who's waiting to join (let them in or decline), their phones, and who's an admin.                                  |
-| **Posts**      | Everything kept on the server, by network and kind.                                                                            |
-| **Channels**   | What your people made and watched together.                                                                                    |
-| **Live**       | Moments as they form, and how many tuned in.                                                                                   |
-| **Analytics**  | How ADHX gets used, as counts only: never what anyone searched or watched.                                                     |
-| **Processing** | What's downloading, converting and being understood right now. Pause new work, retry what failed, or keep a post as a link.    |
-| **System**     | Whether it's all working, and how it's set up. See below.                                                                      |
-| **Moderation** | Hide a post from every public page, clear a note, or keep someone out. Every admin action is logged here.                      |
-| **Invites**    | Make and revoke invite links, choose who may invite, and, until email is set up, pass on the sign-in links waiting for people. |
+| Section        | What it's for                                                                                                                                                                                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Overview**   | Saves, people and disk at a glance.                                                                                                                                                                                |
+| **People**     | Who's here, who's waiting to join (let them in or decline), their phones, and who's an admin.                                                                                                                      |
+| **Posts**      | Everything kept on the server, by network and kind.                                                                                                                                                                |
+| **Channels**   | What your people made and watched together.                                                                                                                                                                        |
+| **Live**       | Moments as they form, and how many tuned in.                                                                                                                                                                       |
+| **Analytics**  | How ADHX gets used, as counts only: never what anyone searched or watched.                                                                                                                                         |
+| **Processing** | What's downloading, converting and being understood right now. Pause new work, retry what failed, or keep a post as a link.                                                                                        |
+| **System**     | Whether it's all working, and how it's set up. See below.                                                                                                                                                          |
+| **Moderation** | Hide a post from every public page, clear a note, or keep someone out. Every admin action is logged here.                                                                                                          |
+| **Invites**    | Make and revoke invite links (one per person, or one group link for a whole chat, where you approve each joiner), choose who may invite, and, until email is set up, pass on the sign-in links waiting for people. |
 
 **System** answers "is it actually working?" in one place:
 

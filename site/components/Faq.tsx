@@ -42,7 +42,7 @@ export const FAQS: Array<{ q: string; a: string }> = [
   },
   {
     q: 'Who can join?',
-    a: 'People you send an invite link to. Your friends don’t need an email address and you don’t need email set up: make a link, send it, they pick a name and they’re in. Each link works once and runs out after a week, and you can make anyone your friends invite wait for your approval. Signing up by email is off unless you list who may in Admin → System → Settings.',
+    a: 'People you send an invite link to. Your friends don’t need an email address and you don’t need email set up: make a link, send it, they pick a name and they’re in. Send one link per person, or one group link to the whole chat: everyone who joins with it waits until you let them in. Links run out after a week, and you can make anyone your friends invite wait for your approval too. Signing up by email is off unless you list who may in Admin → System → Settings.',
   },
   {
     q: 'Who can see what we save?',

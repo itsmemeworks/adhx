@@ -18,8 +18,9 @@ const NO_STORE = { 'Cache-Control': 'no-store' }
  * `{ canInvite, invites: [{ id, url, code, nameHint, createdAt, expiresAt, uses }] }`.
  * Only a link's hash is kept, so `url` is always null here: the link is shown
  * once, when it's made (`POST`), and `POST /api/app/invites/{id}/link` makes
- * a fresh one. `uses` is 0 (an invite lets one person in, then it's gone from
- * this list). Your own only, admins included (the web's admin list stays on
+ * a fresh one. `uses` is how many people joined with it: 0 for a one-person
+ * invite (it lets one person in, then it's gone from this list), more for a
+ * group link an admin made on the web. Your own only, admins included (the web's admin list stays on
  * the web). `canInvite` says whether you may make one.
  */
 export const GET = withPhoneKey(async (_request, { userId }) => {
@@ -30,7 +31,7 @@ export const GET = withPhoneKey(async (_request, { userId }) => {
     nameHint: invite.nameHint,
     createdAt: invite.createdAt,
     expiresAt: invite.expiresAt,
-    uses: 0,
+    uses: invite.uses,
   }))
   return NextResponse.json({ canInvite: mayCreateInvites(userId), invites }, { headers: NO_STORE })
 })
