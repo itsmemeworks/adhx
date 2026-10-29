@@ -43,6 +43,9 @@ export function e2eProcessEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv 
     SEMANTIC_SEARCH: 'off',
     // "Right now" e2e seeds two savers per moment (e2e/seed.ts).
     MOMENT_MIN_SAVERS: '2',
+    // A new server only lets invited people make accounts; the sign-in spec
+    // makes one from an email link, as a server that opened sign-up would.
+    ALLOWED_EMAILS: '*',
     ...extra,
   }
 }
