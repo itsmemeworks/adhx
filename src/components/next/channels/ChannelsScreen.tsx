@@ -169,6 +169,7 @@ export function ChannelsScreen() {
                           {cover?.img && (
                             <NxImage
                               src={cover.img}
+                              sizes="64px"
                               alt=""
                               className="absolute inset-0 h-full w-full object-cover"
                             />
@@ -220,6 +221,7 @@ export function ChannelsScreen() {
                           {cover?.img ? (
                             <NxImage
                               src={cover.img}
+                              sizes="(max-width: 768px) 240px, 33vw"
                               alt=""
                               className="absolute inset-0 h-full w-full object-cover"
                             />

@@ -45,6 +45,11 @@ export async function register(): Promise<void> {
   const { startSemanticProcesses } = await import('@/lib/semantic/supervisor')
   startSemanticProcesses()
 
+  // Right now: understand the topic names and group recent saves once, now,
+  // so the first visit doesn't wait seconds for them. Off under test.
+  const { warmMoments } = await import('@/lib/moments/engine')
+  warmMoments()
+
   // New X bookmarks arrive within the hour without pressing Sync.
   // Off with AUTO_SYNC_EVERY_MINUTES=0, and under test.
   const { startAutoSync } = await import('@/lib/sync/auto')

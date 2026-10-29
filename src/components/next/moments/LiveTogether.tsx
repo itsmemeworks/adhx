@@ -350,7 +350,9 @@ export function ArrivalToast({
       <span className="relative shrink-0">
         {/* In the toast's corner: 18 − 10 = 8 px. */}
         <span className="block h-[42px] w-[42px] overflow-hidden rounded-[8px] bg-nx-raised">
-          {cover && <NxImage src={cover} alt="" className="h-full w-full object-cover" />}
+          {cover && (
+            <NxImage src={cover} sizes="42px" alt="" className="h-full w-full object-cover" />
+          )}
         </span>
         <span aria-hidden className="absolute -bottom-1.5 -right-1.5 block">
           <NxAvatar

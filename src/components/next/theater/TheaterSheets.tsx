@@ -199,6 +199,7 @@ export function UpNextSheet({
                     {cover ? (
                       <NxImage
                         src={cover}
+                        sizes="(max-width: 768px) 33vw, 160px"
                         alt=""
                         className="absolute inset-0 h-full w-full object-cover"
                       />
@@ -708,7 +709,12 @@ export function WhySheet({
       </div>
       <div className="flex items-center gap-3 rounded-[var(--nx-nest)] bg-white/[0.05] p-2">
         {cover ? (
-          <NxImage src={cover} alt="" className="h-14 w-11 shrink-0 rounded-[8px] object-cover" />
+          <NxImage
+            src={cover}
+            sizes="44px"
+            alt=""
+            className="h-14 w-11 shrink-0 rounded-[8px] object-cover"
+          />
         ) : (
           <span aria-hidden className="h-14 w-11 shrink-0 rounded-[8px] bg-nx-cream" />
         )}

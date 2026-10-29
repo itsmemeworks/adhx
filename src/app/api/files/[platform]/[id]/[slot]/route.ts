@@ -10,6 +10,7 @@ import { keepJobs } from '@/lib/db/schema'
 import { proxySrc } from '@/lib/keep/src'
 import { wakeKeep } from '@/lib/keep/worker'
 import { ensurePoster } from '@/lib/keep/poster'
+import { canShrink, thumbFor, thumbWidth } from '@/lib/keep/thumb'
 import { keptFileAccess, ownsSave, validFileToken } from '@/lib/keep/file-access'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { phoneCaller } from '@/lib/api/phone-auth'
@@ -47,6 +48,11 @@ function conversionPending(platform: string, id: string, slot: Slot): boolean {
 }
 
 const WAIT_MS = 25_000
+/**
+ * A tile's picture (`?w=`) waits less: a shimmer that lasts 25 s reads as a
+ * broken page, and the tile is drawn again on the next visit anyway.
+ */
+const THUMB_WAIT_MS = 4_000
 
 /**
  * Why a post's video isn't here, for the player to say: the download gave up
@@ -109,8 +115,9 @@ async function waitForKept(
   id: string,
   slot: Slot,
   signal: AbortSignal,
+  waitMs = WAIT_MS,
 ): Promise<KeptFile | null> {
-  const until = Date.now() + WAIT_MS
+  const until = Date.now() + waitMs
   while (Date.now() < until && !signal.aborted) {
     await new Promise((r) => setTimeout(r, 750))
     const kept = findKept(platform, id, slot)
@@ -173,6 +180,9 @@ function parseRange(header: string | null, size: number): { start: number; end: 
  * proxies (`?a=` carries the author they need); other networks wait for the
  * download.
  *
+ * `?w=` asks for a picture or poster at most that wide (a tile or cover): a
+ * smaller WebP copy made once and kept beside the original (`thumb.ts`).
+ *
  * A post whose only saves are Just for me is served to its owners only (their
  * session or phone key, or the post's `?k=` file token) and never cached. To
  * anyone else it looks exactly like a post nobody saved, and why a file isn't
@@ -216,13 +226,17 @@ export async function GET(
   let kept = retainedAllowed ? findKept(platform, id, slot) : null
   const author = request.nextUrl.searchParams.get('a') ?? ''
   const download = request.nextUrl.searchParams.get('download') === '1'
+  const width =
+    download || slot.startsWith('video-') || slot.startsWith('audio-')
+      ? null
+      : thumbWidth(request.nextUrl.searchParams.get('w'))
   // Where to send it meanwhile, worked out only when it isn't kept.
   const meanwhile = kept ? null : standIn(platform, id, slot, author, download, !retainedAllowed)
   // Nothing to hand over (no proxy, no stored picture): a fresh save is
   // usually seconds from kept. Wait for it rather than failing the player.
   if (!kept && retainedAllowed && !meanwhile && downloading(platform, id)) {
     wakeKeep()
-    kept = await waitForKept(platform, id, slot, request.signal)
+    kept = await waitForKept(platform, id, slot, request.signal, width ? THUMB_WAIT_MS : WAIT_MS)
   }
   // A video kept before stills were taken on download: make its poster now.
   if (!kept && retainedAllowed && slot === 'poster') kept = await ensurePoster(platform, id)
@@ -246,6 +260,7 @@ export async function GET(
     let file: string
     let size: number
     let modified: number
+    let mime = kept.mime
     try {
       file = absolutePath(kept.path)
       const stat = fs.statSync(file)
@@ -254,8 +269,16 @@ export async function GET(
     } catch {
       return notFound()
     }
+    // A tile's copy; the original when one can't be made.
+    const thumb = width && canShrink(kept.mime) ? await thumbFor(file, modified, width) : null
+    if (thumb) {
+      file = thumb.file
+      size = thumb.size
+      modified = thumb.modified
+      mime = 'image/webp'
+    }
     const headers: Record<string, string> = {
-      'Content-Type': kept.mime,
+      'Content-Type': mime,
       'Accept-Ranges': 'bytes',
       'Cache-Control': privateToOwner
         ? 'private, no-store'
@@ -265,7 +288,7 @@ export async function GET(
       'X-Content-Type-Options': 'nosniff',
     }
     if (!privateToOwner && !conversionPending(platform, id, kept.slot)) {
-      const etag = `"${size}-${modified}"`
+      const etag = `"${size}-${modified}${thumb ? `-w${width}` : ''}"`
       headers['ETag'] = etag
       if (request.headers.get('if-none-match') === etag) {
         return new NextResponse(null, { status: 304, headers })

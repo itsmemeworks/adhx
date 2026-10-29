@@ -31,17 +31,32 @@ export interface NamingDeps {
   choose?: (candidates: string[], samples: string[]) => Promise<string | null>
 }
 
-const g = globalThis as unknown as { __adhxMomentTopics?: Float32Array[] | null }
+const g = globalThis as unknown as {
+  __adhxMomentTopics?: Float32Array[] | null
+  /** The one pass in flight: groups named at once share it. */
+  __adhxMomentTopicsLoading?: Promise<Float32Array[] | null> | null
+}
 
 async function topicVectors(deps: NamingDeps): Promise<Float32Array[] | null> {
   if (g.__adhxMomentTopics) return g.__adhxMomentTopics
+  // Understanding every topic takes seconds; never start a second pass.
+  if (!deps.embedTopics && g.__adhxMomentTopicsLoading) return g.__adhxMomentTopicsLoading
+  const load = (async () => {
+    try {
+      const embed = deps.embedTopics ?? embedQueries
+      const full = await embed(MOMENT_TOPICS.map((t) => queryPrompt(t)))
+      g.__adhxMomentTopics = full.map((v) => truncate(v))
+      return g.__adhxMomentTopics
+    } catch {
+      return null
+    }
+  })()
+  if (deps.embedTopics) return load
+  g.__adhxMomentTopicsLoading = load
   try {
-    const embed = deps.embedTopics ?? embedQueries
-    const full = await embed(MOMENT_TOPICS.map((t) => queryPrompt(t)))
-    g.__adhxMomentTopics = full.map((v) => truncate(v))
-    return g.__adhxMomentTopics
-  } catch {
-    return null
+    return await load
+  } finally {
+    g.__adhxMomentTopicsLoading = null
   }
 }
 

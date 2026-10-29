@@ -525,6 +525,7 @@ export function LeadResult({
     <>
       <NxImage
         src={cover}
+        sizes="(max-width: 768px) 50vw, 33vw"
         fallbackSrc={mediaFallbackSrc(post)}
         alt=""
         reveal="fade"
@@ -824,6 +825,7 @@ export function QueueView({
                   <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[10px] bg-nx-surface">
                     <NxImage
                       src={cover}
+                      sizes="56px"
                       alt=""
                       className="absolute inset-0 h-full w-full object-cover"
                     />
