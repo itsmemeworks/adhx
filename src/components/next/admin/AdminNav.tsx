@@ -13,6 +13,7 @@ export const ADMIN_SECTIONS = [
   { id: 'live', href: '/admin/live', label: 'Live' },
   { id: 'analytics', href: '/admin/analytics', label: 'Analytics' },
   { id: 'processing', href: '/admin/processing', label: 'Processing' },
+  { id: 'system', href: '/admin/system', label: 'System' },
   { id: 'moderation', href: '/admin/moderation', label: 'Moderation' },
   { id: 'invites', href: '/admin/invites', label: 'Invites' },
 ] as const
@@ -29,6 +30,8 @@ const ICONS: Record<AdminSectionId, string> = {
   live: '<circle cx="12" cy="12" r="2.5"></circle><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M4.9 4.9a10 10 0 0 0 0 14.2M19.1 4.9a10 10 0 0 1 0 14.2"></path>',
   processing:
     '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"></path>',
+  system:
+    '<rect x="3" y="4" width="18" height="7" rx="2"></rect><rect x="3" y="13" width="18" height="7" rx="2"></rect><path d="M7 7.5h.01M7 16.5h.01M11 7.5h6M11 16.5h6"></path>',
   moderation: '<path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"></path>',
   invites: '<path d="M4 6h16v12H4z"></path><path d="M4 7l8 6 8-6"></path>',
   analytics: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path>',

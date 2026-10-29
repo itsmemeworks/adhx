@@ -17,7 +17,7 @@ import { readResponseBodyWithLimit } from '@/lib/media/proxy'
 import { conversionHeartbeat, conversionFailure } from '@/lib/processing/conversion'
 import { indexingPaused } from '@/lib/processing/config'
 import { claimNextJob } from '@/lib/processing/scheduling'
-import { noteWorkerSeen } from '@/lib/processing/presence'
+import { noteWorkerClaim, noteWorkerClaimProblem, noteWorkerSeen } from '@/lib/processing/presence'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -41,6 +41,7 @@ export async function POST(request: Request): Promise<Response> {
     if (!body || typeof body !== 'object')
       throw new ProcessingInputError('Expected a request object')
     if (body.action === 'claim') {
+      noteWorkerClaim(body)
       validateMediaCacheKeys(body.cachedMedia)
       const releaseMedia: string[] = []
       const job = await claimNextJob(body.workerId, body.model, body.protocol, body.kinds, (keys) =>
@@ -105,6 +106,7 @@ export async function POST(request: Request): Promise<Response> {
   } catch (error) {
     const conflict = error instanceof ProcessingConflict
     const invalid = error instanceof ProcessingInputError
+    if (conflict && body?.action === 'claim') noteWorkerClaimProblem(body.workerId, error.message)
     if (!conflict && !invalid) console.error('[processing] job request failed')
     return Response.json(
       {

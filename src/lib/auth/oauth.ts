@@ -5,6 +5,7 @@ import { and, eq, exists, gt, isNull, lte, or } from 'drizzle-orm'
 import { encryptToken, safeDecryptToken } from './token-encryption'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 import { appUrl } from '@/lib/routes/app-url'
+import { extra } from '@/lib/settings/extras'
 
 // Retry helper for idempotent Twitter API calls (GET only).
 // Non-idempotent operations (token exchange, refresh) must NOT retry
@@ -654,8 +655,8 @@ async function performRefresh(snapshot: StoredTokenSnapshot): Promise<StoredToke
     throw new TokenRefreshError('Token refresh is already in progress', 423)
   }
 
-  const clientId = process.env.TWITTER_CLIENT_ID!
-  const clientSecret = process.env.TWITTER_CLIENT_SECRET!
+  const clientId = extra('TWITTER_CLIENT_ID')!
+  const clientSecret = extra('TWITTER_CLIENT_SECRET')!
   let refreshed: Awaited<ReturnType<typeof refreshAccessToken>>
   try {
     refreshed = await refreshAccessToken(tokens.refreshToken, clientId, clientSecret)

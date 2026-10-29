@@ -10,6 +10,7 @@ import { NavMenu } from './NavMenu'
 import { Credit, PostMedia, creditedPosts } from './Post'
 import { PhonePair, PhoneShot, WebShot } from './Shots'
 import { Mock, StepFeed, StepKeep, StepShare } from './mocks'
+import { AdminSection } from './AdminSection'
 
 /**
  * adhx.com: the product site (static, on GitHub Pages). What ADHX does, shown
@@ -32,6 +33,7 @@ const NAV = [
   { href: '#features', label: 'Features' },
   { href: '#apps', label: 'Apps' },
   { href: '#self-host', label: 'Self-host' },
+  { href: '#admin', label: 'Admin' },
   { href: '/install/', label: 'Install' },
 ]
 
@@ -916,6 +918,10 @@ function SelfHost() {
                 short: 'Kept media plays for anyone who can reach your server.',
               },
               {
+                long: 'Rather not read the guides? Point your AI coding agent at the repository: it knows how to set ADHX up.',
+                short: 'Or point your AI agent at the repo. It knows the way.',
+              },
+              {
                 long: 'No ads, nobody selling your attention. Open source under the MIT licence.',
                 short: 'No ads. Open source, MIT licence.',
               },
@@ -961,6 +967,7 @@ export function ProductSite() {
         <Apps />
         <Band />
         <SelfHost />
+        <AdminSection />
       </main>
       <Footer />
     </div>

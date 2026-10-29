@@ -5,6 +5,7 @@ import { overviewBoard } from './overview'
 import { peopleBoard } from './people'
 import { postsBoard } from './posts'
 import { processingBoard } from './processing'
+import { systemBoard } from './system'
 import { parseAdminRange, type AdminRange } from '../shared'
 
 /**
@@ -20,6 +21,7 @@ export const ADMIN_BOARDS = [
   'live',
   'analytics',
   'processing',
+  'system',
   'moderation',
   'invites',
 ] as const
@@ -39,6 +41,7 @@ export const DEFAULT_RANGE: Record<AdminBoardId, AdminRange> = {
   live: 'week',
   analytics: 'month',
   processing: 'week',
+  system: 'week',
   moderation: 'week',
   invites: 'week',
 }
@@ -64,6 +67,8 @@ export async function loadAdminBoard(
       return analyticsBoard(range)
     case 'processing':
       return processingBoard(viewerId)
+    case 'system':
+      return systemBoard()
     case 'moderation':
       return moderationBoard()
     case 'invites':
@@ -81,4 +86,5 @@ export {
   peopleBoard,
   postsBoard,
   processingBoard,
+  systemBoard,
 }

@@ -13,6 +13,7 @@
 import { keptSrc } from '@/lib/keep/src'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { isValidTweetAuthor, isValidTweetId } from '@/lib/media/proxy'
+import { noteServiceCall } from '@/lib/ops/service-calls'
 
 export interface MediaUrlOptions {
   tweetId: string
@@ -384,6 +385,9 @@ export async function fetchTweetResult(
   // headers arrive, but a slow or stalled JSON body must not escape the same
   // operation timeout.
   const timeoutMs = opts.timeoutMs ?? 5000
+  const started = Date.now()
+  const answered = () =>
+    noteServiceCall('fxtwitter', 'post details', { ok: true, ms: Date.now() - started })
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
@@ -405,13 +409,22 @@ export async function fetchTweetResult(
     if (!response.ok) {
       await response.body?.cancel()
       console.error(`FxTwitter API error: ${response.status}`)
+      // A deleted or private post is an answer; anything else is FxTwitter failing.
+      if (isGoneCode(response.status)) answered()
+      else
+        noteServiceCall('fxtwitter', 'post details', {
+          ok: false,
+          error: new Error(`HTTP ${response.status}`),
+        })
       return { ok: false, gone: isGoneCode(response.status) }
     }
 
     const data = (await response.json()) as FxTwitterResponse
+    answered()
     if (!data.tweet && isGoneCode(data.code)) return { ok: false, gone: true }
     return { ok: true, data }
   } catch (error) {
+    noteServiceCall('fxtwitter', 'post details', { ok: false, error })
     // AbortError means timeout - log differently for clarity
     if (error instanceof Error && error.name === 'AbortError') {
       console.error(`FxTwitter API request timed out after ${timeoutMs}ms`)

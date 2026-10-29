@@ -200,6 +200,10 @@ export function moderationBoard(now = Date.now()): ModerationBoard {
         return line('retried', typeof t.platform === 'string' ? postOf(t) : 'failed work')
       case 'keep_link_only':
         return line('kept as a link', postOf(t))
+      case 'set_setting':
+        return line(t.cleared ? 'cleared' : 'changed', String(t.name ?? 'a setting'))
+      case 'test_service':
+        return line('tested', String(t.service ?? 'a service'))
       default:
         return line(r.action.replace(/_/g, ' '), '')
     }

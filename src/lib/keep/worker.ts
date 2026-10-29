@@ -39,6 +39,8 @@ interface State {
   lastScan: number
   lastPosterRepair?: number
   lastClean: number
+  /** When the loop last ran (ms), for the admin System page. */
+  lastTick?: number
   /** With KEEP_BACKFILL=off: only saves made after this. */
   since: string | null
 }
@@ -208,6 +210,7 @@ async function tick(): Promise<void> {
   const s = state()
   try {
     const now = Date.now()
+    s.lastTick = now
     if (now - s.lastClean > CLEAN_EVERY_MS && s.running === 0) {
       s.lastClean = now
       await cleanUp()
@@ -278,6 +281,16 @@ export async function diskHasRoom(): Promise<boolean> {
 export function keepCutoff(): string | null {
   const s = state()
   return s.timer ? s.since : null
+}
+
+/** Is the download loop running in this process, and how busy is it? (admin System page) */
+export function keepWorkerStatus(): {
+  running: boolean
+  downloading: number
+  lastTickAt: number | null
+} {
+  const s = state()
+  return { running: !!s.timer, downloading: s.running, lastTickAt: s.lastTick ?? null }
 }
 
 /** A save just happened: look for it now instead of on the next scan. */
