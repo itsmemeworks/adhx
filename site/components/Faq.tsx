@@ -30,7 +30,7 @@ export const FAQS: Array<{ q: string; a: string }> = [
   },
   {
     q: 'What does it need to run?',
-    a: 'Anything with Docker, amd64 or arm64: a NAS, a mini PC, a spare laptop or a small cloud server. About 2 GB of memory to spare and no GPU. Roughly 10–30 GB of disk per 1,000 saves. The first start downloads about 800 MB of search models in the background.',
+    a: 'Anything with Docker, amd64 or arm64: a NAS, a mini PC, a spare laptop or a small cloud server. 4 GB of memory is comfortable (2 GB works with speech and screen text switched off), and no GPU. Roughly 10–30 GB of disk per 1,000 saves. The first start downloads about 800 MB of search models in the background.',
   },
   {
     q: 'Which networks can I save from?',
@@ -42,11 +42,11 @@ export const FAQS: Array<{ q: string; a: string }> = [
   },
   {
     q: 'Who can join?',
-    a: 'People you send an invite link to. Each link works once and runs out after a week, and you can approve every new person yourself. Once you set up email, anyone who reaches your sign-in page can ask for a link too, unless you list who may sign up in Admin → System → Settings.',
+    a: 'People you send an invite link to. Each link works once and runs out after a week, and you can make anyone your friends invite wait for your approval. Once you set up email, anyone who reaches your sign-in page can ask for a link too, unless you list who may sign up in Admin → System → Settings.',
   },
   {
     q: 'Who can see what we save?',
-    a: 'Your feed, your faces and who saved what are only for people on your server. A post someone shares gets a public preview page, like a link you’d paste anywhere, which never says who saved it, and the kept file of a shared post plays for anyone with its address. Want nothing reachable from outside? Keep ADHX on your home network or Tailscale. Just for me keeps a save to yourself.',
+    a: 'Your feed, your faces and who saved what are only for people on your server. Some pages are public, though, and search engines can find them: a shared post’s preview page (which never says who saved it) and Right now, which shows what’s being saved with counts but no names. The kept file of a shared post plays for anyone with its address. Want nothing reachable from outside? Keep ADHX on your home network or Tailscale. Just for me keeps a save to yourself.',
   },
   {
     q: 'Is it OK to download other people’s posts?',
@@ -55,6 +55,10 @@ export const FAQS: Array<{ q: string; a: string }> = [
   {
     q: 'What happens when the original post is deleted?',
     a: 'Nothing, for your group. ADHX keeps a real copy in the best quality the network offers when it’s saved, and plays it from your server. It can’t keep posts that are private or DRM-protected.',
+  },
+  {
+    q: 'What happens when a network changes something?',
+    a: 'Downloads go through yt-dlp, and X through FxTwitter. When a network changes, saving from it can break until those tools catch up. Copies you already kept are safe on your server.',
   },
   {
     q: 'How do I update it and back it up?',

@@ -217,7 +217,8 @@ export function AiSection() {
               <span>
                 ONNX models through transformers.js, on the CPU, in their own process so the web app
                 never stalls. A post’s words take about a tenth of a second, a picture 3–7 seconds,
-                a video 11–15. Vectors and a keyword index live in SQLite with everything else.{' '}
+                a video 11–15. Vectors and a keyword index live in SQLite with everything else, and
+                nearly 4,000 tests run on every change.{' '}
               </span>
               <a
                 href={`${GITHUB_URL}/blob/main/ARCHITECTURE.md`}

@@ -273,7 +273,7 @@ function ProofStrip() {
       <li>
         <StarButton className="min-h-[36px] px-3 text-[13px] md:text-[14px]" />
       </li>
-      {['MIT licence', `${RELEASE} · 170+ releases`, 'amd64 + arm64', 'No GPU needed'].map((t) => (
+      {['Free and open source (MIT)', `${RELEASE} · 170+ releases`].map((t) => (
         <li key={t} className="flex items-center gap-2 whitespace-nowrap">
           <Dot className="h-1 w-1 bg-nx-muted" />
           <span>{t}</span>
@@ -308,13 +308,13 @@ function Hero() {
           <div className="flex flex-col items-stretch gap-6 md:items-start lg:w-[420px] lg:shrink-0 lg:gap-7 lg:pt-2">
             <p className="m-0 max-w-[640px] text-[16px] leading-[1.45] text-nx-soft md:text-[19px] md:leading-[1.5]">
               <span className="md:hidden">
-                A private social network you run for your people. They share the best of TikTok,
-                Instagram, X and eleven more; it keeps a real copy and plays it in one feed.
+                A private social network for your friends and family. One of you runs it; everyone
+                shares the best of TikTok, Instagram, X and eleven more into one feed.
               </span>
               <span className="hidden md:inline">
-                A private social network you run for your friends and family. They share the best of
-                TikTok, Instagram, X, YouTube and ten more; it keeps a real copy of each and plays
-                them in one feed, with their faces on.
+                A private social network for your friends and family. One of you runs it; everyone
+                shares the best of TikTok, Instagram, X, YouTube and ten more, and it keeps a real
+                copy of each in one feed, with their faces on.
               </span>
             </p>
             <div className="flex flex-col gap-3">
@@ -418,74 +418,6 @@ function Features() {
   return (
     <div id="features" className="scroll-mt-16 border-t border-white/10">
       <Feature
-        id="f-new"
-        kicker="Home"
-        title="Opens playing. In an order you can predict."
-        shortTitle="Predictable, on purpose."
-        short={
-          <p className="m-0">
-            Just saved, then what you haven’t seen, then more like what you keep. Every post says
-            why it’s next.
-          </p>
-        }
-        mock={
-          <PhonePair
-            shots={[
-              {
-                src: 'iphone-up-next',
-                alt: 'ADHX on iPhone: Up next over Home. Just saved first, in the order it will play, each with whose save it is: Color palette inspiration, Aurora, the Audio-to-MIDI model playing now, Sound Lab, a synth that becomes whatever you type.',
-              },
-            ]}
-          />
-        }
-      >
-        <p className="m-0">
-          Home plays the moment you open it: what your people saved since you last looked, then
-          everything else you haven’t seen, newest first, then For you, more like what you keep.
-          Every post says why it’s next; Up next shows the whole lineup. Videos and photos by
-          default, text and articles when you want them. No guessing, no endless scroll.
-        </p>
-        <p className="m-0">
-          Just want the latest? Switch Home to Everyone, Friends or Mine: the newest saves first,
-          seen or not.
-        </p>
-      </Feature>
-
-      <Feature
-        id="f-faces"
-        kicker="Saver faces"
-        title="Ana and Ben saved this."
-        short={
-          <p className="m-0">
-            <span>Every post wears the faces of whoever kept it. Shared by default; flip </span>
-            <strong className="font-extrabold text-nx-cream">Just for me</strong>
-            <span> to keep one to yourself.</span>
-          </p>
-        }
-        mock={
-          <PhonePair
-            shots={[
-              {
-                src: 'android-share',
-                alt: 'The ADHX share card on Android: Saved for your people, kept a copy at 600p. Jo, Ben, Ana and Mum will see it, a note field, and the Just for me switch, off.',
-              },
-            ]}
-          />
-        }
-        flip
-        dark
-      >
-        <p className="m-0">
-          <span>
-            Every post wears the faces of whoever kept it, so you know who to thank. Saves go to
-            your people by default. Flip{' '}
-          </span>
-          <strong className="font-extrabold text-nx-cream">Just for me</strong>
-          <span> and it stays out of everyone else’s feed, channels and search.</span>
-        </p>
-      </Feature>
-
-      <Feature
         id="f-vault"
         kicker="The meme vault"
         title="Deleted on X. Still in your copy."
@@ -549,6 +481,74 @@ function Features() {
             How it knows
           </a>
           <span>.</span>
+        </p>
+      </Feature>
+
+      <Feature
+        id="f-faces"
+        kicker="Saver faces"
+        title="Ana and Ben saved this."
+        short={
+          <p className="m-0">
+            <span>Every post wears the faces of whoever kept it. Shared by default; flip </span>
+            <strong className="font-extrabold text-nx-cream">Just for me</strong>
+            <span> to keep one to yourself.</span>
+          </p>
+        }
+        mock={
+          <PhonePair
+            shots={[
+              {
+                src: 'android-share',
+                alt: 'The ADHX share card on Android: Saved for your people, kept a copy at 600p. Jo, Ben, Ana and Mum will see it, a note field, and the Just for me switch, off.',
+              },
+            ]}
+          />
+        }
+      >
+        <p className="m-0">
+          <span>
+            Every post wears the faces of whoever kept it, so you know who to thank. Saves go to
+            your people by default. Flip{' '}
+          </span>
+          <strong className="font-extrabold text-nx-cream">Just for me</strong>
+          <span> and it stays out of everyone else’s feed, channels and search.</span>
+        </p>
+      </Feature>
+
+      <Feature
+        id="f-new"
+        kicker="Home"
+        title="Opens playing. In an order you can predict."
+        shortTitle="Predictable, on purpose."
+        short={
+          <p className="m-0">
+            Just saved, then what you haven’t seen, then more like what you keep. Every post says
+            why it’s next.
+          </p>
+        }
+        mock={
+          <PhonePair
+            shots={[
+              {
+                src: 'iphone-up-next',
+                alt: 'ADHX on iPhone: Up next over Home. Just saved first, in the order it will play, each with whose save it is: Color palette inspiration, Aurora, the Audio-to-MIDI model playing now, Sound Lab, a synth that becomes whatever you type.',
+              },
+            ]}
+          />
+        }
+        flip
+        dark
+      >
+        <p className="m-0">
+          Home plays the moment you open it: what your people saved since you last looked, then
+          everything else you haven’t seen, newest first, then For you, more like what you keep.
+          Every post says why it’s next; Up next shows the whole lineup. Videos and photos by
+          default, text and articles when you want them. No guessing, no endless scroll.
+        </p>
+        <p className="m-0">
+          Just want the latest? Switch Home to Everyone, Friends or Mine: the newest saves first,
+          seen or not.
         </p>
       </Feature>
 
@@ -633,7 +633,7 @@ function Features() {
         <p className="m-0">
           Send a friend one link: it signs them in and pairs their phone. No password, nothing for
           your mum to remember. Each link works once and runs out after a week, and you can approve
-          every new person yourself.
+          anyone your friends invite before they’re in.
         </p>
       </Feature>
     </div>
@@ -789,7 +789,7 @@ function Band() {
 
 const SPECS: Array<[string, string]> = [
   ['Runs on', 'Anything with Docker, amd64 or arm64'],
-  ['Needs', 'About 2 GB of memory to spare. No GPU'],
+  ['Memory', '4 GB is comfortable; 2 GB with speech and screen text off. No GPU'],
   ['Disk', 'Roughly 10–30 GB per 1,000 saves'],
   ['First start', 'Fetches the search models (about 800 MB) in the background'],
   ['Your data', 'One /data folder. Stop ADHX and copy it to back up'],
@@ -879,11 +879,11 @@ export function ProductSite() {
         <Friends />
         <GroupChat />
         <Features />
-        <Band />
         <AiSection />
         <SelfHost />
         <AdminSection />
         <Apps />
+        <Band />
         <Faq />
         <Closer />
       </main>
