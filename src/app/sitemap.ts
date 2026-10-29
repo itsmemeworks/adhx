@@ -6,11 +6,16 @@ import { and, eq, desc, isNull, sql } from 'drizzle-orm'
 import { previewPath } from '@/lib/activity/record'
 import type { PlatformId } from '@/lib/platform/url'
 import { isValidTwitterHandle, passesThinContentGate } from '@/lib/sitemap/queries'
-import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { appUrl } from '@/lib/routes/app-url'
+import { publicPagesOn } from '@/lib/settings/public-pages'
 import { readBannedUserIds, readModeratedPostKeys } from '@/lib/admin/moderation'
 
 /**
  * Single sitemap served at /sitemap.xml (where robots.txt points).
+ *
+ * Empty unless the owner has turned "Show up in search engines" on (Admin →
+ * System, `PUBLIC_PAGES`): a new ADHX stays out of search engines. URLs use
+ * this server's own address (`appUrl()`), never adhx.com.
  *
  * Rendered at request time, NOT build time: it reads the runtime SQLite DB,
  * which is only migrated at container startup, so a build-time render would hit
@@ -32,8 +37,6 @@ import { readBannedUserIds, readModeratedPostKeys } from '@/lib/admin/moderation
  * can't dilute site-wide quality signals — see `src/lib/sitemap/queries.ts`.
  */
 export const dynamic = 'force-dynamic'
-
-const baseUrl = PUBLIC_BASE_URL
 
 /** The content platforms whose saved/previewed posts map to preview URLs. */
 const PLATFORMS: PlatformId[] = ['twitter', 'instagram', 'tiktok']
@@ -59,6 +62,8 @@ function trackAuthor(
 }
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  if (!publicPagesOn()) return []
+  const baseUrl = appUrl()
   const now = new Date()
 
   // Hubs: the homepage and Right now (live, public), and the privacy page.
