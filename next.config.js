@@ -99,8 +99,10 @@ const nextConfig = {
           value: 'nosniff',
         },
         {
+          // Other sites never learn which page you were on, and X serves its
+          // pictures (it refuses ones asked for with another site's referrer).
           key: 'Referrer-Policy',
-          value: 'strict-origin-when-cross-origin',
+          value: 'same-origin',
         },
         {
           key: 'X-XSS-Protection',

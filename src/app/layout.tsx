@@ -122,7 +122,7 @@ const siteMetadata: Omit<Metadata, 'metadataBase'> = {
   publisher: 'ADHX',
   applicationName: 'ADHX',
   generator: 'Next.js',
-  referrer: 'origin-when-cross-origin',
+  referrer: 'same-origin',
   openGraph: {
     type: 'website',
     locale: 'en_US',

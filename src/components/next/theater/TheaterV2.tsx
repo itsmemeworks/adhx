@@ -3480,7 +3480,7 @@ export function TheaterV2({
           onClick={openQuickSearch}
           className={cn(
             'pointer-events-auto lg:hidden',
-            (source.feed || (!me && !authLoading)) && 'hidden md:flex',
+            (source.feed || (!authLoading && !me?.authenticated)) && 'hidden md:flex',
           )}
         />
         {/* Wide screens paste with ⌘V (the pill kept for keyboards); below lg it's in ⋯. */}
