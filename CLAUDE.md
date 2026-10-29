@@ -86,6 +86,7 @@ or named to anyone but its owner.
 | `pnpm email:dev`                              | Preview sign-in emails on :3003.                                    |
 | `pnpm extension:build`                        | Build the desktop extension (after `pnpm --dir extension install`). |
 | `pnpm site:dev` / `site:build`                | The adhx.com product site on :3040.                                 |
+| `pnpm site:og`                                | Redraw `site/public/og.png` from `site/app/og` (site:dev running).  |
 | `pnpm check:dependencies`                     | Audit all three JavaScript lockfiles.                               |
 | `./gradlew assembleDebug` (in `apps/android`) | Android debug APK. iOS builds from `apps/ios/ADHXShare.xcodeproj`.  |
 

@@ -30,6 +30,7 @@
     "prepare": "husky",
     "site:dev": "cd site && next dev --webpack -p 3040",
     "site:build": "cd site && next build --webpack",
+    "site:og": "node site/scripts/og.mjs",
     "check:dependencies": "node scripts/security/check-dependencies.mjs"
   },
   "lint-staged": {

@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-29 — adhx.com: demo-first hero, friends-only story, the AI explained, SEO
+
+- Owner: hero CTAs should be "try the demo" and "self-host"; Admin copy read oddly; the free on-box AI (EmbeddingGemma 2, Whisper, Florence-2) and optional Jev weren't evident; the site should read as a whole social network that's only your friends; meta/OG/SEO/AEO should be strong.
+- Hero: kicker "The social network that's only your friends", primary **Try the live demo** (demo.adhx.com), secondary **Host your own** (#self-host); header button is Try the demo with GitHub as an icon. A closing "Bring your people. Leave the algorithm." section repeats both.
+- New sections: Friends (`Friends.tsx`, replaces the networks strip: fourteen networks → your people pick → one feed, plus the social parts, minus strangers), AI (`AiSection.tsx`: what each model does, what Jev adds and sees, the four payoffs), FAQ (`Faq.tsx`). Admin is now "Is it working? No SSH required."
+- SEO: keyword title + template, canonical per page, OG/X large card from a designed `public/og.png` (`app/og` → `pnpm site:og`), absolute og:video, googlebot previews, `robots.txt`, `sitemap.xml`, site `llms.txt`, and JSON-LD (WebSite, SoftwareApplication, SoftwareSourceCode, VideoObject, FAQPage built from the visible FAQ).
+- Copy stays true to the code: models run on the server or its Mac helper; Jev gets only the search and public post words. "Nothing leaves your house" is gone.
+- Follow-up: republish the site after merge (manual `site.yml`).
+
 ## 2026-10-29 — Admin → System: each fact once, settings changeable there
 
 - Owner (testing v2.11.0 live): System repeated itself (services three times, workers and queues twice, settings in two cards, the server name three times, Processing's own settings and pause button again) and most configuration was still env-only.

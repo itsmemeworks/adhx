@@ -99,6 +99,38 @@ export const Menu = (p: IconProps) => <Stroke {...p} d="M4 7h16M4 12h16M4 17h16"
 export const Send = (p: IconProps) => <Stroke {...p} width={2.2} d="M4 12l16-8-6 16-3-7z" />
 export const Chat = (p: IconProps) => <Stroke {...p} d="M4 5h16v11H9l-5 4z" />
 
+export const Sparkle = (p: IconProps) => (
+  <Stroke
+    {...p}
+    width={2}
+    d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7z"
+  />
+)
+export const Users = (p: IconProps) => (
+  <Stroke {...p}>
+    <circle cx="9" cy="8" r="3.5" />
+    <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+    <path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6" />
+  </Stroke>
+)
+
+/** A filled play triangle. */
+export function Play({ className, style, size = 18 }: IconProps) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      width={typeof size === 'number' ? size : undefined}
+      height={typeof size === 'number' ? size : undefined}
+      className={className}
+      style={typeof size === 'string' ? { width: size, height: size, ...style } : style}
+    >
+      <path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z" />
+    </svg>
+  )
+}
+
 export function Dots({ className, style, size = 18 }: IconProps) {
   return (
     <svg
