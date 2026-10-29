@@ -33,6 +33,47 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # What a PR touches. A PR confined to the phone apps (built by native.yml)
+  # or the extension cannot change the web app, its image or the site, so the
+  # heavy jobs below skip. Anything else, and every non-PR run, runs them all.
+  changes:
+    if: github.event_name != 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      web: ${{ steps.files.outputs.web }}
+      extension: ${{ steps.files.outputs.extension }}
+    steps:
+      - id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -z "$PR" ]; then
+            echo 'web=true' >> "$GITHUB_OUTPUT"
+            echo 'extension=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename')
+          web=false
+          extension=false
+          [ -n "$files" ] || web=true
+          while IFS= read -r file; do
+            case "$file" in
+              '') ;;
+              apps/*) ;;
+              extension/*) extension=true ;;
+              *) web=true ;;
+            esac
+          done <<< "$files"
+          echo "web=$web" >> "$GITHUB_OUTPUT"
+          echo "extension=$extension" >> "$GITHUB_OUTPUT"
+          echo "web=$web extension=$extension"
+
   release-compatibility:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -74,7 +115,7 @@ jobs:
   # Both native runner-image builds already compile the production app.
   # Keep the required `build` context without compiling it a third time.
   build:
-    needs: container-smoke
+    needs: [changes, container-smoke]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: |
@@ -85,13 +126,23 @@ jobs:
     steps:
       - name: Require both native image builds and smoke tests
         env:
+          CHANGES: ${{ needs.changes.result }}
+          WEB: ${{ needs.changes.outputs.web }}
           RESULT: ${{ needs.container-smoke.result }}
-        run: test "$RESULT" = success
+        # Fail closed: a broken `changes` job must not let a PR skip the image.
+        run: |
+          test "$CHANGES" = success
+          if [ "$WEB" = false ]; then
+            echo 'Only the phone apps or the extension changed; no image to build.'
+          else
+            test "$RESULT" = success
+          fi
 
   extension:
+    needs: changes
     runs-on: ubuntu-latest
     if: |
-      github.event_name != 'workflow_run' &&
+      github.event_name != 'workflow_run' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.extension == 'true') &&
       !(github.event.pull_request.user.login == 'github-actions[bot]' &&
         github.head_ref == 'release-please--branches--main' &&
         github.event.pull_request.head.repo.full_name == github.repository)
@@ -125,8 +176,9 @@ jobs:
   # Native builds exercise the actual installed architecture, including SQLite,
   # FFmpeg, yt-dlp and ONNX bindings. No QEMU inference and no image publishing.
   container-smoke:
+    needs: changes
     if: |
-      github.event_name != 'workflow_run' &&
+      github.event_name != 'workflow_run' && needs.changes.outputs.web == 'true' &&
       !(github.event.pull_request.user.login == 'github-actions[bot]' &&
         github.head_ref == 'release-please--branches--main' &&
         github.event.pull_request.head.repo.full_name == github.repository)
@@ -201,8 +253,9 @@ jobs:
           fi
 
   site-build:
+    needs: changes
     if: |
-      github.event_name != 'workflow_run' &&
+      github.event_name != 'workflow_run' && needs.changes.outputs.web == 'true' &&
       !(github.event.pull_request.user.login == 'github-actions[bot]' &&
         github.head_ref == 'release-please--branches--main' &&
         github.event.pull_request.head.repo.full_name == github.repository)
@@ -274,9 +327,11 @@ jobs:
         run: pnpm format:check
 
   test:
-    # Skip for release-please PRs (only update version/changelog) and workflow_run events
+    # Skip for release-please PRs (only update version/changelog), workflow_run
+    # events and PRs confined to the phone apps or the extension
+    needs: changes
     if: |
-      github.event_name != 'workflow_run' &&
+      github.event_name != 'workflow_run' && needs.changes.outputs.web == 'true' &&
       !(github.event.pull_request.user.login == 'github-actions[bot]' &&
         github.head_ref == 'release-please--branches--main' &&
         github.event.pull_request.head.repo.full_name == github.repository)
@@ -336,8 +391,9 @@ jobs:
           retention-days: 14
 
   e2e:
+    needs: changes
     if: |
-      github.event_name != 'workflow_run' &&
+      github.event_name != 'workflow_run' && needs.changes.outputs.web == 'true' &&
       !(github.event.pull_request.user.login == 'github-actions[bot]' &&
         github.head_ref == 'release-please--branches--main' &&
         github.event.pull_request.head.repo.full_name == github.repository)

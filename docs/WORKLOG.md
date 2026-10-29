@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-28 — Fewer dependency PRs, less CI per PR
+
+- Owner: Dependabot PRs used too much CI. Five ecosystems on weekly schedules, majors kept separate, made about nine PRs a week; each ran the whole CI (two native image builds, e2e, tests), and strict branch protection made every merge rebase and re-run the rest (one PR ran 9 times).
+- `dependabot.yml`: monthly; the app and extension npm updates share one minor/patch PR and one major PR (`directories`), with a 7-day cooldown; Actions, Gradle and Docker get one grouped PR each. Security updates are unaffected.
+- `ci.yml`: a `changes` job reads the PR's files; PRs only under `apps/` or `extension/` skip the image builds, e2e, tests and site build (the extension job still runs for extension changes). `build` always runs and fails if `changes` failed. CodeQL ignores `apps/**`.
+- Follow-up: the skip path first runs on the next app- or extension-only PR after merge.
+
 ## 2026-10-28 — More one-click installs: any server, Portainer, CapRover, Zeabur
 
 - Owner: more one-click installs, with provider buttons where they exist. Buttons that keep a disk need either a file in the repo (Render, done) or a template published from an account (Railway, Zeabur); Koyeb's button can't attach a volume and DigitalOcean App Platform has no disk, so they're out. sslip.io isn't on the Public Suffix List (shared Let's Encrypt limits), so no-domain installs stay plain HTTP on 3000.
