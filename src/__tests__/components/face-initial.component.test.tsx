@@ -10,7 +10,7 @@ describe('FaceInitial', () => {
     const { container } = render(<FaceInitial username="ana" name="Ana" size={96} />)
     const face = container.querySelector('[data-face="initial"]')
     expect(face).toHaveAttribute('data-initial', 'A')
-    expect(face).toHaveStyle({ background: faceColour('ana') })
+    expect(face).toHaveStyle({ backgroundColor: faceColour('ana') })
     expect(container.textContent).toBe('')
   })
 
