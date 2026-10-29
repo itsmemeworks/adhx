@@ -524,16 +524,35 @@ async function recompute(): Promise<void> {
 
   const previous = s.moments
   const matches = matchPrevious(drafts, previous)
+  const raws = drafts.map((d) =>
+    centreOf([...d.members.keys()].map((k) => chosen!.raws.get(k)!).filter(Boolean)),
+  )
+  // New groups are named at the same time (one Jev round trip, not one each),
+  // each avoiding the names kept from before; clashes between them are
+  // settled in order below without asking Jev again.
+  const kept = new Set(matches.flatMap((m) => (m?.title ? [m.title] : [])))
+  const proposed = await Promise.all(
+    drafts.map((d, i) =>
+      matches[i]?.title ? null : nameMoment(raws[i], postTexts(newestKeys(d.members, 12)), kept),
+    ),
+  )
   const taken = new Set<string>()
   const moments: Moment[] = []
   for (let i = 0; i < drafts.length; i++) {
     const d = drafts[i]
     const prev = matches[i]
-    const keys = [...d.members.keys()]
-    const raw = centreOf(keys.map((k) => chosen!.raws.get(k)!).filter(Boolean))
-    let title = prev?.title
+    const raw = raws[i]
+    let title = prev?.title ?? proposed[i] ?? undefined
     if (!title || taken.has(title)) {
-      title = await nameMoment(raw, postTexts(newestKeys(d.members, 12)), taken)
+      title = await nameMoment(
+        raw,
+        postTexts(newestKeys(d.members, 12)),
+        taken,
+        {},
+        {
+          useJev: false,
+        },
+      )
     }
     taken.add(title)
     const hue = prev?.hue ?? pickHue(seedFrom(title), new Set(moments.map((m) => m.hue)))
@@ -807,20 +826,52 @@ function ensureRunning(): void {
   }
 }
 
+/**
+ * Wait for moments only when there are none yet. Once a regroup has run, a
+ * due one happens behind the answer (its result reaches open pages as a
+ * `snapshot` event), so nobody waits for naming or for the model.
+ */
+function computed(): Promise<void> {
+  const s = state()
+  if (!s.lastRecompute) return ensureRecomputed()
+  void ensureRecomputed()
+  return Promise.resolve()
+}
+
+/** A moment by slug, waiting for a due regroup only when it isn't there yet. */
+async function findMoment(slug: string): Promise<Moment | undefined> {
+  await computed()
+  const found = state().moments.find((x) => x.slug === slug)
+  if (found) return found
+  const s = state()
+  if (!s.recomputing && Date.now() - s.lastRecompute < RECOMPUTE_MS) return undefined
+  await ensureRecomputed()
+  return state().moments.find((x) => x.slug === slug)
+}
+
+/**
+ * Compute moments once at server start (no timer, nobody counted as
+ * listening), so the first visit doesn't wait for the topic names to be
+ * understood and the first regroup. Never throws.
+ */
+export function warmMoments(): void {
+  if (process.env['NODE_ENV'] === 'test') return
+  void ensureRecomputed()
+}
+
 // ——— Public API ———
 
 /** Everything "Right now" shows, computing it first if needed. */
 export async function getMomentsSnapshot(): Promise<MomentsSnapshot> {
   ensureRunning()
-  await ensureRecomputed()
+  await computed()
   return snapshot()
 }
 
 /** One moment's posts, newest first, with per-minute save counts. */
 export async function getMomentDetail(slug: string, limit = 60): Promise<MomentDetail | null> {
   ensureRunning()
-  await ensureRecomputed()
-  const m = state().moments.find((x) => x.slug === slug)
+  const m = await findMoment(slug)
   if (!m) return null
   const keys = visibleOnly(newestKeys(m.members, limit))
   const posts = await loadPosts(keys)
@@ -877,21 +928,19 @@ export function formingPostKeys(id: string): { keys: string[]; since: string } |
 /** Whether a forming group still exists (computing first if needed). */
 export async function hasForming(id: string): Promise<boolean> {
   ensureRunning()
-  await ensureRecomputed()
+  await computed()
   return state().forming.some((x) => x.id === id)
 }
 
 /** Whether a moment is live now (computing first if needed). */
 export async function hasMoment(slug: string): Promise<boolean> {
   ensureRunning()
-  await ensureRecomputed()
-  return state().moments.some((x) => x.slug === slug)
+  return !!(await findMoment(slug))
 }
 
 /** Posts near a moment that aren't in it yet ("Wander"), best first. */
 export async function getMomentNeighbours(slug: string, limit = 20): Promise<FeedItem[] | null> {
-  await ensureRecomputed()
-  const m = state().moments.find((x) => x.slug === slug)
+  const m = await findMoment(slug)
   if (!m) return null
   const hits = nearestPosts(m.raw, limit * 2, new Set(m.members.keys()))
   const allowed = await publishable(hits.map((h) => h.key))

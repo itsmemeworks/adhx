@@ -176,7 +176,12 @@ function Thumb({ item, className }: { item: SearchResultItem; className: string 
   return (
     <span className={cn('relative block shrink-0 overflow-hidden bg-nx-plate', className)}>
       {cover ? (
-        <NxImage src={cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <NxImage
+          src={cover}
+          sizes="96px"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+        />
       ) : (
         <span className="absolute inset-0 overflow-hidden bg-nx-cream p-1.5 font-nx-serif text-[11px] leading-[1.1] text-nx-bg">
           {postWords(item.post).title}

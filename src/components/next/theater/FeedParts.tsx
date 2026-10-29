@@ -342,6 +342,7 @@ function RecapThumbs({ covers, tall = false }: { covers: readonly string[]; tall
         >
           <NxImage
             src={src}
+            sizes="42px"
             alt=""
             loading="eager"
             className="absolute inset-0 h-full w-full object-cover"
@@ -470,6 +471,7 @@ function TonightRow({ recap }: { recap?: CaughtUpRecap | null }) {
               {card.cover && (
                 <NxImage
                   src={card.cover}
+                  sizes="(max-width: 768px) 50vw, 300px"
                   alt=""
                   loading="eager"
                   className="absolute inset-0 h-full w-full object-cover"

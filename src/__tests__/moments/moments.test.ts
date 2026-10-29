@@ -31,6 +31,7 @@ import {
   __resetMoments,
   getMomentDetail,
   getMomentsSnapshot,
+  hasMoment,
   subscribe,
   type MomentEvent,
 } from '@/lib/moments/engine'
@@ -388,6 +389,37 @@ describe('Right now, live', () => {
     >
     expect(formed.moment).toMatchObject({ title: 'Duckling', people: 2, posts: 2 })
     expect((await getMomentsSnapshot()).moments.map((m) => m.title)).toContain('Duckling')
+    stop()
+  })
+
+  it('answers from the last regroup while a due one runs behind it', async () => {
+    await seedLibrary()
+    await __moments.recompute()
+    const before = (await getMomentsSnapshot()).moments.map((m) => m.title)
+    expect(before).not.toContain('Duckling')
+
+    for (let i = 0; i < 5; i++) {
+      save(USER_A, `duck${i}`, `duckling number ${i}`)
+      save(USER_B, `duck${i}`, `duckling number ${i}`)
+      await understood(`duck${i}`, topic(5, 300 + i))
+    }
+    vi.setSystemTime(new Date(Date.now() + 6 * 60_000))
+    const events: MomentEvent[] = []
+    const stop = subscribe((e) => events.push(e))
+
+    // The page isn't held up by the regroup that's now due...
+    expect((await getMomentsSnapshot()).moments.map((m) => m.title)).toEqual(before)
+    // ...which still runs, and reaches open pages as a snapshot.
+    await vi.waitFor(() =>
+      expect(
+        events.some(
+          (e) => e.type === 'snapshot' && e.snapshot.moments.some((m) => m.title === 'Duckling'),
+        ),
+      ).toBe(true),
+    )
+    const duck = (await getMomentsSnapshot()).moments.find((m) => m.title === 'Duckling')!
+    expect(await hasMoment(duck.slug)).toBe(true)
+    expect((await getMomentDetail(duck.slug))?.items).toHaveLength(5)
     stop()
   })
 

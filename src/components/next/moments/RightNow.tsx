@@ -53,12 +53,30 @@ function shortWhat(post: FeedItem): string {
   return KIND_WORD[nextPostKind(post)] ?? 'a post'
 }
 
-function Cover({ post, className, tiny }: { post: FeedItem; className?: string; tiny?: boolean }) {
+/** How wide the lead's covers are drawn: three across on phones, two on wide screens. */
+const LEAD_COVER_SIZES = '(min-width: 1024px) 170px, 34vw'
+
+function Cover({
+  post,
+  className,
+  tiny,
+  sizes,
+  priority,
+}: {
+  post: FeedItem
+  className?: string
+  tiny?: boolean
+  /** How wide it's drawn (`<img sizes>`), so a small copy loads. */
+  sizes: string
+  priority?: boolean
+}) {
   const src = postCoverSrc(post)
   if (src)
     return (
       <NxImage
         src={src}
+        sizes={sizes}
+        priority={priority}
         alt=""
         className={cn('absolute inset-0 h-full w-full object-cover', className)}
       />
@@ -109,10 +127,12 @@ function StreamChip({ item, fresh }: { item: StreamItem; fresh: boolean }) {
         'flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-3',
         fresh ? 'animate-nx-slide-in bg-[#1f1d1a]' : 'bg-nx-surface',
       )}
-      style={fresh ? { boxShadow: `0 0 0 1.5px ${hue}` } : undefined}
+      // Inside the pill: the strip clips its overflow, which cut an outer ring
+      // where the first pill meets the strip's edge.
+      style={fresh ? { boxShadow: `inset 0 0 0 1.5px ${hue}` } : undefined}
     >
       <span className="relative block h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-nx-raised">
-        <Cover post={post} tiny />
+        <Cover post={post} tiny sizes="28px" />
       </span>
       <span
         className={cn(
@@ -235,7 +255,7 @@ function LeadMoment({
               i === 3 && 'hidden lg:block',
             )}
           >
-            <Cover post={post} />
+            <Cover post={post} sizes={LEAD_COVER_SIZES} priority={i < 3} />
           </span>
         ))}
         {arriving && (
@@ -244,7 +264,7 @@ function LeadMoment({
             className="absolute inset-y-0 left-0 block w-1/3 overflow-hidden animate-nx-drop-in lg:inset-y-auto lg:top-0 lg:h-1/2 lg:w-1/2"
             style={{ boxShadow: `inset 0 0 0 3px ${moment.hue}` }}
           >
-            <Cover post={arriving} />
+            <Cover post={arriving} sizes={LEAD_COVER_SIZES} />
             <span
               className="absolute left-2.5 top-2.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-extrabold text-black"
               style={{ background: moment.hue }}
@@ -331,7 +351,7 @@ function LeadMoment({
                 className="flex min-w-0 items-center gap-3 text-sm"
               >
                 <span className="relative block h-9 w-9 shrink-0 overflow-hidden rounded-[10px] bg-nx-raised">
-                  <Cover post={post} tiny />
+                  <Cover post={post} tiny sizes="36px" />
                 </span>
                 <span
                   aria-hidden
@@ -409,7 +429,7 @@ function SideCard({
           dashed && 'saturate-[0.75]',
         )}
       >
-        {cover && <Cover post={cover} />}
+        {cover && <Cover post={cover} sizes="(min-width: 1024px) 140px, 84px" />}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-2 lg:py-1.5 lg:pr-1">{children}</div>
       {action}

@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { articleHeadline, articleLede, postAuthor, postCoverSrc } from '../post'
-import { AuthorLine, NxImage } from '../primitives'
+import { AuthorLine, NxImage, TILE_SIZES } from '../primitives'
 import { TileFrame, type TileProps } from './TileFrame'
 
 /** Yellow uppercase kicker shared by the article tile and stage. */
@@ -29,7 +29,12 @@ export function ArticleTile({ item, ...frame }: TileProps) {
     >
       {cover && (
         <span className="relative block h-[39%] shrink-0 overflow-hidden">
-          <NxImage src={cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <NxImage
+            src={cover}
+            sizes={TILE_SIZES}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+          />
         </span>
       )}
       <span className="flex min-h-0 flex-1 flex-col gap-2 px-3.5 py-3">

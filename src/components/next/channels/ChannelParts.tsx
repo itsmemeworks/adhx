@@ -72,6 +72,7 @@ export function ChannelCover({
             {tile.img ? (
               <NxImage
                 src={tile.img}
+                sizes="(max-width: 768px) 40vw, 200px"
                 alt=""
                 className="absolute inset-0 h-full w-full object-cover"
               />
@@ -218,6 +219,7 @@ export function TopChannels({
                     {cover ? (
                       <NxImage
                         src={cover}
+                        sizes="52px"
                         alt=""
                         className="absolute inset-0 h-full w-full object-cover"
                       />
