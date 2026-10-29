@@ -111,7 +111,7 @@ describe('sitemap', () => {
     expect(urls).toContain('https://friends.example/now')
     expect(urls).toContain('https://friends.example/t/alice/cats')
     expect(urls).toContain('https://friends.example/someone/status/111')
-    expect(urls.every((u) => u.startsWith('https://friends.example'))).toBe(true)
+    expect(urls.every((u) => new URL(u).origin === 'https://friends.example')).toBe(true)
   })
 
   it('uses the address remembered at setup when the environment names none', () => {
