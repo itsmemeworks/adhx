@@ -1,0 +1,30 @@
+{
+  "version": "2",
+  "templates": [
+    {
+      "type": 3,
+      "title": "ADHX",
+      "description": "Keep the posts you and your friends love from X, Instagram, TikTok, YouTube and ten more networks, and find any of them by describing what you remember.",
+      "note": "Open http://&lt;this machine&gt;:3000 once it's running and enter the setup code to become the owner. Needs about 2 GB of memory.",
+      "categories": ["media", "social"],
+      "platform": "linux",
+      "logo": "https://raw.githubusercontent.com/itsmemeworks/adhx/main/public/icon-192.png",
+      "repository": {
+        "url": "https://github.com/itsmemeworks/adhx",
+        "stackfile": "deploy/one-click/docker-compose.yml"
+      },
+      "env": [
+        {
+          "name": "SETUP_CODE",
+          "label": "Setup code",
+          "description": "Any phrase. You type it once, on the first screen, to become the owner. Leave it empty to read it from the stack's log."
+        },
+        {
+          "name": "APP_URL",
+          "label": "Address (optional)",
+          "description": "How people reach ADHX, like https://adhx.example.com. Leave it empty and ADHX remembers the address you set it up from."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+# ADHX as a Zeabur template. Zeabur's Deploy button points at a template
+# published from a Zeabur account: publish this with
+#   npx zeabur@latest template create -f deploy/zeabur/template.yaml
+# and put the button it gives you in the README.
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: ADHX
+spec:
+  description: Save the posts you and your friends love from fourteen networks and find them by meaning.
+  icon: https://raw.githubusercontent.com/itsmemeworks/adhx/main/public/icon-512.png
+  tags:
+    - Media
+    - Tool
+  readme: |-
+    # ADHX
+
+    Keep the posts you and your friends love from X, Instagram, TikTok, YouTube
+    and ten more networks, and find any of them by describing what you remember.
+
+    Once it's running, open your domain and enter the setup code shown under
+    this service's variables (`SETUP_CODE`) to become the owner.
+  variables:
+    - key: PUBLIC_DOMAIN
+      type: DOMAIN
+      name: Domain
+      description: The address your ADHX lives at.
+  services:
+    - name: adhx
+      icon: https://raw.githubusercontent.com/itsmemeworks/adhx/main/public/icon-512.png
+      template: PREBUILT
+      domainKey: PUBLIC_DOMAIN
+      spec:
+        source:
+          image: ghcr.io/itsmemeworks/adhx:latest
+        ports:
+          - id: web
+            port: 3000
+            type: HTTP
+        volumes:
+          - id: data
+            dir: /data
+        env:
+          SETUP_CODE:
+            default: ${PASSWORD}
+            expose: false
+          SEMANTIC_THREADS:
+            default: '1'

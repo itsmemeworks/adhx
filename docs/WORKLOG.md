@@ -13,6 +13,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - `ci.yml`: a `changes` job reads the PR's files; PRs only under `apps/` or `extension/` skip the image builds, e2e, tests and site build (the extension job still runs for extension changes). `build` always runs and fails if `changes` failed. CodeQL ignores `apps/**`.
 - Follow-up: the skip path first runs on the next app- or extension-only PR after merge.
 
+## 2026-10-28 — More one-click installs: any server, Portainer, CapRover, Zeabur
+
+- Owner: more one-click installs, with provider buttons where they exist. Buttons that keep a disk need either a file in the repo (Render, done) or a template published from an account (Railway, Zeabur); Koyeb's button can't attach a volume and DigitalOcean App Platform has no disk, so they're out. sslip.io isn't on the Public Suffix List (shared Let's Encrypt limits), so no-domain installs stay plain HTTP on 3000.
+- `deploy/install.sh`: one command on any Linux server. Installs Docker if missing, runs `deploy/one-click` (no domain) or `deploy/vps` (Caddy HTTPS) from `/opt/adhx`, keeps settings in `.env`, makes a setup code, waits for health and prints the setup link (or "up to date" once owned). Re-running updates; adding a domain keeps the data.
+- `deploy/cloud-init.yaml`: paste into User data (Hetzner, DigitalOcean, Vultr, Linode); writes the `.env` and runs the installer.
+- Portainer app-template URL, CapRover one-click template, Zeabur template (owner publishes it for a button). `appUrl()` reads `ZEABUR_WEB_URL`.
+- `install-recipes.yml` (only when these change): builds the branch image, installs with no domain, claims ownership, re-runs with `ADHX_DOMAIN=localhost` and checks the owner, data and HTTPS survive; `check-install-templates.rb` checks every template's image, port and `/data`.
+- Follow-ups: publish the Zeabur and Railway templates; submit Coolify/Dokploy/CasaOS/Runtipi listings. All need a release that includes the one-click setup.
+
 ## 2026-10-28 — A public read-only demo at demo.adhx.com
 
 - Owner: a hosted example so people can try ADHX before installing, on Fly at demo.adhx.com, led by someone other than Pete.

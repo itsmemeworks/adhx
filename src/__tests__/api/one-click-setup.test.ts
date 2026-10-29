@@ -26,6 +26,7 @@ const PLATFORM_URLS = [
   'RAILWAY_PUBLIC_DOMAIN',
   'FLY_APP_NAME',
   'COOLIFY_URL',
+  'ZEABUR_WEB_URL',
 ]
 
 function clearAddresses() {
@@ -107,6 +108,12 @@ describe('this ADHX’s own address', () => {
     const { appUrl } = await import('@/lib/routes/app-url')
     vi.stubEnv('COOLIFY_URL', 'https://adhx.example.net,https://www.adhx.example.net')
     expect(appUrl()).toBe('https://adhx.example.net')
+  })
+
+  it("takes Zeabur's address without its trailing slash", async () => {
+    const { appUrl } = await import('@/lib/routes/app-url')
+    vi.stubEnv('ZEABUR_WEB_URL', 'https://my-adhx.zeabur.app/')
+    expect(appUrl()).toBe('https://my-adhx.zeabur.app')
   })
 
   it('remembers the setup address only when nothing names one', async () => {

@@ -25,6 +25,7 @@ export function configuredAppUrl(): string | null {
     cleanOrigin(env['RENDER_EXTERNAL_URL']) ??
     cleanOrigin(env['RAILWAY_PUBLIC_DOMAIN']) ??
     (env['FLY_APP_NAME'] ? cleanOrigin(`${env['FLY_APP_NAME']}.fly.dev`) : null) ??
-    cleanOrigin(env['COOLIFY_URL']?.split(',')[0])
+    cleanOrigin(env['COOLIFY_URL']?.split(',')[0]) ??
+    cleanOrigin(env['ZEABUR_WEB_URL'])
   )
 }
