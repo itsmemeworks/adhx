@@ -12,8 +12,8 @@ import type {
 } from '@/lib/admin/boards/system'
 import { REFUSAL_WORDS } from '@/lib/processing/refusal-words'
 import { cn } from '@/lib/utils'
-import { SystemExtras } from './SystemExtras'
 import { STATE_COLOUR, SystemMap } from './SystemMap'
+import { SystemSettings } from './SystemSettings'
 import {
   BTN,
   Bars,
@@ -21,7 +21,6 @@ import {
   CardHead,
   Chip,
   Dot,
-  LABEL,
   PageTitle,
   TD,
   TH,
@@ -74,7 +73,7 @@ function StateDot({ state, size = 9 }: { state: CheckState; size?: number }) {
 
 function CheckRow({ check }: { check: HealthCheck }) {
   return (
-    <li className="flex gap-3 border-t border-white/[0.06] px-4 py-3 first:border-t-0">
+    <li className="flex gap-3 border-t border-white/[0.06] px-[18px] py-3 first:border-t-0">
       <span className="mt-[7px]">
         <StateDot state={check.state} />
       </span>
@@ -89,6 +88,28 @@ function CheckRow({ check }: { check: HealthCheck }) {
         {check.fix && <span className="text-[13px] text-nx-ink-faint">{check.fix}</span>}
       </span>
     </li>
+  )
+}
+
+/** What's wrong, under the banner: only checks that need someone, with the fix (the cards below say the rest). */
+function Problems({ overall, checks }: { overall: CheckState; checks: HealthCheck[] }) {
+  const problems = checks
+    .filter((c) => c.state === 'bad' || c.state === 'warn')
+    .sort((a, b) => (a.state === b.state ? 0 : a.state === 'bad' ? -1 : 1))
+  return (
+    <Card accent={overall === 'bad'} className="min-w-0 overflow-hidden">
+      <div className="flex items-center gap-3 px-[18px] py-4">
+        <StateDot state={overall} size={12} />
+        <span className="text-lg font-extrabold">{OVERALL[overall]}</span>
+      </div>
+      {problems.length > 0 && (
+        <ul className="m-0 list-none border-t border-white/[0.06] p-0">
+          {problems.map((c) => (
+            <CheckRow key={c.id} check={c.fix ? { ...c, summary: c.fix, fix: null } : c} />
+          ))}
+        </ul>
+      )}
+    </Card>
   )
 }
 
@@ -244,7 +265,7 @@ function HelperCard({ helper, now }: { helper: HelperView; now: number }) {
           {helper.setupProblem
             ? `This server turns helpers away: ${REFUSAL_WORDS[helper.setupProblem]}.`
             : helper.lastSeenAt
-              ? `Last asked for work ${agoShort(helper.lastSeenAt, now)}. Helpers ask every few seconds, so over two minutes means it’s gone.`
+              ? 'Helpers ask for work every few seconds, so two quiet minutes means it’s gone.'
               : 'Not seen since this server started.'}
         </span>
         {helper.lastRefused && (
@@ -311,11 +332,23 @@ function HelperCard({ helper, now }: { helper: HelperView; now: number }) {
   )
 }
 
-function ServicesCard({ services, now }: { services: ServiceView[]; now: number }) {
+function ServicesCard({
+  services,
+  tools,
+  now,
+}: {
+  services: ServiceView[]
+  tools: HealthCheck[]
+  now: number
+}) {
   return (
     <Card className="min-w-0 overflow-hidden" as="section" labelledBy="system-services">
       <div className="px-[18px] pb-1 pt-4">
-        <CardHead id="system-services" title="Outside services" note="since the server started" />
+        <CardHead
+          id="system-services"
+          title="Services and tools"
+          note="counts since the server started"
+        />
       </div>
       <ul className="m-0 list-none p-0">
         {services.map((svc) => (
@@ -387,6 +420,20 @@ function ServicesCard({ services, now }: { services: ServiceView[]; now: number 
             )}
           </li>
         ))}
+        {tools.map((t) => (
+          <li
+            key={t.id}
+            className="flex items-start gap-2.5 border-t border-white/[0.06] px-[18px] py-3"
+          >
+            <span className="mt-[7px]">
+              <StateDot state={t.state} />
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-[15px] font-extrabold">{t.title}</span>
+              <span className="break-words text-sm text-nx-ink-soft">{t.summary}</span>
+            </span>
+          </li>
+        ))}
       </ul>
     </Card>
   )
@@ -407,11 +454,6 @@ export function SystemView({ data, server }: { data: SystemBoard; server: string
     return () => clearInterval(t)
   }, [router])
 
-  const groups = (['Queues', 'Workers', 'Services', 'Setup'] as const).map((g) => ({
-    group: g,
-    checks: data.checks.filter((c) => c.group === g),
-  }))
-
   return (
     <>
       <PageTitle
@@ -429,10 +471,7 @@ export function SystemView({ data, server }: { data: SystemBoard; server: string
         }
       />
 
-      <Card accent={data.overall === 'bad'} className="flex items-center gap-3 px-[18px] py-4">
-        <StateDot state={data.overall} size={12} />
-        <span className="text-lg font-extrabold">{OVERALL[data.overall]}</span>
-      </Card>
+      <Problems overall={data.overall} checks={data.checks} />
 
       <SystemMap data={data} />
 
@@ -443,97 +482,15 @@ export function SystemView({ data, server }: { data: SystemBoard; server: string
       </div>
 
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <Card className="min-w-0 overflow-hidden" as="section" labelledBy="system-checks">
-          <div className="px-4 pb-2 pt-3.5">
-            <CardHead id="system-checks" title="Checks" />
-          </div>
-          {groups.map(
-            (g) =>
-              g.checks.length > 0 && (
-                <div key={g.group}>
-                  <p className={cn(LABEL, 'm-0 px-4 pb-1 pt-2')}>{g.group}</p>
-                  <ul className="m-0 list-none p-0">
-                    {g.checks.map((c) => (
-                      <CheckRow key={c.id} check={c} />
-                    ))}
-                  </ul>
-                </div>
-              ),
-          )}
-        </Card>
-
-        <div className="flex min-w-0 flex-col gap-4">
-          <HelperCard helper={data.helper} now={now} />
-          <ServicesCard services={data.services} now={now} />
-        </div>
+        <HelperCard helper={data.helper} now={now} />
+        <ServicesCard
+          services={data.services}
+          tools={data.checks.filter((c) => c.id === 'ffmpeg' || c.id === 'disk')}
+          now={now}
+        />
       </div>
 
-      <SystemExtras extras={data.extras} />
-
-      <Card className="min-w-0 overflow-hidden" as="section" labelledBy="system-settings">
-        <div className="px-4 pb-1 pt-3.5">
-          <CardHead
-            id="system-settings"
-            title="Settings"
-            note="as this server sees them · secrets show only Set or Not set"
-          />
-        </div>
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-x-6 lg:grid-cols-2">
-          {data.settings.map((g) => (
-            <div key={g.group} className="min-w-0">
-              <p className={cn(LABEL, 'm-0 px-4 pb-1 pt-3')}>{g.group}</p>
-              <ul className="m-0 list-none p-0">
-                {g.rows.map((r) => (
-                  <li
-                    key={r.label}
-                    className="flex items-start justify-between gap-3 border-t border-white/[0.06] px-4 py-2 text-sm"
-                  >
-                    <span className="flex min-w-0 flex-col">
-                      <span className="text-nx-ink-soft">{r.label}</span>
-                      {r.env && (
-                        <span className="font-mono text-[11px] text-nx-ink-faint">{r.env}</span>
-                      )}
-                    </span>
-                    <span className="flex min-w-0 flex-col items-end text-right">
-                      <span className="max-w-[260px] break-all font-extrabold">{r.value}</span>
-                      {r.isDefault && (
-                        <span className="text-[11px] text-nx-ink-faint">default</span>
-                      )}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <Card className="flex flex-col gap-2 px-[18px] py-4">
-        <CardHead title="This server" />
-        <ul className="m-0 grid list-none grid-cols-1 gap-x-6 gap-y-1.5 p-0 text-sm sm:grid-cols-2">
-          {[
-            ['Name', data.host.label],
-            ['Machine', `${data.host.hostname}${data.host.container ? ' (Docker)' : ''}`],
-            ['Load', data.host.load.join(' · ')],
-            ['Version', `v${data.server.version}`],
-            ['Node', data.server.node],
-            ['Platform', data.server.platform],
-            ['Started', agoShort(data.server.startedAt, now) || 'just now'],
-            ['Database', data.server.database],
-            ['Media', data.server.media],
-          ].map(([k, v]) => (
-            <li key={k} className="flex justify-between gap-3">
-              <span className="text-nx-ink-faint">{k}</span>
-              <span
-                className="min-w-0 break-all text-right font-extrabold"
-                suppressHydrationWarning
-              >
-                {v}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </Card>
+      <SystemSettings groups={data.settings} />
     </>
   )
 }

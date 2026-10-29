@@ -43,6 +43,8 @@ interface State {
   lastTick?: number
   /** With KEEP_BACKFILL=off: only saves made after this. */
   since: string | null
+  /** The backfill switch `since` was worked out for. */
+  backfill?: boolean
 }
 
 const g = globalThis as unknown as { __adhxKeep?: State }
@@ -211,6 +213,14 @@ async function tick(): Promise<void> {
   try {
     const now = Date.now()
     s.lastTick = now
+    // Both can change in Admin → System while this runs.
+    if (!keepEnabled()) return
+    const backfill = keepBackfill()
+    if (backfill !== s.backfill) {
+      s.backfill = backfill
+      s.since = backfillCutoff()
+      s.lastScan = 0
+    }
     if (now - s.lastClean > CLEAN_EVERY_MS && s.running === 0) {
       s.lastClean = now
       await cleanUp()
@@ -318,8 +328,12 @@ export function backfillCutoff(now = new Date()): string | null {
   })
 }
 
+/**
+ * Start the loop (once per process). It runs even with keeping switched off,
+ * doing nothing, so switching it on in Admin → System needs no restart.
+ */
 export function startKeeping(): void {
-  if (!keepEnabled()) return
+  if (process.env.NODE_ENV === 'test' || process.env['VITEST']) return
   const s = state()
   if (s.owner && s.owner !== MODULE && s.timer) {
     clearInterval(s.timer)
@@ -327,6 +341,7 @@ export function startKeeping(): void {
   }
   if (s.timer) return
   s.owner = MODULE
+  s.backfill = keepBackfill()
   s.since = backfillCutoff()
   // A restart mid-download leaves rows marked running; try them again.
   db.update(keepJobs)

@@ -772,9 +772,14 @@ to `archived_posts`, and `bookmarks_fts` was replaced by `post_text_fts`.
 `server_settings` key `processing.paused` (Pause new work) feed the admin area.
 Admin → System also reads in-memory state since the server started (Mac helper
 claims and refusals, outside-service call outcomes, 5-minute backlog samples)
-and lets an admin set optional extras (Jev, email, X app keys, server name) as
-`server_settings` `extra.*` rows, secrets encrypted, read through
-`src/lib/settings/extras.ts` with the environment winning; see the
+and lets an admin change settings (Jev, email, X app keys, server name, what
+gets kept, how closely videos are read, X sync interval, sign-up allowlist) as
+`server_settings` `extra.*` rows, secrets encrypted. They're read on every use
+through `setting()` (`src/lib/settings/value.ts`): a saved value wins, then the
+environment. `value.ts` never touches the database; a process with one installs
+the reader by importing `src/lib/settings/extras.ts` (the web server from
+`instrumentation.ts`, the understanding worker from `child.ts`), so the Mac
+helper only ever sees its environment. See the
 [admin specification](docs/specs/admin.md).
 
 The main isolation key for saves is `(userId, platform, sourceId)`.

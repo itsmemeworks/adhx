@@ -15,6 +15,8 @@ function send(message: ChildMessage): void {
 process.on('disconnect', () => process.exit(0))
 
 async function runJobs(): Promise<void> {
+  // Settings saved in Admin → System (speech, text on screen, indexing level).
+  await import('../settings/extras')
   const { currentActivity, startUnderstandingWorker, wakeWorker } = await import('./worker')
   process.on('message', (message: ParentMessage) => {
     if (message.type === 'wake') wakeWorker()

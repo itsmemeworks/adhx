@@ -31,6 +31,9 @@ function boundedDigest(error: unknown): string | undefined {
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return
 
+  // Settings saved in Admin → System: lets `setting()` see them in this process.
+  await import('@/lib/settings/extras')
+
   const { initSentry } = await import('@/lib/sentry')
   initSentry()
 
@@ -51,12 +54,12 @@ export async function register(): Promise<void> {
   warmMoments()
 
   // New X bookmarks arrive within the hour without pressing Sync.
-  // Off with AUTO_SYNC_EVERY_MINUTES=0, and under test.
+  // Idle with AUTO_SYNC_EVERY_MINUTES=0; off under test.
   const { startAutoSync } = await import('@/lib/sync/auto')
   startAutoSync()
 
   // Download every saved post's media (best quality) so ADHX serves its own
-  // copies. Off with KEEP_MEDIA=off, and under test.
+  // copies. Idle with KEEP_MEDIA=off; off under test.
   const { startKeeping } = await import('@/lib/keep/worker')
   startKeeping()
   // The admin System page's backlog chart: queue sizes every five minutes.

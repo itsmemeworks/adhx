@@ -3,72 +3,229 @@ import { db } from '@/lib/db'
 import { serverSettings } from '@/lib/db/schema'
 import { decryptToken, encryptToken } from '@/lib/auth/token-encryption'
 import { writeServerSetting } from './server'
+import { envSetting, installStoredSettings, setting, storedSetting } from './value'
 
 /**
- * Optional extras an admin can switch on from Admin → System, for whoever
- * didn't know about them when they set ADHX up: Jev, email for sign-in
- * links, the X app keys and a name for the server.
+ * Settings an admin can change from Admin → System instead of the server's
+ * environment: optional extras (Jev, email, the X app, a server name) and the
+ * day-to-day knobs (what gets kept, how closely videos are read, how often X
+ * syncs, who may sign up).
  *
- * The environment always wins: a variable that's set is used as it is, and
- * the admin page shows "Set in the environment" instead of a field. Only
- * when it's unset does a value saved here count. Secrets are stored
- * encrypted (the same key as X tokens) and never sent back to the page.
+ * A value saved here wins; the environment gives the starting value, and
+ * clearing a saved value goes back to it. Every one of these is read when it's
+ * used, so a change applies within a few seconds, without a restart. Settings
+ * read once at startup (paths, the processing mode, the session secret) stay
+ * in the environment and show on the page read-only.
  *
- * Read through `extra()`; never `process.env` directly for these names.
+ * Secrets are stored encrypted (the same key as X tokens) and never sent back
+ * to the page. Read through `setting()` / `extra()`; never `process.env`
+ * directly for these names.
  */
 
+export type SettingKind = 'text' | 'secret' | 'choice' | 'number' | 'list'
+
+export type SettingGroup =
+  'Sign-in and email' | 'Keeping copies' | 'Understanding' | 'Jev' | 'X' | 'This server'
+
 export interface ExtraSpec {
+  group: SettingGroup
   label: string
-  secret: boolean
-  /** What it's for, in a line. */
+  kind: SettingKind
+  /** What it does, in a line. */
   help: string
+  /** The value used when nothing is set, as it would be written. */
+  fallback?: string
+  /** What nothing set means, when it isn't a value ("Anyone"). */
+  unset?: string
+  choices?: readonly { value: string; label: string }[]
+  /** Numbers: the allowed range. */
+  min?: number
+  max?: number
   /** Checks a value before it's saved; returns why it's wrong, or null. */
   check?: (value: string) => string | null
+  /** The value in words, for the page. */
+  show?: (value: string) => string
 }
 
+const ON_OFF = [
+  { value: 'on', label: 'On' },
+  { value: 'off', label: 'Off' },
+] as const
+
+const isOff = (v: string) => ['off', '0', 'false'].includes(v.toLowerCase())
+const onOff = (v: string) => (isOff(v) ? 'Off' : 'On')
+
 export const EXTRAS = {
-  TYPESAFE_API_KEY: {
-    label: 'Jev key',
-    secret: true,
-    help: 'Refines search, names channels and moments. From typesafe.ai.',
-  },
-  TYPESAFE_CHANNEL_IMAGES: {
-    label: 'Jev looks at channel pictures',
-    secret: false,
-    help: 'Sends public post pictures to Jev to name channels by what they show. on or off.',
-    check: (v) => (v === 'on' || v === 'off' ? null : 'Use on or off.'),
-  },
   RESEND_API_KEY: {
+    group: 'Sign-in and email',
     label: 'Resend key',
-    secret: true,
+    kind: 'secret',
     help: 'Emails sign-in links through Resend.',
   },
   SMTP_URL: {
+    group: 'Sign-in and email',
     label: 'SMTP',
-    secret: true,
-    help: 'Emails sign-in links through your own mail server: smtps://user:password@host:465.',
+    kind: 'secret',
+    help: 'Or your own mail server: smtps://user:password@host:465.',
     check: (v) => (/^smtps?:\/\/\S+$/.test(v) ? null : 'Start it with smtp:// or smtps://.'),
   },
   EMAIL_FROM: {
+    group: 'Sign-in and email',
     label: 'Emails come from',
-    secret: false,
-    help: 'Like ADHX <login@your.domain>. The address must be one your mail service lets you send as.',
+    kind: 'text',
+    help: 'Like ADHX <login@your.domain>: an address your mail service lets you send as.',
+    fallback: 'ADHX <login@adhx.com>',
     check: (v) => (/@/.test(v) ? null : 'Include an email address.'),
   },
+  ALLOWED_EMAILS: {
+    group: 'Sign-in and email',
+    label: 'Who may sign up',
+    kind: 'list',
+    help: 'Emails or @domains, separated by commas. Empty or * lets anyone in. People with an account can always sign in.',
+    unset: 'Anyone',
+    check: (v) =>
+      v === '*' ||
+      v
+        .split(',')
+        .map((e) => e.trim())
+        .filter(Boolean)
+        .every((e) => /^[^@\s,]*@[^@\s,]+\.[^@\s,]+$/.test(e))
+        ? null
+        : 'Use emails or @domains, separated by commas.',
+    show: (v) => {
+      if (v === '*') return 'Anyone'
+      const n = v.split(',').filter((e) => e.trim()).length
+      return `${n} ${n === 1 ? 'entry' : 'entries'}`
+    },
+  },
+  KEEP_MEDIA: {
+    group: 'Keeping copies',
+    label: 'Keep copies',
+    kind: 'choice',
+    help: 'Download every save’s media once and serve it from here. Off: posts play from their source.',
+    fallback: 'on',
+    choices: ON_OFF,
+    show: onOff,
+  },
+  KEEP_BACKFILL: {
+    group: 'Keeping copies',
+    label: 'Older saves too',
+    kind: 'choice',
+    help: 'Off keeps only what’s saved from now on, which is kinder to a small disk.',
+    fallback: 'on',
+    choices: ON_OFF,
+    show: onOff,
+  },
+  KEEP_CONCURRENCY: {
+    group: 'Keeping copies',
+    label: 'Downloads at once',
+    kind: 'number',
+    help: 'More is faster and busier. 1 to 8.',
+    fallback: '2',
+    min: 1,
+    max: 8,
+  },
+  KEEP_MAX_FILESIZE: {
+    group: 'Keeping copies',
+    label: 'Largest file',
+    kind: 'text',
+    help: 'Bigger files are skipped. Like 500M or 4G.',
+    fallback: '4G',
+    check: (v) => (/^\d+(\.\d+)?[KMG]?$/i.test(v) ? null : 'Use a size like 500M or 4G.'),
+  },
+  KEEP_MIN_FREE_GB: {
+    group: 'Keeping copies',
+    label: 'Stop when free disk is under',
+    kind: 'number',
+    help: 'In GB. Downloads wait until there’s room again.',
+    fallback: '2',
+    min: 0,
+    max: 100_000,
+    show: (v) => `${v} GB`,
+  },
+  KEEP_H264: {
+    group: 'Keeping copies',
+    label: 'Convert videos to H.264',
+    kind: 'choice',
+    help: 'So every browser plays them. Off keeps whatever the source sent.',
+    fallback: 'on',
+    choices: ON_OFF,
+    show: onOff,
+  },
+  INDEXING_LEVEL: {
+    group: 'Understanding',
+    label: 'How closely videos are read',
+    kind: 'choice',
+    help: 'Deep finds more and takes longer. Changing it reads every video again.',
+    fallback: 'normal',
+    choices: [
+      { value: 'light', label: 'Light' },
+      { value: 'normal', label: 'Normal' },
+      { value: 'deep', label: 'Deep' },
+    ],
+    show: (v) => v.charAt(0).toUpperCase() + v.slice(1),
+  },
+  SEMANTIC_SPEECH: {
+    group: 'Understanding',
+    label: 'Listen to speech',
+    kind: 'choice',
+    help: 'Writes down what’s said in videos so search finds it.',
+    fallback: 'on',
+    choices: ON_OFF,
+    show: onOff,
+  },
+  SEMANTIC_SCREEN_TEXT: {
+    group: 'Understanding',
+    label: 'Read text on screen',
+    kind: 'choice',
+    help: 'Reads captions, memes and screenshots so search finds the words.',
+    fallback: 'on',
+    choices: ON_OFF,
+    show: onOff,
+  },
+  TYPESAFE_API_KEY: {
+    group: 'Jev',
+    label: 'Jev key',
+    kind: 'secret',
+    help: 'Sharper search, and names for channels and moments. From typesafe.ai.',
+  },
+  TYPESAFE_CHANNEL_IMAGES: {
+    group: 'Jev',
+    label: 'Jev looks at channel pictures',
+    kind: 'choice',
+    help: 'Sends public post pictures to Jev to name channels by what they show.',
+    fallback: 'off',
+    choices: ON_OFF,
+    show: (v) => (v === 'on' ? 'On' : 'Off'),
+  },
   TWITTER_CLIENT_ID: {
+    group: 'X',
     label: 'X app id',
-    secret: false,
+    kind: 'text',
     help: 'From your X developer app, to bring in X bookmarks.',
   },
   TWITTER_CLIENT_SECRET: {
+    group: 'X',
     label: 'X app secret',
-    secret: true,
+    kind: 'secret',
     help: 'From the same X developer app.',
   },
+  AUTO_SYNC_EVERY_MINUTES: {
+    group: 'X',
+    label: 'Bring in new bookmarks every',
+    kind: 'number',
+    help: 'In minutes, for everyone who connected X. 0 turns it off.',
+    fallback: '50',
+    min: 0,
+    max: 1440,
+    show: (v) => (Number(v) === 0 ? 'Off' : `${v} minutes`),
+  },
   SERVER_LABEL: {
+    group: 'This server',
     label: 'Server name',
-    secret: false,
-    help: 'What the System page calls this machine, like UGREEN NAS.',
+    kind: 'text',
+    help: 'What this page calls the machine, like UGREEN NAS.',
+    unset: 'The machine’s own name',
   },
 } satisfies Record<string, ExtraSpec>
 
@@ -80,7 +237,7 @@ export function isExtraName(value: unknown): value is ExtraName {
 
 const PREFIX = 'extra.'
 const CACHE_MS = 5_000
-const MAX_LENGTH = 500
+const MAX_LENGTH = 2_000
 
 const g = globalThis as unknown as {
   __adhxExtras?: { at: number; values: Map<string, string> }
@@ -99,7 +256,7 @@ function stored(): Map<string, string> {
       const name = row.key.slice(PREFIX.length)
       if (!isExtraName(name)) continue
       try {
-        values.set(name, EXTRAS[name].secret ? decryptToken(row.value) : row.value)
+        values.set(name, EXTRAS[name].kind === 'secret' ? decryptToken(row.value) : row.value)
       } catch {
         // Saved under another server secret: treat it as unset.
       }
@@ -111,60 +268,96 @@ function stored(): Map<string, string> {
   return values
 }
 
-function fromEnv(name: ExtraName): string | null {
-  const v = process.env[name]?.trim()
-  return v ? v : null
-}
+// Importing this module is what lets `setting()` see saved values in this process.
+installStoredSettings(stored)
 
-/** The value in use: the environment's, else the admin's, else null. */
+/** The value in use: the one saved here, else the environment's, else null. */
 export function extra(name: ExtraName): string | null {
-  return fromEnv(name) ?? stored().get(name) ?? null
+  return setting(name)
 }
 
 /** Where the value in use comes from. */
-export function extraSource(name: ExtraName): 'env' | 'admin' | null {
-  if (fromEnv(name)) return 'env'
-  return stored().has(name) ? 'admin' : null
+export function extraSource(name: ExtraName): 'admin' | 'env' | null {
+  if (storedSetting(name) !== null) return 'admin'
+  return envSetting(name) ? 'env' : null
 }
 
 export class ExtraError extends Error {}
 
-/** Save (or with null, clear) an admin value. Refused when the environment sets it. */
+/** Why a value can't be saved, or null. */
+function problemWith(spec: ExtraSpec, value: string): string | null {
+  if (value.length > MAX_LENGTH) return 'That’s too long.'
+  if (spec.kind === 'choice' && !spec.choices?.some((c) => c.value === value))
+    return `Choose ${spec.choices?.map((c) => c.label.toLowerCase()).join(' or ')}.`
+  if (spec.kind === 'number') {
+    const n = Number(value)
+    if (!/^\d+(\.\d+)?$/.test(value) || !Number.isFinite(n)) return 'Use a number.'
+    if (spec.min !== undefined && n < spec.min) return `Use ${spec.min} or more.`
+    if (spec.max !== undefined && n > spec.max) return `Use ${spec.max} or less.`
+  }
+  return spec.check?.(value) ?? null
+}
+
+/** Save (or with null, clear back to the environment's) a value. */
 export function setExtra(name: ExtraName, value: string | null): void {
-  if (fromEnv(name)) throw new ExtraError(`${name} is set in the environment; change it there.`)
   const key = `${PREFIX}${name}`
   const clean = value?.trim() ?? ''
+  const spec: ExtraSpec = EXTRAS[name]
   if (!clean) {
     db.delete(serverSettings).where(eq(serverSettings.key, key)).run()
   } else {
-    if (clean.length > MAX_LENGTH) throw new ExtraError('That’s too long.')
-    const spec: ExtraSpec = EXTRAS[name]
-    const problem = spec.check?.(clean)
+    const problem = problemWith(spec, clean)
     if (problem) throw new ExtraError(problem)
-    writeServerSetting(key, spec.secret ? encryptToken(clean) : clean)
+    writeServerSetting(key, spec.kind === 'secret' ? encryptToken(clean) : clean)
   }
   g.__adhxExtras = undefined
 }
 
-/** For the System page: every extra, where it comes from, and its value only when not secret. */
-export function extrasView(): {
+export interface ExtraView {
   name: ExtraName
+  group: SettingGroup
   label: string
   help: string
-  secret: boolean
-  source: 'env' | 'admin' | null
+  kind: SettingKind
+  choices: { value: string; label: string }[] | null
+  min: number | null
+  max: number | null
+  /** Where the value in use comes from; 'default' when nothing is set. */
+  source: 'admin' | 'env' | 'default'
+  /** True when the environment also sets it (so clearing goes back to that). */
+  inEnv: boolean
+  /** The value in use, as written; null for secrets and when unset. */
   value: string | null
-}[] {
+  /** The value in use, in words ("Set" / "Not set" for secrets). */
+  shown: string
+}
+
+/** For the System page: every setting, where it comes from, and its value only when not secret. */
+export function extrasView(): ExtraView[] {
   return (Object.keys(EXTRAS) as ExtraName[]).map((name) => {
     const spec: ExtraSpec = EXTRAS[name]
-    const source = extraSource(name)
+    const secret = spec.kind === 'secret'
+    const source = extraSource(name) ?? 'default'
+    const raw = extra(name) ?? spec.fallback ?? null
     return {
       name,
+      group: spec.group,
       label: spec.label,
       help: spec.help,
-      secret: spec.secret,
+      kind: spec.kind,
+      choices: spec.choices ? [...spec.choices] : null,
+      min: spec.min ?? null,
+      max: spec.max ?? null,
       source,
-      value: spec.secret || !source ? null : extra(name),
+      inEnv: envSetting(name) !== null,
+      value: secret ? null : raw,
+      shown: secret
+        ? source === 'default'
+          ? 'Not set'
+          : 'Set'
+        : raw === null
+          ? (spec.unset ?? 'Not set')
+          : (spec.show?.(raw) ?? raw),
     }
   })
 }

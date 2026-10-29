@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils'
 import { useAdminAction } from './actions'
 import {
   BTN,
-  BTN_SM,
   Bars,
   Card,
   CardHead,
@@ -44,6 +43,7 @@ function lowerFirst(s: string): string {
 function seenAgo(iso: string | null): string {
   if (!iso) return 'Not seen yet'
   const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000))
+  if (s < 5) return 'Seen just now'
   if (s < 60) return `Seen ${s} seconds ago`
   const m = Math.round(s / 60)
   if (m < 60) return `Seen ${m} min ago`
@@ -219,49 +219,30 @@ export function ProcessingView({ data, server }: { data: ProcessingBoard; server
 
         <div className="flex min-w-0 flex-col gap-4 self-start">
           <Card className="flex flex-col gap-2.5 px-[18px] py-4">
-            <CardHead title={remote ? 'Mac helper' : 'Processing'} />
+            <CardHead title={remote ? 'Mac helper' : 'Where the work runs'} />
             {remote ? (
-              <>
-                <span className="flex items-center gap-2 text-[15px] font-extrabold">
-                  <Dot
-                    colour={data.helper.connected ? 'rgb(var(--nx-good))' : 'rgb(var(--nx-danger))'}
-                  />
-                  <span>
-                    {data.helper.connected
-                      ? `Connected${data.helper.name ? ` · ${data.helper.name}` : ''}`
-                      : 'Not connected'}
-                  </span>
+              <span className="flex flex-wrap items-center gap-x-2 text-[15px] font-extrabold">
+                <Dot
+                  colour={data.helper.connected ? 'rgb(var(--nx-good))' : 'rgb(var(--nx-danger))'}
+                />
+                <span>
+                  {data.helper.connected
+                    ? `Connected${data.helper.name ? ` · ${data.helper.name}` : ''}`
+                    : 'Not connected'}
                 </span>
-                <span className="text-[13px] text-nx-ink-soft" suppressHydrationWarning>
-                  {`${seenAgo(data.helper.lastSeenAt)} · ${plural(data.helper.convertedWeek, 'video')} converted, ${fmt(data.helper.understoodWeek)} understood this week`}
+                <span
+                  className="text-[13px] font-normal text-nx-ink-faint"
+                  suppressHydrationWarning
+                >
+                  {seenAgo(data.helper.lastSeenAt)}
                 </span>
-              </>
-            ) : (
-              <span className="text-[13px] text-nx-ink-soft">
-                {`This server does the work · ${plural(data.helper.convertedWeek, 'video')} converted, ${fmt(data.helper.understoodWeek)} understood this week`}
               </span>
+            ) : (
+              <span className="text-sm text-nx-ink-soft">This server does it all itself.</span>
             )}
-            <span className="flex gap-2.5">
-              <button type="button" className={BTN_SM} disabled={!!busy} onClick={pause}>
-                {data.paused ? 'Resume' : 'Pause'}
-              </button>
-            </span>
-          </Card>
-          <Card className="flex flex-col gap-2.5 px-[18px] py-4">
-            <CardHead title="Settings" />
-            <ul className="m-0 flex list-none flex-col gap-[9px] p-0 text-sm">
-              {[
-                ['Keep media', data.settings.keepMedia ? 'On, best quality' : 'Off'],
-                ['Understanding', data.settings.understanding],
-                ['Older saves', data.settings.backfill ? 'Backfill on' : 'Backfill paused'],
-                ['Stop when free disk', `under ${data.settings.minFreeGb} GB`],
-              ].map(([k, v]) => (
-                <li key={k} className="flex justify-between gap-2.5">
-                  <span className="text-nx-ink-soft">{k}</span>
-                  <span className="text-right font-extrabold">{v}</span>
-                </li>
-              ))}
-            </ul>
+            <Link href="/admin/system" className="text-[13px] font-extrabold text-nx-accent">
+              Health and settings are on System
+            </Link>
           </Card>
           <Card className="flex flex-col gap-2 px-[18px] py-4">
             <CardHead title="Done this week" />

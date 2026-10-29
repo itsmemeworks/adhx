@@ -100,7 +100,7 @@ function Networks() {
           you love.
         </span>
         <span className={cn(s.rise, 'mt-8 text-[22px] text-[#c9bfab]')} style={at(600)}>
-          From fourteen networks, in one place.
+          Fourteen networks. One feed.
         </span>
       </div>
       <div className="absolute right-[64px] top-[120px] grid grid-cols-4 gap-4">
@@ -227,7 +227,7 @@ function Keep() {
       >
         <span className={cn(s.serif, s.pulse, 'text-[180px] leading-none text-[#ffd23f]')}>4K</span>
         <span className="px-10 text-center text-[22px] leading-snug text-[#c9bfab]">
-          Downloaded once, served from your own disk, plays in every browser.
+          Downloaded once. Played from your own disk, in any browser.
         </span>
       </div>
     </>
@@ -311,7 +311,7 @@ function Search() {
       <Caption
         kicker="Search by meaning"
         title={<span>Describe it. Find it.</span>}
-        sub="It reads the words, the pictures, the video, what’s said and the text on screen, on your own server."
+        sub="Words, pictures, video, what’s said and what’s on screen. All on your own server."
       />
     </>
   )
@@ -360,7 +360,7 @@ function RightNow() {
         className={cn(s.rise, 'absolute bottom-[50px] left-[64px] text-[24px] text-[#c9bfab]')}
         style={at(1100)}
       >
-        What everyone on your ADHX is saving, as it happens. Tune in and watch together.
+        What your lot are saving, as it happens. Tune in and watch together.
       </div>
     </>
   )
@@ -479,7 +479,7 @@ function Phones() {
           Share from any app.
         </span>
         <span className={cn(s.rise, 'text-[24px] leading-snug text-[#c9bfab]')} style={at(500)}>
-          The companion apps put ADHX in your share menu. One tap and it’s yours.
+          The apps put ADHX in your share menu. One tap and it’s kept.
         </span>
       </div>
       <Phone post="sudara" delay={300} className="absolute right-[360px] top-[80px]" />
@@ -504,7 +504,7 @@ function Finale() {
           className={cn(s.serif, s.rise, 'text-[64px] leading-none text-[#ffd23f]')}
           style={at(450)}
         >
-          Self-hosted. Yours.
+          Yours. Not ours.
         </span>
         <span
           className={cn(

@@ -232,13 +232,13 @@ function Hero() {
           <div className="flex flex-col items-stretch gap-6 md:items-start lg:w-[420px] lg:shrink-0 lg:gap-7 lg:pt-2">
             <p className="m-0 max-w-[640px] text-[16px] leading-[1.45] text-nx-soft md:text-[19px] md:leading-[1.5]">
               <span className="md:hidden">
-                A private feed of the best of every social network, picked by your closest friends
-                and family. On a box you own. Open source.
+                A private feed of every network’s best bits, picked by your closest friends and
+                family. On a box you own. Open source.
               </span>
               <span className="hidden md:inline">
-                A private feed of the best of every social network, picked by your closest friends
-                and family, on a box you own. Real copies, found by what you remember, sent on to
-                any app.
+                A private feed of every network’s best bits, picked by your closest friends and
+                family, on a box you own. Real copies, found by what you remember, sent on to any
+                app.
               </span>
             </p>
             <div className="flex flex-col gap-2.5 md:flex-row md:flex-wrap md:gap-3 lg:flex-col lg:items-start">
@@ -254,7 +254,7 @@ function Hero() {
                 href="https://demo.adhx.com"
                 className="flex min-h-[44px] items-center justify-center gap-1.5 whitespace-nowrap text-[15px] font-bold text-nx-accent hover:text-white lg:justify-start"
               >
-                <span>Or look around the live demo</span>
+                <span>Or poke around the live demo</span>
                 <Arrow size={16} />
               </a>
             </div>
@@ -298,7 +298,7 @@ function Networks() {
             <span className="text-nx-accent">One feed.</span>
           </h2>
           <p className="m-0 text-[14px] text-nx-muted md:text-[15px]">
-            Save from any of them. Watch all of them here.
+            Save from any of them. Watch them all here.
           </p>
         </div>
         <ul className="m-0 flex list-none flex-wrap gap-2 p-0 md:gap-2.5 xl:grid xl:grid-cols-7">
@@ -336,14 +336,14 @@ const STEPS: Array<{
   {
     n: '01',
     title: 'Your people save from any app',
-    body: 'Hit share in whatever app you’re in and pick ADHX. Or paste the link. Anyone you invited can add to the pile.',
+    body: 'Hit share in any app and pick ADHX, or paste the link. Anyone you invited can add to the pile.',
     short: 'Hit share wherever you are and pick ADHX. Or paste the link.',
     Visual: StepShare,
   },
   {
     n: '02',
     title: 'Your box keeps a real copy',
-    body: 'It downloads the actual video or photos, in the best quality going, onto a server you run. Not a link. The thing.',
+    body: 'The actual video or photos, in the best quality going, on a server you run. Not a link. The thing.',
     short: 'The actual video or photos, in the best quality going. Not a link.',
     Visual: StepKeep,
   },
@@ -500,8 +500,8 @@ function Features() {
       <Feature
         id="f-new"
         kicker="Home"
-        title="Opens on something to play. Always in the same order."
-        shortTitle="Always in the same order."
+        title="Opens playing. In an order you can predict."
+        shortTitle="Predictable, on purpose."
         short={
           <p className="m-0">
             Just saved, then what you haven’t seen, then more like what you keep. Every post says
@@ -520,11 +520,10 @@ function Features() {
         }
       >
         <p className="m-0">
-          Home starts playing the moment you open the app, in an order you can predict: what your
-          people saved since you last looked, then everything else you haven’t seen, newest first,
-          then For you, more like what you keep. Every post says why it’s next, and Up next shows
-          the whole lineup. Videos and photos by default; text posts and articles when you want
-          them. No algorithm guessing, no endless scroll.
+          Home plays the moment you open it: what your people saved since you last looked, then
+          everything else you haven’t seen, newest first, then For you, more like what you keep.
+          Every post says why it’s next; Up next shows the whole lineup. Videos and photos by
+          default, text and articles when you want them. No guessing, no endless scroll.
         </p>
         <p className="m-0">
           Just want the latest? Switch Home to Everyone, Friends or Mine: the newest saves first,
@@ -558,8 +557,8 @@ function Features() {
       >
         <p className="m-0">
           <span>
-            Every post wears the faces of whoever kept it, so you know whose taste you’re trusting.
-            Saves go to your people by default. Flip{' '}
+            Every post wears the faces of whoever kept it, so you know who to thank. Saves go to
+            your people by default. Flip{' '}
           </span>
           <strong className="font-extrabold text-nx-cream">Just for me</strong>
           <span> and it stays out of everyone else’s feed, channels and search.</span>
@@ -629,11 +628,7 @@ function Features() {
           <Chat size={18} className="mt-0.5 shrink-0 text-nx-accent" />
           <span>
             <strong className="font-extrabold text-nx-cream">Search from Claude too.</strong>
-            <span>
-              {' '}
-              Add the adhx skill with a read-only key and ask for anything you saved, in plain
-              words.
-            </span>
+            <span> Add the adhx skill with a read-only key and ask for anything you saved.</span>
           </span>
         </p>
       </Feature>
@@ -717,9 +712,8 @@ function Features() {
         }
       >
         <p className="m-0">
-          Send a friend one link. It signs them in and pairs their phone in the same go. It works
-          once and runs out after a week, so nobody gets in uninvited. Approve who joins, if you
-          like.
+          Send a friend one link: it signs them in and pairs their phone. It works once and runs out
+          after a week, so nobody gets in uninvited. Approve who joins, if you like.
         </p>
       </Feature>
     </div>
@@ -758,14 +752,14 @@ function Apps() {
             </span>
             <span className="hidden md:inline">
               Hit share anywhere and pick ADHX. The post lands on your box, for your people or just
-              for you. Then it plays in the same full-screen player, and Share sends the actual
-              video to the group chat.
+              for you. It plays in the same full-screen player, and Share sends the actual video to
+              the group chat.
             </span>
           </p>
           <ul className="m-0 mt-1 hidden list-none flex-col gap-2.5 p-0 md:flex">
             {[
               'Save from any app’s share button',
-              'The full-screen player, one after another',
+              'The same full-screen player, one after another',
               'Send a post straight to a friend’s Home',
               'Home · Channels · Live, a tap apart',
             ].map((t) => (
@@ -910,7 +904,7 @@ function SelfHost() {
                 short: 'Invite-only. Approve who joins, if you like.',
               },
               {
-                long: 'Search runs on your server, what’s said and what’s on screen included. Nothing goes to an AI company unless you add the optional search refinement key.',
+                long: 'Search runs on your server, speech and on-screen text included. Nothing goes to an AI company unless you add the optional search refinement key.',
                 short: 'Search runs on your server. An AI key is optional.',
               },
               {
@@ -918,7 +912,7 @@ function SelfHost() {
                 short: 'Kept media plays for anyone who can reach your server.',
               },
               {
-                long: 'Rather not read the guides? Point your AI coding agent at the repository: it knows how to set ADHX up.',
+                long: 'Rather not read the guides? Point your AI coding agent at the repo. It knows how to set ADHX up.',
                 short: 'Or point your AI agent at the repo. It knows the way.',
               },
               {
