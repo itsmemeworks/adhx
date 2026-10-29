@@ -13,9 +13,13 @@ import {
 import { isSameOriginPost, readSmallForm } from '@/lib/auth/form-post'
 import { sanitizeUsername } from '@/lib/auth/username-rules'
 import { recordAnalytic } from '@/lib/analytics/record'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { appUrl } from '@/lib/routes/app-url'
 
 export const dynamic = 'force-dynamic'
+
+/** Joins with group links from one address in an hour: a leaked link fills slowly. */
+const GROUP_JOINS_PER_HOUR = 20
 
 type Context = { params: Promise<{ token: string }> }
 
@@ -40,6 +44,7 @@ export async function GET(_request: NextRequest, { params }: Context) {
     inviterUsername: invite.inviterUsername,
     name: sanitizeUsername(invite.nameHint ?? ''),
     signedInAs: await signedInUsername(),
+    group: invite.group,
   })
 }
 
@@ -62,6 +67,17 @@ export async function POST(request: NextRequest, { params }: Context) {
   }
   if (!form) return inviteErrorPage('Open your invite link again, then press Join.', 400)
 
+  const before = readInvite(token)
+  if (before.ok && before.group) {
+    const limit = checkRateLimit(`invites:group-join:${getClientIp(request)}`, {
+      windowMs: 60 * 60 * 1000,
+      max: GROUP_JOINS_PER_HOUR,
+    })
+    if (limit.limited) {
+      return inviteErrorPage('Lots of people just joined from here. Try again in a bit.', 429)
+    }
+  }
+
   const result = redeemInvite(token, form.get('username') ?? '')
   if (!result.ok) {
     if ('problem' in result) return inviteProblemPage(result.problem)
@@ -77,13 +93,14 @@ export async function POST(request: NextRequest, { params }: Context) {
           ? INVITE_NAME_ERRORS.taken(result.username)
           : INVITE_NAME_ERRORS.invalid,
       signedInAs: await signedInUsername(),
+      group: invite.group,
       status: result.nameError === 'taken' ? 409 : 400,
     })
   }
 
   recordAnalytic({ name: 'auth.complete', userId: result.userId, source: 'invite' })
   const base = appUrl()
-  // Joined from a member's invite with approvals on: wait for an admin.
+  // Joined with a group link, or a member's invite with approvals on: wait for an admin.
   const next = result.approval === 'pending' ? '/invite/waiting' : '/invite/done'
   const response = NextResponse.redirect(new URL(next, base), 303)
   response.headers.set('Cache-Control', 'no-store')

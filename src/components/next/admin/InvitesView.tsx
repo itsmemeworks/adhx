@@ -6,6 +6,7 @@ import { SIGN_IN_LINKS_ID } from '@/lib/next-ui/routes'
 import { cn } from '@/lib/utils'
 import { copyText, useAdminAction } from './actions'
 import {
+  BTN,
   BTN_SM,
   Card,
   CardHead,
@@ -36,6 +37,18 @@ function expiresIn(ms: number, now = Date.now()): string {
   return hours >= 24 ? 'in a day' : hours === 1 ? 'in an hour' : `in ${hours} hours`
 }
 
+/** A group link's state chip: "Group · 3 of 25 joined · 2 waiting". */
+function groupState(
+  group: NonNullable<InvitesBoard['links'][number]['group']>,
+  state: InvitesBoard['links'][number]['state'],
+): string {
+  const parts = [`Group · ${group.joined} of ${group.maxUses} joined`]
+  if (group.joinedWaiting) parts.push(`${group.joinedWaiting} waiting`)
+  else if (state === 'expired') parts.push('expired')
+  else if (state === 'cancelled') parts.push('cancelled')
+  return parts.join(' · ')
+}
+
 function lastsFor(ms: number, now = Date.now()): string {
   const mins = Math.max(1, Math.round((ms - now) / 60_000))
   return `lasts ${mins} more min`
@@ -43,46 +56,58 @@ function lastsFor(ms: number, now = Date.now()): string {
 
 export function InvitesView({ data }: { data: InvitesBoard }) {
   const { run, busy, error } = useAdminAction()
-  const [made, setMade] = useState<string | null>(null)
+  const [made, setMade] = useState<{ url: string; group: boolean } | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const admins = names(data.admins.map(displayName))
 
-  async function copy(key: string, url: string) {
+  async function copy(key: string, url: string, group = false) {
     if (await copyText(url)) {
       setCopied(key)
       setTimeout(() => setCopied((c) => (c === key ? null : c)), 2000)
     } else {
-      setMade(url)
+      setMade({ url, group })
     }
   }
 
-  async function makeLink() {
-    const res = await run('make', '/api/invites', { body: {} })
+  async function makeLink(group: boolean) {
+    const res = await run(group ? 'make-group' : 'make', '/api/invites', {
+      body: group ? { group: true } : {},
+    })
     if (res && typeof res.url === 'string') {
-      setMade(res.url)
-      await copy('made', res.url)
+      setMade({ url: res.url, group })
+      await copy(group ? 'made-group' : 'made', res.url, group)
     }
   }
 
-  async function copyInvite(id: string) {
+  async function copyInvite(id: string, group: boolean) {
     const res = await run(`link:${id}`, `/api/invites/${encodeURIComponent(id)}/link`, { body: {} })
-    if (res && typeof res.url === 'string') await copy(id, res.url)
+    if (res && typeof res.url === 'string') await copy(id, res.url, group)
   }
 
   return (
     <>
       <PageTitle
         title="Invites"
-        sub="Everyone joins with a link. Links are single use and last 7 days."
+        sub={`Everyone joins with a link, and links last 7 days. An invite link lets one person in; a group link lets up to ${data.groupMaxUses} people from a chat in, each waiting for you.`}
         right={
-          <button
-            type="button"
-            className={PRIMARY_BTN}
-            disabled={!!busy}
-            onClick={() => void makeLink()}
-          >
-            {copied === 'made' ? 'Link copied' : 'Make an invite link'}
-          </button>
+          <span className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={BTN}
+              disabled={!!busy}
+              onClick={() => void makeLink(true)}
+            >
+              {copied === 'made-group' ? 'Link copied' : 'Make a group link'}
+            </button>
+            <button
+              type="button"
+              className={PRIMARY_BTN}
+              disabled={!!busy}
+              onClick={() => void makeLink(false)}
+            >
+              {copied === 'made' ? 'Link copied' : 'Make an invite link'}
+            </button>
+          </span>
         }
       />
       {(made || error) && (
@@ -91,14 +116,20 @@ export function InvitesView({ data }: { data: InvitesBoard }) {
             <span className="text-nx-danger">{error}</span>
           ) : (
             <>
-              <span className="text-nx-ink-soft">New link, works once:</span>
-              <span className="min-w-0 flex-1 truncate font-mono text-[13px]">{made}</span>
+              <span className="text-nx-ink-soft">
+                {made?.group
+                  ? 'New group link, people who join wait for you:'
+                  : 'New link, works once:'}
+              </span>
+              <span className="min-w-0 flex-1 truncate font-mono text-[13px]">{made?.url}</span>
               <button
                 type="button"
                 className={BTN_SM}
-                onClick={() => made && void copy('made', made)}
+                onClick={() => made && void copy('made-copy', made.url, made.group)}
               >
-                {copied === 'made' ? 'Copied' : 'Copy link'}
+                {copied === 'made-copy' || copied === 'made' || copied === 'made-group'
+                  ? 'Copied'
+                  : 'Copy link'}
               </button>
             </>
           )}
@@ -157,7 +188,9 @@ export function InvitesView({ data }: { data: InvitesBoard }) {
                     <span className="text-xs text-nx-ink-faint" suppressHydrationWarning>
                       {[
                         r.invitedBy
-                          ? `Invited by ${r.invitedBy.name || r.invitedBy.username}`
+                          ? r.viaGroupLink
+                            ? `Joined with ${r.invitedBy.name || r.invitedBy.username}’s group link`
+                            : `Invited by ${r.invitedBy.name || r.invitedBy.username}`
                           : null,
                         agoShort(r.askedAt),
                       ]
@@ -259,13 +292,19 @@ export function InvitesView({ data }: { data: InvitesBoard }) {
                       {l.state === 'waiting'
                         ? expiresIn(l.expiresAt)
                         : l.state === 'used'
-                          ? 'Used'
+                          ? l.group
+                            ? 'Full'
+                            : 'Used'
                           : l.state === 'expired'
                             ? 'Expired'
                             : 'Cancelled'}
                     </td>
                     <td className={TD}>
-                      {l.state === 'waiting' ? (
+                      {l.group ? (
+                        <Chip tone={l.group.joinedWaiting ? 'accent' : undefined}>
+                          {groupState(l.group, l.state)}
+                        </Chip>
+                      ) : l.state === 'waiting' ? (
                         <Chip>Waiting</Chip>
                       ) : l.usedBy && l.usedByWaiting ? (
                         <Chip tone="accent">{`${l.usedBy.username} is waiting`}</Chip>
@@ -283,7 +322,7 @@ export function InvitesView({ data }: { data: InvitesBoard }) {
                             className={BTN_SM}
                             disabled={!!busy}
                             title="Makes a fresh link (the old one stops working)"
-                            onClick={() => void copyInvite(l.id)}
+                            onClick={() => void copyInvite(l.id, !!l.group)}
                           >
                             {copied === l.id ? 'Copied' : 'Copy link'}
                           </button>

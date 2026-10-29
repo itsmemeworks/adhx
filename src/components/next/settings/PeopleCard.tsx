@@ -35,6 +35,7 @@ export interface JoinRequestRow {
   name: string | null
   askedAt: string
   invitedBy: { username: string; name: string | null } | null
+  viaGroupLink?: boolean
 }
 
 export interface PeopleData {
@@ -190,7 +191,7 @@ export function JoinQueue({
               <span className="flex min-w-0 flex-col gap-0.5">
                 <span className="truncate text-[15px] font-extrabold">{shownName(r)}</span>
                 <span className="truncate text-[13px] text-nx-ink-soft">
-                  {`${r.invitedBy ? `invited by ${shownName(r.invitedBy)} · ` : ''}${agoLabel(r.askedAt)}`}
+                  {`${r.invitedBy ? `${r.viaGroupLink ? 'joined with the group link from' : 'invited by'} ${shownName(r.invitedBy)} · ` : ''}${agoLabel(r.askedAt)}`}
                 </span>
               </span>
             </div>

@@ -642,6 +642,16 @@ Invites are the easy way in (`src/lib/auth/invites.ts`, table `invites`).
 4. The browser lands on `/invite/done` ("You're in.") with a phone pairing code
    already on screen, or on `/invite/waiting` when approval is needed.
 
+**Group links.** An admin can instead make one link for a group chat
+(`POST /api/invites { group: true }`; admins only, whatever **Who can invite**
+says). It isn't spent: each join takes a place with one conditional write
+(`invites.uses + 1` while under `max_uses`, 25) and gets its own spent invite
+row with `group_id` pointing at the link, so the identity, the approval queue
+and "who invited you" work as for a one-person invite. Everyone who joins with
+a group link is `pending` until an admin answers. It stops when full,
+cancelled, expired, or when its maker is no longer an unbanned admin; joins
+from one address are limited to 20 an hour.
+
 **Who can invite** (`admin | approve | anyone`) is stored in `server_settings`
 (`invites.who`) and changed by admins with `PATCH /api/people`; `INVITES=members`
 only sets the first default. Under **Anyone, I approve**, someone a non-admin

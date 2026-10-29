@@ -11,6 +11,7 @@ export const INVITE_PROBLEMS: Record<InviteProblem, string> = {
   expired: 'This invite has expired. Invites last 7 days, so ask for a new one.',
   revoked: 'This invite was cancelled. Ask whoever sent it for a new one.',
   dead: 'This invite doesn’t work any more. Ask whoever runs this ADHX for a new one.',
+  full: 'Everyone this link was for has joined. Ask whoever sent it for a new one.',
 }
 
 export const INVITE_NAME_ERRORS = {
@@ -24,6 +25,7 @@ const STATUS: Record<InviteProblem, number> = {
   expired: 410,
   revoked: 410,
   dead: 410,
+  full: 410,
 }
 
 export function inviteProblemPage(problem: InviteProblem): NextResponse {
@@ -56,6 +58,8 @@ export function inviteJoinPage(options: {
   name: string
   error?: string
   signedInAs?: string | null
+  /** A group link: they wait for an admin after picking a name. */
+  group?: boolean
   status?: number
 }): NextResponse {
   const error = options.error
@@ -69,7 +73,7 @@ export function inviteJoinPage(options: {
   return scriptFreePage({
     title: `${options.inviter} wants you in.`,
     heading: `${inviter} wants you in. <span class="accent">Pick a name.</span>`,
-    kicker: 'Private invite',
+    kicker: options.group ? 'Group invite' : 'Private invite',
     before: `<div class="chip"><span class="face" aria-hidden="true" style="background:${faceColour(options.inviterUsername ?? options.inviter)}">${initial}</span><span><b>${inviter} invited you</b><small>to their ADHX, for friends only</small></span></div>`,
     content: `<form action="/invite/${escapeHtml(options.token)}" method="post">
          <label for="username">Your name</label>
@@ -77,7 +81,11 @@ export function inviteJoinPage(options: {
          ${error}
          <button type="submit">Join<span aria-hidden="true">→</span></button>
        </form>
-       <p class="note">No password, no email needed. This link works once and lasts 7 days.</p>${signedIn}`,
+       <p class="note">${
+         options.group
+           ? `No password, no email needed. Once you’ve picked a name, ${inviter} lets you in.`
+           : 'No password, no email needed. This link works once and lasts 7 days.'
+       }</p>${signedIn}`,
     status: options.status,
   })
 }

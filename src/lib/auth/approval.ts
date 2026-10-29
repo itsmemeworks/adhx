@@ -31,6 +31,8 @@ export interface JoinRequest {
   /** When they joined (ISO). */
   askedAt: string
   invitedBy: { username: string; name: string | null } | null
+  /** They joined with `invitedBy`'s group link rather than a one-person invite. */
+  viaGroupLink: boolean
   /** Snoozed with "Not now" until then (ISO), or null. */
   snoozedUntil: string | null
 }
@@ -43,6 +45,7 @@ type Row = {
   snoozed_until: number | null
   inviter_username: string | null
   inviter_name: string | null
+  via_group: number
 }
 
 function sqliteTime(value: string | null): string {
@@ -64,7 +67,8 @@ export function listJoinRequests(
   const rows = db.all<Row>(sql`
     SELECT ui.provider_id AS id, u.username, u.display_name, u.created_at,
            u.approval_snoozed_until AS snoozed_until,
-           m.username AS inviter_username, m.display_name AS inviter_name
+           m.username AS inviter_username, m.display_name AS inviter_name,
+           (i.group_id IS NOT NULL) AS via_group
     FROM users u
     JOIN user_identities ui ON ui.user_id = u.id AND ui.provider = 'invite'
     LEFT JOIN invites i ON i.id = ui.provider_id
@@ -83,6 +87,7 @@ export function listJoinRequests(
     invitedBy: r.inviter_username
       ? { username: r.inviter_username, name: r.inviter_name ?? null }
       : null,
+    viaGroupLink: !!r.via_group,
     snoozedUntil:
       r.snoozed_until && r.snoozed_until > now ? new Date(r.snoozed_until).toISOString() : null,
   }))

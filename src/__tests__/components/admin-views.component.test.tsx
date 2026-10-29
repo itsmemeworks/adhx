@@ -164,6 +164,7 @@ describe('PeopleView', () => {
         name: 'Ben',
         askedAt: new Date().toISOString(),
         invitedBy: { username: 'jo', name: 'Jo' },
+        viaGroupLink: false,
         snoozedUntil: null,
       },
     ],
@@ -383,6 +384,7 @@ describe('InvitesView', () => {
       admins: [face('pete', 'Pete')],
       requests: [],
       links: [],
+      groupMaxUses: 25,
       waiting: 0,
       used: 0,
       signIn: {

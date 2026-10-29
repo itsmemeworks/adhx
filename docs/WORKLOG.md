@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-29 — Group invite links with admin approval
+
+- Owner: the admin makes a link, sends it to friends, and approves whoever follows it. Before, an invite was one link per person and admin-made invites skipped approval.
+- Admin → Invites → **Make a group link** (`POST /api/invites { group: true }`, admins only): up to 25 people (`GROUP_LINK_MAX_USES`) within 7 days, each `pending` until an admin answers under Waiting for you. One conditional write takes a place (`invites.uses` < `max_uses`); each join gets its own spent invite row (`group_id` → the link) so identity, approvals and "who invited you" reuse the one-person path. Requests say "Joined with Ana's group link".
+- Stops when full ("Everyone this link was for has joined"), cancelled, expired, or its maker isn't an unbanned admin; group joins are limited to 20 an hour per address. Guarded migration adds `max_uses`, `uses`, `group_id` and an index.
+- Phones: `GET /api/app/invites` now reports real `uses`; phones list the admin's group links but can't make one yet (follow-up).
+
 ## 2026-10-29 — Email sign-up is invite-only by default
 
 - Owner: the admin shouldn't need email by default; they make a link, send it to friends, and approve who follows it. Chose invite-only email sign-up for new servers.

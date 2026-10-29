@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { inviteCode, inviteMode, type InviteMode } from '@/lib/auth/invites'
+import { GROUP_LINK_MAX_USES, inviteCode, inviteMode, type InviteMode } from '@/lib/auth/invites'
 import { listJoinRequests, type JoinRequest } from '@/lib/auth/approval'
 import { pendingAdminSignInLinks, signInDelivery } from '@/lib/email/magic-link'
 import { previewPathFor } from '@/lib/admin/moderation'
@@ -248,6 +248,8 @@ export interface InviteRow {
   usedBy: Face | null
   /** The person who used it is waiting for an admin. */
   usedByWaiting: boolean
+  /** A group link: `joined` people used it (of `maxUses`), `joinedWaiting` still waiting. */
+  group: { joined: number; maxUses: number; joinedWaiting: number } | null
 }
 
 export interface InvitesBoard {
@@ -255,6 +257,8 @@ export interface InvitesBoard {
   admins: Face[]
   requests: JoinRequest[]
   links: InviteRow[]
+  /** How many people one group link lets in. */
+  groupMaxUses: number
   waiting: number
   used: number
   signIn: {
@@ -285,13 +289,23 @@ export function invitesBoard(now = Date.now()): InvitesBoard {
     used_at: string | null
     revoked_at: string | null
     used_approval: string | null
+    max_uses: number | null
+    uses: number
+    joined_waiting: number
   }>(sql`
     SELECT i.id, i.created_by, i.created_at, i.expires_at, i.used_by, i.used_at, i.revoked_at,
-      u.approval AS used_approval
+      u.approval AS used_approval, i.max_uses, i.uses,
+      (SELECT COUNT(*) FROM invites j JOIN users ju ON ju.id = j.used_by
+        WHERE j.group_id = i.id AND ju.approval = 'pending') AS joined_waiting
     FROM invites i LEFT JOIN users u ON u.id = i.used_by
-    WHERE (i.used_by IS NULL AND i.revoked_at IS NULL AND i.expires_at > ${now})
-       OR i.used_at >= ${recent}
-    ORDER BY (i.used_by IS NULL) DESC, i.created_at DESC
+    -- A join through a group link is counted on the link, not listed.
+    WHERE i.group_id IS NULL
+      AND ((i.used_by IS NULL AND i.revoked_at IS NULL AND i.expires_at > ${now}
+            AND (i.max_uses IS NULL OR i.uses < i.max_uses))
+        OR i.used_at >= ${recent}
+        OR (i.max_uses IS NOT NULL AND i.created_at >= ${recent}))
+    ORDER BY (i.used_by IS NULL AND i.revoked_at IS NULL AND i.expires_at > ${now}) DESC,
+      i.created_at DESC
     LIMIT 30`)
   const faces = facesById([
     ...adminRows.map((r) => r.id),
@@ -309,9 +323,15 @@ export function invitesBoard(now = Date.now()): InvitesBoard {
         ? 'cancelled'
         : num(r.expires_at) <= now
           ? 'expired'
-          : 'waiting',
+          : r.max_uses !== null && num(r.uses) >= num(r.max_uses)
+            ? 'used'
+            : 'waiting',
     usedBy: r.used_by ? (faces.get(r.used_by) ?? null) : null,
     usedByWaiting: r.used_approval === 'pending',
+    group:
+      r.max_uses === null
+        ? null
+        : { joined: num(r.uses), maxUses: num(r.max_uses), joinedWaiting: num(r.joined_waiting) },
   }))
   const [used] = db.all<{ n: number }>(
     sql`SELECT COUNT(*) AS n FROM invites WHERE used_by IS NOT NULL`,
@@ -336,6 +356,7 @@ export function invitesBoard(now = Date.now()): InvitesBoard {
     admins: adminRows.map((r) => faces.get(r.id)).filter((f): f is Face => !!f),
     requests: listJoinRequests({}, now),
     links,
+    groupMaxUses: GROUP_LINK_MAX_USES,
     waiting: links.filter((l) => l.state === 'waiting').length,
     used: num(used?.n),
     signIn: {
