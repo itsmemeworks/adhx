@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import HomePage from '@/app/page'
-import { getCurrentUserId } from '@/lib/auth/session'
+import { getCurrentUserId, getWaitingAccount } from '@/lib/auth/session'
 import { getTheaterFeed } from '@/lib/theater/feed'
 import { redirect } from 'next/navigation'
 import { isFreshInstall } from '@/lib/auth/allowlist'
 
-vi.mock('@/lib/auth/session', () => ({ getCurrentUserId: vi.fn() }))
+vi.mock('@/lib/auth/session', () => ({
+  getCurrentUserId: vi.fn(),
+  getWaitingAccount: vi.fn(async () => null),
+}))
 vi.mock('@/lib/auth/allowlist', () => ({ isFreshInstall: vi.fn(() => false) }))
 vi.mock('@/lib/theater/feed', () => ({
   getTheaterFeed: vi.fn(async () => ({ items: [], savedToday: 0 })),
@@ -44,6 +47,15 @@ describe('home destination', () => {
     await HomePage({ searchParams: Promise.resolve({}) })
     expect(redirect).not.toHaveBeenCalled()
     expect(getTheaterFeed).toHaveBeenCalledOnce()
+  })
+
+  it('takes someone still waiting to be let in back to their waiting page', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    vi.mocked(getWaitingAccount).mockResolvedValueOnce({ userId: 'u2', approval: 'pending' })
+    await expect(HomePage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
+      'REDIRECT:/invite/waiting',
+    )
+    expect(getTheaterFeed).not.toHaveBeenCalled()
   })
 
   it('opens a brand-new ADHX on setup', async () => {

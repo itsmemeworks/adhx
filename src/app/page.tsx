@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUserId } from '@/lib/auth/session'
+import { getCurrentUserId, getWaitingAccount } from '@/lib/auth/session'
 import { isFreshInstall } from '@/lib/auth/allowlist'
 import { getTheaterFeed } from '@/lib/theater/feed'
 import { TheaterStaticList } from '@/components/theater/TheaterStaticList'
@@ -38,6 +38,10 @@ export default async function HomePage({
     redirect(addedId ? savedToPlay(addedId, params.platform) : feedPlayHref('new'))
   }
   if (isFreshInstall()) redirect('/setup')
+  // Someone who joined and hasn't been let in yet (or was turned away) is
+  // signed out everywhere else; coming back, they should see where they stand,
+  // not the public home with a Sign in button that won't work for them.
+  if (await getWaitingAccount()) redirect('/invite/waiting')
 
   const seed = await getTheaterFeed()
   metrics.theaterOpened('home')
