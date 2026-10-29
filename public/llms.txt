@@ -4,6 +4,8 @@
 
 ## Public pages
 
+These open for anyone with the link. Search engines are asked to stay away (robots.txt and `noindex`) unless this server's owner has turned on "Show up in search engines".
+
 - [Post previews](/{username}/status/{id}): an X post in the theater, with Schema.org JSON-LD (SocialMediaPosting), Open Graph tags and semantic HTML. Instagram is at /p/{id} and /reel/{id}, TikTok at /@{username}/video/{id}, and the other networks at /s/{network}/{id}.
 - [Public channels](/t/{username}/{tag}): a channel its owner made public, playable by anyone. The curator's profile is at /t/{username}.
 - [Right now](/now): the moments people on this server are saving, with counts only and never who saved what.

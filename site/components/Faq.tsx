@@ -46,7 +46,7 @@ export const FAQS: Array<{ q: string; a: string }> = [
   },
   {
     q: 'Who can see what we save?',
-    a: 'Your feed, your faces and who saved what are only for people on your server. Some pages are public, though, and search engines can find them: a shared post’s preview page (which never says who saved it) and Right now, which shows what’s being saved with counts but no names. The kept file of a shared post plays for anyone with its address. Want nothing reachable from outside? Keep ADHX on your home network or Tailscale. Just for me keeps a save to yourself.',
+    a: 'Your feed, your faces and who saved what are only for people on your server. A few pages open for anyone with the link: a shared post’s preview page (which never says who saved it) and Right now, which shows what’s being saved with counts but no names. Search engines are kept out unless you switch them on in Admin → System. The kept file of a shared post plays for anyone with its address. Want nothing reachable from outside? Keep ADHX on your home network or Tailscale. Just for me keeps a save to yourself.',
   },
   {
     q: 'Is it OK to download other people’s posts?',

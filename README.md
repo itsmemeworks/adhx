@@ -197,6 +197,8 @@ Where next:
 
 Kept media and shared post previews can be opened by anyone who can reach your server and knows the address. Invites and the email allowlist protect accounts, not playback, so put it on a private network or VPN if that's the boundary you want.
 
+A new ADHX stays out of search engines: robots.txt turns crawlers away, the sitemap is empty and every page says `noindex`. Shared links still open, and still unfold into a card in chats. To be found, the owner turns on **Show up in search engines** in Admin → System → Settings (`PUBLIC_PAGES=on`). A server that already had a public channel before this switch existed keeps being listed after the upgrade, and shows the switch On.
+
 ## The admin area
 
 The first person to set ADHX up is its admin, and **Admin** (in Settings, or `/admin`) is where you run the place. Admin is attached to the account, never to a username, and you can make other people admins from **People**.
@@ -221,7 +223,7 @@ The first person to set ADHX up is its admin, and **Admin** (in Settings, or `/a
 - **The Mac helper.** Whether it's connected, what it says it can do, and how many jobs it holds. If it's being turned away, it says why: a wrong token, a server that isn't set up for a helper, or a helper on a different version.
 - **What's wrong, and the fix.** Anything that needs you sits right under the status line, in plain words.
 - **Services and tools.** Jev, email, FxTwitter, X sync, yt-dlp, Sentry, FFmpeg and the disk: whether each is on, when it last answered, and what kind of failure it last had.
-- **Settings you can change on the spot.** The Jev key, email (Resend or SMTP), who may sign up, the X app keys and how often X syncs, what gets kept (older saves too? how big? stop at how much free disk?), how closely videos are read, speech and text on screen, and a name for your server. No editing the server's settings, no restart. A value saved here beats the server's environment, and one tap goes back to it. Keys are stored encrypted and never shown again. **Test Jev** and **Send me a test email** check them for real.
+- **Settings you can change on the spot.** The Jev key, email (Resend or SMTP), who may sign up, the X app keys and how often X syncs, what gets kept (older saves too? how big? stop at how much free disk?), how closely videos are read, speech and text on screen, whether search engines may list your public pages, and a name for your server. No editing the server's settings, no restart. A value saved here beats the server's environment, and one tap goes back to it. Keys are stored encrypted and never shown again. **Test Jev** and **Send me a test email** check them for real.
 - **The rest, read-only.** Paths, the processing mode and secrets like the session key are read when ADHX starts, so they're shown with where they come from and changed in the environment.
 
 The page refreshes itself every 15 seconds, and the **System** menu entry shows a count when something is broken.
