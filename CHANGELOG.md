@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.13.0](https://github.com/itsmemeworks/adhx/compare/v2.12.0...v2.13.0) (2026-10-29)
+
+
+### Features
+
+* **auth:** make email sign-up invite-only by default ([#676](https://github.com/itsmemeworks/adhx/issues/676)) ([d83145c](https://github.com/itsmemeworks/adhx/commit/d83145c2f4a832c1081bf94d0d332c7f81d0fb4b))
+* **privacy:** keep a new server out of search engines unless the owner opens it ([#675](https://github.com/itsmemeworks/adhx/issues/675)) ([3bd1d2a](https://github.com/itsmemeworks/adhx/commit/3bd1d2a107a1d8b28ba4d79919977852327a7c39))
+* **site:** demo-first hero, friends-only story, the ai explained and full seo ([#672](https://github.com/itsmemeworks/adhx/issues/672)) ([8b89019](https://github.com/itsmemeworks/adhx/commit/8b890195b562616518c11357371c2c297916e48f))
+* **site:** meme-style avatars for the people on adhx.com and in the demo ([#680](https://github.com/itsmemeworks/adhx/issues/680)) ([22cc64b](https://github.com/itsmemeworks/adhx/commit/22cc64b37ec96b8af49da626eb9cb0fdc3737f48))
+* **site:** persona-reviewed copy with honest claims, proof and a path for non-techies ([#674](https://github.com/itsmemeworks/adhx/issues/674)) ([086be39](https://github.com/itsmemeworks/adhx/commit/086be39a1771b6fa8de0a9665500496b6f2ff123))
+
+
+### Bug Fixes
+
+* **invites:** send someone still waiting back to their waiting page ([#678](https://github.com/itsmemeworks/adhx/issues/678)) ([dfc6d25](https://github.com/itsmemeworks/adhx/commit/dfc6d25c40fd758304a5b854f513dead5fbe52ef))
+
 ## [2.12.0](https://github.com/itsmemeworks/adhx/compare/v2.11.0...v2.12.0) (2026-10-29)
 
 
