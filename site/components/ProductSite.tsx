@@ -2,15 +2,19 @@ import type { ReactNode } from 'react'
 import { cn } from './cn'
 import { CopyCommand } from './CopyCommand'
 import { Gob } from './Gob'
+import { DEMO_URL, GITHUB_URL } from './links'
 import { NetworkIcon } from './NetworkIcon'
-import { ALL_PLATFORMS, networkLabel } from './networks'
+import { networkLabel } from './networks'
 import { Face, type PersonId } from './People'
-import { Arrow, Check, Chat, Download, GitHubMark, Menu } from './icons'
+import { Arrow, Check, Chat, Download, GitHubMark, Menu, Play } from './icons'
 import { NavMenu } from './NavMenu'
 import { Credit, PostMedia, creditedPosts } from './Post'
 import { PhonePair, PhoneShot, WebShot } from './Shots'
 import { Mock, StepFeed, StepKeep, StepShare } from './mocks'
 import { AdminSection } from './AdminSection'
+import { AiSection } from './AiSection'
+import { Faq } from './Faq'
+import { Friends } from './Friends'
 
 /**
  * adhx.com: the product site (static, on GitHub Pages). What ADHX does, shown
@@ -19,7 +23,7 @@ import { AdminSection } from './AdminSection'
  * from `lg` the desktop one.
  */
 
-export const GITHUB_URL = 'https://github.com/itsmemeworks/adhx'
+export { DEMO_URL, GITHUB_URL }
 
 const SETUP = `docker run -d --name adhx -p 3000:3000 \\
   -v adhx:/data ghcr.io/itsmemeworks/adhx
@@ -31,10 +35,10 @@ export const WRAP = 'mx-auto w-full max-w-[1264px] px-4 md:px-8'
 const NAV = [
   { href: '#how', label: 'How it works' },
   { href: '#features', label: 'Features' },
+  { href: '#ai', label: 'AI' },
   { href: '#apps', label: 'Apps' },
   { href: '#self-host', label: 'Self-host' },
-  { href: '#admin', label: 'Admin' },
-  { href: '/install/', label: 'Install' },
+  { href: '#faq', label: 'FAQ' },
 ]
 
 /* ——— Bits ——— */
@@ -51,18 +55,27 @@ export function Dot({ className }: { className?: string }) {
   return <span aria-hidden className={cn('shrink-0 rounded-full bg-nx-accent', className)} />
 }
 
-function GitHubButton({ children, className }: { children: ReactNode; className?: string }) {
+const BUTTON =
+  'flex min-h-[52px] items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-6 text-[16px] font-extrabold'
+export const PRIMARY = cn(BUTTON, 'bg-nx-accent text-black hover:bg-white')
+export const SECONDARY = cn(
+  BUTTON,
+  'border-[1.5px] border-nx-cream text-nx-cream hover:bg-white/10',
+)
+
+/** The two ways in: look around the demo, or run your own. */
+export function Ctas({ className }: { className?: string }) {
   return (
-    <a
-      href={GITHUB_URL}
-      className={cn(
-        'flex min-h-[52px] items-center justify-center gap-2.5 whitespace-nowrap rounded-full bg-nx-accent px-6 text-[16px] font-extrabold text-black hover:bg-white',
-        className,
-      )}
-    >
-      <GitHubMark className="h-5 w-5" />
-      <span>{children}</span>
-    </a>
+    <div className={cn('flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:gap-3', className)}>
+      <a href={DEMO_URL} className={PRIMARY}>
+        <Play size={18} />
+        <span>Try the live demo</span>
+      </a>
+      <a href="#self-host" className={SECONDARY}>
+        <span>Host your own</span>
+        <Arrow size={18} />
+      </a>
+    </div>
   )
 }
 
@@ -113,7 +126,7 @@ export function Header({ home = '' }: { home?: string }) {
           <Gob size={34} />
           <span className="font-nx-serif text-[28px] leading-none md:text-[30px]">adhx</span>
         </a>
-        <nav aria-label="Sections" className="hidden gap-8 md:flex">
+        <nav aria-label="Sections" className="hidden gap-7 lg:flex xl:gap-8">
           {nav.map((n) => (
             <a
               key={n.href}
@@ -127,10 +140,17 @@ export function Header({ home = '' }: { home?: string }) {
         <span className="flex-1" />
         <a
           href={GITHUB_URL}
-          className="hidden min-h-[44px] items-center gap-2 whitespace-nowrap rounded-full bg-nx-accent pl-4 pr-5 text-[15px] font-extrabold text-black hover:bg-white md:flex"
+          aria-label="ADHX on GitHub"
+          className="hidden h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-nx-surface text-nx-cream hover:text-white lg:flex"
         >
           <GitHubMark className="h-[18px] w-[18px]" />
-          <span>GitHub</span>
+        </a>
+        <a
+          href={DEMO_URL}
+          className="hidden min-h-[44px] items-center gap-2 whitespace-nowrap rounded-full bg-nx-accent pl-4 pr-5 text-[15px] font-extrabold text-black hover:bg-white sm:flex"
+        >
+          <Play size={15} />
+          <span>Try the demo</span>
         </a>
         <NavMenu
           summary={
@@ -152,11 +172,24 @@ export function Header({ home = '' }: { home?: string }) {
             </a>
           ))}
           <a
+            href="/install/"
+            className="flex min-h-[44px] items-center rounded-[14px] px-3 text-[15px] font-semibold text-nx-cream hover:bg-[#262320]"
+          >
+            Install the apps
+          </a>
+          <a
             href={GITHUB_URL}
-            className="mt-1 flex min-h-[44px] items-center gap-2 rounded-full bg-nx-accent px-4 text-[15px] font-extrabold text-black"
+            className="flex min-h-[44px] items-center gap-2 rounded-[14px] px-3 text-[15px] font-semibold text-nx-cream hover:bg-[#262320]"
           >
             <GitHubMark className="h-[18px] w-[18px]" />
             <span>GitHub</span>
+          </a>
+          <a
+            href={DEMO_URL}
+            className="mt-1 flex min-h-[44px] items-center gap-2 rounded-full bg-nx-accent px-4 text-[15px] font-extrabold text-black"
+          >
+            <Play size={15} />
+            <span>Try the live demo</span>
           </a>
         </NavMenu>
       </div>
@@ -217,7 +250,12 @@ function Hero() {
       aria-labelledby="hero-title"
       className="relative overflow-hidden pb-12 pt-6 md:pb-20 md:pt-12 lg:pb-11 lg:pt-16"
     >
-      <div className={cn(WRAP, 'flex flex-col gap-4 md:gap-8')}>
+      <div className={cn(WRAP, 'flex flex-col gap-3 md:gap-6')}>
+        <Kicker>
+          <Dot className="h-1.5 w-1.5" />
+          <span className="md:hidden">The friends-only social network</span>
+          <span className="hidden md:inline">The social network that’s only your friends</span>
+        </Kicker>
         <h1
           id="hero-title"
           className="m-0 font-nx-serif text-[46px] font-normal leading-[0.95] tracking-[-0.015em] md:text-[68px] lg:text-[clamp(68px,6.4vw,92px)]"
@@ -232,93 +270,34 @@ function Hero() {
           <div className="flex flex-col items-stretch gap-6 md:items-start lg:w-[420px] lg:shrink-0 lg:gap-7 lg:pt-2">
             <p className="m-0 max-w-[640px] text-[16px] leading-[1.45] text-nx-soft md:text-[19px] md:leading-[1.5]">
               <span className="md:hidden">
-                A private feed of every network’s best bits, picked by your closest friends and
-                family. On a box you own. Open source.
+                Your friends scroll fourteen networks so you don’t have to. The best bits land in
+                one private feed, on a server you run.
               </span>
               <span className="hidden md:inline">
-                A private feed of every network’s best bits, picked by your closest friends and
-                family, on a box you own. Real copies, found by what you remember, sent on to any
-                app.
+                Your friends and family scroll TikTok, Instagram, X, YouTube and ten more so you
+                don’t have to. The best bits land in one private feed with their faces on, kept for
+                good on a server you run.
               </span>
             </p>
-            <div className="flex flex-col gap-2.5 md:flex-row md:flex-wrap md:gap-3 lg:flex-col lg:items-start">
-              <GitHubButton>Get it on GitHub</GitHubButton>
-              <a
-                href="#self-host"
-                className="flex min-h-[52px] items-center justify-center gap-2.5 whitespace-nowrap rounded-full border-[1.5px] border-nx-cream px-6 text-[16px] font-extrabold text-nx-cream hover:bg-white/10"
-              >
-                <span>Start a feed for your people</span>
-                <Arrow size={18} className="hidden md:block" />
-              </a>
-              <a
-                href="https://demo.adhx.com"
-                className="flex min-h-[44px] items-center justify-center gap-1.5 whitespace-nowrap text-[15px] font-bold text-nx-accent hover:text-white lg:justify-start"
-              >
-                <span>Or poke around the live demo</span>
-                <Arrow size={16} />
-              </a>
+            <div className="flex flex-col gap-3">
+              <Ctas />
+              <p className="m-0 text-[13px] leading-[1.5] text-nx-muted md:text-[14px]">
+                <span>The demo needs no sign-up. Hosting is one Docker command. </span>
+                <a
+                  href={GITHUB_URL}
+                  className="inline-flex items-center gap-1 font-semibold text-nx-soft underline-offset-2 hover:text-white hover:underline"
+                >
+                  <GitHubMark className="h-3.5 w-3.5" />
+                  <span>Free and open source</span>
+                </a>
+                <span>.</span>
+              </p>
             </div>
-            <ul className="m-0 hidden list-none flex-col gap-2.5 p-0 text-[15px] text-nx-muted md:flex">
-              {[
-                'Self-hosted and open source, MIT licence',
-                'No ads, no strangers, no growth meetings',
-                'Web, iPhone and Android',
-              ].map((t) => (
-                <li key={t} className="flex items-center gap-2.5">
-                  <Dot className="h-1.5 w-1.5" />
-                  <span>{t}</span>
-                </li>
-              ))}
-            </ul>
           </div>
           <div className="min-w-0 flex-1 lg:pt-0">
             <HeroComposition />
           </div>
         </div>
-      </div>
-    </section>
-  )
-}
-
-/* ——— Networks ——— */
-
-function Networks() {
-  return (
-    <section
-      aria-labelledby="nets-title"
-      className="border-y border-white/10 bg-black py-6 md:py-12 lg:py-6"
-    >
-      <div className={cn(WRAP, 'flex flex-col gap-[18px] md:gap-6 lg:gap-[22px]')}>
-        <div className="flex flex-col gap-1.5 md:gap-2 lg:flex-row lg:items-baseline lg:justify-between lg:gap-6">
-          <h2
-            id="nets-title"
-            className="m-0 font-nx-serif text-[30px] font-normal leading-none md:whitespace-nowrap md:text-[38px]"
-          >
-            <span>Fourteen networks. </span>
-            <span className="text-nx-accent">One feed.</span>
-          </h2>
-          <p className="m-0 text-[14px] text-nx-muted md:text-[15px]">
-            Save from any of them. Watch them all here.
-          </p>
-        </div>
-        <ul className="m-0 flex list-none flex-wrap gap-2 p-0 md:gap-2.5 xl:grid xl:grid-cols-7">
-          {ALL_PLATFORMS.map((p) => (
-            <li
-              key={p}
-              className="flex h-[34px] items-center gap-2 rounded-full border border-white/10 bg-nx-surface pl-[5px] pr-3 md:h-12 md:gap-2.5 md:pl-2 md:pr-3.5"
-            >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] bg-[#262320] md:h-8 md:w-8 md:rounded-[10px]">
-                <NetworkIcon
-                  platform={p}
-                  className="h-3.5 w-3.5 text-white md:h-[18px] md:w-[18px]"
-                />
-              </span>
-              <span className="whitespace-nowrap text-[13px] font-semibold md:text-[15px]">
-                {networkLabel(p)}
-              </span>
-            </li>
-          ))}
-        </ul>
       </div>
     </section>
   )
@@ -376,8 +355,8 @@ function HowItWorks() {
             </h2>
           </div>
           <p className="m-0 max-w-[430px] font-nx-serif text-[22px] leading-[1.1] text-nx-soft md:text-[30px] md:leading-[1.08] lg:max-w-[340px] lg:text-[26px] xl:max-w-[430px] xl:text-[30px]">
-            <span>Nothing leaves your house unless </span>
-            <span className="text-nx-cream">one of you sends it.</span>
+            <span>Your friends are invited. </span>
+            <span className="text-nx-cream">The algorithm isn’t.</span>
           </p>
         </div>
         <ol className="m-0 mt-5 flex list-none flex-col gap-3 p-0 md:mt-10 md:gap-5 lg:mt-11 lg:grid lg:grid-cols-3 lg:gap-6">
@@ -607,8 +586,8 @@ function Features() {
         title="Nobody remembers captions."
         short={
           <p className="m-0">
-            ADHX hears what’s said in the video and reads the text on screen. Or ask Claude, with
-            the adhx skill.
+            Type what you remember: the punchline, what someone said, the words on screen. It turns
+            up.
           </p>
         }
         mock={
@@ -621,8 +600,14 @@ function Features() {
         dark
       >
         <p className="m-0">
-          Type what you remember. ADHX hears what’s said in the video and reads the text on screen,
-          so the meme turns up by its punchline. It runs on your box: no frame or sound leaves it.
+          <span>
+            Type what you remember: the punchline, what someone said, the words on screen, “that cat
+            that’s also a piano”. The meme turns up anyway.{' '}
+          </span>
+          <a href="#ai" className="font-semibold text-nx-cream underline-offset-2 hover:underline">
+            How it knows
+          </a>
+          <span>.</span>
         </p>
         <p className="m-0 flex items-start gap-2.5 text-[14px] leading-[1.5] text-nx-muted md:text-[15px]">
           <Chat size={18} className="mt-0.5 shrink-0 text-nx-accent" />
@@ -904,8 +889,8 @@ function SelfHost() {
                 short: 'Invite-only. Approve who joins, if you like.',
               },
               {
-                long: 'Search runs on your server, speech and on-screen text included. Nothing goes to an AI company unless you add the optional search refinement key.',
-                short: 'Search runs on your server. An AI key is optional.',
+                long: 'The AI runs on your server, free. Jev is optional, and only ever sees public post words.',
+                short: 'The AI runs on your server, free. Jev is optional.',
               },
               {
                 long: 'Kept media and shared previews play for anyone who can reach your server, so use private networking if that matters to you.',
@@ -955,16 +940,47 @@ export function ProductSite() {
       <Header />
       <main id="top">
         <Hero />
-        <Networks />
+        <Friends />
         <HowItWorks />
         <Features />
+        <AiSection />
         <Apps />
         <Band />
         <SelfHost />
         <AdminSection />
+        <Faq />
+        <Closer />
       </main>
       <Footer />
     </div>
+  )
+}
+
+/* ——— The last word ——— */
+
+function Closer() {
+  return (
+    <section aria-labelledby="closer-title" className="border-t border-white/10 bg-black">
+      <div
+        className={cn(
+          WRAP,
+          'flex flex-col items-start gap-4 py-12 md:items-center md:gap-6 md:py-20 md:text-center',
+        )}
+      >
+        <Gob size={56} />
+        <h2
+          id="closer-title"
+          className="m-0 font-nx-serif text-[40px] font-normal leading-[0.95] tracking-[-0.015em] md:text-[64px] lg:text-[72px]"
+        >
+          <span className="block md:inline">Bring your people. </span>
+          <span className="block text-nx-accent md:inline">Leave the algorithm.</span>
+        </h2>
+        <p className="m-0 max-w-[560px] text-[15px] leading-[1.45] text-nx-soft md:text-[18px] md:leading-[1.55]">
+          Look around the demo as Sam, or have your own running before the kettle boils.
+        </p>
+        <Ctas className="w-full sm:w-auto md:justify-center" />
+      </div>
+    </section>
   )
 }
 
@@ -991,6 +1007,8 @@ export function Footer() {
           className="-my-[13px] flex flex-wrap gap-x-[22px] gap-y-1 md:my-0 md:gap-7"
         >
           {[
+            { href: DEMO_URL, label: 'Live demo' },
+            { href: '/install/', label: 'Phone apps' },
             { href: GITHUB_URL, label: 'GitHub' },
             { href: `${GITHUB_URL}/blob/main/PRIVACY.md`, label: 'Privacy' },
             { href: `${GITHUB_URL}/blob/main/LICENSE`, label: 'MIT licence' },

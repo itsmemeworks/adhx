@@ -193,19 +193,20 @@ export function AdminSection() {
             id="admin-title"
             className="m-0 font-nx-serif text-[34px] font-normal leading-[0.95] tracking-[-0.01em] md:text-[48px] lg:text-[56px]"
           >
-            Is it working? One page says.
+            <span className="block">Is it working?</span>
+            <span className="block text-nx-accent">No SSH required.</span>
           </h2>
           <p className="m-0 text-[15px] leading-[1.45] text-nx-soft md:text-[18px] md:leading-[1.55]">
-            Whoever runs ADHX gets Admin. System draws your setup, from the NAS to the optional Mac
-            helper to every outside service, lit green, amber or red, and says what’s wrong in plain
-            words.
+            If you run your ADHX, you get an Admin area. Its System page maps the whole setup (your
+            server, the optional Mac helper, every outside service), lights each part green, amber
+            or red, and tells you in plain words what’s wrong and how to fix it.
           </p>
           <ul className="m-0 mt-1.5 flex list-none flex-col gap-2 p-0 text-[15px] leading-[1.4] text-nx-cream md:gap-3 md:text-[16px] md:leading-[1.45]">
             {[
-              'Every queue: what’s waiting, what’s stuck and how fast it’s clearing.',
+              'Every queue: what’s waiting, what’s stuck, how fast it’s clearing.',
               'The Mac helper: connected, or exactly why not.',
-              'Change settings on the spot: what gets kept, how closely videos are read, who can sign up. No restart, no YAML.',
-              'Let people in, make invite links, pause the work, hide a post. Every action is logged.',
+              'Settings you change right there: what gets kept, how closely videos are read, who can join. No restart, no YAML.',
+              'Let people in, send invites, pause the work, hide a post. Every action is logged.',
             ].map((line) => (
               <li key={line} className="flex gap-2.5 md:gap-3">
                 <Dot className="mt-[7px] h-1.5 w-1.5 md:mt-2 md:h-[7px] md:w-[7px]" />

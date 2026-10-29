@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 import localFont from 'next/font/local'
 import './globals.css'
+import { GITHUB_URL, SITE_URL } from '../components/links'
+import { OG_IMAGE, TAGLINE } from '../components/seo'
 
 // Reuse the application's licensed assets without a build-time font request.
 const serif = localFont({
@@ -17,24 +19,66 @@ const sans = localFont({
   display: 'swap',
 })
 
+const TITLE = 'ADHX: the private social network for you and your friends'
+const DESCRIPTION =
+  'Your friends pick the best of TikTok, Instagram, X, YouTube and ten more networks, and ADHX plays it in one private feed. Self-hosted, open source, with free AI search.'
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://adhx.com'),
-  title: 'ADHX: your friends have better taste than the algorithm',
-  description:
-    'A private feed of the best of fourteen social networks, picked by your closest friends and family, on a server you run. It opens playing, in an order you can predict: just saved, not seen yet, then more like what you keep, with a friend’s face on every save. Channels, Live watch-together, search by what’s said and what’s on screen, and invite links that pair a phone. Open source, with iPhone and Android apps.',
+  metadataBase: new URL(SITE_URL),
+  title: { default: TITLE, template: '%s · ADHX' },
+  description: DESCRIPTION,
+  applicationName: 'ADHX',
+  keywords: [
+    'private social network',
+    'self-hosted social network',
+    'social network for friends',
+    'friends only feed',
+    'save TikTok videos',
+    'save Instagram reels',
+    'save X posts',
+    'open source',
+    'Docker',
+  ],
+  authors: [{ name: 'ADHX contributors', url: GITHUB_URL }],
+  creator: 'ADHX contributors',
+  category: 'Social networking',
+  alternates: { canonical: '/' },
   icons: {
     icon: [
       { url: '/favicon-32.png', type: 'image/png', sizes: '32x32' },
       { url: '/favicon-16.png', type: 'image/png', sizes: '16x16' },
+      { url: '/icon-512.png', type: 'image/png', sizes: '512x512' },
     ],
     apple: '/icon-192.png',
   },
   openGraph: {
-    title: 'ADHX: your friends have better taste than the algorithm',
+    type: 'website',
+    url: '/',
+    siteName: 'ADHX',
+    locale: 'en_GB',
+    title: `ADHX: ${TAGLINE.toLowerCase()}`,
     description:
-      'A private feed picked by your people, not an algorithm. Just saved first, then what you haven’t seen. Saver faces, channels, Live and search by what’s said. Self-hosted and open source.',
-    images: [{ url: '/adhx-reel.jpg', width: 1280, height: 720 }],
-    videos: [{ url: '/adhx-reel.mp4', width: 1280, height: 720, type: 'video/mp4' }],
+      'A private social network for you and your friends. They find the best of fourteen networks; you all watch it in one feed, on a server you run. Try the demo.',
+    images: [OG_IMAGE],
+    videos: [{ url: `${SITE_URL}/adhx-reel.mp4`, width: 1280, height: 720, type: 'video/mp4' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `ADHX: ${TAGLINE.toLowerCase()}`,
+    description:
+      'A private social network for you and your friends. Self-hosted, open source, with free AI search.',
+    images: [OG_IMAGE],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-video-preview': -1,
+      'max-snippet': -1,
+    },
   },
 }
 

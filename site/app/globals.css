@@ -165,9 +165,11 @@ body {
 }
 
 /* The small-screen menu (a <details>, so it works without script). */
-.nx-menu > summary {
+.nx-menu > summary,
+.nx-faq > summary {
   list-style: none;
 }
-.nx-menu > summary::-webkit-details-marker {
+.nx-menu > summary::-webkit-details-marker,
+.nx-faq > summary::-webkit-details-marker {
   display: none;
 }

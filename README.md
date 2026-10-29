@@ -303,6 +303,7 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm format:check
 | `pnpm test:e2e`     | Browser tests with Playwright, against their own server on port 3002 (`pnpm test:e2e:install` once) |
 | `pnpm parity:serve` | A server full of sample friends and posts, for screenshots and the phone apps                       |
 | `pnpm site:dev`     | The adhx.com product site, which is a separate app in [`site/`](site/)                              |
+| `pnpm site:og`      | Redraw the site's share picture while `pnpm site:dev` runs                                          |
 | `pnpm email:dev`    | Preview the sign-in emails                                                                          |
 
 ## Documentation map

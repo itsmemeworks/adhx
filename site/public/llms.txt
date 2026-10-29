@@ -1,0 +1,33 @@
+# ADHX
+
+> ADHX is a private, self-hosted social network for one group of friends and family. Members save the best posts they find on fourteen public networks (X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky); the server keeps a real copy of each post's media and plays everything in one full-screen feed, showing the face of whoever saved each post. It is free and open source (MIT), runs as one Docker container, and has iPhone and Android apps.
+
+Tagline: "Your friends have better taste than the algorithm."
+
+## Key facts
+
+- Who it's for: a small group who already share posts with each other (friends, family, a group chat). Invite-only; strangers can't join or browse members' saves.
+- Cost: free. You pay only for wherever you run it, which can be a NAS, a mini PC, a spare laptop or a small cloud server.
+- Try it: [demo.adhx.com](https://demo.adhx.com) is a live, read-only ADHX where the visitor is Sam and four friends have been saving posts. No sign-up.
+- Self-host: `docker run -d --name adhx -p 3000:3000 -v adhx:/data ghcr.io/itsmemeworks/adhx`, then open the setup link in `docker logs adhx`. One-click installs exist for Render, Fly, Railway, Unraid, Umbrel, Portainer, Coolify, Synology and TrueNAS.
+- Kept media: ADHX downloads each post once, in the best quality offered, and plays it from your server, so it survives the original being deleted. Private or DRM-protected posts may not download.
+- Social features: a Home feed that opens playing (just saved, then not seen yet, then more like what you keep), a page per friend, reactions, channels, Live (watch together and react in real time), sending a post to a friend, invite links that also pair a phone.
+- Admin: whoever runs the server gets an Admin area with a System page that maps the setup, shows health in green, amber or red, and lets them change settings without a restart.
+
+## AI features
+
+- Built in and free, running on the user's own server (or a Mac helper they own): EmbeddingGemma 2 (Google's open embedding model) understands pictures, video frames and words; Whisper transcribes speech in videos; Florence-2 reads text on screen.
+- What it powers: search by description ("that cat that's also a piano"), the "For you" part of Home, channels that group and name themselves, Live moments, and "More like this".
+- No frame or sound leaves the server.
+- Optional: Jev, TypeSafe's decision model, with the owner's own key. It re-ranks the top search results and names channels and moments. It receives only the search and public post words, never who saved what. Everything works without it.
+
+## Links
+
+- [Home page](https://adhx.com/): what ADHX is, features, AI, self-hosting and FAQ.
+- [Install the phone apps](https://adhx.com/install/): Android from GitHub; iPhone through AltStore PAL (EU) or SideStore.
+- [Live demo](https://demo.adhx.com)
+- [Source code and README](https://github.com/itsmemeworks/adhx)
+- [Self-hosting guide](https://github.com/itsmemeworks/adhx/blob/main/docs/self-hosting.md)
+- [NAS guide](https://github.com/itsmemeworks/adhx/blob/main/deploy/nas/README.md)
+- [Privacy](https://github.com/itsmemeworks/adhx/blob/main/PRIVACY.md)
+- [Agent skill for searching your own saves](https://github.com/itsmemeworks/adhx/blob/main/skills/adhx/SKILL.md)
