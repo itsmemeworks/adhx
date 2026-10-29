@@ -2,13 +2,14 @@
 
 ADHX is made to be **self-hosted**, for you and the people you invite. Whoever runs an ADHX server is responsible for the data on it and is its data controller. This file is the honest description of what the software stores and sends on every ADHX server, and who can see it. The separate product website in `site/` runs no ADHX account service; its hosting provider may process ordinary request logs.
 
-Last updated: 25 October 2026.
+Last updated: 29 October 2026.
 
 ## Short version
 
 - **Named to friends, never to strangers.** A _member_ is anyone who can sign in to your server (approved and not banned). Your saves are shared with members by default: they see the post, your username, display name, picture, when you saved it and your note.
 - **Just for me** keeps a save out of everyone else's feed, channels, search, Right now and counts, and its kept files are yours alone. One exception you should know about: admins' post and member counts include it.
-- **Strangers** (anyone not signed in) see posts and counts, never who saved them. Right now, preview pages, public channels and the sitemap do show _which posts_ people on your server shared.
+- **Strangers** (anyone not signed in) see posts and counts, never who saved them. Right now, preview pages and public channels do show _which posts_ people on your server shared, to anyone who has the link.
+- **Search engines are kept out** unless the owner turns on **Show up in search engines** (Admin → System). A server that already had a public channel before that switch existed keeps being listed after upgrading, and shows the switch On.
 - **Kept media files of shared posts are not behind sign-in.** Anyone who can reach your server and knows a post's network and ID can fetch them. A post only saved Just for me is served to its owner alone. Quoted files follow their live parent save's access; files with no remaining
   save or quote parent are inaccessible while disk cleanup catches up. Shared
   media must revalidate access when reused from a browser cache. Private files
@@ -189,11 +190,13 @@ These work without an account. None of them names who saved a post.
 - Right now (`/now`), its moments (`/moments/{slug}`) and Tune in, which show what members are sharing, with counts
 - public channels `/t/{username}/{tag}` and curator pages `/t/{username}`: once you have a public channel, your username, display name, picture and when you joined are public there and in its share image
 - author pages `/{handle}` (the original posters, not members)
-- the sitemap, which lists preview pages of posts members have shared
+- the sitemap, which lists preview pages of posts members have shared, but only when the owner has turned on **Show up in search engines**. Otherwise it is empty
 - public JSON: `/api/share/…` (a post's details, how many members shared it, and public channels holding it with their curators' usernames), `/api/collections/trending` and signed-out moments. **No account ids.** (`/api/activity`, `/api/trending` and `/api/analytics` are for admins.)
 - kept media files of shared posts (see Kept media)
 
 Viewing a preview does not require an account. Saving does.
+
+**Search engines.** By default an ADHX asks search engines to stay away: `/robots.txt` disallows everything, the sitemap is empty and every page says `noindex`. Link-preview bots (X, Facebook, WhatsApp, Slack, Discord, Telegram, LinkedIn) may still fetch a page someone pasted, so a shared link shows its card. robots.txt is a request, not a lock: anyone with a link can still open these pages. With **Show up in search engines** on, crawlers may list the pages above, and robots.txt and the sitemap point at this server's own address.
 
 ## How long we keep it
 

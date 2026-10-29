@@ -99,10 +99,14 @@ describe('public tag channels: private wins', () => {
   it('leaves a channel holding only private saves out of the sitemap', async () => {
     tag('secret2', 'quiet')
     share('quiet')
+    // A server whose owner opened it to search engines; off, the sitemap is empty.
+    vi.stubEnv('PUBLIC_PAGES', 'on')
+    ;(await import('@/lib/settings/extras')).__resetExtrasCache()
     const { default: sitemap } = await import('@/app/sitemap')
     const urls = (await sitemap()).map((e) => e.url)
     expect(urls.some((u) => u.endsWith('/t/ben/cats'))).toBe(true)
     expect(urls.some((u) => u.endsWith('/t/ben/quiet'))).toBe(false)
+    vi.unstubAllEnvs()
   })
 
   it('counts only public posts on the curator profile', async () => {

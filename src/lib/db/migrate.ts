@@ -1318,6 +1318,31 @@ for (const column of ['extracted_content', 'filed_path', 'needs_transcript'] as 
   }
 }
 
+// Search engines: a new ADHX stays out of them until its owner turns "Show up
+// in search engines" on (Admin → System, `PUBLIC_PAGES`). A server that had
+// already made a channel public was being indexed before the switch existed,
+// so the first start after upgrading saves it as On: the owner sees it there
+// and decides, instead of the server dropping out of search unannounced. An
+// environment value is left to speak for itself. Runs once.
+try {
+  if (!isSettled('public_pages_default')) {
+    const fromEnv = process.env['PUBLIC_PAGES']?.trim()
+    const published = db.prepare('SELECT 1 FROM tag_shares WHERE is_public = 1 LIMIT 1').get()
+    if (!fromEnv && published) {
+      db.prepare(
+        `INSERT INTO server_settings (key, value, updated_at) VALUES ('extra.PUBLIC_PAGES', 'on', ?)
+         ON CONFLICT(key) DO NOTHING`,
+      ).run(new Date().toISOString())
+      console.log('[migrate] Public channels found: kept this server in search engines')
+    }
+    markSettled('public_pages_default')
+  }
+} catch (error) {
+  console.log('[migrate] FAILED choosing the search engine default', error)
+  db.close()
+  process.exit(1)
+}
+
 // Apply after every guarded column/table exists, including on already released DBs.
 // Index replacements are atomic; a failure leaves the previous indexes intact.
 db.transaction(() => db.exec(QUERY_INDEX_DDL))()

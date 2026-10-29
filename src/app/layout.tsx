@@ -7,6 +7,7 @@ import { demoMode } from '@/lib/demo/mode'
 import { jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 import { getCurrentUserId } from '@/lib/auth/session'
+import { siteRobots } from '@/lib/settings/public-pages'
 
 // Body fonts remain selectable in settings. Every face is bundled so Docker
 // builds never depend on Google's changing CSS/font responses. Provenance and
@@ -94,7 +95,7 @@ const siteUrl = PUBLIC_BASE_URL
 const siteDescription =
   'Every app wants your attention. ADHX just wants your friends’ opinions. Keep the best posts from X, Instagram, TikTok, YouTube, Reddit and more on a server you run, and find any of them by describing what you remember.'
 
-export const metadata: Metadata = {
+const siteMetadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
     default: 'ADHX - Your friends have better taste than the algorithm.',
@@ -122,17 +123,6 @@ export const metadata: Metadata = {
   applicationName: 'ADHX',
   generator: 'Next.js',
   referrer: 'origin-when-cross-origin',
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
   openGraph: {
     type: 'website',
     locale: 'en_US',
@@ -158,6 +148,12 @@ export const metadata: Metadata = {
   },
   manifest: '/manifest.json',
   category: 'productivity',
+}
+
+// Per request: whether search engines may list this ADHX is the owner's
+// switch (Admin → System), off on a new server. Pages only ever narrow it.
+export function generateMetadata(): Metadata {
+  return { ...siteMetadata, robots: siteRobots() }
 }
 
 export const viewport: Viewport = {

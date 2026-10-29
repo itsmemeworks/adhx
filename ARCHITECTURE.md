@@ -1209,7 +1209,12 @@ the installed PWA. Browser ingress converges on the preview pages and
 Public pages combine visual UI with semantic server output: preview metadata,
 JSON-LD (`SocialMediaPosting` or `VideoObject`), public tweet JSON, author and
 curator hubs, public channel `CollectionPage` lists, and a dynamic sitemap.
-None of them name savers.
+None of them name savers. Whether crawlers may list any of it is the owner's
+`PUBLIC_PAGES` switch (`src/lib/settings/public-pages.ts`), off on a new
+server: `src/app/robots.ts` disallows everything but link-preview bots, the
+sitemap is empty, and the root layout's `generateMetadata` sets `noindex`.
+Pages may narrow `robots` to noindex but never set `index: true` themselves.
+robots.txt and the sitemap use `appUrl()`, never adhx.com.
 Public APIs and preview metadata recheck moderation and avoid caching a
 transient upstream miss as a durable publication decision.
 

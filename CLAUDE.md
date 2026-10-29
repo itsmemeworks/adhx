@@ -126,6 +126,10 @@ same).
   in the same account/platform; orphaned retained files are never served. Shared
   files remain reachable without sign-in but must revalidate visibility with
   every cache use (private/no-cache + ETag; private saves use no-store).
+- **Search engines are off until the owner says otherwise.** `robots.ts`,
+  the sitemap and the root layout's robots meta all follow `publicPagesOn()`
+  (`src/lib/settings/public-pages.ts`, `PUBLIC_PAGES`). A page may set
+  `robots: { index: false }`, never `index: true`.
 - **Public caches check `savePrivacyFingerprint()` on every read**, including
   warm hits. Don't replace it with TTL-only or process-local invalidation.
 - **`activity.userId` and `analytics_events.userId` are stored, never
@@ -502,7 +506,8 @@ Short notes on what is easy to get wrong. Each links to the full description.
   new outside call in `trackServiceCall`.
 - **Settings in Admin → System** (`EXTRAS` in `src/lib/settings/extras.ts`:
   Jev, email, X app keys and sync interval, `SERVER_LABEL`, the `KEEP_*`
-  switches, `INDEXING_LEVEL`, speech / text on screen, `ALLOWED_EMAILS`). Read
+  switches, `INDEXING_LEVEL`, speech / text on screen, `ALLOWED_EMAILS`,
+  `PUBLIC_PAGES`). Read
   them only through `setting()` / `extra()`, never `process.env`, and on every
   use (no module-level constants): a saved, encrypted `server_settings`
   `extra.*` row wins, then the environment, within 5 s and without a restart.

@@ -220,6 +220,15 @@ export const EXTRAS = {
     max: 1440,
     show: (v) => (Number(v) === 0 ? 'Off' : `${v} minutes`),
   },
+  PUBLIC_PAGES: {
+    group: 'This server',
+    label: 'Show up in search engines',
+    kind: 'choice',
+    help: 'On lets Google and others list Right now, public channels and shared posts. Off keeps them out; links people send still open.',
+    fallback: 'off',
+    choices: ON_OFF,
+    show: (v) => (v === 'on' ? 'On' : 'Off'),
+  },
   SERVER_LABEL: {
     group: 'This server',
     label: 'Server name',

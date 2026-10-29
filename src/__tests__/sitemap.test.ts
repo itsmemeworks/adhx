@@ -33,13 +33,18 @@ function seedBannedUser(userId: string, username: string) {
 }
 
 describe('Dynamic Sitemap', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     testInstance = createTestDb()
     vi.clearAllMocks()
+    // These cases describe a server whose owner opened it to search engines.
+    vi.stubEnv('PUBLIC_PAGES', 'on')
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://adhx.com')
+    ;(await import('@/lib/settings/extras')).__resetExtrasCache()
   })
 
   afterEach(() => {
     testInstance.close()
+    vi.unstubAllEnvs()
   })
 
   it('returns just the static hubs when there is no content', async () => {
