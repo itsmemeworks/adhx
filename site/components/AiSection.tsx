@@ -2,7 +2,8 @@ import type { ReactNode } from 'react'
 import { cn } from './cn'
 import { Face } from './People'
 import { Credit, PostMedia } from './Post'
-import { Arrow, Heart, List, Screen, Search, Sparkle, Together, Wave } from './icons'
+import { Arrow, Chat, Chip, Heart, List, Screen, Search, Sparkle, Together, Wave } from './icons'
+import { GITHUB_URL } from './links'
 import { Kicker, WRAP } from './ProductSite'
 
 /**
@@ -119,10 +120,10 @@ export function AiSection() {
               <span className="block text-nx-accent">You just remember the gist.</span>
             </h2>
             <p className="m-0 text-[15px] leading-[1.45] text-nx-soft md:text-[18px] md:leading-[1.55]">
-              ADHX doesn’t just store posts. It looks at the pictures, watches the videos, listens
-              to what’s said and reads what’s on screen. That’s how search finds things by
-              description, and how Home, channels and Live know what goes with what. It runs on your
-              server, free. No API bill, no account, nobody else’s cloud.
+              ADHX doesn’t just store posts. It looks at the pictures, samples the videos frame by
+              frame, listens to what’s said and reads what’s on screen. That’s how search finds
+              things by description, and how Home, channels and Live know what goes with what. The
+              models run on your server, free: no API bill, no account.
             </p>
           </div>
           <Understanding />
@@ -155,7 +156,8 @@ export function AiSection() {
               ))}
             </ul>
             <p className="m-0 border-t border-white/10 pt-3 text-[13px] leading-[1.5] text-nx-muted md:text-[14px]">
-              No frame or sound leaves your server. Got a spare Mac? It can take the heavy lifting.
+              No frame or sound leaves machines you run. Locally it reads the first 32 seconds of
+              each video; a spare Mac can take the heavy lifting and read the whole thing.
             </p>
           </div>
 
@@ -183,8 +185,9 @@ export function AiSection() {
               </span>
             </p>
             <p className="m-0 mt-auto text-[13px] leading-[1.5] text-nx-muted md:text-[14px]">
-              Jev only sees your search and public post words, never who saved what. Leave it off
-              and everything still works.
+              Jev sees your search and the words of the public posts it’s ranking (plus their
+              thumbnails, if you switch on channel pictures). Never who saved what. Leave it off and
+              everything still works.
             </p>
           </div>
         </div>
@@ -205,6 +208,43 @@ export function AiSection() {
             </li>
           ))}
         </ul>
+
+        <div className="grid gap-3 md:gap-4 lg:grid-cols-2">
+          <p className="m-0 flex gap-3 rounded-[20px] border border-white/10 p-4 text-[14px] leading-[1.5] text-nx-soft md:p-5 md:text-[15px]">
+            <Chip size={20} className="mt-0.5 shrink-0 text-nx-accent" />
+            <span>
+              <strong className="font-extrabold text-nx-cream">Under the hood. </strong>
+              <span>
+                ONNX models through transformers.js, on the CPU, in their own process so the web app
+                never stalls. A post’s words take about a tenth of a second, a picture 3–7 seconds,
+                a video 11–15. Vectors and a keyword index live in SQLite with everything else, and
+                nearly 4,000 tests run on every change.{' '}
+              </span>
+              <a
+                href={`${GITHUB_URL}/blob/main/ARCHITECTURE.md`}
+                className="font-semibold text-nx-cream underline-offset-2 hover:underline"
+              >
+                The architecture
+              </a>
+            </span>
+          </p>
+          <p className="m-0 flex gap-3 rounded-[20px] border border-white/10 p-4 text-[14px] leading-[1.5] text-nx-soft md:p-5 md:text-[15px]">
+            <Chat size={20} className="mt-0.5 shrink-0 text-nx-accent" />
+            <span>
+              <strong className="font-extrabold text-nx-cream">Ask Claude, too. </strong>
+              <span>
+                “Find that sourdough video I saved.” The adhx Agent Skill searches your saves by
+                meaning with a read-only key, in Claude Code, Cursor, Codex or Gemini CLI.{' '}
+              </span>
+              <a
+                href={`${GITHUB_URL}/blob/main/skills/adhx/SKILL.md`}
+                className="font-semibold text-nx-cream underline-offset-2 hover:underline"
+              >
+                The skill
+              </a>
+            </span>
+          </p>
+        </div>
       </div>
     </section>
   )
