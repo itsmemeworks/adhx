@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-29 — Fresh-install run-through and launch copy
+
+- Owner asked for a simulated fresh install: an admin sets up, makes an invite link and onboards four friends. Ran the production build against an empty data folder (migrate, then start, as the image does; `SEMANTIC_SEARCH=off`). Setup code from the log, then owner email and name, then Admin → Invites → Make a group link. Ana, Ben and Mum (phones) and Jojo (desktop) each joined in their own browser and waited; a taken name was refused without using a place. The admin let all four in ("4 of 25 joined"), each opened straight into Home signed in, and Ana's save played on the others' Home as "ana saved this".
+- Found: a waiting friend who comes back to `/` saw the public landing page with Sign in (fixed separately: home sends them to `/invite/waiting`). The Invites nav badge counts open links but reads "need you" (left as is).
+- Launch copy: README leads with "a private social network", names the free on-server models, gives the 4 GB guidance, invites via a group link, says DRM posts can't be kept and that saving can break when a network changes; release and demo badges. The site's Invites feature leads with the group link.
+
 ## 2026-10-29 — Group invite links with admin approval
 
 - Owner: the admin makes a link, sends it to friends, and approves whoever follows it. Before, an invite was one link per person and admin-made invites skipped approval.
