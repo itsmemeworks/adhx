@@ -49,7 +49,7 @@ import {
 } from './env'
 import { prepareMedia, usingMediaSource } from './media'
 import { seedAdminPhones, seedAdminWorld } from './seed-admin'
-import { buildShowcaseMedia, showcaseEnabled } from './showcase'
+import { buildShowcaseMedia, seedShowcaseAvatars, showcaseEnabled } from './showcase'
 import {
   DOING,
   FILLER_STILLS,
@@ -665,6 +665,8 @@ export async function seedParityDb(): Promise<void> {
   seedSaves()
   const placeholders = await seedKept()
   await seedFillerMedia()
+  // After the media folder is laid out (seedKept starts it afresh).
+  if (showcaseEnabled()) await seedShowcaseAvatars(PEOPLE)
   seedUnderstanding()
   seedChannels()
   seedViews()
