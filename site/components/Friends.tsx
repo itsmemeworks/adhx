@@ -90,8 +90,8 @@ export function Friends() {
           </div>
           <p className="m-0 max-w-[560px] text-[15px] leading-[1.45] text-nx-soft md:text-[18px] md:leading-[1.55]">
             The big networks are built for strangers and advertisers. ADHX keeps the good part: your
-            people find the best of all of them and share it with each other, in one place nobody
-            else can get into.
+            people find the best of all of them and share it with each other. Who saved what stays
+            between you.
           </p>
         </div>
 
@@ -172,6 +172,62 @@ export function Friends() {
             </li>
           </ul>
         </div>
+      </div>
+    </section>
+  )
+}
+
+const VERSUS: Array<{ problem: string; fix: string }> = [
+  {
+    problem: 'Links die.',
+    fix: 'ADHX keeps the actual video, in the best quality going. Deleted on X? Still in your copy.',
+  },
+  {
+    problem: 'Nobody scrolls back 4,000 messages.',
+    fix: 'Describe it (“the baby arguing with a hamster”) and it turns up.',
+  },
+  {
+    problem: '“Who sent this?”',
+    fix: 'Every post wears the face of whoever saved it. Credit where it’s due.',
+  },
+]
+
+/** The question every visitor has: isn't this just the group chat? */
+export function GroupChat() {
+  return (
+    <section aria-labelledby="chat-title" className="py-10 md:py-16">
+      <div
+        className={cn(
+          WRAP,
+          'grid gap-5 md:gap-8 lg:grid-cols-[minmax(0,380fr)_minmax(0,756fr)] lg:items-center lg:gap-16',
+        )}
+      >
+        <div className="flex flex-col gap-2.5 md:gap-4">
+          <Kicker>Versus the group chat</Kicker>
+          <h2
+            id="chat-title"
+            className="m-0 font-nx-serif text-[36px] font-normal leading-[0.95] tracking-[-0.01em] md:text-[56px]"
+          >
+            Why not just the group chat?
+          </h2>
+          <p className="m-0 text-[15px] leading-[1.45] text-nx-soft md:text-[18px] md:leading-[1.55]">
+            Keep it for the chatting. And when one’s too good, Share sends the actual video back to
+            it.
+          </p>
+        </div>
+        <ul className="m-0 grid list-none gap-2.5 p-0 md:gap-3">
+          {VERSUS.map(({ problem, fix }) => (
+            <li
+              key={problem}
+              className="grid gap-1 rounded-[20px] border border-white/10 bg-nx-surface px-4 py-3.5 md:grid-cols-[minmax(0,240px)_minmax(0,1fr)] md:items-center md:gap-6 md:px-6 md:py-5"
+            >
+              <span className="font-nx-serif text-[24px] leading-[1.05] text-nx-muted line-through decoration-nx-accent/70 decoration-2 md:text-[28px]">
+                {problem}
+              </span>
+              <span className="text-[15px] leading-[1.45] text-nx-cream md:text-[17px]">{fix}</span>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   )

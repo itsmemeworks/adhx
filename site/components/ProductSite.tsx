@@ -6,15 +6,17 @@ import { DEMO_URL, GITHUB_URL } from './links'
 import { NetworkIcon } from './NetworkIcon'
 import { networkLabel } from './networks'
 import { Face, type PersonId } from './People'
-import { Arrow, Check, Chat, Download, GitHubMark, Menu, Play } from './icons'
+import { Arrow, Check, Download, GitHubMark, Menu, Play } from './icons'
 import { NavMenu } from './NavMenu'
+import { TellAFriend } from './TellAFriend'
+import pkg from '../../package.json'
 import { Credit, PostMedia, creditedPosts } from './Post'
 import { PhonePair, PhoneShot, WebShot } from './Shots'
-import { Mock, StepFeed, StepKeep, StepShare } from './mocks'
+import { Mock } from './mocks'
 import { AdminSection } from './AdminSection'
 import { AiSection } from './AiSection'
 import { Faq } from './Faq'
-import { Friends } from './Friends'
+import { Friends, GroupChat } from './Friends'
 
 /**
  * adhx.com: the product site (static, on GitHub Pages). What ADHX does, shown
@@ -33,7 +35,7 @@ docker logs adhx | grep setup
 export const WRAP = 'mx-auto w-full max-w-[1264px] px-4 md:px-8'
 
 const NAV = [
-  { href: '#how', label: 'How it works' },
+  { href: '#friends', label: 'How it works' },
   { href: '#features', label: 'Features' },
   { href: '#ai', label: 'AI' },
   { href: '#apps', label: 'Apps' },
@@ -62,6 +64,25 @@ export const SECONDARY = cn(
   BUTTON,
   'border-[1.5px] border-nx-cream text-nx-cream hover:bg-white/10',
 )
+
+/** The release on the site, from the repo's package.json at build time (e.g. "v2.12"). */
+export const RELEASE = `v${pkg.version.split('.').slice(0, 2).join('.')}`
+
+/** A star costs nothing and is how people find the repo. */
+export function StarButton({ className }: { className?: string }) {
+  return (
+    <a
+      href={GITHUB_URL}
+      className={cn(
+        'inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-full border border-white/15 bg-nx-surface px-4 text-[15px] font-extrabold text-nx-cream hover:border-white/40 hover:text-white',
+        className,
+      )}
+    >
+      <GitHubMark className="h-[18px] w-[18px]" />
+      <span>Star on GitHub</span>
+    </a>
+  )
+}
 
 /** The two ways in: look around the demo, or run your own. */
 export function Ctas({ className }: { className?: string }) {
@@ -147,10 +168,11 @@ export function Header({ home = '' }: { home?: string }) {
         </a>
         <a
           href={DEMO_URL}
-          className="hidden min-h-[44px] items-center gap-2 whitespace-nowrap rounded-full bg-nx-accent pl-4 pr-5 text-[15px] font-extrabold text-black hover:bg-white sm:flex"
+          className="flex min-h-[44px] items-center gap-2 whitespace-nowrap rounded-full bg-nx-accent pl-3.5 pr-4 text-[15px] font-extrabold text-black hover:bg-white sm:pl-4 sm:pr-5"
         >
           <Play size={15} />
-          <span>Try the demo</span>
+          <span className="sm:hidden">Demo</span>
+          <span className="hidden sm:inline">Try the demo</span>
         </a>
         <NavMenu
           summary={
@@ -244,6 +266,23 @@ function HeroComposition() {
   )
 }
 
+/** Small, checkable facts: what it is, how alive it is, what it runs on. */
+function ProofStrip() {
+  return (
+    <ul className="m-0 flex list-none flex-wrap items-center gap-x-3 gap-y-2 p-0 text-[13px] font-semibold text-nx-muted md:text-[14px]">
+      <li>
+        <StarButton className="min-h-[36px] px-3 text-[13px] md:text-[14px]" />
+      </li>
+      {['Free and open source (MIT)', `${RELEASE} · 170+ releases`].map((t) => (
+        <li key={t} className="flex items-center gap-2 whitespace-nowrap">
+          <Dot className="h-1 w-1 bg-nx-muted" />
+          <span>{t}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function Hero() {
   return (
     <section
@@ -253,8 +292,7 @@ function Hero() {
       <div className={cn(WRAP, 'flex flex-col gap-3 md:gap-6')}>
         <Kicker>
           <Dot className="h-1.5 w-1.5" />
-          <span className="md:hidden">The friends-only social network</span>
-          <span className="hidden md:inline">The social network that’s only your friends</span>
+          <span>Open source · Self-hosted · Friends only</span>
         </Kicker>
         <h1
           id="hero-title"
@@ -270,126 +308,29 @@ function Hero() {
           <div className="flex flex-col items-stretch gap-6 md:items-start lg:w-[420px] lg:shrink-0 lg:gap-7 lg:pt-2">
             <p className="m-0 max-w-[640px] text-[16px] leading-[1.45] text-nx-soft md:text-[19px] md:leading-[1.5]">
               <span className="md:hidden">
-                Your friends scroll fourteen networks so you don’t have to. The best bits land in
-                one private feed, on a server you run.
+                A private social network for your friends and family. One of you runs it; everyone
+                shares the best of TikTok, Instagram, X and eleven more into one feed.
               </span>
               <span className="hidden md:inline">
-                Your friends and family scroll TikTok, Instagram, X, YouTube and ten more so you
-                don’t have to. The best bits land in one private feed with their faces on, kept for
-                good on a server you run.
+                A private social network for your friends and family. One of you runs it; everyone
+                shares the best of TikTok, Instagram, X, YouTube and ten more, and it keeps a real
+                copy of each in one feed, with their faces on.
               </span>
             </p>
             <div className="flex flex-col gap-3">
               <Ctas />
               <p className="m-0 text-[13px] leading-[1.5] text-nx-muted md:text-[14px]">
-                <span>The demo needs no sign-up. Hosting is one Docker command. </span>
-                <a
-                  href={GITHUB_URL}
-                  className="inline-flex items-center gap-1 font-semibold text-nx-soft underline-offset-2 hover:text-white hover:underline"
-                >
-                  <GitHubMark className="h-3.5 w-3.5" />
-                  <span>Free and open source</span>
-                </a>
-                <span>.</span>
+                <span>In the demo you’re Sam, and your friends have been busy. </span>
+                <span className="whitespace-nowrap">No sign-up.</span>
               </p>
+              <TellAFriend className="-mt-1" />
             </div>
+            <ProofStrip />
           </div>
           <div className="min-w-0 flex-1 lg:pt-0">
             <HeroComposition />
           </div>
         </div>
-      </div>
-    </section>
-  )
-}
-
-/* ——— How it works ——— */
-
-const STEPS: Array<{
-  n: string
-  title: string
-  body: string
-  short: string
-  Visual: (p: { compact?: boolean }) => ReactNode
-}> = [
-  {
-    n: '01',
-    title: 'Your people save from any app',
-    body: 'Hit share in any app and pick ADHX, or paste the link. Anyone you invited can add to the pile.',
-    short: 'Hit share wherever you are and pick ADHX. Or paste the link.',
-    Visual: StepShare,
-  },
-  {
-    n: '02',
-    title: 'Your box keeps a real copy',
-    body: 'The actual video or photos, in the best quality going, on a server you run. Not a link. The thing.',
-    short: 'The actual video or photos, in the best quality going. Not a link.',
-    Visual: StepKeep,
-  },
-  {
-    n: '03',
-    title: 'Everyone gets one feed',
-    body: 'Everything your lot kept, full screen, with their faces on it. No ads in between, no strangers, no “suggested for you”.',
-    short: 'Full screen, with their faces on it. No ads in between.',
-    Visual: StepFeed,
-  },
-]
-
-function HowItWorks() {
-  return (
-    <section
-      id="how"
-      aria-labelledby="how-title"
-      className="scroll-mt-16 pb-16 pt-8 md:py-16 lg:pb-10"
-    >
-      <div className={WRAP}>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
-          <div className="flex flex-col gap-2.5 md:gap-3.5">
-            <Kicker>How it works</Kicker>
-            <h2
-              id="how-title"
-              className="m-0 font-nx-serif text-[36px] font-normal leading-[0.95] tracking-[-0.01em] md:whitespace-nowrap md:text-[60px] lg:text-[48px] xl:text-[60px]"
-            >
-              <span className="block md:inline">Three steps. </span>
-              <span className="block md:inline">No algorithm.</span>
-            </h2>
-          </div>
-          <p className="m-0 max-w-[430px] font-nx-serif text-[22px] leading-[1.1] text-nx-soft md:text-[30px] md:leading-[1.08] lg:max-w-[340px] lg:text-[26px] xl:max-w-[430px] xl:text-[30px]">
-            <span>Your friends are invited. </span>
-            <span className="text-nx-cream">The algorithm isn’t.</span>
-          </p>
-        </div>
-        <ol className="m-0 mt-5 flex list-none flex-col gap-3 p-0 md:mt-10 md:gap-5 lg:mt-11 lg:grid lg:grid-cols-3 lg:gap-6">
-          {STEPS.map(({ n, title, body, short, Visual }) => (
-            <li key={n}>
-              <div className="flex gap-3.5 lg:hidden">
-                <span aria-hidden className="shrink-0">
-                  <Visual compact />
-                </span>
-                <span className="flex min-w-0 flex-col gap-1 pt-0.5">
-                  <span className="text-[12px] font-extrabold text-nx-accent">{n}</span>
-                  <h3 className="m-0 text-[16px] font-extrabold leading-tight md:text-[19px]">
-                    {title}
-                  </h3>
-                  <p className="m-0 text-[14px] leading-snug text-nx-soft md:text-[15px]">
-                    <span className="md:hidden">{short}</span>
-                    <span className="hidden md:inline">{body}</span>
-                  </p>
-                </span>
-              </div>
-              <div className="hidden h-full overflow-hidden rounded-[24px] border border-white/10 bg-nx-surface lg:block">
-                <div aria-hidden>
-                  <Visual />
-                </div>
-                <div className="flex flex-col gap-2 px-[22px] pb-6 pt-5">
-                  <span className="text-[13px] font-extrabold text-nx-accent">{n}</span>
-                  <h3 className="m-0 text-[22px] font-extrabold leading-[1.2]">{title}</h3>
-                  <p className="m-0 text-[15px] leading-[1.5] text-nx-soft">{body}</p>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ol>
       </div>
     </section>
   )
@@ -477,77 +418,9 @@ function Features() {
   return (
     <div id="features" className="scroll-mt-16 border-t border-white/10">
       <Feature
-        id="f-new"
-        kicker="Home"
-        title="Opens playing. In an order you can predict."
-        shortTitle="Predictable, on purpose."
-        short={
-          <p className="m-0">
-            Just saved, then what you haven’t seen, then more like what you keep. Every post says
-            why it’s next.
-          </p>
-        }
-        mock={
-          <PhonePair
-            shots={[
-              {
-                src: 'iphone-up-next',
-                alt: 'ADHX on iPhone: Up next over Home. Just saved first, in the order it will play, each with whose save it is: Color palette inspiration, Aurora, the Audio-to-MIDI model playing now, Sound Lab, a synth that becomes whatever you type.',
-              },
-            ]}
-          />
-        }
-      >
-        <p className="m-0">
-          Home plays the moment you open it: what your people saved since you last looked, then
-          everything else you haven’t seen, newest first, then For you, more like what you keep.
-          Every post says why it’s next; Up next shows the whole lineup. Videos and photos by
-          default, text and articles when you want them. No guessing, no endless scroll.
-        </p>
-        <p className="m-0">
-          Just want the latest? Switch Home to Everyone, Friends or Mine: the newest saves first,
-          seen or not.
-        </p>
-      </Feature>
-
-      <Feature
-        id="f-faces"
-        kicker="Saver faces"
-        title="Ana and Ben saved this."
-        short={
-          <p className="m-0">
-            <span>Every post wears the faces of whoever kept it. Shared by default; flip </span>
-            <strong className="font-extrabold text-nx-cream">Just for me</strong>
-            <span> to keep one to yourself.</span>
-          </p>
-        }
-        mock={
-          <PhonePair
-            shots={[
-              {
-                src: 'android-share',
-                alt: 'The ADHX share card on Android: Saved for your people, kept a copy at 600p. Jo, Ben, Ana and Mum will see it, a note field, and the Just for me switch, off.',
-              },
-            ]}
-          />
-        }
-        flip
-        dark
-      >
-        <p className="m-0">
-          <span>
-            Every post wears the faces of whoever kept it, so you know who to thank. Saves go to
-            your people by default. Flip{' '}
-          </span>
-          <strong className="font-extrabold text-nx-cream">Just for me</strong>
-          <span> and it stays out of everyone else’s feed, channels and search.</span>
-        </p>
-      </Feature>
-
-      <Feature
         id="f-vault"
         kicker="The meme vault"
-        title="Deleted on X. Still here."
+        title="Deleted on X. Still in your copy."
         short={
           <>
             <p className="m-0">
@@ -555,7 +428,7 @@ function Features() {
               any app.
             </p>
             <p className="m-0 text-[13px] text-nx-muted">
-              Posts that are private or DRM-protected may not download.
+              ADHX can’t keep posts that are private or DRM-protected.
             </p>
           </>
         }
@@ -572,11 +445,11 @@ function Features() {
       >
         <p className="m-0">
           ADHX keeps a real copy of every save, in the best quality the network offers, and plays it
-          from your box. When the original gets nuked, yours doesn’t notice. Share sends the actual
-          file to any app, not a link that dies next month.
+          from your box. When the original gets nuked, your group’s copy doesn’t notice. Share sends
+          the actual file to any app, not a link that dies next month.
         </p>
         <p className="m-0 text-[14px] text-nx-muted md:text-[15px]">
-          Posts that are private or DRM-protected when you save them may not download.
+          ADHX can’t keep posts that are private or DRM-protected when you save them.
         </p>
       </Feature>
 
@@ -609,12 +482,73 @@ function Features() {
           </a>
           <span>.</span>
         </p>
-        <p className="m-0 flex items-start gap-2.5 text-[14px] leading-[1.5] text-nx-muted md:text-[15px]">
-          <Chat size={18} className="mt-0.5 shrink-0 text-nx-accent" />
+      </Feature>
+
+      <Feature
+        id="f-faces"
+        kicker="Saver faces"
+        title="Ana and Ben saved this."
+        short={
+          <p className="m-0">
+            <span>Every post wears the faces of whoever kept it. Shared by default; flip </span>
+            <strong className="font-extrabold text-nx-cream">Just for me</strong>
+            <span> to keep one to yourself.</span>
+          </p>
+        }
+        mock={
+          <PhonePair
+            shots={[
+              {
+                src: 'android-share',
+                alt: 'The ADHX share card on Android: Saved for your people, kept a copy at 600p. Jo, Ben, Ana and Mum will see it, a note field, and the Just for me switch, off.',
+              },
+            ]}
+          />
+        }
+      >
+        <p className="m-0">
           <span>
-            <strong className="font-extrabold text-nx-cream">Search from Claude too.</strong>
-            <span> Add the adhx skill with a read-only key and ask for anything you saved.</span>
+            Every post wears the faces of whoever kept it, so you know who to thank. Saves go to
+            your people by default. Flip{' '}
           </span>
+          <strong className="font-extrabold text-nx-cream">Just for me</strong>
+          <span> and it stays out of everyone else’s feed, channels and search.</span>
+        </p>
+      </Feature>
+
+      <Feature
+        id="f-new"
+        kicker="Home"
+        title="Opens playing. In an order you can predict."
+        shortTitle="Predictable, on purpose."
+        short={
+          <p className="m-0">
+            Just saved, then what you haven’t seen, then more like what you keep. Every post says
+            why it’s next.
+          </p>
+        }
+        mock={
+          <PhonePair
+            shots={[
+              {
+                src: 'iphone-up-next',
+                alt: 'ADHX on iPhone: Up next over Home. Just saved first, in the order it will play, each with whose save it is: Color palette inspiration, Aurora, the Audio-to-MIDI model playing now, Sound Lab, a synth that becomes whatever you type.',
+              },
+            ]}
+          />
+        }
+        flip
+        dark
+      >
+        <p className="m-0">
+          Home plays the moment you open it: what your people saved since you last looked, then
+          everything else you haven’t seen, newest first, then For you, more like what you keep.
+          Every post says why it’s next; Up next shows the whole lineup. Videos and photos by
+          default, text and articles when you want them. No guessing, no endless scroll.
+        </p>
+        <p className="m-0">
+          Just want the latest? Switch Home to Everyone, Friends or Mine: the newest saves first,
+          seen or not.
         </p>
       </Feature>
 
@@ -682,7 +616,7 @@ function Features() {
         title="One link. They’re in, phone and all."
         short={
           <p className="m-0">
-            It signs a friend in and pairs their phone in one go. Approve who joins, if you like.
+            It signs a friend in and pairs their phone. No password for your mum to forget.
           </p>
         }
         mock={
@@ -697,8 +631,9 @@ function Features() {
         }
       >
         <p className="m-0">
-          Send a friend one link: it signs them in and pairs their phone. It works once and runs out
-          after a week, so nobody gets in uninvited. Approve who joins, if you like.
+          Send a friend one link: it signs them in and pairs their phone. No password, nothing for
+          your mum to remember. Each link works once and runs out after a week, and you can approve
+          anyone your friends invite before they’re in.
         </p>
       </Feature>
     </div>
@@ -763,8 +698,8 @@ function Apps() {
               <span>Install the apps</span>
             </a>
             <p className="m-0 text-[13px] leading-[1.5] text-nx-muted md:text-[14px]">
-              Not in the stores. Android installs from GitHub; iPhone through AltStore PAL in the
-              EU, or SideStore everywhere else.
+              Not in the stores yet. Android installs from GitHub; iPhone through TestFlight when
+              your ADHX offers it, or AltStore PAL or SideStore. No app? The web works too.
             </p>
           </div>
         </div>
@@ -852,6 +787,15 @@ function Band() {
 
 /* ——— Self-host ——— */
 
+const SPECS: Array<[string, string]> = [
+  ['Runs on', 'Anything with Docker, amd64 or arm64'],
+  ['Memory', '4 GB is comfortable; 2 GB with speech and screen text off. No GPU'],
+  ['Disk', 'Roughly 10–30 GB per 1,000 saves'],
+  ['First start', 'Fetches the search models (about 800 MB) in the background'],
+  ['Your data', 'One /data folder. Stop ADHX and copy it to back up'],
+  ['Updates', 'Pull the new image, or run the installer again'],
+]
+
 function SelfHost() {
   return (
     <section
@@ -862,7 +806,7 @@ function SelfHost() {
       <div
         className={cn(
           WRAP,
-          'grid items-center gap-5 pb-10 pt-8 md:gap-10 md:py-16 lg:min-h-[600px] lg:grid-cols-[minmax(0,516fr)_minmax(0,620fr)] lg:gap-16',
+          'grid items-start gap-6 pb-10 pt-8 md:gap-10 md:py-16 lg:grid-cols-[minmax(0,516fr)_minmax(0,620fr)] lg:gap-16',
         )}
       >
         <div className="flex flex-col gap-2.5 md:gap-4">
@@ -874,57 +818,49 @@ function SelfHost() {
             <span>Yours. </span>
             <span className="text-nx-accent">Not ours.</span>
           </h2>
-          <p className="m-0 hidden text-[18px] leading-[1.55] text-nx-soft md:block">
-            ADHX isn’t a service you sign up to. It’s a box you run, for the people you’d actually
-            let in your house.
+          <p className="m-0 text-[15px] leading-[1.45] text-nx-soft md:text-[18px] md:leading-[1.55]">
+            ADHX isn’t a service you sign up to. It’s one container you run for the people you’d
+            actually let in your house, and everything it keeps is a folder you own.
           </p>
-          <ul className="m-0 mt-1.5 flex list-none flex-col gap-2 p-0 text-[15px] leading-[1.4] text-nx-cream md:gap-3 md:text-[16px] md:leading-[1.45]">
+          <dl className="m-0 mt-1 grid grid-cols-1 overflow-hidden rounded-[18px] border border-white/10 sm:grid-cols-2">
+            {SPECS.map(([term, detail]) => (
+              <div
+                key={term}
+                className="flex flex-col gap-0.5 border-t border-white/10 px-4 py-3 first:border-t-0 sm:[&:nth-child(2)]:border-t-0 sm:odd:border-r"
+              >
+                <dt className="text-[12px] font-extrabold uppercase tracking-[0.12em] text-nx-accent">
+                  {term}
+                </dt>
+                <dd className="m-0 text-[14px] leading-snug text-nx-cream md:text-[15px]">
+                  {detail}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <ul className="m-0 mt-1 flex list-none flex-col gap-2 p-0 text-[14px] leading-[1.45] text-nx-soft md:text-[15px]">
             {[
-              {
-                long: 'One Docker container and one folder of data.',
-                short: 'One Docker container, one folder of data.',
-              },
-              {
-                long: 'Invite-only. Approve who joins, if you like.',
-                short: 'Invite-only. Approve who joins, if you like.',
-              },
-              {
-                long: 'The AI runs on your server, free. Jev is optional, and only ever sees public post words.',
-                short: 'The AI runs on your server, free. Jev is optional.',
-              },
-              {
-                long: 'Kept media and shared previews play for anyone who can reach your server, so use private networking if that matters to you.',
-                short: 'Kept media plays for anyone who can reach your server.',
-              },
-              {
-                long: 'Rather not read the guides? Point your AI coding agent at the repo. It knows how to set ADHX up.',
-                short: 'Or point your AI agent at the repo. It knows the way.',
-              },
-              {
-                long: 'No ads, nobody selling your attention. Open source under the MIT licence.',
-                short: 'No ads. Open source, MIT licence.',
-              },
+              'Put it behind your reverse proxy, or keep it on Tailscale or your home network.',
+              'Rather not read the guides? Point your AI coding agent at the repo. It knows how to set ADHX up.',
             ].map((line) => (
-              <li key={line.long} className="flex gap-2.5 md:gap-3">
-                <Dot className="mt-[7px] h-1.5 w-1.5 md:mt-2 md:h-[7px] md:w-[7px]" />
-                <span className="md:hidden">{line.short}</span>
-                <span className="hidden md:inline">{line.long}</span>
+              <li key={line} className="flex gap-2.5">
+                <Dot className="mt-[7px] h-1.5 w-1.5" />
+                <span>{line}</span>
               </li>
             ))}
           </ul>
         </div>
-        <div className="flex min-w-0 flex-col gap-3 md:gap-4">
+        <div className="flex min-w-0 flex-col gap-3 md:gap-4 lg:sticky lg:top-24">
           <CopyCommand text={SETUP} title="Try it in a minute" note="anywhere with Docker" />
-          <a
-            href={`${GITHUB_URL}#one-click-wherever-you-host`}
-            className="flex min-h-[52px] items-center justify-center gap-2.5 whitespace-nowrap rounded-full bg-nx-accent px-6 text-[16px] font-extrabold text-black hover:bg-white"
-          >
-            <GitHubMark className="h-5 w-5" />
-            <span>One-click installs</span>
-          </a>
-          <p className="m-0 text-center text-[13px] leading-[1.45] text-nx-muted md:text-[14px]">
-            Render, Fly, Railway, a VPS with HTTPS, Unraid, Umbrel, Portainer, Coolify, Synology and
-            TrueNAS.
+          <div className="flex flex-col gap-2.5 sm:flex-row">
+            <a href={`${GITHUB_URL}#one-click-wherever-you-host`} className={cn(PRIMARY, 'flex-1')}>
+              <span>Every way to install</span>
+              <Arrow size={18} />
+            </a>
+            <StarButton className="min-h-[52px] px-6 text-[16px]" />
+          </div>
+          <p className="m-0 text-[13px] leading-[1.5] text-nx-muted md:text-[14px]">
+            A Linux installer with HTTPS, Render, Railway, Fly, Portainer, CapRover, Unraid, Umbrel
+            and UGREEN, plus paste-in Compose for Synology, TrueNAS, Coolify, Dokploy and CasaOS.
           </p>
         </div>
       </div>
@@ -941,13 +877,13 @@ export function ProductSite() {
       <main id="top">
         <Hero />
         <Friends />
-        <HowItWorks />
+        <GroupChat />
         <Features />
         <AiSection />
-        <Apps />
-        <Band />
         <SelfHost />
         <AdminSection />
+        <Apps />
+        <Band />
         <Faq />
         <Closer />
       </main>
@@ -979,6 +915,10 @@ function Closer() {
           Look around the demo as Sam, or have your own running before the kettle boils.
         </p>
         <Ctas className="w-full sm:w-auto md:justify-center" />
+        <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px] text-nx-muted md:justify-center md:text-[14px]">
+          <StarButton className="min-h-[40px]" />
+          <span>{`MIT licence · ${RELEASE} · a star helps other people find it`}</span>
+        </p>
       </div>
     </section>
   )
