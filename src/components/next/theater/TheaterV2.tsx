@@ -236,6 +236,8 @@ function emptyState(
   retry?: boolean
   /** Offer Paste instead of a link. */
   paste?: boolean
+  /** A second, quieter link beside the main action. */
+  also?: { label: string; href: string }
 } {
   const missing = load.status === 'error' && load.missing
   if (source.moment && missing)
@@ -285,6 +287,8 @@ function emptyState(
       action: 'Paste',
       href: '/channels',
       paste: true,
+      // A new ADHX starts with just you: your own saves still play.
+      also: { label: 'Play my saves', href: '/play?recent=1' },
     }
   if (source.feed === 'friends')
     return {
@@ -1904,6 +1908,14 @@ export function TheaterV2({
                     }
                   >
                     {empty.action}
+                  </Link>
+                )}
+                {empty.also && (
+                  <Link
+                    href={empty.also.href}
+                    className="rounded-full border border-white/30 px-5 py-3 text-sm font-bold text-nx-ink"
+                  >
+                    {empty.also.label}
                   </Link>
                 )}
               </span>

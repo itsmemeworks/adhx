@@ -175,6 +175,7 @@ fun NewTab(
             onChannels = { feed.tab = HomeTab.Channels },
             onLive = { feed.tab = HomeTab.Live },
             onAgain = { feed.setMode(FeedMode.EVERYONE) },
+            onMine = { feed.setMode(FeedMode.MINE) },
             hidden = ui.hidden,
             onShowHidden = feed::showHidden,
             nothingYet = ui.nothingYet,
@@ -609,6 +610,7 @@ fun CaughtUp(
     onChannels: () -> Unit,
     onLive: () -> Unit,
     onAgain: () -> Unit,
+    onMine: () -> Unit = {},
     hidden: Map<String, Int> = emptyMap(),
     onShowHidden: () -> Unit = {},
     nothingYet: Boolean = false,
@@ -733,8 +735,11 @@ fun CaughtUp(
                 PrimaryButton(Copy.BROWSE_CHANNELS, onClick = onChannels, modifier = Modifier.fillMaxWidth())
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     LiveButton(onLive, Modifier.weight(1f))
-                    // Nothing saved yet: there's nothing to watch again.
-                    if (!nothingYet) {
+                    // Nothing new from anyone yet: there's nothing to watch again, but
+                    // your own saves still play (a new ADHX starts with just you).
+                    if (nothingYet) {
+                        MineButton(onMine, Modifier.weight(1f))
+                    } else {
                         AgainButton(onAgain, Modifier.weight(1f))
                     }
                 }
@@ -759,6 +764,25 @@ private fun AgainButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
         Icon(Glyphs.Again, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(8.dp))
         Text(Copy.WATCH_AGAIN, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Ink, maxLines = 1)
+    }
+}
+
+/** "Play my saves", a faint outline with a play arrow. */
+@Composable
+private fun MineButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier
+            .height(48.dp)
+            .clip(RoundedCornerShape(50))
+            .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(50))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Glyphs.Play, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(Copy.PLAY_MY_SAVES, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Ink, maxLines = 1)
     }
 }
 

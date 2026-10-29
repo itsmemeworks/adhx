@@ -223,10 +223,17 @@ struct LibraryHome: View {
                 .padding(.top, headerHeight)
                 .frame(maxHeight: .infinity, alignment: .top)
             } else if feed.items.isEmpty && feed.nothingYet {
-                // Nobody has saved anything new yet: not "all caught up".
-                EmptyNote(title: "Nothing new yet.", message: "Save something for your people to find.")
-                    .padding(.top, headerHeight)
-                    .frame(maxHeight: .infinity, alignment: .top)
+                // Nobody has saved anything new yet: not "all caught up". Your own
+                // saves still play (a new ADHX starts with just you).
+                VStack(alignment: .leading, spacing: 0) {
+                    EmptyNote(title: "Nothing new yet.", message: "Save something for your people to find.")
+                    Button("Play my saves") { Task { await feed.setMode(.mine) } }
+                        .buttonStyle(PillButtonStyle(kind: .outline, height: 44, fullWidth: false))
+                        .padding(.horizontal, 20)
+                        .padding(.top, 14)
+                }
+                .padding(.top, headerHeight)
+                .frame(maxHeight: .infinity, alignment: .top)
             } else if feed.items.isEmpty {
                 caughtUp(server, topInset: headerHeight + 40)
             } else if model.welcome {

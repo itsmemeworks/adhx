@@ -588,6 +588,11 @@ describe('New in the theater', () => {
     expect(await screen.findByText('Nothing new yet.')).toBeInTheDocument()
     expect(screen.getByText('Save something for your people to find.')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'Paste' }).length).toBeGreaterThan(0)
+    // Its owner is the only one here so far: their own saves still play.
+    expect(screen.getByRole('link', { name: 'Play my saves' })).toHaveAttribute(
+      'href',
+      '/play?recent=1',
+    )
     expect(screen.queryByText('You’re all caught up.')).not.toBeInTheDocument()
   })
 })
