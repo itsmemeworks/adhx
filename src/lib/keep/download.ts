@@ -239,6 +239,9 @@ async function collectGeneric(target: KeepTarget, dir: string): Promise<Collecte
   }
 
   if (ytError && MEDIA_ONLY.has(target.platform)) throw ytError
+  // Not yt-dlp's answer about the post (FFmpeg missing, a crash): try again
+  // later rather than keep the page's preview, or nothing, as the post.
+  if (ytError && !(ytError instanceof YtdlpError)) throw ytError
   // Behind a sign-in, the page's preview picture isn't the post: say why instead.
   if (
     ytError instanceof YtdlpError &&

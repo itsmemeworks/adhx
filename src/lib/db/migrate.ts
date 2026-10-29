@@ -1404,7 +1404,10 @@ serverSecret()
 if (!db.prepare(`SELECT 1 FROM users WHERE role = 'admin' LIMIT 1`).get()) {
   const stored = db.prepare(`SELECT value FROM server_settings WHERE key = 'app_url'`).get() as
     { value?: string } | undefined
-  const address = configuredAppUrl() ?? cleanOrigin(stored?.value) ?? 'http://localhost:3000'
+  const address =
+    configuredAppUrl() ??
+    cleanOrigin(stored?.value) ??
+    `http://localhost:${process.env.PORT || 3000}`
   for (const line of setupAnnouncement(address)) console.log(line)
 }
 

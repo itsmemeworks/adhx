@@ -53,6 +53,14 @@ describe('keeping a video-only post yt-dlp can’t download', () => {
     ).rejects.toThrow(/private/)
   })
 
+  it('retries a TikTok that failed for a reason other than the post', async () => {
+    ytdlpDownload.mockRejectedValue(new Error('FFmpeg is unavailable'))
+    const { keepPost } = await import('@/lib/keep/download')
+    await expect(
+      keepPost({ platform: 'tiktok', postId: '123', author: 'test', category: 'video' }),
+    ).rejects.toThrow(/FFmpeg/)
+  })
+
   it('still keeps a picture network’s preview images', async () => {
     const { YtdlpError } = await import('@/lib/keep/ytdlp')
     ytdlpDownload.mockRejectedValue(new YtdlpError('ERROR: No video formats found', true))

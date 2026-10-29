@@ -337,7 +337,8 @@ export function SignInModal({
               ) : delivery === 'admin' ? (
                 <>
                   This ADHX doesn’t send email. Ask whoever runs it for the sign-in link for {email}
-                  . It expires in 60 minutes. Open it in your normal browser and press Sign in.
+                  . It expires in 60 minutes. Open it in your normal browser and press Sign in. If
+                  you run this ADHX, it’s also in the server log, on the line starting “[sign-in]”.
                 </>
               ) : delivery === 'log' ? (
                 <>
