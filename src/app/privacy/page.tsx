@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { NxHeader } from '@/components/next/channels/ChannelParts'
 
 export const metadata: Metadata = {
-  title: 'Privacy · ADHX',
+  title: 'Privacy',
   description: 'What ADHX stores, who sees it, what is public, and what is never exposed.',
 }
 

@@ -142,7 +142,7 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
         params: Promise.resolve({ username: 'curator', tag: 'secret-tag' }),
       })
 
-      expect(metadata.title).toBe('Private channel — ADHX')
+      expect(metadata.title).toBe('Private channel')
       expect(metadata.robots).toEqual({ index: false, follow: false })
       expect(JSON.stringify(metadata)).toContain('/api/og/playlist/brand/card?generic=1')
       expect(JSON.stringify(metadata)).not.toContain('curator')

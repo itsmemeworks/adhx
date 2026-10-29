@@ -67,7 +67,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!tweet) {
     return {
-      title: 'Post unavailable - ADHX',
+      title: 'Post unavailable',
       description: 'This post is no longer available on X.',
       robots: { index: false },
     }

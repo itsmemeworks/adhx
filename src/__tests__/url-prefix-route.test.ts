@@ -185,7 +185,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         params: Promise.resolve({ username: 'testuser', id: '123456789' }),
       })
 
-      expect(metadata.title).toBe('Post unavailable - ADHX')
+      expect(metadata.title).toBe('Post unavailable')
       expect(metadata.description).toBe('This post is no longer available on X.')
       // Never indexed — there's nothing here worth a SERP result, and it
       // would only get staler.
@@ -207,7 +207,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       })
 
       expect(metadata.robots).toEqual({ index: false })
-      expect(metadata.title).toBe('Post removed - ADHX')
+      expect(metadata.title).toBe('Post removed')
       expect(fetchTweetData).not.toHaveBeenCalled()
     })
 

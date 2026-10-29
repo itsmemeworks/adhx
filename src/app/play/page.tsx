@@ -15,7 +15,7 @@ import { sourceFromParams } from '@/components/next/theater/queue'
  */
 export const dynamic = 'force-dynamic'
 
-export const metadata = { title: 'Playing · adhx', robots: { index: false } }
+export const metadata = { title: 'Playing', robots: { index: false } }
 
 export default async function PlayPage({
   searchParams,

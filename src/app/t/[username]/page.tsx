@@ -63,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (result.status === 'not_found' || result.status === 'redirect') {
     return {
-      title: `@${username} — ADHX`,
+      title: `@${username}`,
       description: 'A curator on ADHX.',
     }
   }

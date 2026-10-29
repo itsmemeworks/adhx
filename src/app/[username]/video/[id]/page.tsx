@@ -80,7 +80,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!saved && metadataStatus?.kind !== 'resolved') {
     const permanent = metadataStatus?.kind === 'permanent-miss'
     return unavailablePreviewMetadata({
-      title: permanent ? `@${handle} on TikTok unavailable - ADHX` : `@${handle} on TikTok`,
+      title: permanent ? `@${handle} on TikTok unavailable` : `@${handle} on TikTok`,
       description: permanent
         ? 'This TikTok video is no longer available.'
         : 'This TikTok video preview is temporarily unavailable.',

@@ -85,7 +85,7 @@ export async function generateInstagramPreviewMetadata(
     const noun = pathHint === 'post' ? 'Instagram post' : 'Instagram Reel'
     const canonicalUrl = `${baseUrl}/${pathHint === 'post' ? 'p' : 'reels'}/${id}`
     return unavailablePreviewMetadata({
-      title: permanent ? `${noun} unavailable - ADHX` : `${noun} - ADHX`,
+      title: permanent ? `${noun} unavailable` : `${noun}`,
       description: permanent
         ? `This ${noun} is no longer available.`
         : `This ${noun} preview is temporarily unavailable.`,

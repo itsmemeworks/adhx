@@ -74,7 +74,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (result.status === 'redirect') {
     const redirectCardUrl = playlistSocialCardUrl(result.username, result.tag)
     return {
-      title: `#${tag} — ADHX`,
+      title: `#${tag}`,
       description: `A curated ${noun} on ADHX.`,
       openGraph: {
         images: [{ url: redirectCardUrl, width: 1200, height: 630, alt: `ADHX ${noun}` }],
@@ -85,7 +85,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (result.status === 'private') {
     return {
-      title: `Private ${noun} — ADHX`,
+      title: `Private ${noun}`,
       description: `This ${noun} is private.`,
       robots: { index: false, follow: false },
       openGraph: {

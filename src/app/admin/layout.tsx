@@ -13,7 +13,7 @@ import { AdminShell } from '@/components/next/admin/AdminShell'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Admin · adhx',
+  title: 'Admin',
   robots: { index: false, follow: false },
 }
 

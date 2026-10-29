@@ -42,7 +42,7 @@ vi.mock('@/lib/theater/resolve-shared-preview', () => ({
 }))
 
 vi.mock('@/lib/theater/shared-preview', () => ({
-  MODERATED_PAGE_METADATA: { title: 'Post removed - ADHX' },
+  MODERATED_PAGE_METADATA: { title: 'Post removed' },
   SharedPreviewPage: () => null,
   sharedPreviewSeed: mocks.sharedPreviewSeed,
 }))

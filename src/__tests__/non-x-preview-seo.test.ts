@@ -48,7 +48,7 @@ vi.mock('@/lib/theater/resolve-shared-preview', () => ({
 
 vi.mock('@/lib/theater/shared-preview', () => ({
   MODERATED_PAGE_METADATA: {
-    title: 'Post removed - ADHX',
+    title: 'Post removed',
     description: 'This post was removed from ADHX.',
     robots: { index: false },
   },
@@ -78,7 +78,7 @@ describe('non-X preview metadata status', () => {
       const metadata = await generateMetadata({ params: Promise.resolve({ id: REEL_ID }) })
 
       expect(metadata).toMatchObject({
-        title: 'Instagram Reel unavailable - ADHX',
+        title: 'Instagram Reel unavailable',
         robots: { index: false },
         alternates: { canonical: `https://adhx.example.org/reels/${REEL_ID}` },
       })
