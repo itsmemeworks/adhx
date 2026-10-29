@@ -382,6 +382,22 @@ describe('settings', () => {
     expect(settingRow(board, 'ALLOWED_EMAILS')?.value).toBe('2 entries')
   })
 
+  it('shows email sign-up as invite-only until the owner opens it', async () => {
+    const set = (name: string, value: string) => system({ action: 'set', name, value })
+    expect(signupAllowlist()).toEqual([])
+    expect(settingRow(await systemBoard(NOW), 'ALLOWED_EMAILS')?.value).toBe(
+      'Only people with an invite',
+    )
+    expect((await set('ALLOWED_EMAILS', '*')).status).toBe(200)
+    expect(signupAllowlist()).toBeNull()
+    expect(settingRow(await systemBoard(NOW), 'ALLOWED_EMAILS')?.value).toBe('Anyone')
+    expect((await set('ALLOWED_EMAILS', 'none')).status).toBe(200)
+    expect(signupAllowlist()).toEqual([])
+    expect(settingRow(await systemBoard(NOW), 'ALLOWED_EMAILS')?.value).toBe(
+      'Only people with an invite',
+    )
+  })
+
   it('refuses values the server can’t use', async () => {
     const set = (name: string, value: string) => system({ action: 'set', name, value })
     for (const [name, value] of [

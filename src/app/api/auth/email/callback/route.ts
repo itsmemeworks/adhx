@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
   const heldLinks = signInDelivery() === 'admin'
   if (heldLinks ? !mayGetHeldLink(row.email) : !mayUseEmail(row.email)) {
     return loginLinkPage({
-      error: 'This ADHX is for invited people. Ask whoever runs it to add your email.',
+      error: 'This ADHX is for invited people. Ask whoever runs it for an invite link.',
       status: 403,
     })
   }

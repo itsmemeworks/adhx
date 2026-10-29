@@ -20,10 +20,26 @@ describe('sign-up allowlist', () => {
     existing = false
   })
 
-  it('is open when ALLOWED_EMAILS is unset or *', async () => {
+  it('is invite-only when ALLOWED_EMAILS is unset or none', async () => {
+    vi.stubEnv('ALLOWED_EMAILS', '')
+    const { mayUseEmail, signupAllowlist } = await import('@/lib/auth/allowlist')
+    expect(signupAllowlist()).toEqual([])
+    expect(mayUseEmail('stranger@example.com')).toBe(false)
+    vi.stubEnv('ALLOWED_EMAILS', 'None')
+    expect(mayUseEmail('stranger@example.com')).toBe(false)
+  })
+
+  it('still lets existing accounts sign in when invite-only', async () => {
+    vi.stubEnv('ALLOWED_EMAILS', '')
+    existing = true
     const { mayUseEmail } = await import('@/lib/auth/allowlist')
-    expect(mayUseEmail('anyone@example.com')).toBe(true)
+    expect(mayUseEmail('friend@example.com')).toBe(true)
+  })
+
+  it('is open to anyone with *', async () => {
     vi.stubEnv('ALLOWED_EMAILS', '*')
+    const { mayUseEmail, signupAllowlist } = await import('@/lib/auth/allowlist')
+    expect(signupAllowlist()).toBeNull()
     expect(mayUseEmail('anyone@example.com')).toBe(true)
   })
 

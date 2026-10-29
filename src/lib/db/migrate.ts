@@ -1343,6 +1343,31 @@ try {
   process.exit(1)
 }
 
+// Email sign-up: a new ADHX is invite-only (`ALLOWED_EMAILS` unset lets nobody
+// new in by email; invite links need no email). Before that default, unset
+// meant anyone, so the first start after upgrading a server that already has
+// accounts saves `*`: its sign-up stays as it was, and Admin → System shows
+// "Anyone" for the owner to change. An environment value speaks for itself.
+// Runs once.
+try {
+  if (!isSettled('allowed_emails_default')) {
+    const fromEnv = process.env['ALLOWED_EMAILS']?.trim()
+    const existing = db.prepare('SELECT 1 FROM users LIMIT 1').get()
+    if (!fromEnv && existing) {
+      db.prepare(
+        `INSERT INTO server_settings (key, value, updated_at) VALUES ('extra.ALLOWED_EMAILS', '*', ?)
+         ON CONFLICT(key) DO NOTHING`,
+      ).run(new Date().toISOString())
+      console.log('[migrate] Existing accounts found: kept email sign-up open to anyone')
+    }
+    markSettled('allowed_emails_default')
+  }
+} catch (error) {
+  console.log('[migrate] FAILED choosing the email sign-up default', error)
+  db.close()
+  process.exit(1)
+}
+
 // Apply after every guarded column/table exists, including on already released DBs.
 // Index replacements are atomic; a failure leaves the previous indexes intact.
 db.transaction(() => db.exec(QUERY_INDEX_DDL))()

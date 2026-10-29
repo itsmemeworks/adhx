@@ -9,6 +9,7 @@ Last updated: 29 October 2026.
 - **Named to friends, never to strangers.** A _member_ is anyone who can sign in to your server (approved and not banned). Your saves are shared with members by default: they see the post, your username, display name, picture, when you saved it and your note.
 - **Just for me** keeps a save out of everyone else's feed, channels, search, Right now and counts, and its kept files are yours alone. One exception you should know about: admins' post and member counts include it.
 - **Strangers** (anyone not signed in) see posts and counts, never who saved them. Right now, preview pages and public channels do show _which posts_ people on your server shared, to anyone who has the link.
+- **Joining is by invite.** A new server lets nobody make an account by email unless the owner lists who may (`ALLOWED_EMAILS`); invite links need no email.
 - **Search engines are kept out** unless the owner turns on **Show up in search engines** (Admin → System). A server that already had a public channel before that switch existed keeps being listed after upgrading, and shows the switch On.
 - **Kept media files of shared posts are not behind sign-in.** Anyone who can reach your server and knows a post's network and ID can fetch them. A post only saved Just for me is served to its owner alone. Quoted files follow their live parent save's access; files with no remaining
   save or quote parent are inaccessible while disk cleanup catches up. Shared

@@ -79,21 +79,23 @@ export const EXTRAS = {
   },
   ALLOWED_EMAILS: {
     group: 'Sign-in and email',
-    label: 'Who may sign up',
+    label: 'Who may sign up by email',
     kind: 'list',
-    help: 'Emails or @domains, separated by commas. Empty or * lets anyone in. People with an account can always sign in.',
-    unset: 'Anyone',
+    help: 'Emails or @domains, separated by commas, or * for anyone. Empty or none: only people you send an invite link. People with an account can always sign in.',
+    unset: 'Only people with an invite',
     check: (v) =>
       v === '*' ||
+      v.toLowerCase() === 'none' ||
       v
         .split(',')
         .map((e) => e.trim())
         .filter(Boolean)
         .every((e) => /^[^@\s,]*@[^@\s,]+\.[^@\s,]+$/.test(e))
         ? null
-        : 'Use emails or @domains, separated by commas.',
+        : 'Use emails or @domains separated by commas, * for anyone, or none.',
     show: (v) => {
       if (v === '*') return 'Anyone'
+      if (v.toLowerCase() === 'none') return 'Only people with an invite'
       const n = v.split(',').filter((e) => e.trim()).length
       return `${n} ${n === 1 ? 'entry' : 'entries'}`
     },

@@ -77,6 +77,8 @@ describe('getting sign-in links to people without Resend', () => {
     vi.clearAllMocks()
     vi.stubEnv('NEXT_PUBLIC_APP_URL', 'http://localhost:3000')
     vi.stubEnv('RESEND_API_KEY', '')
+    // Open sign-up, so delivery is what's tested; cases about who may sign up set their own.
+    vi.stubEnv('ALLOWED_EMAILS', '*')
   })
 
   afterEach(() => {
@@ -118,6 +120,15 @@ describe('getting sign-in links to people without Resend', () => {
           subject: 'Your ADHX sign-in link',
         }),
       )
+    })
+
+    it('is invite-only by default: a stranger is told to ask for an invite link', async () => {
+      vi.stubEnv('SMTP_URL', 'smtp://mail.example.com')
+      vi.stubEnv('ALLOWED_EMAILS', '')
+      const { status, body } = await ask('stranger@example.com')
+      expect(status).toBe(403)
+      expect(body.error).toMatch(/invite link/)
+      expect(sendMail).not.toHaveBeenCalled()
     })
 
     it('says so when the mail server fails, and lets them try again at once', async () => {

@@ -4,15 +4,20 @@ import { userIdentities, users } from '@/lib/db/schema'
 import { setting } from '@/lib/settings/value'
 
 /**
- * Who may make an account on this ADHX. A self-hosted ADHX is usually for you
- * and your friends: set `ALLOWED_EMAILS` to a comma-separated list of emails
- * and/or `@domain.example` entries. Unset (or `*`) leaves sign-up open.
- * People who already have an account can always sign in. Admin → System can
- * change it too (the saved list wins).
+ * Who may make an account by email on this ADHX. People join by invite link
+ * (no email needed), so unset (or `none`) lets nobody new in by email:
+ * invite-only. `ALLOWED_EMAILS` opens it to a comma-separated list of emails
+ * and/or `@domain.example` entries, or `*` to anyone. People who already have
+ * an account can always sign in. Admin → System can change it too (the saved
+ * value wins). Servers that were open before this default existed were saved
+ * as `*` when they upgraded.
+ *
+ * Null means anyone; an empty list means invite-only.
  */
 export function signupAllowlist(): string[] | null {
   const raw = setting('ALLOWED_EMAILS')
-  if (!raw || raw === '*') return null
+  if (raw === '*') return null
+  if (!raw || raw.toLowerCase() === 'none') return []
   return raw
     .split(',')
     .map((e) => e.trim().toLowerCase())
