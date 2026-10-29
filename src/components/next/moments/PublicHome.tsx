@@ -21,7 +21,7 @@ export function PublicHome() {
       error === 'x_link_only'
         ? 'Sign in with your email first, then connect X in Settings.'
         : error === 'not_invited'
-          ? 'This ADHX is for invited people. Ask whoever runs it to add your email.'
+          ? 'This ADHX is for invited people. Ask whoever runs it for an invite link.'
           : null,
     )
   }, [])

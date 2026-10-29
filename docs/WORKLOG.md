@@ -6,12 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
-## 2026-10-29 — A new server stays out of search engines
+## 2026-10-29 — A new server stays out of search engines and is invite-only
 
 - Why: a privacy-skeptic review of adhx.com found a fresh ADHX was crawlable (`public/robots.txt` Allow: /, a sitemap of every shared preview) and pointed crawlers at adhx.com (hard-coded sitemap line, `PUBLIC_BASE_URL` fallback).
 - New owner switch `PUBLIC_PAGES` ("Show up in search engines", Admin → System → Settings, `EXTRAS`), default off. Off: `src/app/robots.ts` disallows everything except link-preview bots (so sent links still unfurl), the sitemap is empty, the root layout's `generateMetadata` sets noindex/nofollow on every page. On: today's rules. robots.txt and the sitemap now use `appUrl()`.
 - Existing installs: a one-time migration step (`public_pages_default`) saves it On when any channel was already public and `PUBLIC_PAGES` isn't in the environment, so nobody is silently de-indexed; everyone else starts Off.
-- Sign-up is unchanged (open once email is set up, unless `ALLOWED_EMAILS`); whether to make it allowlist- or invite-only by default is waiting on the owner.
+- Owner chose invite-only email sign-up: `ALLOWED_EMAILS` unset (or `none`) now lets nobody new in by email (was: anyone), `*` is anyone. A one-time step (`allowed_emails_default`) saves `*` on servers that already had accounts. Strangers are told to ask for an invite link. `verify-upgrade.mjs` now lets a new one-time step's saved setting carry its own clock.
+- Owner's intent: no email needed by default; the admin shares a link and approves who follows it. Today an invite is one link per person and admin-made invites skip approval, so a reusable group link with approval is a separate follow-up.
 - Follow-ups: canonical/OG URLs and `metadataBase` still use `PUBLIC_BASE_URL` (adhx.com unless baked in at build), so an indexed self-hosted server's canonicals point at adhx.com; the site FAQ/llms change ships with the next site publish.
 
 ## 2026-10-29 — adhx.com: persona review, honest claims, proof and a path for non-techies

@@ -346,8 +346,9 @@ Short notes on what is easy to get wrong. Each links to the full description.
 - Two ways in: an **invite link** (`/invite/{token}`, 7 days, single use, only
   the token's SHA-256 stored; it makes an account with no email) or an
   **email magic link** (15 minutes; 60 when links are held for an admin with
-  `EMAIL_LINKS_TO_ADMIN`). `ALLOWED_EMAILS` limits who may create an account
-  by email; existing accounts can always sign in. In development without
+  `EMAIL_LINKS_TO_ADMIN`). Email sign-up is invite-only by default:
+  `ALLOWED_EMAILS` unset or `none` lets nobody new in by email, a list lets
+  those in, `*` anyone; existing accounts can always sign in. In development without
   `RESEND_API_KEY` or `SMTP_URL`, links are printed to the server console.
 - **Who can invite** (`admin | approve | anyone`) lives in `server_settings`
   (`invites.who`); `INVITES=members` only sets the first default. Under

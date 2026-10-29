@@ -653,9 +653,11 @@ with `approve | not_now | decline`; phone `/api/app/people/requests/{id}`),
 and every answer is audited. Requests are anchored to the invite identity, so
 deleting the inviter doesn't strand them.
 
-Email sign-in is how people get back in on a new browser. `ALLOWED_EMAILS`
-limits who may create an account by email; existing accounts can always sign
-in. Links go by Resend or SMTP, or (with `EMAIL_LINKS_TO_ADMIN`) wait on the
+Email sign-in is how people get back in on a new browser. Making an account
+by email is invite-only by default: `ALLOWED_EMAILS` unset (or `none`) lets
+nobody new in, a list lets those emails and `@domains` in, `*` lets anyone.
+Existing accounts can always sign in. A server that had accounts before this
+default was saved as `*` on upgrade (`allowed_emails_default`). Links go by Resend or SMTP, or (with `EMAIL_LINKS_TO_ADMIN`) wait on the
 admin page for an admin to pass on.
 
 ## Phone app API and auth

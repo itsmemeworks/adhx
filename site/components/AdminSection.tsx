@@ -88,7 +88,7 @@ function Box({
 const SETTINGS: [string, string, string][] = [
   ['Keep copies', 'On', 'Default'],
   ['How closely videos are read', 'Normal', 'Environment'],
-  ['Who may sign up', '2 entries', 'Set here'],
+  ['Who may sign up by email', '2 entries', 'Set here'],
 ]
 
 /** A drawing of Admin → System. */

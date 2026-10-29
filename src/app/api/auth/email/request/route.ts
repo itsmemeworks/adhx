@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   // there's an admin, even when their own email isn't on ALLOWED_EMAILS.
   if (signInDelivery() === 'admin' ? !mayGetHeldLink(email) : !mayUseEmail(email)) {
     return NextResponse.json(
-      { error: 'This ADHX is for invited people. Ask whoever runs it to add your email.' },
+      { error: 'This ADHX is for invited people. Ask whoever runs it for an invite link.' },
       { status: 403 },
     )
   }

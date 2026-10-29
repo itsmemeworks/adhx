@@ -82,6 +82,8 @@ describe('API: /api/auth/email/*', () => {
     mockUserId = null
     mockSendMagicLinkEmail.mockClear()
     mockSendMagicLinkEmail.mockResolvedValue({ ok: true })
+    // These cases are about the link itself, so sign-up is open to anyone.
+    vi.stubEnv('ALLOWED_EMAILS', '*')
   })
 
   afterEach(() => {
