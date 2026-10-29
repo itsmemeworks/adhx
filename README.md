@@ -144,16 +144,24 @@ Open the link it prints, add your email and pick your name: you're the owner. Th
 
 ### One click, wherever you host
 
-| Where                                                  | How                                                                                                                                                                      |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| A server with a domain, HTTPS included                 | [`deploy/vps`](deploy/vps/docker-compose.yml): `ADHX_DOMAIN=adhx.example.com docker compose up -d`                                                                       |
-| Render                                                 | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/itsmemeworks/adhx) (Standard plan + disk) |
-| Railway                                                | [Two-minute recipe](deploy/railway/README.md)                                                                                                                            |
-| Fly.io                                                 | [`deploy/fly`](deploy/fly/fly.toml): four commands                                                                                                                       |
-| Portainer, Dokploy, Coolify, CasaOS, Synology, TrueNAS | Paste [`deploy/one-click/docker-compose.yml`](deploy/one-click/docker-compose.yml)                                                                                       |
-| Unraid                                                 | [Container template](deploy/unraid/adhx.xml)                                                                                                                             |
-| Umbrel                                                 | [App folder](deploy/umbrel/adhx) (not in the Umbrel store yet)                                                                                                           |
-| UGREEN NAS                                             | [UGOS Pro walkthrough](deploy/nas/ugreen.md)                                                                                                                             |
+| Where                                                   | How                                                                                                                                                                      |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Any Linux server                                        | `curl -fsSL https://raw.githubusercontent.com/itsmemeworks/adhx/main/deploy/install.sh \| sudo sh` ([what it does](deploy/install.sh))                                   |
+| Any Linux server with a domain, HTTPS included          | `curl -fsSL https://raw.githubusercontent.com/itsmemeworks/adhx/main/deploy/install.sh \| sudo ADHX_DOMAIN=adhx.example.com sh`                                          |
+| A new server at Hetzner, DigitalOcean, Vultr, Linode, … | Paste [`deploy/cloud-init.yaml`](deploy/cloud-init.yaml) into **User data** when you create it                                                                           |
+| Render                                                  | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/itsmemeworks/adhx) (Standard plan + disk) |
+| Railway                                                 | [Two-minute recipe](deploy/railway/README.md)                                                                                                                            |
+| Fly.io                                                  | [`deploy/fly`](deploy/fly/fly.toml): four commands                                                                                                                       |
+| Portainer                                               | **Settings → App Templates**, URL `https://raw.githubusercontent.com/itsmemeworks/adhx/main/deploy/portainer/templates.json`; then **App Templates → ADHX**              |
+| CapRover                                                | **One-Click Apps → >> TEMPLATE <<**, paste [`deploy/caprover/adhx.yml`](deploy/caprover/adhx.yml)                                                                        |
+| Zeabur                                                  | [Template](deploy/zeabur/template.yaml) (button once it's published)                                                                                                     |
+| Dokploy, Coolify, CasaOS, Synology, TrueNAS             | Paste [`deploy/one-click/docker-compose.yml`](deploy/one-click/docker-compose.yml)                                                                                       |
+| Your own Compose, with Caddy for HTTPS                  | [`deploy/vps`](deploy/vps/docker-compose.yml): `ADHX_DOMAIN=adhx.example.com docker compose up -d`                                                                       |
+| Unraid                                                  | [Container template](deploy/unraid/adhx.xml)                                                                                                                             |
+| Umbrel                                                  | [App folder](deploy/umbrel/adhx) (not in the Umbrel store yet)                                                                                                           |
+| UGREEN NAS                                              | [UGOS Pro walkthrough](deploy/nas/ugreen.md)                                                                                                                             |
+
+The installer sets up Docker if it's missing, keeps ADHX in `/opt/adhx` and prints the link that makes you the owner. Run it again to update; add `ADHX_DOMAIN` later and it moves to HTTPS with everything kept.
 
 Wherever it runs, the first screen asks for a setup code. It's in the server log, or in the host's dashboard when the template made one (`SETUP_CODE`). That way, reaching a fresh server first isn't enough to take it over.
 
