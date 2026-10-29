@@ -59,6 +59,9 @@ export async function register(): Promise<void> {
   // copies. Off with KEEP_MEDIA=off, and under test.
   const { startKeeping } = await import('@/lib/keep/worker')
   startKeeping()
+  // The admin System page's backlog chart: queue sizes every five minutes.
+  const { startBacklogSampler } = await import('@/lib/admin/boards/system')
+  startBacklogSampler()
   // Links shared from the phone app, read and saved in the background.
   const { startSaveQueue } = await import('@/lib/app/save-queue')
   startSaveQueue()

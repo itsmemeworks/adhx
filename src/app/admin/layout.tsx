@@ -7,6 +7,7 @@ import { getCurrentUserId } from '@/lib/auth/session'
 import { requireAdmin } from '@/lib/admin/guard'
 import { waitingCount } from '@/lib/auth/approval'
 import { serverInfo } from '@/lib/admin/boards/overview'
+import { systemProblems } from '@/lib/admin/boards/system'
 import { AdminShell } from '@/components/next/admin/AdminShell'
 
 export const dynamic = 'force-dynamic'
@@ -40,6 +41,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     processing: count(
       sql`SELECT COUNT(*) AS n FROM keep_jobs WHERE status = 'unavailable' AND accepted_at IS NULL`,
     ),
+    system: await systemProblems(now),
     invites: count(sql`
       SELECT COUNT(*) AS n FROM invites i JOIN users m ON m.id = i.created_by
       WHERE i.used_by IS NULL AND i.revoked_at IS NULL AND i.expires_at > ${now}

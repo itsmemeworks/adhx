@@ -6,6 +6,9 @@
  * answer" (Jev only ever refines; it is never required).
  */
 
+import { trackServiceCall } from '@/lib/ops/service-calls'
+import { extra } from '@/lib/settings/extras'
+
 const ENDPOINT = 'https://api.typesafe.ai/v1/systemone'
 
 export type JevQuestion =
@@ -21,7 +24,7 @@ export interface JevAnswer {
 }
 
 export function jevAvailable(): boolean {
-  return Boolean(process.env['TYPESAFE_API_KEY'])
+  return Boolean(extra('TYPESAFE_API_KEY'))
 }
 
 /**
@@ -37,11 +40,21 @@ export async function askJev(
   state: Record<string, unknown>,
   questions: Record<string, JevQuestion>,
   timeoutMs: number,
+  /** What the answer is for, as the admin System page lists it. */
+  purpose = 'other',
+): Promise<Record<string, JevAnswer>> {
+  return trackServiceCall('jev', purpose, () => ask(state, questions, timeoutMs))
+}
+
+async function ask(
+  state: Record<string, unknown>,
+  questions: Record<string, JevQuestion>,
+  timeoutMs: number,
 ): Promise<Record<string, JevAnswer>> {
   const response = await fetch(ENDPOINT, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${process.env['TYPESAFE_API_KEY']}`,
+      Authorization: `Bearer ${extra('TYPESAFE_API_KEY')}`,
       'Content-Type': 'application/json',
     },
     body: wellFormedJson({ model: 'jev-latest', state, questions }),

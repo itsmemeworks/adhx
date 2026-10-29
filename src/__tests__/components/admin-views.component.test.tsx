@@ -79,7 +79,7 @@ describe('AdminNav', () => {
     )
     expect(within(nav).getByLabelText('1 need you')).toBeInTheDocument()
     expect(within(nav).getByLabelText('2 need you')).toBeInTheDocument()
-    expect(within(nav).getAllByRole('link')).toHaveLength(9)
+    expect(within(nav).getAllByRole('link')).toHaveLength(10)
   })
 })
 

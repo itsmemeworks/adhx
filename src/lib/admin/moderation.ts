@@ -63,6 +63,8 @@ export type AdminAuditAction =
   | 'resume_work'
   | 'retry_failed'
   | 'keep_link_only'
+  | 'set_setting'
+  | 'test_service'
 
 function nowIso(): string {
   return new Date().toISOString()

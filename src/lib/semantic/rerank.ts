@@ -79,6 +79,7 @@ async function scoreWithJev(
       ]),
     ),
     TIMEOUT_MS,
+    'search refine',
   )
   const scores = new Map<string, number>()
   candidates.forEach((c, i) => {

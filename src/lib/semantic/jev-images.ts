@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto'
+import { trackServiceCall } from '@/lib/ops/service-calls'
+import { extra } from '@/lib/settings/extras'
 import type { JevAnswer, JevQuestion } from './jev'
 
 export const CHANNEL_IMAGE_MODEL = 'jev-1.14.0'
@@ -6,11 +8,18 @@ export type VisualPost = { id: string; words: string; jpeg: Uint8Array }
 
 /** Explicitly separate from text refinement: a key alone never enables image uploads. */
 export function channelImagesEnabled(): boolean {
-  return process.env['TYPESAFE_CHANNEL_IMAGES'] === 'on' && !!process.env['TYPESAFE_API_KEY']
+  return extra('TYPESAFE_CHANNEL_IMAGES') === 'on' && !!extra('TYPESAFE_API_KEY')
 }
 
 /** Bounded multipart request; callers supply only eligible public source content. */
 export async function askJevImages(
+  posts: VisualPost[],
+  questions: Record<string, JevQuestion>,
+): Promise<Record<string, JevAnswer>> {
+  return trackServiceCall('jev', 'channel pictures', () => askImages(posts, questions))
+}
+
+async function askImages(
   posts: VisualPost[],
   questions: Record<string, JevQuestion>,
 ): Promise<Record<string, JevAnswer>> {
@@ -52,7 +61,7 @@ export async function askJevImages(
     redirect: 'error',
     signal: AbortSignal.timeout(15_000),
     headers: {
-      Authorization: `Bearer ${process.env['TYPESAFE_API_KEY']}`,
+      Authorization: `Bearer ${extra('TYPESAFE_API_KEY')}`,
       'TypeSafe-Danger-Zone-Images': 'true',
     },
   })

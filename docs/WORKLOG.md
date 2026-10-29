@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-29 — Admin → System: is it working, and optional extras
+
+- Owner: see whether the queues and the optional Mac helper actually work, with this server's setup (a UGREEN NAS) and the optional services (Jev …) visualised, and let admins switch on extras they didn't know about at setup.
+- `/admin/system`: checks with a fix each (queues, processes, Mac helper, outside services, disk, yt-dlp/FFmpeg, address); a map (server box with processes and queues → helper with what's waiting/held → services); per queue waiting/working/retrying/failed, oldest wait, a 5-minute backlog line (in memory since start) and finished per hour (24 h, from the DB); every setting with secrets as Set/Not set. Menu badge counts broken checks; refreshes every 15 s.
+- The helper now reports why it's turned away (wrong/no token, not remote, bad server token) and why a connected helper is refused work (model/version mismatch). Jev (per purpose), email and FxTwitter calls are counted with a failure kind only.
+- Optional extras (`src/lib/settings/extras.ts`): Jev key and pictures, Resend/SMTP/from, X app id/secret, `SERVER_LABEL`, saved encrypted in `server_settings`; env wins; Test Jev / Send me a test email. Audited by name only.
+- README "The admin area" + "point your AI agent at the repo"; site `#admin` section (a drawing, not a screenshot) and an agent line in Self-host. Site not republished.
+- Follow-ups: backlog history is lost on restart (persist samples if wanted); other env settings (keep, indexing) stay environment-only because they need a restart.
+
 ## 2026-10-29 — Make Right now and thumbnails fast
 
 - Owner: Right now took ~15 s and every thumbnail 10 s+. Measured on a synthetic bench library (400 posts, 1,599 saves, 4–5 MB kept photos; never the owner's DB), production builds.

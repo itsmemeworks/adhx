@@ -8,6 +8,8 @@ import { captureException } from '@/lib/sentry'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 import { ADMIN_LOGIN_TOKEN_TTL_MS } from '@/lib/auth/login-token-policy'
 import { appUrl } from '@/lib/routes/app-url'
+import { trackServiceCall } from '@/lib/ops/service-calls'
+import { extra } from '@/lib/settings/extras'
 
 /**
  * How a sign-in link reaches someone:
@@ -39,7 +41,7 @@ function flag(name: string): boolean | null {
 
 /** Which way links go on this server (also shown to admins). */
 export function signInDelivery(): SignInDelivery | null {
-  if (process.env.RESEND_API_KEY || process.env['SMTP_URL']) return 'email'
+  if (extra('RESEND_API_KEY') || extra('SMTP_URL')) return 'email'
   const held = flag('EMAIL_LINKS_TO_ADMIN')
   if (held) return 'admin'
   if (process.env.NODE_ENV !== 'production') return 'log'
@@ -58,11 +60,11 @@ async function renderEmail(url: string, intent: 'signin' | 'change') {
 type Message = { subject: string; html: string; text: string }
 
 async function sendWithResend(to: string, message: Message) {
-  const from = process.env.EMAIL_FROM || 'ADHX <login@adhx.com>'
+  const from = extra('EMAIL_FROM') || 'ADHX <login@adhx.com>'
   const response = await fetchWithTimeout('https://api.resend.com/emails', SEND_TIMEOUT_MS, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      Authorization: `Bearer ${extra('RESEND_API_KEY')}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ from, to, ...message }),
@@ -98,10 +100,10 @@ export function smtpOptions(raw: string) {
 
 async function sendWithSmtp(to: string, message: Message) {
   const nodemailer = await import('nodemailer')
-  const transport = nodemailer.createTransport(smtpOptions(process.env['SMTP_URL'] ?? ''))
+  const transport = nodemailer.createTransport(smtpOptions(extra('SMTP_URL') ?? ''))
   try {
     await transport.sendMail({
-      from: process.env.EMAIL_FROM || 'ADHX <login@localhost>',
+      from: extra('EMAIL_FROM') || 'ADHX <login@localhost>',
       to,
       subject: message.subject,
       html: message.html,
@@ -232,8 +234,9 @@ export async function sendMagicLinkEmail(params: {
 
   try {
     const message = await renderEmail(url, intent)
-    if (process.env.RESEND_API_KEY) await sendWithResend(email, message)
-    else await sendWithSmtp(email, message)
+    await trackServiceCall('email', 'sign-in', () =>
+      extra('RESEND_API_KEY') ? sendWithResend(email, message) : sendWithSmtp(email, message),
+    )
     return { ok: true, delivery }
   } catch (error) {
     captureException(error, { endpoint: 'sendMagicLinkEmail' })
@@ -263,11 +266,28 @@ export async function sendSignInCodeEmail(params: {
     const { SignInCodeEmail } = await import('@/emails/sign-in-code')
     const html = await render(SignInCodeEmail({ code, origin }))
     const message = { subject: `Your ADHX code: ${code}`, html, text: toPlainText(html) }
-    if (process.env.RESEND_API_KEY) await sendWithResend(email, message)
-    else await sendWithSmtp(email, message)
+    await trackServiceCall('email', 'sign-in', () =>
+      extra('RESEND_API_KEY') ? sendWithResend(email, message) : sendWithSmtp(email, message),
+    )
     return { ok: true, delivery }
   } catch (error) {
     captureException(error, { endpoint: 'sendSignInCodeEmail' })
     return { ok: false }
   }
+}
+
+/**
+ * Admin → System → Send a test email: one plain message to the admin's own
+ * address, through whichever service is set up. Throws with the failure.
+ */
+export async function sendTestEmail(to: string): Promise<void> {
+  if (signInDelivery() !== 'email') throw new Error('No email service is set up')
+  const message: Message = {
+    subject: 'ADHX can send email',
+    html: '<p>This is a test from Admin → System. Sign-in links will arrive the same way.</p>',
+    text: 'This is a test from Admin → System. Sign-in links will arrive the same way.',
+  }
+  await trackServiceCall('email', 'test', () =>
+    extra('RESEND_API_KEY') ? sendWithResend(to, message) : sendWithSmtp(to, message),
+  )
 }

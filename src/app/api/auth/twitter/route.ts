@@ -12,13 +12,13 @@ import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { metrics } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
 import { appUrl } from '@/lib/routes/app-url'
-
-const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
+import { extra } from '@/lib/settings/extras'
 
 // GET /api/auth/twitter - Initiate OAuth to *link* X to an existing account
 // (bookmark sync). X is not a sign-in method — unsigned visitors are bounced.
 // Supports ?returnUrl=/path to redirect after linking.
 export async function GET(request: NextRequest) {
+  const CLIENT_ID = extra('TWITTER_CLIENT_ID')
   if (!CLIENT_ID) {
     return NextResponse.json({ error: 'Twitter client ID not configured' }, { status: 500 })
   }

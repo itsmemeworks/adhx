@@ -53,6 +53,9 @@ type SupervisorState = {
   started: boolean
   children: Partial<Record<ChildRole, ChildProcess>>
   restarts: Record<ChildRole, number>
+  /** When each running child started, and how the last one ended (for admins). */
+  since?: Partial<Record<ChildRole, number>>
+  lastExit?: Partial<Record<ChildRole, { at: number; code: number | null; signal: string | null }>>
   activity: JobActivity | null
   pending: Map<number, Pending>
   nextId: number
@@ -98,6 +101,7 @@ function spawn(role: ChildRole): void {
     stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
   })
   state.children[role] = child
+  ;(state.since ??= {})[role] = startedAt
   if (role === 'jobs' && child.pid) {
     try {
       os.setPriority(child.pid, JOBS_NICE)
@@ -109,6 +113,7 @@ function spawn(role: ChildRole): void {
   child.on('error', (error) => captureException(error, { endpoint: `semantic.${role}.spawn` }))
   child.on('exit', (code, signal) => {
     if (state.children[role] === child) delete state.children[role]
+    ;(state.lastExit ??= {})[role] = { at: Date.now(), code, signal }
     if (role === 'jobs') state.activity = null
     if (role === 'query') failPending(new Error('Query process exited'))
     if (!state.started) return
@@ -199,6 +204,37 @@ export function wakeJobs(): void {
   startSemanticProcesses()
   const child = state.children.jobs
   if (child?.connected) child.send({ type: 'wake' } satisfies ParentMessage)
+}
+
+export interface ChildStatus {
+  running: boolean
+  /** When the running process started (ms), else null. */
+  since: number | null
+  /** Restarts since it last ran steadily for five minutes. */
+  restarts: number
+  lastExit: { at: number; code: number | null; signal: string | null } | null
+}
+
+/** Whether the search and understanding processes are up, for the admin System page. */
+export function semanticStatus(): {
+  started: boolean
+  queriesAnswered: number
+  children: Record<ChildRole, ChildStatus>
+} {
+  const child = (role: ChildRole): ChildStatus => {
+    const running = !!state.children[role]?.connected
+    return {
+      running,
+      since: running ? (state.since?.[role] ?? null) : null,
+      restarts: state.restarts[role],
+      lastExit: state.lastExit?.[role] ?? null,
+    }
+  }
+  return {
+    started: state.started,
+    queriesAnswered,
+    children: { query: child('query'), jobs: child('jobs') },
+  }
 }
 
 /** What the jobs process is working on right now, if anything. */

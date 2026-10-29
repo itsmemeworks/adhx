@@ -106,6 +106,7 @@ async function chooseWithJev(candidates: string[], samples: string[]): Promise<s
         },
       },
       NAMING_TIMEOUT_MS,
+      'moment names',
     )
     const pick = answers['name']?.choice
     const i = pick ? ids.indexOf(pick) : -1

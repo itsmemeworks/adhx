@@ -7,6 +7,7 @@ import { memberAvatar } from '@/lib/people/savers'
 import { avatarSourceOf, readPreferences } from '@/lib/preferences/server'
 import { PRIVATE_DEFAULT_KEY } from '@/lib/bookmarks/privacy'
 import { noteOpen, touchLastSeen } from '@/lib/people/last-seen'
+import { extra } from '@/lib/settings/extras'
 
 const SIGNED_OUT = {
   authenticated: false,
@@ -52,7 +53,7 @@ export async function GET() {
     identities: account.identities,
     xConnected: account.xConnected,
     // Whoever runs this ADHX may not have set up an X app.
-    xAvailable: !!process.env.TWITTER_CLIENT_ID,
+    xAvailable: !!extra('TWITTER_CLIENT_ID'),
     isAdmin,
     // With no email, sign-in links wait for an admin to pass on: say how many.
     ...(isAdmin && signInDelivery() === 'admin'

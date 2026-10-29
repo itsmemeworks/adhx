@@ -14,9 +14,7 @@ import { metrics, captureException } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
 import { isUserBanned } from '@/lib/admin/moderation'
 import { appUrl } from '@/lib/routes/app-url'
-
-const CLIENT_ID = process.env.TWITTER_CLIENT_ID!
-const CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET!
+import { extra } from '@/lib/settings/extras'
 
 // GET /api/auth/twitter/callback - Handle OAuth callback
 export async function GET(request: NextRequest) {
@@ -81,8 +79,8 @@ export async function GET(request: NextRequest) {
     const tokens = await exchangeCodeForTokens(
       code,
       consumedState.codeVerifier,
-      CLIENT_ID,
-      CLIENT_SECRET,
+      extra('TWITTER_CLIENT_ID')!,
+      extra('TWITTER_CLIENT_SECRET')!,
       getOAuthRedirectUri(),
     )
 

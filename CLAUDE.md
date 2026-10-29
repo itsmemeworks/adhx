@@ -491,6 +491,20 @@ Short notes on what is easy to get wrong. Each links to the full description.
 - Hiding a post writes `moderated_posts`, `activity.hidden` and `admin_audit`
   in one transaction. Banning writes `user_bans`; the account's sessions,
   phone keys and invites stop working.
+- **Admin → System** (`src/lib/admin/boards/system.ts`) answers "is it
+  working": a check per queue, worker, outside service and setup item, a map,
+  backlog samples and hourly throughput. A queue counts as waiting only by its
+  worker's own claim rules, so a deliberately skipped backlog never reads as
+  stalled. Mac helper claims and refusals (`processing/presence.ts`) and
+  outside-service outcomes (`src/lib/ops/service-calls.ts`) are in memory and
+  keep only a kind of failure, never a message body, address or key. Wrap a
+  new outside call in `trackServiceCall`.
+- **Optional extras** (Jev, email, X app keys, `SERVER_LABEL`) can be set in
+  Admin → System. Read them only through `extra()` (`src/lib/settings/extras.ts`),
+  never `process.env`: the environment wins, then the encrypted
+  `server_settings` `extra.*` row. `SESSION_SECRET`'s fallback to
+  `TWITTER_CLIENT_SECRET` stays environment-only, so saving an X secret never
+  re-signs sessions.
 
 ### The public demo
 
@@ -518,6 +532,7 @@ PARITY_DEMO=1`) daily. Never add a demo write path to the app itself.
 | `PROCESSING_MODE`, `PROCESSING_WORKER_TOKEN`                 | Local processing or the Mac helper.                                   |
 | `TYPESAFE_API_KEY`                                           | Optional Jev rerank and naming. Never commit or log it.               |
 | `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET`                 | Optional X bookmark sync.                                             |
+| `SERVER_LABEL`                                               | What Admin → System calls this machine. Also settable there.          |
 | `TRUST_PROXY_IP_HEADERS`                                     | `true` only behind a proxy that overwrites `X-Forwarded-For`.         |
 
 ## Testing
