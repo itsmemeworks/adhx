@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.11.0](https://github.com/itsmemeworks/adhx/compare/v2.10.0...v2.11.0) (2026-10-29)
+
+
+### Features
+
+* **admin:** system page with health checks, a setup map and optional extras ([#669](https://github.com/itsmemeworks/adhx/issues/669)) ([b34bde0](https://github.com/itsmemeworks/adhx/commit/b34bde0539c76e7e15e5eff22773f08b746d16e5))
+
+
+### Performance Improvements
+
+* make right now and thumbnails load fast ([#667](https://github.com/itsmemeworks/adhx/issues/667)) ([ef6a3e8](https://github.com/itsmemeworks/adhx/commit/ef6a3e8fbd48b748415e05c6a0ac494db841b17a))
+
 ## [2.10.0](https://github.com/itsmemeworks/adhx/compare/v2.9.0...v2.10.0) (2026-10-29)
 
 
