@@ -613,10 +613,10 @@ function Features() {
       <Feature
         id="f-invites"
         kicker="Invites"
-        title="One link. They’re in, phone and all."
+        title="One link in the group chat. Everyone’s in."
         short={
           <p className="m-0">
-            It signs a friend in and pairs their phone. No password for your mum to forget.
+            Drop one link in the chat. Each friend picks a name; you let them in. No passwords.
           </p>
         }
         mock={
@@ -631,9 +631,9 @@ function Features() {
         }
       >
         <p className="m-0">
-          Send a friend one link: it signs them in and pairs their phone. No password, nothing for
-          your mum to remember. Each link works once and runs out after a week, and you can approve
-          anyone your friends invite before they’re in.
+          Drop one group link in the chat. Each friend picks a name, and you let them in with a tap:
+          no password, no email, nothing for your mum to remember. Inviting just one person? Their
+          own link signs them in and pairs their phone in one go. Links run out after a week.
         </p>
       </Feature>
     </div>

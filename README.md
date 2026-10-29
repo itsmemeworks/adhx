@@ -3,10 +3,12 @@
 [![CI](https://github.com/itsmemeworks/adhx/actions/workflows/ci.yml/badge.svg)](https://github.com/itsmemeworks/adhx/actions/workflows/ci.yml)
 [![Release](https://github.com/itsmemeworks/adhx/actions/workflows/release-please.yml/badge.svg)](https://github.com/itsmemeworks/adhx/actions/workflows/release-please.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
+[![Latest release](https://img.shields.io/github/v/release/itsmemeworks/adhx?label=release)](https://github.com/itsmemeworks/adhx/releases/latest)
+[![Live demo](https://img.shields.io/badge/demo-demo.adhx.com-ffd23f)](https://demo.adhx.com)
 
 > **Your friends have better taste than the algorithm.**
 
-ADHX is a private feed of the best posts from X, Instagram, TikTok, YouTube, Reddit and nine more networks, picked by your closest friends and family instead of a recommendation engine with quarterly targets.
+ADHX is a private social network for your friends and family. One of you runs it; everyone shares the best posts they find on X, Instagram, TikTok, YouTube, Reddit and nine more networks into one feed, picked by people who know you instead of a recommendation engine with quarterly targets.
 
 Each of you saves the good stuff from whatever app you're in. ADHX downloads a real copy of every post, in the best quality the network offers, onto a server you run, and plays it from there. Deleted on X? Still here. Can't remember the caption? Describe it ("the baby arguing with a hamster") and ADHX finds it. Then send the actual video to the group chat, not a link that dies next month.
 
@@ -47,14 +49,14 @@ https://github.com/user-attachments/assets/56130b2a-1e79-4d70-85e9-177de0efdb91
 
 - **Home.** What your people saved that you haven't seen yet, full screen, one after another. Every post says why it's there (saved together, sent to you, a friend you watch a lot). Then it stops: "You're all caught up. Go touch grass."
 - **A real copy of everything.** Every save is downloaded once, at the best quality available (up to 4K), and served by your ADHX. Nothing streams from the networks at watch time, and nothing vanishes when they delete it.
-- **Search by what you remember.** Words, what's in the picture, sampled video frames, what's said in a video, and text on screen (that meme's caption, burned-in subtitles). It runs on your own server.
+- **Search by what you remember.** Words, what's in the picture, sampled video frames, what's said in a video, and text on screen (that meme's caption, burned-in subtitles). Three open models do it on your own server, free: EmbeddingGemma 2, Whisper and Florence-2. No API key, no cloud bill.
 - **Faces and notes.** See which of your people saved what: their notes float up as the post plays, and a tap on the face shows everyone who saved it, reacted or watched. Saves are shared with your people by default; **Just for me** keeps one to yourself.
 - **Reactions everywhere.** 😂 or "who sent this 💀" on any post. Reactions stay on the post, and **Channels → Reactions** plays everything your people reacted to.
 - **Send the file, not the link.** Straight to a friend's Home with a note, or out to WhatsApp, Messages or anywhere else as the actual video.
 - **Channels.** ADHX groups everyone's saves into rabbit holes and names them, and gives every friend a channel of everything they kept.
 - **Right now.** When a few of you save the same kind of thing at once, it goes live. **Tune in** to watch together and see who's watching with you.
 - **The original, when you want it.** The network's logo on every post opens who posted it, when, and everything they wrote, with a link back.
-- **Invites with an optional bouncer.** Make a link, send it, they pick a name, done. Or approve each person yourself.
+- **Invites with a bouncer.** Drop one group link in the chat; each friend picks a name and you let them in. Or send someone their own link and they're straight in. No passwords, no email needed.
 - **Phone apps** for iPhone and Android that do all of this, plus share-menu saving from any app.
 
 <details>
@@ -95,7 +97,7 @@ Screenshots use the sample friends from the [design parity harness](e2e/parity/R
 | Imgur      | Images and albums                        | Imgur blocks the UK; a server there can't keep Imgur posts                      |
 | Bluesky    | Video and pictures                       |                                                                                 |
 
-Downloads run through [yt-dlp](https://github.com/yt-dlp/yt-dlp), plus each network's public link-preview data for picture posts. ADHX never asks for your passwords on any of these networks. Posts that are private, blocked or protected by DRM may not download.
+Downloads run through [yt-dlp](https://github.com/yt-dlp/yt-dlp), plus each network's public link-preview data for picture posts. ADHX never asks for your passwords on any of these networks. Posts that are private, blocked or protected by DRM can't be kept. When a network changes something, saving from it can break until yt-dlp catches up; copies you already kept are safe.
 
 ## How it works
 
@@ -132,7 +134,7 @@ In words: you save a link from your phone, the web or the extension. Your server
 
 ## Run your own
 
-ADHX isn't a hosted service: you run it. Any machine with Docker will do, with about 2 GB of memory to spare and some disk (1,000 mixed saves come to roughly 10–30 GB).
+ADHX isn't a hosted service: you run it. Any machine with Docker will do, amd64 or arm64, no GPU needed. 4 GB of memory is comfortable (about 2 GB with speech and text on screen switched off), and 1,000 mixed saves come to roughly 10–30 GB of disk.
 
 ### Try it in a minute
 
@@ -141,7 +143,7 @@ docker run -d --name adhx -p 3000:3000 -v adhx:/data ghcr.io/itsmemeworks/adhx
 docker logs adhx | grep setup
 ```
 
-Open the link it prints, add your email and pick your name: you're the owner. Then invite your people from **Settings → Your people → Make a link**. There's nothing to configure: ADHX makes its own secret and works out its own address. The first start also downloads the search models (about 800 MB) in the background.
+Open the link it prints, add your email and pick your name: you're the owner. Then go to **Admin → Invites → Make a group link**, drop it in your group chat, and let people in as they pick their names. There's nothing to configure: ADHX makes its own secret and works out its own address. The first start also downloads the search models (about 800 MB) in the background.
 
 **Rather have an AI do it?** Every guide here is written by hand, but you don't have to read them. Point your favourite coding agent (Claude Code, Codex, Cursor, Gemini CLI …) at this repository and ask it to set ADHX up on your server. [`AGENTS.md`](AGENTS.md), [`CLAUDE.md`](CLAUDE.md) and the deploy recipes tell it everything it needs, from the installer to the Mac helper.
 
