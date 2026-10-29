@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.12.0](https://github.com/itsmemeworks/adhx/compare/v2.11.0...v2.12.0) (2026-10-29)
+
+
+### Features
+
+* **admin:** change settings from system and show each fact once ([#670](https://github.com/itsmemeworks/adhx/issues/670)) ([d70ee79](https://github.com/itsmemeworks/adhx/commit/d70ee79f47b12a13424d5d418cdad46e3e7e13ef))
+
 ## [2.11.0](https://github.com/itsmemeworks/adhx/compare/v2.10.0...v2.11.0) (2026-10-29)
 
 
