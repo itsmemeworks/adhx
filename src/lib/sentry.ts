@@ -513,7 +513,22 @@ export function initSentry() {
     // http.Server.emit, which recurses when duplicated across Next chunks.
     integrations: (defaultIntegrations) =>
       defaultIntegrations.filter((integration) => integration.name !== 'Http'),
-    sendDefaultPii: false,
+    // SDK 11 collects all of these unless told not to (it replaced
+    // `sendDefaultPii: false`). Keep users, requests, queries and local
+    // variables out of Sentry; only the stack and our sanitized context go.
+    dataCollection: {
+      userInfo: false,
+      cookies: false,
+      httpHeaders: false,
+      httpBodies: [],
+      urlQueryParams: false,
+      graphQL: { document: false, variables: false },
+      genAI: { inputs: false, outputs: false },
+      mcp: { inputs: false, outputs: false },
+      databaseQueryData: false,
+      queues: false,
+      stackFrameVariables: false,
+    },
     beforeSend: (event) => sanitizeSdkPayload(event),
     beforeBreadcrumb: (breadcrumb) => sanitizeSdkPayload(breadcrumb),
     beforeSendTransaction: (event) => sanitizeSdkPayload(event),

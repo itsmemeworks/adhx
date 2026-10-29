@@ -9,14 +9,14 @@ importers:
   .:
     devDependencies:
       '@types/chrome':
-        specifier: ^0.1.43
-        version: 0.1.43
+        specifier: ^0.3.6
+        version: 0.3.6
       extension:
-        specifier: ^4.1.34
-        version: 4.1.34(svelte@5.56.10)(typescript@5.9.3)(webpack@5.109.2(postcss@8.5.23))
+        specifier: ^4.1.35
+        version: 4.1.35(svelte@5.56.10)(typescript@7.0.2)(webpack@5.109.2(postcss@8.5.23))
       typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
+        specifier: ^7.0.2
+        version: 7.0.2
 
 packages:
 
@@ -645,17 +645,14 @@ packages:
   '@tybys/wasm-util@0.10.4':
     resolution: {integrity: sha512-W3c4gRigFS0T/Ma4qIYF3GDAc5AQdHb1yL5znJT1Zv1YaD9Kitx656wBjvr19qbiosmZT8lWDM5BEMynUqX65A==}
 
-  '@types/chrome@0.1.43':
-    resolution: {integrity: sha512-ukH/HhmR6ht+UTX3PLUWJxgJ/RQcK2Foj4lBzsF24SIWsXgqhGuXqjd8FFuwioPP7d/JUKLM4g8GZxw3F4HTcA==}
+  '@types/chrome@0.3.6':
+    resolution: {integrity: sha512-NXCrCBefCHCKMVbkaxfBQqyP766Wg85S2FQhixCCxq7AtjJwoEaja2y5NSqCzpihIi9mPqhaF5RuybTnrdYD2Q==}
+
+  '@types/chrome@0.3.7':
+    resolution: {integrity: sha512-jWZgbHqWbTL1a5+PoyN0OJutNyejWgyZ5MdcvKo6iJE1TNRtXR3FxsC4WzNl52yZWPidfWC8NV/VUNZf+OFKcA==}
 
   '@types/estree@1.0.9':
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
-
-  '@types/filesystem@0.0.36':
-    resolution: {integrity: sha512-vPDXOZuannb9FZdxgHnqSwAG/jvdGM8Wq+6N4D/d80z+D4HWH+bItqsZaVRQykAn6WEVeEkLm2oQigyHtgb0RA==}
-
-  '@types/filewriter@0.0.33':
-    resolution: {integrity: sha512-xFU8ZXTw4gd358lb2jw25nxY9QAgqn2+bKKjKOYfNCzN4DKCFetK7sPtrlpg66Ywe3vWY9FNxprZawAh9wfJ3g==}
 
   '@types/har-format@1.2.16':
     resolution: {integrity: sha512-fluxdy7ryD3MV6h8pTfTYpy/xQzCFC7m89nOH9y94cNqJ1mDIDPut7MnRHI3F6qRmh/cT2fUjG1MLdCNb4hE9A==}
@@ -674,6 +671,126 @@ packages:
 
   '@types/webextension-polyfill@0.12.6':
     resolution: {integrity: sha512-XTNQSGiQaipt1iocbpHSjYHd+Ujcya+K5H4H2uH7JwycReTFixoYqGWIKih2Ec072NuEW2lAyXRDYmlEx00+cw==}
+
+  '@typescript/typescript-aix-ppc64@7.0.2':
+    resolution: {integrity: sha512-MTKKkWB7p/0E9xi1d1tHtZ5PiLkGEMIq88pK2CubZjOsLtYTLqhgIgi6zepFa+9GHZ6h05NMCkQxGKiPXMxXtQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [ppc64]
+    os: [aix]
+
+  '@typescript/typescript-darwin-arm64@7.0.2':
+    resolution: {integrity: sha512-gowzar9MwS/aRWp6f3a4KUqzRjAZjOsmGNCM6LcTgXum+dBfgsBVMN+AgvOCCbguXyick6LJhpBszxMebJ8syA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@typescript/typescript-darwin-x64@7.0.2':
+    resolution: {integrity: sha512-SZ9xZInqApNlNGc9s0W1VSsktYSOe9cFqNOIqmN1Gs8SmkjKZYFt017G4VwPxASInODuAdbTW7sXiFUf893RgA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@typescript/typescript-freebsd-arm64@7.0.2':
+    resolution: {integrity: sha512-W5NH4y/J0plIIS5b2xvTEkU7JFxyqdMAOgf+Ilhl0vHQXKO5dZoxd+C/jEtq56c4F3wk71RB4BMRQ2XdI+bwYQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [freebsd]
+
+  '@typescript/typescript-freebsd-x64@7.0.2':
+    resolution: {integrity: sha512-UMGDx5sTpzNw3WiPebH7l90IWfJggEd+egHt/q6p7/Cm3zqoV7VxkGXt+3DxPIw8CcmvAB0j3sVVfbhX+M4Tpw==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [freebsd]
+
+  '@typescript/typescript-linux-arm64@7.0.2':
+    resolution: {integrity: sha512-Qh4eU4/y3yDjnfjjyPYihMj5/ODIlmt+Bzu17OI+fiSRDW57QmU5SiN63exPRNJPKUzcc1INa1NXdrJ+MqHjUQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@typescript/typescript-linux-arm@7.0.2':
+    resolution: {integrity: sha512-gffT3xPz9sR7j/YJExkyPntrI0P2EP9XbOyWzth2/Gs0RstK+90RBcO0ncXoXy/beYll1SXw846Nf2zdnEz0QQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm]
+    os: [linux]
+
+  '@typescript/typescript-linux-loong64@7.0.2':
+    resolution: {integrity: sha512-uEHck9i8hoAzXPiYRib1O7miOnz23SxIeVl6F4LXox+qov1K35jHcEW6VHKvZI+pyvl7fZEP4MCU5LYvIq1GuQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [loong64]
+    os: [linux]
+
+  '@typescript/typescript-linux-mips64el@7.0.2':
+    resolution: {integrity: sha512-R4KvAMnE43W5Qeqb0Ly56O3mWMWIAgsMyz36DCaycd5nbg/9kzm0liw3JocfRqyJY0KPmzFjbswozXyW0DnIYA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [mips64el]
+    os: [linux]
+
+  '@typescript/typescript-linux-ppc64@7.0.2':
+    resolution: {integrity: sha512-DORx5b3sd/4S7eayxm4FQv+A7CrkUIGRaHiwI8oiHTAI1fAPWhF4J0vAlkC8biAlHSVVwxMQ3tjZ2/DVbnQiiA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [ppc64]
+    os: [linux]
+
+  '@typescript/typescript-linux-riscv64@7.0.2':
+    resolution: {integrity: sha512-wf0jqEDOjrPRnKwYRyyJDRo11KMbvMFrU+q4zqKyChODBzvlkbhNQfKvLxQCcwTpdDaXSHZTVuh0JoCrKCUMHQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [riscv64]
+    os: [linux]
+
+  '@typescript/typescript-linux-s390x@7.0.2':
+    resolution: {integrity: sha512-IkwJc3L7yhytWd/ewjyxNDfOmswCm9GWMJT/ue/dU4aZNbwZeYAetq42VyLmsmSjvoX7z74X6ZaYCtzAr0EuGw==}
+    engines: {node: '>=16.20.0'}
+    cpu: [s390x]
+    os: [linux]
+
+  '@typescript/typescript-linux-x64@7.0.2':
+    resolution: {integrity: sha512-EYdf2cNg7rgCWJnxCdJ+F3V39O8ihb37eHAu1LK8oAFizgTQbPOK7zHHXbPt8rX24COqODXeI3sIf0fCXG7H/A==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [linux]
+
+  '@typescript/typescript-netbsd-arm64@7.0.2':
+    resolution: {integrity: sha512-+polYF4MF04aPpO5FTkHran9yUQDSXqy5GiSDKpsll5jy3l3+g9QLhpf39T+ePtefhXLOGrLl0QIjkQP6VnelA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [netbsd]
+
+  '@typescript/typescript-netbsd-x64@7.0.2':
+    resolution: {integrity: sha512-8YIT0EHM/3dq10ZOVF/A7pc/YSMtbcecct4rWtexrnSCHOPcpC2KTLXfTCR6vDpnSiY12heNb1GiN/wu+T/FyA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [netbsd]
+
+  '@typescript/typescript-openbsd-arm64@7.0.2':
+    resolution: {integrity: sha512-APT8+ClYnuYm1u9+kgGXoMj2VzWzcymwh2gNSQVySHfkRDGOTVkoWLjCmOQSaO+PoqQ57B0flRp9SA+7GnnkzQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [openbsd]
+
+  '@typescript/typescript-openbsd-x64@7.0.2':
+    resolution: {integrity: sha512-yX7s+Q0Dln0Dt9tEzZsAjXXR/+ytBM7AlglaqyeMPxQszJ1JhlJdZ6jLA+IzldHtflX81em7lDao1xXu+aRRkg==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [openbsd]
+
+  '@typescript/typescript-sunos-x64@7.0.2':
+    resolution: {integrity: sha512-dLJDGaLZ1D4HPQn62u1n8mBDkJREwMsAkCdkwd4Ieqw+x3TUyTsqY0YiBCtE6H6OzzgGk3iuZ3vFWRS+E8/d1g==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [sunos]
+
+  '@typescript/typescript-win32-arm64@7.0.2':
+    resolution: {integrity: sha512-Gyl1Vy6OsWesLzmq+EP0Fb7b4Nid5232AvcA2SFcdYreldpNtYFFofPjnt62y9hQy7VTaZp65ICJjuAQRaVcIQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@typescript/typescript-win32-x64@7.0.2':
+    resolution: {integrity: sha512-0BQ3HkAHHlKLSp1qRvf3SUhGpGsDuhB/jgFw75guyqbxJqEaS0Cw/VFO8i2nHglJUzQCRtMMR/IBAKE3ETMC4g==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [win32]
 
   '@vue/compiler-core@3.5.43':
     resolution: {integrity: sha512-zdiLhnbe1QQqgDT8xZMpNmyqZ3qlI+/Q/FHQco57Kwl/b05HhCzN6eVGN9QU9rbga4CrS0H5SYY8VGHZCt/1Hg==}
@@ -1114,12 +1231,12 @@ packages:
     resolution: {integrity: sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==}
     engines: {node: '>=0.8.x'}
 
-  extension-create@4.1.34:
-    resolution: {integrity: sha512-DEg/vdNDRQTWfj40ds+OTYd9w39N31hooj8yei9L1M/y02Mz9yuJEQODXGPaW93OHkn9PV//Fkr+6DbPxrkscg==}
+  extension-create@4.1.35:
+    resolution: {integrity: sha512-dhWSHwmBdgzGWPinukQBaCbXxQXFOn/3bXgjPjH5l4kmBBW7NSJCWiWZGovJnnpLR/M/8i76195lFQ2pmMsb3w==}
     engines: {node: '>=22.12'}
 
-  extension-develop@4.1.34:
-    resolution: {integrity: sha512-ZzKMenl2v6h1kpQpAcq/5l81AnFdJ065UE7xk2oFIIuo4PFERSAhRBZFH2ulPR1b6IUhiAxNzI8T0VQJSTL3jQ==}
+  extension-develop@4.1.35:
+    resolution: {integrity: sha512-ZvNN5uVqLy614KX8owUee5oUg269NolCOBY//PBqaxXZMpL4X1iDRwh/4zuQlWoAkZtVpmsLFK8/600qfR2jxg==}
     engines: {node: '>=22.12'}
 
   extension-from-store@0.2.5:
@@ -1127,12 +1244,12 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
-  extension-install@4.1.34:
-    resolution: {integrity: sha512-hSmIXVZFBCt/I9XtqRzRGHY7ZnUiGLy6Wo+jo28HigaFMt/tdWcW/ChCo8JOcXGzPSUwg82772cT6s7WkHV3rA==}
+  extension-install@4.1.35:
+    resolution: {integrity: sha512-xuhbGlMiGtjtFR4aKbmuQ2+7dD0gVhtQ7qYMqsVTGTZTnVIboUkXOpvoA25Rz/QlHUYWUiul4+WV04QO0m1iww==}
     engines: {node: '>=22.12'}
 
-  extension@4.1.34:
-    resolution: {integrity: sha512-9aSFjyUq4FT22F80F91UWMtc3xiwNCi4EOAIqg1DcG0G4EJTQynK81J6x0Ee6HHyj2mWURbP/D6NSA2yGyDllQ==}
+  extension@4.1.35:
+    resolution: {integrity: sha512-ZY/GnNJugy8ZwFwWfHirUsFQhSRjsqAGC63TiEmTN0O4cHLnViJCMc7gW27jXQPdGcCjwrlRoJ8t059T3csplg==}
     engines: {node: '>=22.12'}
     hasBin: true
 
@@ -1885,9 +2002,9 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
-  typescript@5.9.3:
-    resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
-    engines: {node: '>=14.17'}
+  typescript@7.0.2:
+    resolution: {integrity: sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA==}
+    engines: {node: '>=16.20.0'}
     hasBin: true
 
   undici-types@8.9.0:
@@ -2689,18 +2806,15 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@types/chrome@0.1.43':
+  '@types/chrome@0.3.6':
     dependencies:
-      '@types/filesystem': 0.0.36
+      '@types/har-format': 1.2.16
+
+  '@types/chrome@0.3.7':
+    dependencies:
       '@types/har-format': 1.2.16
 
   '@types/estree@1.0.9': {}
-
-  '@types/filesystem@0.0.36':
-    dependencies:
-      '@types/filewriter': 0.0.33
-
-  '@types/filewriter@0.0.33': {}
 
   '@types/har-format@1.2.16': {}
 
@@ -2715,6 +2829,66 @@ snapshots:
   '@types/trusted-types@2.0.7': {}
 
   '@types/webextension-polyfill@0.12.6': {}
+
+  '@typescript/typescript-aix-ppc64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-darwin-arm64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-darwin-x64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-freebsd-arm64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-freebsd-x64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-arm64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-arm@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-loong64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-mips64el@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-ppc64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-riscv64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-s390x@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-x64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-netbsd-arm64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-netbsd-x64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-openbsd-arm64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-openbsd-x64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-sunos-x64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-win32-arm64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-win32-x64@7.0.2':
+    optional: true
 
   '@vue/compiler-core@3.5.43':
     dependencies:
@@ -3006,14 +3180,14 @@ snapshots:
     dependencies:
       is-what: 4.1.16
 
-  cosmiconfig@9.0.2(typescript@5.9.3):
+  cosmiconfig@9.0.2(typescript@7.0.2):
     dependencies:
       env-paths: 2.2.1
       import-fresh: 3.3.1
       js-yaml: 4.3.2
       parse-json: 5.2.0
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 7.0.2
 
   cross-spawn@7.0.6:
     dependencies:
@@ -3145,7 +3319,7 @@ snapshots:
 
   events@3.3.0: {}
 
-  extension-create@4.1.34:
+  extension-create@4.1.35:
     dependencies:
       axios: 1.20.0
       cross-spawn: 7.0.6
@@ -3157,7 +3331,7 @@ snapshots:
       - debug
       - supports-color
 
-  extension-develop@4.1.34(svelte@5.56.10)(typescript@5.9.3)(webpack@5.109.2(postcss@8.5.23)):
+  extension-develop@4.1.35(svelte@5.56.10)(typescript@7.0.2)(webpack@5.109.2(postcss@8.5.23)):
     dependencies:
       '@babel/core': 7.29.7
       '@babel/preset-typescript': 7.29.7(@babel/core@7.29.7)
@@ -3186,7 +3360,7 @@ snapshots:
       parse5-utilities: 1.0.4
       pintor: 0.3.0
       postcss: 8.5.23
-      postcss-loader: 8.2.1(@rspack/core@2.2.3)(postcss@8.5.23)(typescript@5.9.3)(webpack@5.109.2(postcss@8.5.23))
+      postcss-loader: 8.2.1(@rspack/core@2.2.3)(postcss@8.5.23)(typescript@7.0.2)(webpack@5.109.2(postcss@8.5.23))
       postcss-preset-env: 11.1.1(postcss@8.5.23)
       postcss-scss: 4.0.9(postcss@8.5.23)
       preact: 11.0.0
@@ -3196,8 +3370,8 @@ snapshots:
       schema-utils: 4.8.1(webpack@5.109.2(postcss@8.5.23))
       svelte-loader: 3.2.4(svelte@5.56.10)
       tiny-glob: 0.2.9
-      vue: 3.5.43(typescript@5.9.3)
-      vue-loader: 17.4.2(@vue/compiler-sfc@3.5.43)(vue@3.5.43(typescript@5.9.3))(webpack@5.109.2(postcss@8.5.23))
+      vue: 3.5.43(typescript@7.0.2)
+      vue-loader: 17.4.2(@vue/compiler-sfc@3.5.43)(vue@3.5.43(typescript@7.0.2))(webpack@5.109.2(postcss@8.5.23))
       webextension-polyfill: 0.12.0
       webpack-merge: 6.0.1
       webpack-target-webextension: 2.1.3(webpack@5.109.2(postcss@8.5.23))
@@ -3221,14 +3395,14 @@ snapshots:
     dependencies:
       fflate: 0.8.3
 
-  extension-install@4.1.34:
+  extension-install@4.1.35:
     dependencies:
       cross-spawn: 7.0.6
       pintor: 0.3.0
 
-  extension@4.1.34(svelte@5.56.10)(typescript@5.9.3)(webpack@5.109.2(postcss@8.5.23)):
+  extension@4.1.35(svelte@5.56.10)(typescript@7.0.2)(webpack@5.109.2(postcss@8.5.23)):
     dependencies:
-      '@types/chrome': 0.1.43
+      '@types/chrome': 0.3.7
       '@types/node': 26.6.5
       '@types/webextension-polyfill': 0.12.6
       brave-location: 3.1.1
@@ -3236,9 +3410,9 @@ snapshots:
       chromium-location: 2.1.2
       commander: 15.0.0
       edge-location: 2.3.1
-      extension-create: 4.1.34
-      extension-develop: 4.1.34(svelte@5.56.10)(typescript@5.9.3)(webpack@5.109.2(postcss@8.5.23))
-      extension-install: 4.1.34
+      extension-create: 4.1.35
+      extension-develop: 4.1.35(svelte@5.56.10)(typescript@7.0.2)(webpack@5.109.2(postcss@8.5.23))
+      extension-install: 4.1.35
       firefox-location2: 3.2.0
       floorp-location: 1.0.0
       librewolf-location: 1.2.1
@@ -3677,9 +3851,9 @@ snapshots:
       '@csstools/utilities': 3.0.0(postcss@8.5.23)
       postcss: 8.5.23
 
-  postcss-loader@8.2.1(@rspack/core@2.2.3)(postcss@8.5.23)(typescript@5.9.3)(webpack@5.109.2(postcss@8.5.23)):
+  postcss-loader@8.2.1(@rspack/core@2.2.3)(postcss@8.5.23)(typescript@7.0.2)(webpack@5.109.2(postcss@8.5.23)):
     dependencies:
-      cosmiconfig: 9.0.2(typescript@5.9.3)
+      cosmiconfig: 9.0.2(typescript@7.0.2)
       jiti: 2.7.0
       postcss: 8.5.23
       semver: 7.8.5
@@ -3987,7 +4161,28 @@ snapshots:
   tslib@2.8.1:
     optional: true
 
-  typescript@5.9.3: {}
+  typescript@7.0.2:
+    optionalDependencies:
+      '@typescript/typescript-aix-ppc64': 7.0.2
+      '@typescript/typescript-darwin-arm64': 7.0.2
+      '@typescript/typescript-darwin-x64': 7.0.2
+      '@typescript/typescript-freebsd-arm64': 7.0.2
+      '@typescript/typescript-freebsd-x64': 7.0.2
+      '@typescript/typescript-linux-arm': 7.0.2
+      '@typescript/typescript-linux-arm64': 7.0.2
+      '@typescript/typescript-linux-loong64': 7.0.2
+      '@typescript/typescript-linux-mips64el': 7.0.2
+      '@typescript/typescript-linux-ppc64': 7.0.2
+      '@typescript/typescript-linux-riscv64': 7.0.2
+      '@typescript/typescript-linux-s390x': 7.0.2
+      '@typescript/typescript-linux-x64': 7.0.2
+      '@typescript/typescript-netbsd-arm64': 7.0.2
+      '@typescript/typescript-netbsd-x64': 7.0.2
+      '@typescript/typescript-openbsd-arm64': 7.0.2
+      '@typescript/typescript-openbsd-x64': 7.0.2
+      '@typescript/typescript-sunos-x64': 7.0.2
+      '@typescript/typescript-win32-arm64': 7.0.2
+      '@typescript/typescript-win32-x64': 7.0.2
 
   undici-types@8.9.0: {}
 
@@ -4012,7 +4207,7 @@ snapshots:
     dependencies:
       which: 6.0.1
 
-  vue-loader@17.4.2(@vue/compiler-sfc@3.5.43)(vue@3.5.43(typescript@5.9.3))(webpack@5.109.2(postcss@8.5.23)):
+  vue-loader@17.4.2(@vue/compiler-sfc@3.5.43)(vue@3.5.43(typescript@7.0.2))(webpack@5.109.2(postcss@8.5.23)):
     dependencies:
       chalk: 4.1.2
       hash-sum: 2.0.0
@@ -4020,9 +4215,9 @@ snapshots:
       webpack: 5.109.2(postcss@8.5.23)
     optionalDependencies:
       '@vue/compiler-sfc': 3.5.43
-      vue: 3.5.43(typescript@5.9.3)
+      vue: 3.5.43(typescript@7.0.2)
 
-  vue@3.5.43(typescript@5.9.3):
+  vue@3.5.43(typescript@7.0.2):
     dependencies:
       '@vue/compiler-dom': 3.5.43
       '@vue/compiler-sfc': 3.5.43
@@ -4030,7 +4225,7 @@ snapshots:
       '@vue/server-renderer': 3.5.43
       '@vue/shared': 3.5.43
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 7.0.2
 
   watchpack@2.6.3:
     dependencies:

@@ -1154,7 +1154,8 @@ not distributed coherence mechanisms.
 
 Sentry is server-side only and enabled in production when a DSN is configured.
 Releases and environments are tagged; traces are sampled at 20%.
-`sendDefaultPii` is disabled.
+The SDK's `dataCollection` is off for user info, cookies, headers, bodies,
+query strings, database query data and local variables.
 
 Both explicit captures and SDK-generated events pass through bounded
 sanitizers. Secrets, cookies, authorization data, query strings, request
