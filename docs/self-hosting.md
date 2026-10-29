@@ -34,6 +34,8 @@ Kept media and shared post previews do not require sign-in for anyone who can re
 
 ## Settings
 
+Some of these are extras you might not have known about at setup: Jev (`TYPESAFE_API_KEY`, `TYPESAFE_CHANNEL_IMAGES`), email (`RESEND_API_KEY`, `SMTP_URL`, `EMAIL_FROM`), the X app keys and `SERVER_LABEL`. Admins can set those in **Admin → System → Optional extras**. They work at once, with no restart, and **Test Jev** and **Send me a test email** check them. Keys are stored encrypted in the database. Anything set in the environment wins and shows there read-only. **Admin → System** also shows whether every queue, the Mac helper and each outside service is working.
+
 | Setting                                      | What it does                                                                                                                                                                               |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `NEXT_PUBLIC_APP_URL` (or `APP_URL`)         | The address people use, e.g. `https://adhx.example.com`. Sign-in links point here. Optional: Render, Railway, Fly and Coolify give it; otherwise the address you set ADHX up from is kept. |

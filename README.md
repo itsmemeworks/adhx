@@ -22,6 +22,7 @@ https://github.com/user-attachments/assets/56130b2a-1e79-4d70-85e9-177de0efdb91
 - [Supported networks](#supported-networks)
 - [How it works](#how-it-works)
 - [Run your own](#run-your-own)
+- [The admin area](#the-admin-area)
 - [Saving posts](#saving-posts)
 - [Phone apps](#phone-apps)
 - [Search from Claude and other agents](#search-from-claude-and-other-agents)
@@ -142,6 +143,8 @@ docker logs adhx | grep setup
 
 Open the link it prints, add your email and pick your name: you're the owner. Then invite your people from **Settings → Your people → Make a link**. There's nothing to configure: ADHX makes its own secret and works out its own address. The first start also downloads the search models (about 800 MB) in the background.
 
+**Rather have an AI do it?** Every guide here is written by hand, but you don't have to read them. Point your favourite coding agent (Claude Code, Codex, Cursor, Gemini CLI …) at this repository and ask it to set ADHX up on your server. [`AGENTS.md`](AGENTS.md), [`CLAUDE.md`](CLAUDE.md) and the deploy recipes tell it everything it needs, from the installer to the Mac helper.
+
 ### One click, wherever you host
 
 | Where                                                   | How                                                                                                                                                                      |
@@ -193,6 +196,34 @@ Where next:
 | Know exactly what your server stores and who can see it                                                        | [Privacy](PRIVACY.md)                                                            |
 
 Kept media and shared post previews can be opened by anyone who can reach your server and knows the address. Invites and the email allowlist protect accounts, not playback, so put it on a private network or VPN if that's the boundary you want.
+
+## The admin area
+
+The first person to set ADHX up is its admin, and **Admin** (in Settings, or `/admin`) is where you run the place. Admin is attached to the account, never to a username, and you can make other people admins from **People**.
+
+| Section        | What it's for                                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Overview**   | Saves, people and disk at a glance.                                                                                            |
+| **People**     | Who's here, who's waiting to join (let them in or decline), their phones, and who's an admin.                                  |
+| **Posts**      | Everything kept on the server, by network and kind.                                                                            |
+| **Channels**   | What your people made and watched together.                                                                                    |
+| **Live**       | Moments as they form, and how many tuned in.                                                                                   |
+| **Analytics**  | How ADHX gets used, as counts only: never what anyone searched or watched.                                                     |
+| **Processing** | What's downloading, converting and being understood right now. Pause new work, retry what failed, or keep a post as a link.    |
+| **System**     | Whether it's all working, and how it's set up. See below.                                                                      |
+| **Moderation** | Hide a post from every public page, clear a note, or keep someone out. Every admin action is logged here.                      |
+| **Invites**    | Make and revoke invite links, choose who may invite, and, until email is set up, pass on the sign-in links waiting for people. |
+
+**System** answers "is it actually working?" in one place:
+
+- **A map of your setup.** It shows this server (say, your UGREEN NAS) with the processes running on it, the optional Mac helper, and the outside services ADHX calls. Each one is lit green, amber or red.
+- **Every queue** (keeping copies, converting videos, understanding posts). For each: what's waiting, working and failed, the oldest wait, a backlog line and a per-hour chart of what finished.
+- **The Mac helper.** Whether it's connected, what it says it can do, and how many jobs it holds. If it's being turned away, it says why: a wrong token, a server that isn't set up for a helper, or a helper on a different version.
+- **Outside services.** Jev, email, FxTwitter, X sync, yt-dlp and Sentry: whether each is on, when it last answered, and what kind of failure it last had.
+- **Optional extras you can switch on from the page:** a Jev key, email (Resend or SMTP), the X app keys and a name for your server. You don't need to edit the server's settings or restart. Keys are stored encrypted and never shown again; anything set in the server's environment wins. **Test Jev** and **Send me a test email** check them for real.
+- **Every setting** as the server sees it. Secrets show only as Set or Not set.
+
+The page refreshes itself every 15 seconds, and the **System** menu entry shows a count when something is broken.
 
 ## Saving posts
 

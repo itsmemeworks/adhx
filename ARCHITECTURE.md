@@ -146,14 +146,14 @@ theater, `TheaterV2` at `/play`, whose queue comes from the query: `feed=`,
 
 Other signed-in pages:
 
-| Route                                                | Role                                                                                                       |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `/doing`                                             | What your ADHX is doing: every post being kept, converted, listened to, read or learned.                   |
-| `/settings`                                          | You (picture, name, Just for me by default), Your people (invites, approvals), phone app, keys.            |
-| `/channels/friend/{username}`                        | A friend's channel (members only).                                                                         |
-| `/admin/*`                                           | Admin-role area: overview, people, posts, channels, live, analytics, processing, moderation, invites.      |
-| `/start`, `/welcome`                                 | Email sign-in, then a one-shot username choice for new email accounts.                                     |
-| `/invite/{token}`, `/invite/done`, `/invite/waiting` | Invite confirmation (a script-free route handler), the "You're in." pairing screen, and the approval wait. |
+| Route                                                | Role                                                                                                          |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `/doing`                                             | What your ADHX is doing: every post being kept, converted, listened to, read or learned.                      |
+| `/settings`                                          | You (picture, name, Just for me by default), Your people (invites, approvals), phone app, keys.               |
+| `/channels/friend/{username}`                        | A friend's channel (members only).                                                                            |
+| `/admin/*`                                           | Admin-role area: overview, people, posts, channels, live, analytics, processing, system, moderation, invites. |
+| `/start`, `/welcome`                                 | Email sign-in, then a one-shot username choice for new email accounts.                                        |
+| `/invite/{token}`, `/invite/done`, `/invite/waiting` | Invite confirmation (a script-free route handler), the "You're in." pairing screen, and the approval wait.    |
 
 Public pages (no account needed, never naming savers): the preview pages
 (`/{user}/status/{id}`, `/p/{id}`, `/reel(s)/{id}`, `/@{user}/video/{id}`,
@@ -763,8 +763,13 @@ and `sync_state` tables are dropped at every start, `read_status` was renamed
 to `archived_posts`, and `bookmarks_fts` was replaced by `post_text_fts`.
 `users.last_seen_at` (at most every 5 minutes, from sessions and phone keys),
 `access_keys.platform` (`ios`/`android` when a phone's requests say) and the
-`server_settings` key `processing.paused` (Pause new work) feed the admin area;
-see the [admin specification](docs/specs/admin.md).
+`server_settings` key `processing.paused` (Pause new work) feed the admin area.
+Admin → System also reads in-memory state since the server started (Mac helper
+claims and refusals, outside-service call outcomes, 5-minute backlog samples)
+and lets an admin set optional extras (Jev, email, X app keys, server name) as
+`server_settings` `extra.*` rows, secrets encrypted, read through
+`src/lib/settings/extras.ts` with the environment winning; see the
+[admin specification](docs/specs/admin.md).
 
 The main isolation key for saves is `(userId, platform, sourceId)`.
 `bookmarks` uses `(userId, platform, id)`; media, tags, links and archive rows
