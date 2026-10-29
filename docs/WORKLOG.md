@@ -15,6 +15,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Paste spinner: no remount or animation restart found (one element, clock never reset, on /now and in the theater). Made it an SVG ring on its own layer; the jank measured came from decoding full-size images, which the thumbnails remove.
 - Follow-ups: pre-make the common widths when a file is kept; avatars and link-card images aren't resized.
 
+## 2026-10-29 — The small dependency majors; Tailwind 4 and TypeScript 7 wait
+
+- Owner chose to take the small majors from Dependabot's grouped major PR (#665) and hold the migrations.
+- ESLint 10, eslint-config-prettier 10, @types/better-sqlite3 9, @vitejs/plugin-react 6. Lint gives the same 102 warnings and 0 errors, and the rules still fire.
+- Removed `eslint-config-next`, `@eslint/eslintrc` and `@eslint/js`: `eslint.config.mjs` loads only typescript-eslint and prettier, and Next 16 doesn't lint in the build. They were the only packages whose peers didn't allow ESLint 10, and they meant more update PRs.
+- `dependabot.yml` ignores Tailwind and TypeScript majors (the extension is already on TypeScript 7). Follow-ups: plan the Tailwind 4 migration, and try the app on TypeScript 7.
+
 ## 2026-10-29 — Dependency updates in one PR
 
 - Owner: work through the open Dependabot PRs (645–653) without nine CI runs. All applied together here, each major checked locally first.

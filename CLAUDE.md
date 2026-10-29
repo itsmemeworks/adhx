@@ -573,6 +573,8 @@ runs and fails if `changes` failed, so the required checks stay meaningful.
 Dependabot (`.github/dependabot.yml`) is monthly and grouped: one npm
 minor/patch PR and one major PR covering the app and the extension, and one
 each for Actions, Gradle and Docker. Security updates still arrive at once.
+Tailwind 4 and TypeScript majors are ignored there: they are migrations to
+plan, not bumps.
 
 Merging to `main` never deploys anything. The owner merges the Release Please
 PR; installing a release on a server is a separate step. Release mechanics,
