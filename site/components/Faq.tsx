@@ -14,7 +14,11 @@ const NETWORK_LIST = `${NETWORKS.slice(0, -1).join(', ')} and ${NETWORKS.at(-1)}
 export const FAQS: Array<{ q: string; a: string }> = [
   {
     q: 'What is ADHX?',
-    a: 'A private social network for one group of friends and family. Everyone saves the best posts they find on the big networks, and ADHX keeps a copy of each and plays them in one feed, with the face of whoever saved it. It runs on a server you control, so the only people on it are the ones you invite.',
+    a: 'A private social network you run for one group of friends and family. Everyone saves the best posts they find on the big networks, and ADHX keeps a copy of each and plays them in one feed, with the face of whoever saved it. You decide who joins.',
+  },
+  {
+    q: 'Can my mum use it?',
+    a: 'Yes. One of you runs it; everyone else taps an invite link and picks a name. No password to remember, and it works in any browser. For saving from her iPhone’s share button, whoever runs your ADHX can offer the app through TestFlight, or she can add a three-step Shortcut from Settings. Android installs the app from GitHub.',
   },
   {
     q: 'Is ADHX free?',
@@ -25,8 +29,8 @@ export const FAQS: Array<{ q: string; a: string }> = [
     a: 'Yes. demo.adhx.com is a live ADHX where you’re Sam and your friends have been busy. No sign-up, and nothing you do there is saved.',
   },
   {
-    q: 'What do I need to host it?',
-    a: 'Anything that runs Docker: a NAS, a mini PC, a spare laptop or a small cloud server. It’s one container and one folder of data. There are one-click installs for Render, Fly, Railway, Unraid, Umbrel, Portainer, Coolify, Synology and TrueNAS.',
+    q: 'What does it need to run?',
+    a: 'Anything with Docker, amd64 or arm64: a NAS, a mini PC, a spare laptop or a small cloud server. About 2 GB of memory to spare and no GPU. Roughly 10–30 GB of disk per 1,000 saves. The first start downloads about 800 MB of search models in the background.',
   },
   {
     q: 'Which networks can I save from?',
@@ -34,19 +38,27 @@ export const FAQS: Array<{ q: string; a: string }> = [
   },
   {
     q: 'What does the AI do, and does it send my data anywhere?',
-    a: 'Three open models run on your own server, free: EmbeddingGemma 2 understands pictures, video and words, Whisper listens to speech and Florence-2 reads text on screen. That powers search by description, the For you part of Home, self-sorting channels and Live moments. No frame or sound leaves your server. The optional Jev key sends only your search and public post words to TypeSafe, never who saved what.',
+    a: 'Three open models run on your own server, free: EmbeddingGemma 2 understands pictures, video and words, Whisper listens to speech and Florence-2 reads text on screen. That powers search by description, the For you part of Home, self-sorting channels and Live moments. The models are downloaded once from Hugging Face, and no frame or sound leaves machines you run. The optional Jev key sends your search and the words of the public posts being ranked to TypeSafe (thumbnails too, if you switch on channel pictures), never who saved what.',
   },
   {
-    q: 'Do my friends need to install anything?',
-    a: 'No. An invite link signs them in on the web. To save from their phone’s share button there are free iPhone and Android apps, and the same link pairs them.',
+    q: 'Who can join?',
+    a: 'People you send an invite link to. Each link works once and runs out after a week, and you can approve every new person yourself. Once you set up email, anyone who reaches your sign-in page can ask for a link too, unless you list who may sign up in Admin → System → Settings.',
+  },
+  {
+    q: 'Who can see what we save?',
+    a: 'Your feed, your faces and who saved what are only for people on your server. A post someone shares gets a public preview page, like a link you’d paste anywhere, which never says who saved it, and the kept file of a shared post plays for anyone with its address. Want nothing reachable from outside? Keep ADHX on your home network or Tailscale. Just for me keeps a save to yourself.',
+  },
+  {
+    q: 'Is it OK to download other people’s posts?',
+    a: 'ADHX is for keeping posts for yourself and your group, not republishing them. It keeps the creator’s name on every post, and copyright stays with them. Each network has its own terms about downloading, so check the ones that matter to you. Admins can hide any post in one click, and every hide is logged.',
   },
   {
     q: 'What happens when the original post is deleted?',
-    a: 'Nothing, for you. ADHX keeps a real copy in the best quality the network offers when it’s saved, and plays it from your server. Posts that are private or DRM-protected when saved may not download.',
+    a: 'Nothing, for your group. ADHX keeps a real copy in the best quality the network offers when it’s saved, and plays it from your server. It can’t keep posts that are private or DRM-protected.',
   },
   {
-    q: 'Who can see what I save?',
-    a: 'The people on your server. Saves go to them by default; switch on Just for me to keep one to yourself. A post’s page can be shared by link, but it never says who saved it.',
+    q: 'How do I update it and back it up?',
+    a: 'Pull the new image and restart, or run the installer again; the database updates itself on start. Everything ADHX keeps is in one /data folder: stop ADHX and copy it.',
   },
 ]
 
