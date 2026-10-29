@@ -499,12 +499,21 @@ Short notes on what is easy to get wrong. Each links to the full description.
   outside-service outcomes (`src/lib/ops/service-calls.ts`) are in memory and
   keep only a kind of failure, never a message body, address or key. Wrap a
   new outside call in `trackServiceCall`.
-- **Optional extras** (Jev, email, X app keys, `SERVER_LABEL`) can be set in
-  Admin → System. Read them only through `extra()` (`src/lib/settings/extras.ts`),
-  never `process.env`: the environment wins, then the encrypted
-  `server_settings` `extra.*` row. `SESSION_SECRET`'s fallback to
-  `TWITTER_CLIENT_SECRET` stays environment-only, so saving an X secret never
-  re-signs sessions.
+- **Settings in Admin → System** (`EXTRAS` in `src/lib/settings/extras.ts`:
+  Jev, email, X app keys and sync interval, `SERVER_LABEL`, the `KEEP_*`
+  switches, `INDEXING_LEVEL`, speech / text on screen, `ALLOWED_EMAILS`). Read
+  them only through `setting()` / `extra()`, never `process.env`, and on every
+  use (no module-level constants): a saved, encrypted `server_settings`
+  `extra.*` row wins, then the environment, within 5 s and without a restart.
+  `settings/value.ts` has no database import (the Mac helper reaches
+  `keep/config`, `processing/config` and `semantic/config`; keep their imports
+  relative). Anything read only at startup (paths, `PROCESSING_MODE`,
+  `SEMANTIC_SEARCH`, secrets like `SESSION_SECRET`) stays environment-only and
+  shows read-only. `SESSION_SECRET`'s fallback to `TWITTER_CLIENT_SECRET` stays
+  environment-only, so saving an X secret never re-signs sessions. Each fact
+  appears once on System: problems under the banner, the map, queues, helper,
+  services and tools, then Settings; Processing links there instead of
+  repeating them.
 
 ### The public demo
 

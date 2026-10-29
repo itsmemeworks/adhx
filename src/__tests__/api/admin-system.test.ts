@@ -39,6 +39,12 @@ import { POST as postSystem } from '@/app/api/admin/system/route'
 import { POST as workerPost } from '@/app/api/processing/jobs/route'
 import { adminAudit } from '@/lib/db/schema'
 import { __resetExtrasCache, extra } from '@/lib/settings/extras'
+import { keepBackfill, keepConcurrency, keepMinFreeBytes } from '@/lib/keep/config'
+import { indexingLevel } from '@/lib/processing/config'
+import { speechEnabled } from '@/lib/semantic/config'
+import { autoSyncEveryMinutes } from '@/lib/sync/auto'
+import { signupAllowlist } from '@/lib/auth/allowlist'
+import { setInviteMode } from '@/lib/auth/invites'
 import { jevAvailable } from '@/lib/semantic/jev'
 import { __resetServiceCalls, failureKind, noteServiceCall } from '@/lib/ops/service-calls'
 import {
@@ -139,7 +145,7 @@ describe('admin System board', () => {
     expect(check(board, 'queue-downloads').state).toBe('off')
     expect(check(board, 'queue-understanding').state).toBe('off')
     expect(board.queues.map((q) => q.id)).toEqual(['downloads', 'understanding'])
-    expect(board.settings.map((g) => g.group)).toContain('Understanding and search')
+    expect(board.settings.map((g) => g.group)).toContain('Understanding')
   })
 
   it('shows every secret only as Set or Not set', async () => {
@@ -158,8 +164,8 @@ describe('admin System board', () => {
     for (const v of Object.values(secrets)) expect(text).not.toContain(v)
     expect(text).not.toContain('hunter2')
     const rows = (await systemBoard(NOW)).settings.flatMap((g) => g.rows)
-    expect(rows.find((r) => r.env === 'PROCESSING_WORKER_TOKEN')?.value).toBe('Set')
-    expect(rows.find((r) => r.env === 'SMTP_URL')?.value).toBe('Set')
+    expect(rows.find((r) => r.name === 'PROCESSING_WORKER_TOKEN')?.value).toBe('Set')
+    expect(rows.find((r) => r.name === 'SMTP_URL')?.value).toBe('Set')
   })
 
   describe('the Mac helper', () => {
@@ -304,7 +310,11 @@ function system(body: unknown) {
   )
 }
 
-describe('optional extras', () => {
+function settingRow(board: SystemBoard, name: string) {
+  return board.settings.flatMap((g) => g.rows).find((r) => r.name === name)
+}
+
+describe('settings', () => {
   it('saves a key encrypted, uses it, and never shows it again', async () => {
     const key = 'jev_live_key_abcdefghijklmnop'
     expect(jevAvailable()).toBe(false)
@@ -320,10 +330,8 @@ describe('optional extras', () => {
 
     const board = await systemBoard(NOW)
     expect(JSON.stringify(board)).not.toContain(key)
-    expect(board.extras.find((e) => e.name === 'TYPESAFE_API_KEY')).toMatchObject({
-      source: 'admin',
-      value: null,
-    })
+    expect(settingRow(board, 'TYPESAFE_API_KEY')).toMatchObject({ source: 'admin', value: 'Set' })
+    expect(settingRow(board, 'TYPESAFE_API_KEY')?.edit?.value).toBeNull()
     const [audit] = await testInstance.db.select().from(adminAudit)
     expect(audit.action).toBe('set_setting')
     expect(audit.target).not.toContain(key)
@@ -334,14 +342,80 @@ describe('optional extras', () => {
     expect(extra('TYPESAFE_API_KEY')).toBeNull()
   })
 
-  it('leaves a setting from the environment alone', async () => {
+  it('beats the environment, and clearing goes back to it', async () => {
     vi.stubEnv('RESEND_API_KEY', 're_from_env')
-    const res = await system({ action: 'set', name: 'RESEND_API_KEY', value: 're_other' })
-    expect(res.status).toBe(409)
+    expect(settingRow(await systemBoard(NOW), 'RESEND_API_KEY')?.source).toBe('env')
+    expect(
+      (await system({ action: 'set', name: 'RESEND_API_KEY', value: 're_other' })).status,
+    ).toBe(200)
+    expect(extra('RESEND_API_KEY')).toBe('re_other')
+    expect(settingRow(await systemBoard(NOW), 'RESEND_API_KEY')?.edit).toMatchObject({
+      source: 'admin',
+      inEnv: true,
+    })
+    await system({ action: 'set', name: 'RESEND_API_KEY', value: null })
     expect(extra('RESEND_API_KEY')).toBe('re_from_env')
-    expect((await systemBoard(NOW)).extras.find((e) => e.name === 'RESEND_API_KEY')?.source).toBe(
-      'env',
-    )
+  })
+
+  it('changes how the server works without a restart', async () => {
+    vi.stubEnv('KEEP_CONCURRENCY', '3')
+    expect(keepConcurrency()).toBe(3)
+    const set = (name: string, value: string) => system({ action: 'set', name, value })
+    expect((await set('KEEP_CONCURRENCY', '5')).status).toBe(200)
+    expect(keepConcurrency()).toBe(5)
+    expect((await set('KEEP_BACKFILL', 'off')).status).toBe(200)
+    expect(keepBackfill()).toBe(false)
+    expect((await set('KEEP_MIN_FREE_GB', '20')).status).toBe(200)
+    expect(keepMinFreeBytes()).toBe(20 * 1024 ** 3)
+    expect((await set('INDEXING_LEVEL', 'deep')).status).toBe(200)
+    expect(indexingLevel()).toBe('deep')
+    expect((await set('SEMANTIC_SPEECH', 'off')).status).toBe(200)
+    expect(speechEnabled()).toBe(false)
+    expect((await set('AUTO_SYNC_EVERY_MINUTES', '0')).status).toBe(200)
+    expect(autoSyncEveryMinutes()).toBe(0)
+    expect((await set('ALLOWED_EMAILS', 'ana@example.com, @friends.example')).status).toBe(200)
+    expect(signupAllowlist()).toEqual(['ana@example.com', '@friends.example'])
+
+    const board = await systemBoard(NOW)
+    expect(settingRow(board, 'KEEP_CONCURRENCY')).toMatchObject({ value: '5', source: 'admin' })
+    expect(settingRow(board, 'AUTO_SYNC_EVERY_MINUTES')?.value).toBe('Off')
+    expect(settingRow(board, 'ALLOWED_EMAILS')?.value).toBe('2 entries')
+  })
+
+  it('refuses values the server can’t use', async () => {
+    const set = (name: string, value: string) => system({ action: 'set', name, value })
+    for (const [name, value] of [
+      ['KEEP_CONCURRENCY', '9'],
+      ['KEEP_CONCURRENCY', 'lots'],
+      ['KEEP_MEDIA', 'maybe'],
+      ['INDEXING_LEVEL', 'extreme'],
+      ['KEEP_MAX_FILESIZE', 'big'],
+      ['ALLOWED_EMAILS', 'ana, ben'],
+    ]) {
+      const res = await set(name, value)
+      expect(res.status, `${name}=${value}`).toBe(409)
+      expect((await res.json()).error).toBeTruthy()
+    }
+    expect(keepConcurrency()).toBe(2)
+  })
+
+  it('lists every setting once, and startup ones without a way to change them here', async () => {
+    const rows = (await systemBoard(NOW)).settings.flatMap((g) => g.rows)
+    const names = rows.map((r) => r.name).filter(Boolean)
+    expect(new Set(names).size).toBe(names.length)
+    const labels = rows.map((r) => r.label)
+    expect(new Set(labels).size).toBe(labels.length)
+    expect(rows.find((r) => r.name === 'PROCESSING_MODE')?.edit).toBeNull()
+    expect(rows.find((r) => r.name === 'SESSION_SECRET')?.edit).toBeNull()
+  })
+
+  it('shows who can invite as Invites set it', async () => {
+    setInviteMode('anyone')
+    expect(
+      (await systemBoard(NOW)).settings
+        .flatMap((g) => g.rows)
+        .find((r) => r.label === 'Who can invite')?.value,
+    ).toBe('Any member')
   })
 
   it('checks values and refuses unknown names and members', async () => {

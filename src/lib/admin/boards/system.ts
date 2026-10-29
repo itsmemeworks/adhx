@@ -7,18 +7,15 @@ import { sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import {
   keepBackfill,
-  keepConcurrency,
   keepEnabled,
-  keepH264,
   keepMinFreeBytes,
-  maxFileSize,
   mediaDir,
   ytdlpCookies,
   ytdlpPath,
 } from '@/lib/keep/config'
 import { keepWorkerStatus } from '@/lib/keep/worker'
 import { ffmpegPath } from '@/lib/media/ffmpeg'
-import { indexingLevel, indexingPaused, remoteProcessing } from '@/lib/processing/config'
+import { indexingPaused, remoteProcessing } from '@/lib/processing/config'
 import { workerSetupProblem, type WorkerRefusal } from '@/lib/processing/auth'
 import { newWorkPaused } from '@/lib/processing/pause'
 import {
@@ -29,19 +26,21 @@ import {
 } from '@/lib/processing/presence'
 import { PROCESSING_PROTOCOL } from '@/lib/processing/protocol'
 import { REFUSAL_WORDS, claimProblemWords } from '@/lib/processing/refusal-words'
-import { configuredAppUrl, appUrl } from '@/lib/routes/app-url'
+import { appUrl } from '@/lib/routes/app-url'
 import { signInDelivery } from '@/lib/email/magic-link'
-import {
-  SEMANTIC_MODEL_VERSION,
-  modelCacheDir,
-  screenTextEnabled,
-  semanticEnabled,
-  speechEnabled,
-} from '@/lib/semantic/config'
+import { SEMANTIC_MODEL_VERSION, modelCacheDir, semanticEnabled } from '@/lib/semantic/config'
 import { jobActivity, semanticStatus, type ChildStatus } from '@/lib/semantic/supervisor'
 import { serviceCalls, type ServiceCallStats } from '@/lib/ops/service-calls'
-import { extra, extrasView, isExtraName } from '@/lib/settings/extras'
+import {
+  extra,
+  extrasView,
+  isExtraName,
+  type ExtraView,
+  type SettingGroup,
+} from '@/lib/settings/extras'
+import { inviteMode } from '@/lib/auth/invites'
 import { channelImagesEnabled } from '@/lib/semantic/jev-images'
+import { bytesLabel } from '@/lib/format/bytes'
 import { diskSpace, num } from '../shared'
 
 /**
@@ -49,8 +48,9 @@ import { diskSpace, num } from '../shared'
  *
  * One plain check per moving part (each queue, the Mac helper, the
  * background processes, the tools and the setup), each with what to do when
- * it isn't right, then every setting as this server sees it. Secrets are
- * only ever "Set" or "Not set".
+ * it isn't right, then every setting once: the ones an admin can change here
+ * and the ones only the environment changes. Secrets are only ever "Set" or
+ * "Not set".
  *
  * "Waiting" counts only what the worker would pick up now (same rules as its
  * claim), so a backlog left alone on purpose (backfill off, a retry time not
@@ -122,13 +122,25 @@ export interface ProcessView {
   summary: string
 }
 
-export interface SettingRow {
+export interface SettingView {
   label: string
-  value: string
   /** The variable it comes from, when there is one. */
-  env: string | null
-  /** True when the value is this server's default (nothing set). */
-  isDefault: boolean
+  name: string | null
+  /** The value in use, in words; secrets are only "Set" or "Not set". */
+  value: string
+  /** Saved here, from the environment, or this server's default. */
+  source: 'admin' | 'env' | 'default'
+  /** How to change it here; null when only the environment can (read at startup). */
+  edit: ExtraView | null
+  /** Where it's changed instead, for a value worked out from others. */
+  note?: string
+}
+
+export interface SettingGroupView {
+  group: SettingGroup
+  /** A test button for the group's service. */
+  test: 'jev' | 'email' | null
+  rows: SettingView[]
 }
 
 export interface ServiceView {
@@ -160,10 +172,9 @@ export interface SystemBoard {
   helper: HelperView
   processes: ProcessView[]
   services: ServiceView[]
-  /** Optional extras an admin can set here (secrets never included). */
-  extras: ReturnType<typeof extrasView>
   backlog: BacklogSample[]
-  settings: { group: string; rows: SettingRow[] }[]
+  /** Every setting once, grouped; secrets never included. */
+  settings: SettingGroupView[]
   host: {
     /** SERVER_LABEL, e.g. "UGREEN NAS", else the machine's name. */
     label: string
@@ -181,8 +192,6 @@ export interface SystemBoard {
     node: string
     platform: string
     startedAt: string
-    database: string
-    media: string
   }
 }
 
@@ -545,163 +554,136 @@ export async function probeTools(now = Date.now()): Promise<ToolProbe> {
 
 // ——— Settings ———
 
-/** A setting's value: the environment's, or for an optional extra, the one saved in the admin. */
+/** A setting's value: for one an admin can change, the saved one or the environment's. */
 function env(name: string): string | null {
   if (isExtraName(name)) return extra(name)
   const v = process.env[name]?.trim()
   return v ? v : null
 }
 
-function row(label: string, value: string, name: string | null, isDefault: boolean): SettingRow {
-  return { label, value, env: name, isDefault }
-}
-
-function flagRow(label: string, name: string, on: boolean, onWords: string, offWords: string) {
-  return row(label, on ? onWords : offWords, name, env(name) === null)
-}
-
-function secretRow(label: string, name: string): SettingRow {
-  return row(label, env(name) ? 'Set' : 'Not set', name, env(name) === null)
-}
-
-function settingsRows(remote: boolean): SystemBoard['settings'] {
-  const configured = configuredAppUrl()
-  const delivery = signInDelivery()
-  const invites = env('INVITES')?.toLowerCase() === 'members' ? 'Any member' : 'Admins only'
-  const allowed = env('ALLOWED_EMAILS')
-  let level = 'normal'
-  try {
-    level = indexingLevel()
-  } catch {
-    level = `${env('INDEXING_LEVEL')} (not valid; light, normal or deep)`
+/** A row that only the environment changes (it's read when ADHX starts). */
+function fixedRow(label: string, value: string, name: string | null): SettingView {
+  return {
+    label,
+    name,
+    value,
+    source: name && process.env[name]?.trim() ? 'env' : 'default',
+    edit: null,
   }
-  return [
-    {
-      group: 'Address and sign-in',
-      rows: [
-        row(
-          'Server name',
-          env('SERVER_LABEL') ?? os.hostname(),
-          'SERVER_LABEL',
-          !env('SERVER_LABEL'),
-        ),
-        row('Address', appUrl(), 'NEXT_PUBLIC_APP_URL', false),
-        row(
-          'Address comes from',
-          configured
-            ? env('NEXT_PUBLIC_APP_URL') || env('APP_URL')
-              ? 'Your setting'
-              : 'The host'
-            : 'Where you first set ADHX up',
-          null,
-          !configured,
-        ),
-        row(
-          'Sign-in links',
-          delivery === 'email'
-            ? env('RESEND_API_KEY')
-              ? 'Emailed (Resend)'
-              : 'Emailed (SMTP)'
-            : delivery === 'admin'
-              ? 'Held for an admin to pass on'
-              : delivery === 'log'
-                ? 'Written to the server log'
-                : 'Off',
-          'RESEND_API_KEY / SMTP_URL',
-          delivery !== 'email',
-        ),
-        secretRow('Resend key', 'RESEND_API_KEY'),
-        secretRow('SMTP', 'SMTP_URL'),
-        row(
-          'From address',
-          env('EMAIL_FROM') ?? 'ADHX <login@adhx.com>',
-          'EMAIL_FROM',
-          !env('EMAIL_FROM'),
-        ),
-        row('Who can invite', invites, 'INVITES', !env('INVITES')),
-        row(
-          'Email allowlist',
-          allowed ? `${allowed.split(',').filter((s) => s.trim()).length} addresses` : 'Off',
-          'ALLOWED_EMAILS',
-          !allowed,
-        ),
-        secretRow('Session secret', 'SESSION_SECRET'),
+}
+
+function fixedFlag(label: string, name: string, on: boolean): SettingView {
+  return fixedRow(label, on ? 'On' : 'Off', name)
+}
+
+function fixedSecret(label: string, name: string): SettingView {
+  return fixedRow(label, process.env[name]?.trim() ? 'Set' : 'Not set', name)
+}
+
+function editableRow(view: ExtraView): SettingView {
+  return { label: view.label, name: view.name, value: view.shown, source: view.source, edit: view }
+}
+
+const GROUP_ORDER: { group: SettingGroup; test: SettingGroupView['test'] }[] = [
+  { group: 'Sign-in and email', test: 'email' },
+  { group: 'Keeping copies', test: null },
+  { group: 'Understanding', test: null },
+  { group: 'Jev', test: 'jev' },
+  { group: 'X', test: null },
+  { group: 'This server', test: null },
+]
+
+/**
+ * Every setting once: the ones an admin can change here (from
+ * `settings/extras`) and, under them, the ones read at startup that only the
+ * environment changes.
+ */
+function settingsView(
+  remote: boolean,
+  database: string,
+  extras = extrasView(),
+): SettingGroupView[] {
+  const delivery = signInDelivery()
+  const invites = inviteMode()
+  const fixed: Record<SettingGroup, { before: SettingView[]; after: SettingView[] }> = {
+    'Sign-in and email': {
+      before: [
+        fixedRow('Address', appUrl(), 'NEXT_PUBLIC_APP_URL'),
+        {
+          label: 'Sign-in links',
+          name: null,
+          value:
+            delivery === 'email'
+              ? env('RESEND_API_KEY')
+                ? 'Emailed (Resend)'
+                : 'Emailed (SMTP)'
+              : delivery === 'admin'
+                ? 'Held for an admin to pass on'
+                : delivery === 'log'
+                  ? 'Written to the server log'
+                  : 'Off',
+          source: 'default',
+          edit: null,
+          note: 'Follows the email settings below.',
+        },
+      ],
+      after: [
+        {
+          label: 'Who can invite',
+          name: null,
+          value: invites === 'admin' ? 'Admins only' : 'Any member',
+          source: 'default',
+          edit: null,
+          note: 'Changed on Invites.',
+        },
+        fixedSecret('Session secret', 'SESSION_SECRET'),
       ],
     },
-    {
-      group: 'Keeping copies',
-      rows: [
-        flagRow('Keep media', 'KEEP_MEDIA', keepEnabled(), 'On', 'Off'),
-        flagRow('Older saves', 'KEEP_BACKFILL', keepBackfill(), 'Kept too', 'Only new saves'),
-        row(
-          'Downloads at once',
-          String(keepConcurrency()),
-          'KEEP_CONCURRENCY',
-          !env('KEEP_CONCURRENCY'),
-        ),
-        row('Largest file', maxFileSize(), 'KEEP_MAX_FILESIZE', !env('KEEP_MAX_FILESIZE')),
-        row(
-          'Pause when free disk is under',
-          `${Math.round((keepMinFreeBytes() / 1024 ** 3) * 10) / 10} GB`,
-          'KEEP_MIN_FREE_GB',
-          !env('KEEP_MIN_FREE_GB'),
-        ),
-        flagRow('Convert to H.264', 'KEEP_H264', keepH264(), 'On', 'Off'),
-        row('Media folder', mediaDir(), 'MEDIA_DIR', !env('MEDIA_DIR')),
-        row('yt-dlp', ytdlpPath(), 'YTDLP_PATH', !env('YTDLP_PATH')),
-        row('Cookies file', ytdlpCookies() ? 'Set' : 'Not set', 'YTDLP_COOKIES', !ytdlpCookies()),
-        row('FFmpeg', env('FFMPEG_PATH') ?? 'From PATH', 'FFMPEG_PATH', !env('FFMPEG_PATH')),
+    'Keeping copies': {
+      before: [],
+      after: [
+        fixedRow('Media folder', mediaDir(), 'MEDIA_DIR'),
+        fixedRow('yt-dlp', ytdlpPath(), 'YTDLP_PATH'),
+        fixedRow('Cookies file', ytdlpCookies() ? 'Set' : 'Not set', 'YTDLP_COOKIES'),
+        fixedRow('FFmpeg', process.env['FFMPEG_PATH']?.trim() || 'From PATH', 'FFMPEG_PATH'),
       ],
     },
-    {
-      group: 'Understanding and search',
-      rows: [
-        flagRow('Search by meaning', 'SEMANTIC_SEARCH', semanticEnabled(), 'On', 'Off'),
-        row(
-          'Where the work runs',
-          remote ? 'Mac helper' : 'This server',
-          'PROCESSING_MODE',
-          !env('PROCESSING_MODE'),
-        ),
-        row('Indexing level', level, 'INDEXING_LEVEL', !env('INDEXING_LEVEL')),
-        flagRow('Speech', 'SEMANTIC_SPEECH', speechEnabled(), 'On', 'Off'),
-        flagRow('Text on screen', 'SEMANTIC_SCREEN_TEXT', screenTextEnabled(), 'On', 'Off'),
-        row(
-          'Threads',
-          env('SEMANTIC_THREADS') ?? 'Automatic',
-          'SEMANTIC_THREADS',
-          !env('SEMANTIC_THREADS'),
-        ),
-        row('Model files', modelCacheDir(), 'SEMANTIC_CACHE_DIR', !env('SEMANTIC_CACHE_DIR')),
-        row('Model', SEMANTIC_MODEL_VERSION, null, true),
-        secretRow('Mac helper token', 'PROCESSING_WORKER_TOKEN'),
-        secretRow('Jev key (search refine)', 'TYPESAFE_API_KEY'),
+    Understanding: {
+      before: [
+        fixedFlag('Search by meaning', 'SEMANTIC_SEARCH', semanticEnabled()),
+        fixedRow('Where the work runs', remote ? 'Mac helper' : 'This server', 'PROCESSING_MODE'),
+      ],
+      after: [
+        fixedRow('Threads', process.env['SEMANTIC_THREADS']?.trim() || '2', 'SEMANTIC_THREADS'),
+        fixedRow('Model files', modelCacheDir(), 'SEMANTIC_CACHE_DIR'),
+        fixedSecret('Mac helper token', 'PROCESSING_WORKER_TOKEN'),
       ],
     },
-    {
-      group: 'X and monitoring',
-      rows: [
-        secretRow('X app id', 'TWITTER_CLIENT_ID'),
-        secretRow('X app secret', 'TWITTER_CLIENT_SECRET'),
-        row(
-          'Auto sync',
-          env('AUTO_SYNC_EVERY_MINUTES')
-            ? `Every ${env('AUTO_SYNC_EVERY_MINUTES')} minutes`
-            : 'Off',
-          'AUTO_SYNC_EVERY_MINUTES',
-          !env('AUTO_SYNC_EVERY_MINUTES'),
-        ),
-        secretRow('Sentry', 'SENTRY_DSN'),
-        flagRow(
+    Jev: { before: [], after: [] },
+    X: { before: [], after: [] },
+    'This server': {
+      before: [],
+      after: [
+        fixedSecret('Sentry', 'SENTRY_DSN'),
+        fixedFlag(
           'Trust proxy IP headers',
           'TRUST_PROXY_IP_HEADERS',
-          env('TRUST_PROXY_IP_HEADERS') === 'true',
-          'Yes',
-          'No',
+          process.env['TRUST_PROXY_IP_HEADERS'] === 'true',
         ),
+        fixedRow('Database', database, 'DATABASE_PATH'),
+        fixedRow('Model', SEMANTIC_MODEL_VERSION, null),
       ],
     },
-  ]
+  }
+  return GROUP_ORDER.map(({ group, test }) => ({
+    group,
+    test,
+    rows: [
+      ...fixed[group].before,
+      ...extras.filter((e) => e.group === group).map(editableRow),
+      ...fixed[group].after,
+    ],
+  }))
 }
 
 // ——— Outside services ———
@@ -752,8 +734,7 @@ function servicesView(now: number, tools: ToolProbe | null, keep: boolean): Serv
     ? fromCalls(jevCalls, now, 'Set up; not called since the server started.')
     : {
         state: 'off' as CheckState,
-        summary:
-          'Off: TYPESAFE_API_KEY isn’t set. Search, channels and moments still work, without the extra polish.',
+        summary: 'Off: no Jev key. Search, channels and moments still work, with less polish.',
       }
 
   const delivery = signInDelivery()
@@ -827,7 +808,7 @@ function servicesView(now: number, tools: ToolProbe | null, keep: boolean): Serv
       usedFor: 'downloading from every network',
       state: !keep ? 'off' : !tools ? 'ok' : tools.ytdlp ? 'ok' : 'bad',
       summary: !keep
-        ? 'Off with KEEP_MEDIA=off.'
+        ? 'Off: keeping copies is switched off.'
         : !tools
           ? 'Not checked.'
           : tools.ytdlp
@@ -968,7 +949,10 @@ export async function systemBoard(
     downloadsQueue(
       now,
       !keep
-        ? { state: 'off', summary: 'Off (KEEP_MEDIA=off): posts play from their source.' }
+        ? {
+            state: 'off',
+            summary: 'Off: keeping copies is switched off, so posts play from their source.',
+          }
         : diskFull
           ? { state: 'bad', summary: 'Paused: the media disk is under its free-space minimum.' }
           : pausedBlock,
@@ -978,7 +962,9 @@ export async function systemBoard(
     queues.push(
       conversionsQueue(
         now,
-        !keep ? { state: 'off', summary: 'Off with KEEP_MEDIA=off.' } : (pausedBlock ?? helperDown),
+        !keep
+          ? { state: 'off', summary: 'Off: keeping copies is switched off.' }
+          : (pausedBlock ?? helperDown),
       ),
     )
   }
@@ -987,7 +973,11 @@ export async function systemBoard(
       now,
       remote,
       !indexing
-        ? { state: 'off', summary: 'Off (SEMANTIC_SEARCH=off): search uses words only.' }
+        ? {
+            state: 'off',
+            summary:
+              'Off: search by meaning is switched off (SEMANTIC_SEARCH), so it uses words only.',
+          }
         : (pausedBlock ?? helperDown),
     ),
   )
@@ -997,7 +987,12 @@ export async function systemBoard(
   const status = semanticStatus()
   const processes: ProcessView[] = [
     !keep
-      ? { id: 'keep', title: 'Download loop', state: 'off', summary: 'Off with KEEP_MEDIA=off.' }
+      ? {
+          id: 'keep',
+          title: 'Download loop',
+          state: 'off',
+          summary: 'Off: keeping copies is switched off.',
+        }
       : keepLoop.running && keepLoop.lastTickAt && now - keepLoop.lastTickAt < 2 * MIN
         ? {
             id: 'keep',
@@ -1030,11 +1025,11 @@ export async function systemBoard(
       fix:
         q.state === 'bad'
           ? q.summary.startsWith('Waiting for the Mac helper, which is connected')
-            ? 'See the Mac helper check: it’s connected but refused work.'
+            ? 'The Mac helper is connected but refused work; see why below.'
             : q.summary.startsWith('Waiting for the Mac helper')
-              ? 'Open the ADHX helper on the Mac and check it shows Connected. See the Mac helper card below.'
+              ? 'Open the ADHX helper on the Mac and check it shows Connected.'
               : q.summary.startsWith('Paused: the media disk')
-                ? 'Free some space on the media disk, or lower KEEP_MIN_FREE_GB.'
+                ? 'Free some space on the media disk, or lower “Stop when free disk is under” in Settings.'
                 : `Check that the ${q.where === 'this server' ? 'processes below are running' : 'Mac helper is connected'}, then the server log.`
           : q.failed > 0 && q.state === 'warn'
             ? 'Processing → Retry failed tries them all again.'
@@ -1105,8 +1100,8 @@ export async function systemBoard(
     summary:
       disk.free === null
         ? 'Free space can’t be read.'
-        : `${(disk.free / 1024 ** 3).toFixed(1)} GB free${disk.total ? ` of ${(disk.total / 1024 ** 3).toFixed(0)} GB` : ''}; downloads pause under ${(minFree / 1024 ** 3).toFixed(1)} GB.`,
-    fix: diskFull ? 'Free some space, or lower KEEP_MIN_FREE_GB.' : null,
+        : `${bytesLabel(disk.free)} free${disk.total ? ` of ${bytesLabel(disk.total)}` : ''}; downloads stop under ${bytesLabel(minFree)}.`,
+    fix: diskFull ? 'Free some space, or lower “Stop when free disk is under” in Settings.' : null,
   })
   const address = appUrl()
   checks.push({
@@ -1134,9 +1129,9 @@ export async function systemBoard(
       fix:
         svc.state === 'bad' || svc.state === 'warn'
           ? svc.id === 'jev'
-            ? 'Check TYPESAFE_API_KEY. ADHX keeps working without Jev; answers are just less polished.'
+            ? 'Check the Jev key in Settings, then Test Jev. ADHX works without Jev, just less polished.'
             : svc.id === 'email'
-              ? 'Check the Resend key or SMTP_URL. Until then, Admin → Invites can pass links on.'
+              ? 'Check the Resend key or SMTP in Settings, then send a test email. Until then, Invites can pass links on.'
               : svc.id === 'x'
                 ? 'Settings → Your X bookmarks shows the error; reconnecting X usually fixes it.'
                 : svc.id === 'fxtwitter'
@@ -1152,19 +1147,18 @@ export async function systemBoard(
     helper,
     processes,
     services,
-    extras: extrasView(),
     backlog: backlogHistory(),
-    settings: settingsRows(remote),
+    settings: settingsView(
+      remote,
+      (globalThis as { __adhxSqlitePath?: string }).__adhxSqlitePath ??
+        path.resolve(process.env['DATABASE_PATH'] || './data/adhdone.db'),
+    ),
     host: hostView(),
     server: {
       version: process.env.NEXT_PUBLIC_APP_VERSION || 'dev',
       node: process.version,
       platform: `${process.platform} ${process.arch}`,
       startedAt: new Date(now - process.uptime() * 1000).toISOString(),
-      database:
-        (globalThis as { __adhxSqlitePath?: string }).__adhxSqlitePath ??
-        path.resolve(process.env['DATABASE_PATH'] || './data/adhdone.db'),
-      media: mediaDir(),
     },
   }
 }

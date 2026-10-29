@@ -1,7 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { keepBackfill, keepEnabled, keepMinFreeBytes } from '@/lib/keep/config'
-import { indexingLevel, indexingPaused, remoteProcessing } from '@/lib/processing/config'
+import { remoteProcessing } from '@/lib/processing/config'
 import { remoteWorkerConnected, workerLastSeen } from '@/lib/processing/presence'
 import { keepLinkOnly, keepReason, processingActivity, retryPost } from '@/lib/processing/doing'
 import { newWorkPaused, setNewWorkPaused } from '@/lib/processing/pause'
@@ -45,14 +44,6 @@ export interface ProcessingBoard {
     connected: boolean
     lastSeenAt: string | null
     name: string | null
-    convertedWeek: number
-    understoodWeek: number
-  }
-  settings: {
-    keepMedia: boolean
-    understanding: string
-    backfill: boolean
-    minFreeGb: number
   }
   week: { day: string; kept: number; converted: number; understood: number }[]
 }
@@ -131,12 +122,6 @@ export async function processingBoard(
     ORDER BY updated_at DESC LIMIT 1`)
   const worker = lease ?? conversion
   const seen = workerLastSeen()
-  const convertedWeek = one(sql`
-    SELECT COUNT(DISTINCT platform || ':' || post_id) AS n FROM media_conversions
-    WHERE status = 'done' AND updated_at >= ${weekAgo}`)
-  const understoodWeek = one(sql`
-    SELECT COUNT(DISTINCT platform || ':' || post_id) AS n FROM post_embeddings
-    WHERE created_at >= ${weekAgo}`)
 
   const days = lastDays(7, now)
   const byDay = (rows: { at: string }[]) => {
@@ -163,10 +148,6 @@ export async function processingBoard(
   )
 
   const remote = remoteProcessing()
-  const level = indexingLevel()
-  const understanding = indexingPaused()
-    ? 'Off'
-    : `${level[0].toUpperCase()}${level.slice(1)} · ${remote ? 'Mac helper' : 'this server'}`
 
   return {
     paused: newWorkPaused(),
@@ -188,14 +169,6 @@ export async function processingBoard(
       connected: remote ? remoteWorkerConnected(now) : true,
       lastSeenAt: seen ? new Date(seen).toISOString() : null,
       name: worker?.worker_id ?? null,
-      convertedWeek,
-      understoodWeek,
-    },
-    settings: {
-      keepMedia: keepEnabled(),
-      understanding,
-      backfill: keepBackfill(),
-      minFreeGb: Math.round((keepMinFreeBytes() / 1024 ** 3) * 10) / 10,
     },
     week: days.map((day) => ({
       day,

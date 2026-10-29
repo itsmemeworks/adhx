@@ -4,6 +4,7 @@ import { nanoid } from '@/lib/utils'
 import { captureException } from '@/lib/sentry'
 import { claimSync } from '@/lib/sync/claim'
 import { runBookmarkSync } from '@/lib/sync/run'
+import { setting } from '@/lib/settings/value'
 
 /**
  * The hourly X bookmark sync.
@@ -33,8 +34,8 @@ const MAX_PER_TICK = 50
 
 /** Minutes between one person's automatic syncs; 0 turns the job off. */
 export function autoSyncEveryMinutes(): number {
-  const raw = process.env['AUTO_SYNC_EVERY_MINUTES']
-  if (raw === undefined || raw === '') return DEFAULT_EVERY_MINUTES
+  const raw = setting('AUTO_SYNC_EVERY_MINUTES')
+  if (raw === null) return DEFAULT_EVERY_MINUTES
   const n = Number.parseInt(raw, 10)
   return Number.isFinite(n) && n >= 0 ? n : DEFAULT_EVERY_MINUTES
 }
@@ -110,9 +111,13 @@ export async function autoSyncTick(now = new Date()): Promise<{ synced: number; 
 
 const MODULE = Symbol('auto-sync')
 
-/** Start the checks (once per process; a dev reload swaps in the new code). */
+/**
+ * Start the checks (once per process; a dev reload swaps in the new code).
+ * They run even while the interval is 0, so turning it on in Admin → System
+ * needs no restart; a check with nobody due costs one query.
+ */
 export function startAutoSync(): void {
-  if (process.env['NODE_ENV'] === 'test' || autoSyncEveryMinutes() <= 0) return
+  if (process.env['NODE_ENV'] === 'test') return
   const s = state()
   if (s.owner && s.owner !== MODULE) {
     if (s.timer) clearInterval(s.timer)

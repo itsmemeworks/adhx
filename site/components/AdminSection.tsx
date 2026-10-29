@@ -4,8 +4,9 @@ import { Kicker, Dot, WRAP } from './ProductSite'
 
 /**
  * "Run it from one page": the admin area, with a drawing of Admin → System
- * (the app's map of the server, the Mac helper and the outside services).
- * A still picture with made-up numbers, not a screenshot.
+ * (the app's map of the server, the Mac helper and the outside services, then
+ * a few of its settings). A still picture with made-up numbers, not a
+ * screenshot.
  */
 
 const GOOD = '#7ddc8a'
@@ -84,16 +85,24 @@ function Box({
   )
 }
 
+const SETTINGS: [string, string, string][] = [
+  ['Keep copies', 'On', 'Default'],
+  ['How closely videos are read', 'Normal', 'Environment'],
+  ['Who may sign up', '2 entries', 'Set here'],
+]
+
 /** A drawing of Admin → System. */
 function SystemDrawing() {
   return (
     <figure
       className="m-0 flex flex-col gap-3 rounded-[22px] border border-white/10 bg-nx-surface p-3.5 md:p-4"
-      aria-label="Admin → System in ADHX: a UGREEN NAS running the web app, the download loop and the search process, with 3 posts left to keep and 12 to understand; a connected Mac mini doing 2 jobs with 12 waiting; Jev, email, FxTwitter and yt-dlp working and Sentry off."
+      aria-label="Admin → System in ADHX: a UGREEN NAS running the web app, the download loop and the search process, with 3 posts left to keep and 12 to understand; a connected Mac mini doing 2 jobs with 12 waiting; Jev, email, FxTwitter and yt-dlp working, X needing a look and Sentry off. Below, settings you can change on the spot: keep copies on, videos read at normal depth, sign-up open to two entries."
     >
       <div className="flex items-center gap-2 rounded-[14px] border border-white/10 px-3 py-2">
-        <Light colour={GOOD} />
-        <span className="text-[14px] font-extrabold text-nx-cream">Everything is working</span>
+        <Light colour={WARN} />
+        <span className="text-[14px] font-extrabold text-nx-cream">
+          Working, with things to look at
+        </span>
         <span className="ml-auto text-[11px] text-nx-muted">Checked just now</span>
       </div>
       <div className="grid grid-cols-1 items-stretch gap-2 sm:grid-cols-[minmax(0,1.5fr)_56px_minmax(0,1fr)] sm:gap-0">
@@ -122,7 +131,7 @@ function SystemDrawing() {
           />
         </div>
         <Box colour={GOOD} title="Mac helper" sub="Connected">
-          <Tile colour={GOOD} title="mac-mini" sub="2 jobs now · video, speech" />
+          <Tile colour={GOOD} title="mac-mini" sub="2 jobs now" />
           <span className="text-[11px] leading-snug text-nx-muted">
             12 waiting for it · converts videos and understands pictures, video, speech and text on
             screen
@@ -130,13 +139,34 @@ function SystemDrawing() {
         </Box>
       </div>
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-        <Tile colour={GOOD} title="Jev" sub="answered 2 min ago" />
-        <Tile colour={GOOD} title="Email" sub="sign-in links" />
-        <Tile colour={GOOD} title="FxTwitter" sub="X post details" />
-        <Tile colour={GOOD} title="yt-dlp" sub="2026.10.22" />
-        <Tile colour={WARN} title="X" sub="last sync failed" />
+        <Tile colour={GOOD} title="Jev" sub="Working" />
+        <Tile colour={GOOD} title="Email" sub="Working" />
+        <Tile colour={GOOD} title="FxTwitter" sub="Working" />
+        <Tile colour={GOOD} title="yt-dlp" sub="Working" />
+        <Tile colour={WARN} title="X" sub="Needs a look" />
         <Tile colour={FAINT} title="Sentry" sub="Off" />
       </div>
+      <ul className="m-0 flex list-none flex-col rounded-[14px] border border-white/10 p-0">
+        {SETTINGS.map(([label, value, source]) => (
+          <li
+            key={label}
+            className="flex items-center gap-2 border-t border-white/10 px-3 py-2 first:border-t-0"
+          >
+            <span className="min-w-0 flex-1 truncate text-[12px] font-extrabold text-nx-cream">
+              {label}
+            </span>
+            <span className="flex shrink-0 flex-col items-end">
+              <span className="text-[12px] font-extrabold text-nx-cream">{value}</span>
+              <span className="text-[10px]" style={{ color: source === 'Set here' ? GOOD : FAINT }}>
+                {source}
+              </span>
+            </span>
+            <span className="shrink-0 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-extrabold text-nx-cream">
+              Change
+            </span>
+          </li>
+        ))}
+      </ul>
       <figcaption className="text-[11px] text-nx-muted">
         Admin → System, with made-up numbers.
       </figcaption>
@@ -166,15 +196,15 @@ export function AdminSection() {
             Is it working? One page says.
           </h2>
           <p className="m-0 text-[15px] leading-[1.45] text-nx-soft md:text-[18px] md:leading-[1.55]">
-            Whoever sets ADHX up runs it from Admin. System draws your setup, from the NAS and the
-            optional Mac helper to every outside service, each lit green, amber or red. It says
-            what’s wrong in plain words.
+            Whoever runs ADHX gets Admin. System draws your setup, from the NAS to the optional Mac
+            helper to every outside service, lit green, amber or red, and says what’s wrong in plain
+            words.
           </p>
           <ul className="m-0 mt-1.5 flex list-none flex-col gap-2 p-0 text-[15px] leading-[1.4] text-nx-cream md:gap-3 md:text-[16px] md:leading-[1.45]">
             {[
-              'Every queue: what’s waiting, what’s working, what failed, and how fast it’s going.',
-              'The Mac helper: connected or not, and why it was turned away.',
-              'Switch on extras you missed at setup (smarter search, email, X) without touching config.',
+              'Every queue: what’s waiting, what’s stuck and how fast it’s clearing.',
+              'The Mac helper: connected, or exactly why not.',
+              'Change settings on the spot: what gets kept, how closely videos are read, who can sign up. No restart, no YAML.',
               'Let people in, make invite links, pause the work, hide a post. Every action is logged.',
             ].map((line) => (
               <li key={line} className="flex gap-2.5 md:gap-3">

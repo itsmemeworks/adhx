@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-29 — Admin → System: each fact once, settings changeable there
+
+- Owner (testing v2.11.0 live): System repeated itself (services three times, workers and queues twice, settings in two cards, the server name three times, Processing's own settings and pause button again) and most configuration was still env-only.
+- System is now: status + only the problems (with fixes) → map → queues → Mac helper | services and tools (FFmpeg, disk folded in) → one Settings card. The Checks, Outside services, Optional extras and This server cards are gone; map service tiles say a state word; version/uptime stay in the sidebar only. Processing drops its Settings card, duplicate Pause and week counts, and links to System. Disk sizes share `bytesLabel` (was GiB-as-GB).
+- Settings (`EXTRAS`): added `KEEP_*`, `INDEXING_LEVEL`, speech, text on screen, `AUTO_SYNC_EVERY_MINUTES`, `ALLOWED_EMAILS`. Precedence flipped: a saved value wins, the environment is the starting value, Clear goes back to it. Read via `setting()` (`settings/value.ts`, no DB import, so the Mac helper stays env-only); the web process and the jobs child install the DB reader by importing `extras.ts`. Keep loop and auto-sync now always run (idle when off) so switching on needs no restart; changing the backfill switch recomputes the cutoff live.
+- Fixed: "Who can invite" ignored the mode set on Invites; "Auto sync" read Off when unset (default 50 min).
+- Site: Admin section copy and drawing (state words, a settings strip); a tightening pass over the rest of the site's copy. Not republished.
+- Follow-ups: paths/`PROCESSING_MODE`/`SEMANTIC_SEARCH` still need a restart; a "restart ADHX" button would need the container to restart itself.
+
 ## 2026-10-29 — Admin → System: is it working, and optional extras
 
 - Owner: see whether the queues and the optional Mac helper actually work, with this server's setup (a UGREEN NAS) and the optional services (Jev …) visualised, and let admins switch on extras they didn't know about at setup.

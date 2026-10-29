@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://adhx.com'),
   title: 'ADHX: your friends have better taste than the algorithm',
   description:
-    'A private feed of the best of fourteen social networks, picked by your closest friends and family, on a server you run. Home opens on something to play, always in the same order: just saved, not seen yet, then more like what you keep, with your friends’ faces on every save. Channels from everyone’s saves, Live watch-together, search by what’s said and what’s on screen, and invite links that pair a phone. Open source, with iPhone and Android apps.',
+    'A private feed of the best of fourteen social networks, picked by your closest friends and family, on a server you run. It opens playing, in an order you can predict: just saved, not seen yet, then more like what you keep, with a friend’s face on every save. Channels, Live watch-together, search by what’s said and what’s on screen, and invite links that pair a phone. Open source, with iPhone and Android apps.',
   icons: {
     icon: [
       { url: '/favicon-32.png', type: 'image/png', sizes: '32x32' },
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'ADHX: your friends have better taste than the algorithm',
     description:
-      'A private feed picked by your people, not an algorithm. Home plays the newest first, then what you haven’t seen. Saver faces, channels, Live and search by what’s said. Self-hosted and open source.',
+      'A private feed picked by your people, not an algorithm. Just saved first, then what you haven’t seen. Saver faces, channels, Live and search by what’s said. Self-hosted and open source.',
     images: [{ url: '/adhx-reel.jpg', width: 1280, height: 720 }],
     videos: [{ url: '/adhx-reel.mp4', width: 1280, height: 720, type: 'video/mp4' }],
   },

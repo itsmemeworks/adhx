@@ -1,4 +1,5 @@
 import path from 'path'
+import { setting, settingOff } from '../settings/value'
 
 /**
  * Kept media: ADHX downloads every saved post's pictures, video and sound
@@ -17,11 +18,13 @@ import path from 'path'
  * - `KEEP_H264=off`: keep videos in whatever codec the source sent. By default
  *   a VP9, AV1 or HEVC download is re-encoded to H.264 at the same size so
  *   Safari, Chrome and Firefox all play it.
+ *
+ * The KEEP_* switches can also be changed in Admin → System (saved values
+ * win, see `settings/extras.ts`), so read them on every use.
  */
 
 export function keepEnabled(): boolean {
-  const flag = process.env['KEEP_MEDIA']
-  if (flag === 'off' || flag === '0' || flag === 'false') return false
+  if (settingOff('KEEP_MEDIA')) return false
   if (process.env.NODE_ENV === 'test' || process.env['VITEST']) return false
   return true
 }
@@ -47,26 +50,24 @@ export function ytdlpCookies(): string | null {
 }
 
 export function maxFileSize(): string {
-  const raw = process.env['KEEP_MAX_FILESIZE']
+  const raw = setting('KEEP_MAX_FILESIZE')
   return raw && /^\d+(\.\d+)?[KMG]?$/i.test(raw) ? raw : '4G'
 }
 
 export function keepConcurrency(): number {
-  const n = Number.parseInt(process.env['KEEP_CONCURRENCY'] ?? '', 10)
+  const n = Number.parseInt(setting('KEEP_CONCURRENCY') ?? '', 10)
   return Number.isFinite(n) && n >= 1 && n <= 8 ? n : 2
 }
 
 export function keepH264(): boolean {
-  const flag = process.env['KEEP_H264']
-  return !(flag === 'off' || flag === '0' || flag === 'false')
+  return !settingOff('KEEP_H264')
 }
 
 export function keepBackfill(): boolean {
-  const flag = process.env['KEEP_BACKFILL']
-  return !(flag === 'off' || flag === '0' || flag === 'false')
+  return !settingOff('KEEP_BACKFILL')
 }
 
 export function keepMinFreeBytes(): number {
-  const n = Number.parseFloat(process.env['KEEP_MIN_FREE_GB'] ?? '')
+  const n = Number.parseFloat(setting('KEEP_MIN_FREE_GB') ?? '')
   return (Number.isFinite(n) && n >= 0 ? n : 2) * 1024 ** 3
 }

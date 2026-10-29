@@ -1,4 +1,5 @@
 import path from 'path'
+import { settingOff } from '../settings/value'
 
 /**
  * EmbeddingGemma 2 settings for the understanding pipeline.
@@ -76,19 +77,14 @@ export const KIND_ORDER: Record<JobKind, number> = {
   video: 4,
 }
 
-function switchedOff(name: string): boolean {
-  const flag = process.env[name]
-  return flag === 'off' || flag === '0' || flag === 'false'
-}
-
-/** `SEMANTIC_SPEECH=off` stops new transcription work (stored words stay searchable). */
+/** `SEMANTIC_SPEECH=off` (or Admin → System) stops new transcription work (stored words stay searchable). */
 export function speechEnabled(): boolean {
-  return !switchedOff('SEMANTIC_SPEECH')
+  return !settingOff('SEMANTIC_SPEECH')
 }
 
-/** `SEMANTIC_SCREEN_TEXT=off` stops new on-screen text reading (stored words stay searchable). */
+/** `SEMANTIC_SCREEN_TEXT=off` (or Admin → System) stops new on-screen text reading (stored words stay searchable). */
 export function screenTextEnabled(): boolean {
-  return !switchedOff('SEMANTIC_SCREEN_TEXT')
+  return !settingOff('SEMANTIC_SCREEN_TEXT')
 }
 
 export function extractEnabled(kind: ExtractKind): boolean {

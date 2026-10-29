@@ -8,7 +8,11 @@ import { handleRouteError } from '@/lib/api/response'
 import { sendTestEmail } from '@/lib/email/magic-link'
 import { failureKind } from '@/lib/ops/service-calls'
 import { askJev, jevAvailable } from '@/lib/semantic/jev'
-import { ExtraError, isExtraName, setExtra } from '@/lib/settings/extras'
+import { ExtraError, isExtraName, setExtra, type ExtraName } from '@/lib/settings/extras'
+import { wakeKeep } from '@/lib/keep/worker'
+import { enqueueBackfill } from '@/lib/semantic/queue'
+import { wakeJobs } from '@/lib/semantic/supervisor'
+import { captureException } from '@/lib/sentry'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,11 +20,26 @@ const NO_STORE = { 'Cache-Control': 'private, no-store' }
 
 /**
  * POST /api/admin/system (admins), audited without values:
- * - `{ action: 'set', name, value }`: save an optional extra (`value: null` or
- *   '' clears it) → `{ ok: true }`; 409 when the environment sets it.
+ * - `{ action: 'set', name, value }`: save a setting (`value: null` or '' goes
+ *   back to the environment's) → `{ ok: true }`; 409 with the reason when the
+ *   value isn't valid. Values are never written to the audit log.
  * - `{ action: 'test', service: 'jev' | 'email' }`: one real call →
  *   `{ ok, ms?, error? }` (email goes to the admin's own address).
  */
+/** Start what a change switched on now, instead of on the next check. */
+function applyChange(name: ExtraName): void {
+  if (name.startsWith('KEEP_')) wakeKeep()
+  if (name === 'SEMANTIC_SPEECH' || name === 'SEMANTIC_SCREEN_TEXT' || name === 'INDEXING_LEVEL') {
+    // Older posts need the newly switched-on kinds (or a re-read at the new level)
+    // too; wait out the worker process's few-second settings cache first.
+    setTimeout(() => {
+      enqueueBackfill()
+        .then(() => wakeJobs())
+        .catch((error) => captureException(error, { endpoint: 'admin.system.settings' }))
+    }, 6_000).unref?.()
+  }
+}
+
 export const POST = withAdmin(async (request: NextRequest, actor) => {
   const body = (await request.json().catch(() => null)) as {
     action?: unknown
@@ -39,6 +58,7 @@ export const POST = withAdmin(async (request: NextRequest, actor) => {
         throw error
       }
       writeAudit(actor.userId, 'set_setting', { name: body.name, cleared: !value?.trim() })
+      applyChange(body.name)
       return NextResponse.json({ ok: true }, { headers: NO_STORE })
     }
     if (body?.action === 'test' && (body.service === 'jev' || body.service === 'email')) {

@@ -1,15 +1,17 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { userIdentities, users } from '@/lib/db/schema'
+import { setting } from '@/lib/settings/value'
 
 /**
  * Who may make an account on this ADHX. A self-hosted ADHX is usually for you
  * and your friends: set `ALLOWED_EMAILS` to a comma-separated list of emails
  * and/or `@domain.example` entries. Unset (or `*`) leaves sign-up open.
- * People who already have an account can always sign in.
+ * People who already have an account can always sign in. Admin → System can
+ * change it too (the saved list wins).
  */
 export function signupAllowlist(): string[] | null {
-  const raw = process.env['ALLOWED_EMAILS']?.trim()
+  const raw = setting('ALLOWED_EMAILS')
   if (!raw || raw === '*') return null
   return raw
     .split(',')

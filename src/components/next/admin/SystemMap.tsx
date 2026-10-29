@@ -17,6 +17,13 @@ export const STATE_COLOUR: Record<CheckState, string> = {
   off: 'rgb(var(--nx-ink-faint))',
 }
 
+const SERVICE_WORD: Record<CheckState, string> = {
+  ok: 'Working',
+  warn: 'Needs a look',
+  bad: 'Not working',
+  off: 'Off',
+}
+
 function Light({ state, size = 9 }: { state: CheckState; size?: number }) {
   return (
     <span
@@ -158,7 +165,16 @@ export function SystemMap({ data }: { data: SystemBoard }) {
             <span className="flex min-w-0 flex-col">
               <span className="truncate text-lg font-extrabold">{host.label}</span>
               <span className="text-xs text-nx-ink-faint">
-                {`${host.cpu} · ${host.cores} cores · ${bytesLabel(usedMemory)} of ${bytesLabel(host.memory.total)} memory used${host.container ? ' · in Docker' : ''}`}
+                {[
+                  host.label !== host.hostname ? host.hostname : null,
+                  `${host.cpu} · ${host.cores} cores`,
+                  `${bytesLabel(usedMemory)} of ${bytesLabel(host.memory.total)} memory used`,
+                  `load ${host.load[0]}`,
+                  `${data.server.platform}${host.container ? ', in Docker' : ''}`,
+                  `Node ${data.server.node.replace(/^v/, '')}`,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
               </span>
             </span>
             <span className="ml-auto shrink-0 rounded-full bg-nx-accent/[0.14] px-2.5 py-0.5 text-[11px] font-extrabold text-nx-accent">
@@ -259,7 +275,7 @@ export function SystemMap({ data }: { data: SystemBoard }) {
                       <Node
                         state={w.problem ? 'bad' : helper.connected ? 'ok' : 'off'}
                         title={w.workerId}
-                        sub={`${fmt(w.leases)} job${w.leases === 1 ? '' : 's'} now${w.kinds?.length ? ` · ${w.kinds.join(', ')}` : ''}`}
+                        sub={`${fmt(w.leases)} job${w.leases === 1 ? '' : 's'} now`}
                       />
                     </li>
                   ))}
@@ -276,14 +292,14 @@ export function SystemMap({ data }: { data: SystemBoard }) {
 
       {/* Outside services */}
       <div className="flex flex-col gap-2">
-        <p className={cn(LABEL, 'm-0')}>Outside services it calls</p>
+        <p className={cn(LABEL, 'm-0')}>Services and tools it uses</p>
         <ul className="m-0 grid list-none grid-cols-2 gap-2 p-0 sm:grid-cols-3 xl:grid-cols-6">
           {data.services.map((s) => (
             <li key={s.id} className="min-w-0">
               <Node
                 state={s.state}
                 title={s.name}
-                sub={s.state === 'off' ? 'Off' : s.usedFor}
+                sub={SERVICE_WORD[s.state]}
                 dashed={s.state === 'off'}
               />
             </li>

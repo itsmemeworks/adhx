@@ -219,9 +219,10 @@ The first person to set ADHX up is its admin, and **Admin** (in Settings, or `/a
 - **A map of your setup.** It shows this server (say, your UGREEN NAS) with the processes running on it, the optional Mac helper, and the outside services ADHX calls. Each one is lit green, amber or red.
 - **Every queue** (keeping copies, converting videos, understanding posts). For each: what's waiting, working and failed, the oldest wait, a backlog line and a per-hour chart of what finished.
 - **The Mac helper.** Whether it's connected, what it says it can do, and how many jobs it holds. If it's being turned away, it says why: a wrong token, a server that isn't set up for a helper, or a helper on a different version.
-- **Outside services.** Jev, email, FxTwitter, X sync, yt-dlp and Sentry: whether each is on, when it last answered, and what kind of failure it last had.
-- **Optional extras you can switch on from the page:** a Jev key, email (Resend or SMTP), the X app keys and a name for your server. You don't need to edit the server's settings or restart. Keys are stored encrypted and never shown again; anything set in the server's environment wins. **Test Jev** and **Send me a test email** check them for real.
-- **Every setting** as the server sees it. Secrets show only as Set or Not set.
+- **What's wrong, and the fix.** Anything that needs you sits right under the status line, in plain words.
+- **Services and tools.** Jev, email, FxTwitter, X sync, yt-dlp, Sentry, FFmpeg and the disk: whether each is on, when it last answered, and what kind of failure it last had.
+- **Settings you can change on the spot.** The Jev key, email (Resend or SMTP), who may sign up, the X app keys and how often X syncs, what gets kept (older saves too? how big? stop at how much free disk?), how closely videos are read, speech and text on screen, and a name for your server. No editing the server's settings, no restart. A value saved here beats the server's environment, and one tap goes back to it. Keys are stored encrypted and never shown again. **Test Jev** and **Send me a test email** check them for real.
+- **The rest, read-only.** Paths, the processing mode and secrets like the session key are read when ADHX starts, so they're shown with where they come from and changed in the environment.
 
 The page refreshes itself every 15 seconds, and the **System** menu entry shows a count when something is broken.
 

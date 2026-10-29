@@ -308,14 +308,6 @@ describe('ProcessingView', () => {
       connected: true,
       lastSeenAt: new Date().toISOString(),
       name: 'Petes MacBook Pro',
-      convertedWeek: 43,
-      understoodWeek: 212,
-    },
-    settings: {
-      keepMedia: true,
-      understanding: 'Normal · Mac helper',
-      backfill: false,
-      minFreeGb: 20,
     },
     week: Array.from({ length: 7 }, (_, i) => ({
       day: `d${i}`,
@@ -333,6 +325,10 @@ describe('ProcessingView', () => {
       screen.getByText('And 1 Just for me post on its way, counted, never listed.'),
     ).toBeInTheDocument()
     expect(screen.getByText('Connected · Petes MacBook Pro')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Health and settings are on System' })).toHaveAttribute(
+      'href',
+      '/admin/system',
+    )
     expect(screen.getByText('it’s private on Instagram.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Pause new work' }))
     await waitFor(() =>

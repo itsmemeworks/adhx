@@ -115,8 +115,8 @@ export function InstallPage() {
               Get ADHX on your phone.
             </h1>
             <p className="m-0 max-w-[60ch] text-[15px] leading-[1.5] text-nx-soft md:text-[18px]">
-              ADHX Share isn’t in the App Store or Google Play. You can still install it, for free.
-              Pick your phone and where you are.
+              ADHX Share isn’t in the App Store or Google Play. It installs anyway, for free. Pick
+              your phone and where you are.
             </p>
             <ul className="m-0 mt-2 grid list-none gap-2.5 p-0 sm:grid-cols-2 lg:grid-cols-4">
               {WAYS.map((w) => (
@@ -369,7 +369,7 @@ export function InstallPage() {
             ))}
           </div>
           <p className="m-0 text-[15px] leading-[1.5] text-nx-soft md:text-[17px]">
-            Then share any post, pick ADHX, and it’s saved.
+            Then share any post and pick ADHX. Saved.
           </p>
           <a
             href={GUIDE}
