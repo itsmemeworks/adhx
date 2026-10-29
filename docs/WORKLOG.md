@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-29 — Dependency updates in one PR
+
+- Owner: work through the open Dependabot PRs (645–653) without nine CI runs. All applied together here, each major checked locally first.
+- Minor/patch: Next 16.4.3, jose, lucide-react, nodemailer, simple-icons, twitter-api-v2, @types/qrcode, eslint-config-next; extension 4.1.35, @types/chrome 0.3.6; actions/cache 6.1.0, docker/login-action 4.7.0; OkHttp 5.5.1, Gradle 9.8.2. Pinned to Dependabot's versions, not newer ones still inside the 7-day cooldown.
+- Sentry 11 removed `sendDefaultPii` and collects user info, cookies, headers, bodies, query strings, DB query data and local variables by default; `dataCollection` turns each off.
+- jsdom 30: jest-dom's `background` shorthand check no longer matches, so the face test checks `backgroundColor`. Vite 8 (only Vitest uses it). TypeScript 7 for the extension: typecheck, both browser builds and manifest checks pass.
+
 ## 2026-10-28 — More one-click installs: any server, Portainer, CapRover, Zeabur
 
 - Owner: more one-click installs, with provider buttons where they exist. Buttons that keep a disk need either a file in the repo (Render, done) or a template published from an account (Railway, Zeabur); Koyeb's button can't attach a volume and DigitalOcean App Platform has no disk, so they're out. sslip.io isn't on the Public Suffix List (shared Let's Encrypt limits), so no-domain installs stay plain HTTP on 3000.
