@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.0](https://github.com/itsmemeworks/adhx/compare/v2.9.0...v2.10.0) (2026-10-29)
+
+
+### Features
+
+* add a one-command server installer and more one-click templates ([#660](https://github.com/itsmemeworks/adhx/issues/660)) ([4ffc1ee](https://github.com/itsmemeworks/adhx/commit/4ffc1ee985cbe743132fe0f97b8ff204b55c36fa))
+
 ## [2.9.0](https://github.com/itsmemeworks/adhx/compare/v2.8.4...v2.9.0) (2026-10-28)
 
 
