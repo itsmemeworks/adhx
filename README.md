@@ -203,18 +203,18 @@ A new ADHX stays out of search engines: robots.txt turns crawlers away, the site
 
 The first person to set ADHX up is its admin, and **Admin** (in Settings, or `/admin`) is where you run the place. Admin is attached to the account, never to a username, and you can make other people admins from **People**.
 
-| Section        | What it's for                                                                                                                  |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **Overview**   | Saves, people and disk at a glance.                                                                                            |
-| **People**     | Who's here, who's waiting to join (let them in or decline), their phones, and who's an admin.                                  |
-| **Posts**      | Everything kept on the server, by network and kind.                                                                            |
-| **Channels**   | What your people made and watched together.                                                                                    |
-| **Live**       | Moments as they form, and how many tuned in.                                                                                   |
-| **Analytics**  | How ADHX gets used, as counts only: never what anyone searched or watched.                                                     |
-| **Processing** | What's downloading, converting and being understood right now. Pause new work, retry what failed, or keep a post as a link.    |
-| **System**     | Whether it's all working, and how it's set up. See below.                                                                      |
-| **Moderation** | Hide a post from every public page, clear a note, or keep someone out. Every admin action is logged here.                      |
-| **Invites**    | Make and revoke invite links, choose who may invite, and, until email is set up, pass on the sign-in links waiting for people. |
+| Section        | What it's for                                                                                                                                                                                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Overview**   | Saves, people and disk at a glance.                                                                                                                                                                                |
+| **People**     | Who's here, who's waiting to join (let them in or decline), their phones, and who's an admin.                                                                                                                      |
+| **Posts**      | Everything kept on the server, by network and kind.                                                                                                                                                                |
+| **Channels**   | What your people made and watched together.                                                                                                                                                                        |
+| **Live**       | Moments as they form, and how many tuned in.                                                                                                                                                                       |
+| **Analytics**  | How ADHX gets used, as counts only: never what anyone searched or watched.                                                                                                                                         |
+| **Processing** | What's downloading, converting and being understood right now. Pause new work, retry what failed, or keep a post as a link.                                                                                        |
+| **System**     | Whether it's all working, and how it's set up. See below.                                                                                                                                                          |
+| **Moderation** | Hide a post from every public page, clear a note, or keep someone out. Every admin action is logged here.                                                                                                          |
+| **Invites**    | Make and revoke invite links (one per person, or one group link for a whole chat, where you approve each joiner), choose who may invite, and, until email is set up, pass on the sign-in links waiting for people. |
 
 **System** answers "is it actually working?" in one place:
 
@@ -223,7 +223,7 @@ The first person to set ADHX up is its admin, and **Admin** (in Settings, or `/a
 - **The Mac helper.** Whether it's connected, what it says it can do, and how many jobs it holds. If it's being turned away, it says why: a wrong token, a server that isn't set up for a helper, or a helper on a different version.
 - **What's wrong, and the fix.** Anything that needs you sits right under the status line, in plain words.
 - **Services and tools.** Jev, email, FxTwitter, X sync, yt-dlp, Sentry, FFmpeg and the disk: whether each is on, when it last answered, and what kind of failure it last had.
-- **Settings you can change on the spot.** The Jev key, email (Resend or SMTP), who may sign up, the X app keys and how often X syncs, what gets kept (older saves too? how big? stop at how much free disk?), how closely videos are read, speech and text on screen, whether search engines may list your public pages, and a name for your server. No editing the server's settings, no restart. A value saved here beats the server's environment, and one tap goes back to it. Keys are stored encrypted and never shown again. **Test Jev** and **Send me a test email** check them for real.
+- **Settings you can change on the spot.** The Jev key, email (Resend or SMTP), who may sign up by email (nobody new, by default: invites need no email), the X app keys and how often X syncs, what gets kept (older saves too? how big? stop at how much free disk?), how closely videos are read, speech and text on screen, whether search engines may list your public pages, and a name for your server. No editing the server's settings, no restart. A value saved here beats the server's environment, and one tap goes back to it. Keys are stored encrypted and never shown again. **Test Jev** and **Send me a test email** check them for real.
 - **The rest, read-only.** Paths, the processing mode and secrets like the session key are read when ADHX starts, so they're shown with where they come from and changed in the environment.
 
 The page refreshes itself every 15 seconds, and the **System** menu entry shows a count when something is broken.

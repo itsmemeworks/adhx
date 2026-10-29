@@ -172,6 +172,7 @@ describe('upgrading an existing server', () => {
           ADMIN_USERNAMES: '',
           ADMIN_USER_IDS: '',
           PUBLIC_PAGES: '',
+          ALLOWED_EMAILS: '',
           ...env,
         },
       },
@@ -179,12 +180,12 @@ describe('upgrading an existing server', () => {
     expect(result.status, result.stdout + result.stderr).toBe(0)
   }
 
-  function saved(file: string): string | undefined {
+  function saved(file: string, name = 'PUBLIC_PAGES'): string | undefined {
     const db = new Database(file)
     try {
       const row = db
-        .prepare(`SELECT value FROM server_settings WHERE key = 'extra.PUBLIC_PAGES'`)
-        .get() as { value: string } | undefined
+        .prepare(`SELECT value FROM server_settings WHERE key = ?`)
+        .get(`extra.${name}`) as { value: string } | undefined
       return row?.value
     } finally {
       db.close()
@@ -223,10 +224,16 @@ describe('upgrading an existing server', () => {
 
       migrate(published, migrations)
       migrate(unpublished, migrations)
-      migrate(envOff, migrations, { PUBLIC_PAGES: 'off' })
+      migrate(envOff, migrations, { PUBLIC_PAGES: 'off', ALLOWED_EMAILS: '@family.example' })
       expect(saved(published)).toBe('on')
       expect(saved(unpublished)).toBeUndefined()
       expect(saved(envOff)).toBeUndefined()
+
+      // Email sign-up was open to anyone on every server that had accounts:
+      // it stays that way, unless the environment already says who may join.
+      expect(saved(published, 'ALLOWED_EMAILS')).toBe('*')
+      expect(saved(unpublished, 'ALLOWED_EMAILS')).toBe('*')
+      expect(saved(envOff, 'ALLOWED_EMAILS')).toBeUndefined()
 
       // The owner clears it later: a restart doesn't put it back.
       const db = new Database(published)
@@ -234,6 +241,31 @@ describe('upgrading an existing server', () => {
       db.close()
       migrate(published, migrations)
       expect(saved(published)).toBeUndefined()
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  }, 120_000)
+
+  it('leaves a brand-new server invite-only and out of search engines', () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), 'adhx-fresh-default-'))
+    const migrations = path.join(root, 'drizzle')
+    mkdirSync(path.join(migrations, 'meta'), { recursive: true })
+    writeFileSync(path.join(migrations, 'meta', '_journal.json'), JSON.stringify({ entries: [] }))
+    try {
+      const file = path.join(root, 'fresh.db')
+      const db = new Database(file)
+      db.exec(FULL_SCHEMA_SQL)
+      db.close()
+      migrate(file, migrations, { ALLOWED_EMAILS: '' })
+      expect(saved(file)).toBeUndefined()
+      expect(saved(file, 'ALLOWED_EMAILS')).toBeUndefined()
+
+      // The owner's account arrives after the first start: still invite-only.
+      const later = new Database(file)
+      later.exec(`INSERT INTO users(id,username,role) VALUES('owner','owner','admin')`)
+      later.close()
+      migrate(file, migrations, { ALLOWED_EMAILS: '' })
+      expect(saved(file, 'ALLOWED_EMAILS')).toBeUndefined()
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

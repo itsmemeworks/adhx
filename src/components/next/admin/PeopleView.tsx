@@ -37,8 +37,11 @@ export function JoinBanner({ request }: { request: JoinRequest }) {
   const { run, busy, error } = useAdminAction()
   const decide = (decision: 'approve' | 'decline') =>
     run(decision, `/api/people/requests/${encodeURIComponent(request.id)}`, { body: { decision } })
-  const by = request.invitedBy
-    ? `Invited by ${request.invitedBy.name || request.invitedBy.username}`
+  const inviter = request.invitedBy ? request.invitedBy.name || request.invitedBy.username : null
+  const by = inviter
+    ? request.viaGroupLink
+      ? `Joined with ${inviter}’s group link`
+      : `Invited by ${inviter}`
     : null
   return (
     <Card accent className="flex flex-wrap items-center gap-3.5 px-4 py-3.5">

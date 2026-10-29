@@ -724,6 +724,27 @@ try {
 } catch {
   // Column already exists — nothing to do.
 }
+// Group invite links: invites.max_uses (null for a one-person invite), uses,
+// and group_id on the spent row each join through a group link gets. Guarded
+// for re-runs (no IF NOT EXISTS on ADD COLUMN).
+try {
+  const columns = db.prepare('PRAGMA table_info(invites)').all() as { name: string }[]
+  for (const [column, definition] of [
+    ['max_uses', 'integer'],
+    ['uses', 'integer NOT NULL DEFAULT 0'],
+    ['group_id', 'text'],
+  ]) {
+    if (!columns.some((c) => c.name === column)) {
+      db.exec(`ALTER TABLE invites ADD COLUMN ${column} ${definition}`)
+      console.log(`[migrate] Added invites.${column}`)
+    }
+  }
+  db.exec('CREATE INDEX IF NOT EXISTS invites_group_idx ON invites(group_id)')
+} catch (error) {
+  console.log('[migrate] FAILED adding group invite links', error)
+  db.close()
+  process.exit(1)
+}
 // keep_jobs.progress: the download percent the worker last wrote, for
 // "Getting it ready · 62%" in the theater. Nullable; guarded for re-runs.
 {
@@ -1339,6 +1360,31 @@ try {
   }
 } catch (error) {
   console.log('[migrate] FAILED choosing the search engine default', error)
+  db.close()
+  process.exit(1)
+}
+
+// Email sign-up: a new ADHX is invite-only (`ALLOWED_EMAILS` unset lets nobody
+// new in by email; invite links need no email). Before that default, unset
+// meant anyone, so the first start after upgrading a server that already has
+// accounts saves `*`: its sign-up stays as it was, and Admin → System shows
+// "Anyone" for the owner to change. An environment value speaks for itself.
+// Runs once.
+try {
+  if (!isSettled('allowed_emails_default')) {
+    const fromEnv = process.env['ALLOWED_EMAILS']?.trim()
+    const existing = db.prepare('SELECT 1 FROM users LIMIT 1').get()
+    if (!fromEnv && existing) {
+      db.prepare(
+        `INSERT INTO server_settings (key, value, updated_at) VALUES ('extra.ALLOWED_EMAILS', '*', ?)
+         ON CONFLICT(key) DO NOTHING`,
+      ).run(new Date().toISOString())
+      console.log('[migrate] Existing accounts found: kept email sign-up open to anyone')
+    }
+    markSettled('allowed_emails_default')
+  }
+} catch (error) {
+  console.log('[migrate] FAILED choosing the email sign-up default', error)
   db.close()
   process.exit(1)
 }

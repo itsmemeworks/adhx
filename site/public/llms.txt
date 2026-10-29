@@ -6,7 +6,7 @@ Tagline: "Your friends have better taste than the algorithm."
 
 ## Key facts
 
-- Who it's for: a small group who already share posts with each other (friends, family, a group chat). People join by invite link; once email is set up, sign-up is open unless the owner sets an allowlist. Members see who saved what, strangers never do. Shared posts' preview pages and Right now (counts, no names) open for anyone with the link; search engines are kept out unless the owner switches them on (servers that already had public channels stay listed after upgrading).
+- Who it's for: a small group who already share posts with each other (friends, family, a group chat). People join by invite link, with no email needed; signing up by email is off unless the owner lists who may (servers that already had accounts keep open sign-up after upgrading). Members see who saved what, strangers never do. Shared posts' preview pages and Right now (counts, no names) open for anyone with the link; search engines are kept out unless the owner switches them on (servers that already had public channels stay listed after upgrading).
 - Cost: free. You pay only for wherever you run it, which can be a NAS, a mini PC, a spare laptop or a small cloud server.
 - Try it: [demo.adhx.com](https://demo.adhx.com) is a live, read-only ADHX where the visitor is Sam and four friends have been saving posts. No sign-up.
 - Requirements: Docker on amd64 or arm64, 4 GB of memory comfortable (2 GB with speech and screen text off), no GPU, roughly 10–30 GB of disk per 1,000 saves; the first start downloads about 800 MB of models.

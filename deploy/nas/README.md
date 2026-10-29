@@ -96,7 +96,8 @@ For the container-proxy example, copy this directory's `.env.example` to
 - `NEXT_PUBLIC_APP_URL`: the final address, such as `https://adhx.example.com`.
 - `SESSION_SECRET`: generate a random value once with `openssl rand -base64 32`
   and keep it private and stable. Changing it signs out browsers.
-- `ALLOWED_EMAILS`: who can create accounts. Empty allows open registration.
+- `ALLOWED_EMAILS`: who can create accounts by email. Empty means nobody new
+  by email (invite links still work); `*` allows open registration.
 
 Make the dedicated data folder before starting; otherwise Docker may create
 it as root and the app cannot write to it. Set ownership/permissions for UID

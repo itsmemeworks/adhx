@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import { and, asc, desc, eq, gt, isNull, sql, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
 import { invites, userIdentities, usernameAliases, users } from '@/lib/db/schema'
 import { readServerSetting, writeServerSetting } from '@/lib/settings/server'
@@ -17,11 +17,19 @@ import { appUrl } from '@/lib/routes/app-url'
  * Only the token's SHA-256 is stored. An invite works once, for 7 days, and
  * stops working when it's revoked or its maker is banned, deleted, or no
  * longer allowed to invite.
+ *
+ * A group link is one link an admin can drop into a group chat: up to
+ * `GROUP_LINK_MAX_USES` people join with it within the same 7 days, and every
+ * one of them waits for an admin to let them in, whatever "Who can invite"
+ * says. Each join gets its own spent invite row (`group_id` → the link), so
+ * approvals and "who invited you" work exactly as for a one-person invite.
  */
 
 export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 /** Invites one person can have waiting at once. */
 export const MAX_PENDING_INVITES = 20
+/** People who can join with one group link. */
+export const GROUP_LINK_MAX_USES = 25
 const NAME_HINT_MAX = 40
 const TOKEN_SHAPE = /^[A-Za-z0-9_-]{43}$/
 
@@ -93,6 +101,32 @@ function makerCanInvite(): SQL {
     AND NOT EXISTS (SELECT 1 FROM user_bans b WHERE b.user_id = invites.created_by))`
 }
 
+/**
+ * A group link's maker is still an approved, unbanned admin: only admins make
+ * them, and one stops working if its maker stops being one.
+ */
+function groupMakerIsAdmin(): SQL {
+  return sql`(EXISTS (SELECT 1 FROM users u WHERE u.id = invites.created_by AND u.approval = 'approved' AND u.role = 'admin')
+    AND NOT EXISTS (SELECT 1 FROM user_bans b WHERE b.user_id = invites.created_by))`
+}
+
+/** A group link with room left whose maker is still an admin, or any one-person invite. */
+function groupLinkUsable(): SQL {
+  return or(
+    isNull(invites.maxUses),
+    and(sql`${invites.uses} < ${invites.maxUses}`, groupMakerIsAdmin()),
+  )!
+}
+
+function isAdmin(userId: string): boolean {
+  const user = db
+    .select({ role: users.role, approval: users.approval })
+    .from(users)
+    .where(eq(users.id, userId))
+    .get()
+  return user?.role === 'admin' && user.approval === 'approved'
+}
+
 function cleanNameHint(raw: unknown): string | null {
   if (typeof raw !== 'string') return null
   const clean = raw.replace(/\s+/g, ' ').trim().slice(0, NAME_HINT_MAX)
@@ -105,10 +139,11 @@ export type CreateInviteResult =
 
 export function createInvite(
   userId: string,
-  options: { nameHint?: unknown } = {},
+  options: { nameHint?: unknown; group?: boolean } = {},
   now = Date.now(),
 ): CreateInviteResult {
   if (!mayCreateInvites(userId)) return { ok: false, reason: 'forbidden' }
+  if (options.group && !isAdmin(userId)) return { ok: false, reason: 'forbidden' }
   const token = crypto.randomBytes(32).toString('base64url')
   const id = `inv_${crypto.randomBytes(9).toString('base64url')}`
   const expiresAt = now + INVITE_TTL_MS
@@ -133,7 +168,9 @@ export function createInvite(
         createdBy: userId,
         createdAt: new Date(now).toISOString(),
         expiresAt,
-        nameHint: cleanNameHint(options.nameHint),
+        // A group link is for whoever's in the chat, so no name to suggest.
+        nameHint: options.group ? null : cleanNameHint(options.nameHint),
+        maxUses: options.group ? GROUP_LINK_MAX_USES : null,
       })
       .run()
     return { ok: true, id, token, expiresAt: new Date(expiresAt).toISOString() }
@@ -159,6 +196,12 @@ export interface InviteSummary {
   createdAt: string
   expiresAt: string
   nameHint: string | null
+  /** A group link: many people, each waiting for an admin. */
+  group: boolean
+  /** People who joined with it so far (0 for a one-person invite). */
+  uses: number
+  /** How many may join with it; null for a one-person invite. */
+  maxUses: number | null
   /** The maker's username. */
   createdBy: string
   /** The maker's display name, when they set one ("Made by Ana"). */
@@ -182,6 +225,8 @@ export function listPendingInvites(
       createdAt: invites.createdAt,
       expiresAt: invites.expiresAt,
       nameHint: invites.nameHint,
+      uses: invites.uses,
+      maxUses: invites.maxUses,
       createdById: invites.createdBy,
       createdBy: users.username,
       createdByName: users.displayName,
@@ -195,13 +240,17 @@ export function listPendingInvites(
         isNull(invites.revokedAt),
         gt(invites.expiresAt, now),
         makerCanInvite(),
+        groupLinkUsable(),
       ),
     )
     // Newest first: the one you just made is on top.
     .orderBy(desc(invites.createdAt), asc(invites.expiresAt))
     .all()
-  return rows.map(({ createdById, expiresAt, ...row }) => ({
+  return rows.map(({ createdById, expiresAt, uses, maxUses, ...row }) => ({
     ...row,
+    group: maxUses !== null,
+    uses: uses ?? 0,
+    maxUses,
     code: inviteCode(row.id),
     expiresAt: new Date(expiresAt).toISOString(),
     mine: createdById === userId,
@@ -256,10 +305,17 @@ export function renewInviteLink(
   return row ? { id: row.id, token, expiresAt: new Date(row.expiresAt).toISOString() } : null
 }
 
-export type InviteProblem = 'bad' | 'used' | 'expired' | 'revoked' | 'dead'
+export type InviteProblem = 'bad' | 'used' | 'expired' | 'revoked' | 'dead' | 'full'
 
 export type InviteLookup =
-  | { ok: true; inviter: string; inviterUsername: string; nameHint: string | null }
+  | {
+      ok: true
+      inviter: string
+      inviterUsername: string
+      nameHint: string | null
+      /** A group link: whoever joins waits for an admin. */
+      group: boolean
+    }
   | { ok: false; problem: InviteProblem }
 
 /** Why this token can't be used, or who it's from. Never changes anything. */
@@ -271,7 +327,10 @@ export function readInvite(token: unknown, now = Date.now()): InviteLookup {
       revokedAt: invites.revokedAt,
       expiresAt: invites.expiresAt,
       nameHint: invites.nameHint,
+      uses: invites.uses,
+      maxUses: invites.maxUses,
       live: sql<number>`CASE WHEN ${makerCanInvite()} THEN 1 ELSE 0 END`,
+      groupLive: sql<number>`CASE WHEN ${groupMakerIsAdmin()} THEN 1 ELSE 0 END`,
       username: users.username,
       displayName: users.displayName,
     })
@@ -284,11 +343,15 @@ export function readInvite(token: unknown, now = Date.now()): InviteLookup {
   if (row.revokedAt) return { ok: false, problem: 'revoked' }
   if (row.expiresAt <= now) return { ok: false, problem: 'expired' }
   if (!row.live || !row.username) return { ok: false, problem: 'dead' }
+  const group = row.maxUses !== null
+  if (group && !row.groupLive) return { ok: false, problem: 'dead' }
+  if (group && (row.uses ?? 0) >= (row.maxUses ?? 0)) return { ok: false, problem: 'full' }
   return {
     ok: true,
     inviter: row.displayName?.trim() || row.username,
     inviterUsername: row.username,
     nameHint: row.nameHint,
+    group,
   }
 }
 
@@ -324,7 +387,11 @@ function isUniqueViolation(error: unknown): boolean {
  *
  * With "Anyone, I approve" on, someone a member (not an admin) invited joins
  * as `pending`: the account exists, but it is signed out everywhere except the
- * waiting page until an admin lets them in.
+ * waiting page until an admin lets them in. Everyone who joins with a group
+ * link joins as `pending`.
+ *
+ * A group link isn't spent: one conditional write takes a place (`uses + 1`,
+ * while under the cap) and the join gets its own spent row pointing at it.
  */
 export function redeemInvite(
   token: unknown,
@@ -346,6 +413,7 @@ export function redeemInvite(
         .where(
           and(
             eq(invites.tokenHash, tokenHash),
+            isNull(invites.maxUses),
             isNull(invites.usedAt),
             isNull(invites.revokedAt),
             gt(invites.expiresAt, now),
@@ -354,7 +422,7 @@ export function redeemInvite(
         )
         .returning({ id: invites.id, createdBy: invites.createdBy })
         .get()
-      if (!invite) return false
+      if (!invite) return joinGroupLink(tokenHash, username, userId, now)
       if (usernameTaken(username)) throw new NameTaken()
       const maker = db
         .select({ role: users.role })
@@ -367,6 +435,7 @@ export function redeemInvite(
       db.update(invites).set({ usedBy: userId }).where(eq(invites.id, invite.id)).run()
       return true
     })
+    if (claimed === 'group') return { ok: true, userId, username, approval: 'pending' }
     if (claimed) return { ok: true, userId, username, approval }
   } catch (error) {
     if (error instanceof NameTaken || isUniqueViolation(error)) {
@@ -379,4 +448,53 @@ export function redeemInvite(
   }
   const lookup = readInvite(token, now)
   return lookup.ok ? { ok: false, problem: 'used' } : lookup
+}
+
+/**
+ * Inside `redeemInvite`'s transaction: take a place on a group link and make
+ * the account, waiting for an admin. False when the token isn't a group link
+ * that still has room.
+ */
+function joinGroupLink(
+  tokenHash: string,
+  username: string,
+  userId: string,
+  now: number,
+): 'group' | false {
+  const link = db
+    .update(invites)
+    .set({ uses: sql`${invites.uses} + 1` })
+    .where(
+      and(
+        eq(invites.tokenHash, tokenHash),
+        isNotNull(invites.maxUses),
+        sql`${invites.uses} < ${invites.maxUses}`,
+        isNull(invites.revokedAt),
+        gt(invites.expiresAt, now),
+        makerCanInvite(),
+        groupMakerIsAdmin(),
+      ),
+    )
+    .returning({ id: invites.id, createdBy: invites.createdBy, expiresAt: invites.expiresAt })
+    .get()
+  if (!link) return false
+  if (usernameTaken(username)) throw new NameTaken()
+  const joinId = `inv_${crypto.randomBytes(9).toString('base64url')}`
+  const at = new Date(now).toISOString()
+  db.insert(users).values({ id: userId, username, usernameChosen: true, approval: 'pending' }).run()
+  db.insert(invites)
+    .values({
+      id: joinId,
+      // Never shown or usable: the row only records this join.
+      tokenHash: hash(crypto.randomBytes(32).toString('base64url')),
+      createdBy: link.createdBy,
+      createdAt: at,
+      expiresAt: link.expiresAt,
+      usedBy: userId,
+      usedAt: at,
+      groupId: link.id,
+    })
+    .run()
+  db.insert(userIdentities).values({ provider: 'invite', providerId: joinId, userId }).run()
+  return 'group'
 }

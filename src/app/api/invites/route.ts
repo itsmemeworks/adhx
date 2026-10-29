@@ -32,10 +32,11 @@ export const GET = withAuth(async (_request, userId) => {
 })
 
 /**
- * POST /api/invites { nameHint? } → { id, url, expiresAt }. Admins, or any
- * member when the server lets members invite (`inviteMode()`: the setting in
- * Settings, else `INVITES` on first start). The link is shown once: only its
- * hash is kept.
+ * POST /api/invites { nameHint?, group? } → { id, url, expiresAt }. Admins,
+ * or any member when the server lets members invite (`inviteMode()`: the
+ * setting in Settings, else `INVITES` on first start). `group: true` (admins
+ * only) makes one link for a group chat: up to `GROUP_LINK_MAX_USES` people,
+ * each waiting for an admin. The link is shown once: only its hash is kept.
  */
 export const POST = withAuth(async (request: NextRequest, userId) => {
   if (!mayCreateInvites(userId)) {
@@ -57,8 +58,9 @@ export const POST = withAuth(async (request: NextRequest, userId) => {
       },
     )
   }
-  const body = (await request.json().catch(() => ({}))) as { nameHint?: unknown }
-  const created = createInvite(userId, { nameHint: body?.nameHint })
+  const body = (await request.json().catch(() => ({}))) as { nameHint?: unknown; group?: unknown }
+  const group = body?.group === true
+  const created = createInvite(userId, { nameHint: body?.nameHint, group })
   if (!created.ok) {
     return created.reason === 'too_many'
       ? NextResponse.json(
@@ -66,7 +68,11 @@ export const POST = withAuth(async (request: NextRequest, userId) => {
           { status: 409, headers: NO_STORE },
         )
       : NextResponse.json(
-          { error: 'Only the admin can make invites here.' },
+          {
+            error: group
+              ? 'Only admins can make a group link.'
+              : 'Only the admin can make invites here.',
+          },
           { status: 403, headers: NO_STORE },
         )
   }

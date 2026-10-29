@@ -619,9 +619,17 @@ export const invites = sqliteTable(
     usedAt: text('used_at'),
     revokedAt: text('revoked_at'),
     nameHint: text('name_hint'),
+    // A group link (one link for many people, each waiting for an admin) has
+    // a cap; a one-person invite has none. `uses` counts joins through it.
+    maxUses: integer('max_uses'),
+    uses: integer('uses').notNull().default(0),
+    // A join through a group link gets its own spent row pointing at the link,
+    // so approvals and "who invited you" work as for one-person invites.
+    groupId: text('group_id'),
   },
   (table) => ({
     createdByIdx: index('invites_created_by_idx').on(table.createdBy),
+    groupIdx: index('invites_group_idx').on(table.groupId),
   }),
 )
 

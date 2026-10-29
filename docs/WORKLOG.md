@@ -6,6 +6,20 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-29 — Group invite links with admin approval
+
+- Owner: the admin makes a link, sends it to friends, and approves whoever follows it. Before, an invite was one link per person and admin-made invites skipped approval.
+- Admin → Invites → **Make a group link** (`POST /api/invites { group: true }`, admins only): up to 25 people (`GROUP_LINK_MAX_USES`) within 7 days, each `pending` until an admin answers under Waiting for you. One conditional write takes a place (`invites.uses` < `max_uses`); each join gets its own spent invite row (`group_id` → the link) so identity, approvals and "who invited you" reuse the one-person path. Requests say "Joined with Ana's group link".
+- Stops when full ("Everyone this link was for has joined"), cancelled, expired, or its maker isn't an unbanned admin; group joins are limited to 20 an hour per address. Guarded migration adds `max_uses`, `uses`, `group_id` and an index.
+- Phones: `GET /api/app/invites` now reports real `uses`; phones list the admin's group links but can't make one yet (follow-up).
+
+## 2026-10-29 — Email sign-up is invite-only by default
+
+- Owner: the admin shouldn't need email by default; they make a link, send it to friends, and approve who follows it. Chose invite-only email sign-up for new servers.
+- `ALLOWED_EMAILS` unset (or `none`) now lets nobody new make an account by email (was: anyone); a list still works, `*` is anyone, existing accounts always sign in, invites ignore it. Strangers are told to ask for an invite link. Admin → System: "Who may sign up by email", unset reads "Only people with an invite".
+- Existing installs: a one-time step (`allowed_emails_default`) saves `*` on servers that already had accounts and no env value, so their sign-up doesn't change. `verify-upgrade.mjs` lets a new one-time step's saved setting carry its own clock, as it already did for receipts.
+- Follow-up: one reusable link for a group with admin approval per joiner. Today an invite is one link per person and admin-made invites skip approval.
+
 ## 2026-10-29 — A new server stays out of search engines
 
 - Why: a privacy-skeptic review of adhx.com found a fresh ADHX was crawlable (`public/robots.txt` Allow: /, a sitemap of every shared preview) and pointed crawlers at adhx.com (hard-coded sitemap line, `PUBLIC_BASE_URL` fallback).

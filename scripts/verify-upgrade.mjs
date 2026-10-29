@@ -503,11 +503,14 @@ export async function rehearseUpgrade({ schemaFixture = false, writeSchemaFixtur
     const reupgraded = snapshot(sqlite)
     // A newly introduced one-time migration runs later after restoring the
     // backup. Compare its key/value exactly, allowing only its receipt clock
-    // to differ. Existing receipt timestamps and every user/work row stay exact.
-    for (const row of reupgraded.migration_state) {
-      if (!(before.migration_state ?? []).some((old) => old.key === row.key)) {
-        const expected = first.migration_state.find((original) => original.key === row.key)
-        if (expected) row.updated_at = expected.updated_at
+    // (and that of a setting it saved) to differ. Existing receipt timestamps
+    // and every user/work row stay exact.
+    for (const table of ['migration_state', 'server_settings']) {
+      for (const row of reupgraded[table] ?? []) {
+        if (!(before[table] ?? []).some((old) => old.key === row.key)) {
+          const expected = (first[table] ?? []).find((original) => original.key === row.key)
+          if (expected) row.updated_at = expected.updated_at
+        }
       }
     }
     assert.deepEqual(

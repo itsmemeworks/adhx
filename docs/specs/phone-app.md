@@ -159,8 +159,9 @@ only (admins too: everyone's list stays on the web).
 - `GET` → `{ canInvite, invites: [{ id, url, code, nameHint, createdAt,
 expiresAt, uses }] }`, newest first, only links that still work. `url` is
   always **null**: only a link's hash is kept, so a link is shown once, when
-  it's made (use `/link` below to share one again). `uses` is 0 (an invite
-  lets one person in, then leaves this list). `code` is a short non-secret
+  it's made (use `/link` below to share one again). `uses` is 0 for an
+  invite (it lets one person in, then leaves this list), or how many joined
+  with a group link an admin made on the web. `code` is a short non-secret
   label for telling them apart.
 - `POST` `{ nameHint? }` → `201 { id, url, expiresAt }`. `url` is the join
   page (`<origin>/invite/<token>`, for the invitee's browser: they don't have

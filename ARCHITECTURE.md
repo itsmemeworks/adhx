@@ -642,6 +642,16 @@ Invites are the easy way in (`src/lib/auth/invites.ts`, table `invites`).
 4. The browser lands on `/invite/done` ("You're in.") with a phone pairing code
    already on screen, or on `/invite/waiting` when approval is needed.
 
+**Group links.** An admin can instead make one link for a group chat
+(`POST /api/invites { group: true }`; admins only, whatever **Who can invite**
+says). It isn't spent: each join takes a place with one conditional write
+(`invites.uses + 1` while under `max_uses`, 25) and gets its own spent invite
+row with `group_id` pointing at the link, so the identity, the approval queue
+and "who invited you" work as for a one-person invite. Everyone who joins with
+a group link is `pending` until an admin answers. It stops when full,
+cancelled, expired, or when its maker is no longer an unbanned admin; joins
+from one address are limited to 20 an hour.
+
 **Who can invite** (`admin | approve | anyone`) is stored in `server_settings`
 (`invites.who`) and changed by admins with `PATCH /api/people`; `INVITES=members`
 only sets the first default. Under **Anyone, I approve**, someone a non-admin
@@ -653,9 +663,11 @@ with `approve | not_now | decline`; phone `/api/app/people/requests/{id}`),
 and every answer is audited. Requests are anchored to the invite identity, so
 deleting the inviter doesn't strand them.
 
-Email sign-in is how people get back in on a new browser. `ALLOWED_EMAILS`
-limits who may create an account by email; existing accounts can always sign
-in. Links go by Resend or SMTP, or (with `EMAIL_LINKS_TO_ADMIN`) wait on the
+Email sign-in is how people get back in on a new browser. Making an account
+by email is invite-only by default: `ALLOWED_EMAILS` unset (or `none`) lets
+nobody new in, a list lets those emails and `@domains` in, `*` lets anyone.
+Existing accounts can always sign in. A server that had accounts before this
+default was saved as `*` on upgrade (`allowed_emails_default`). Links go by Resend or SMTP, or (with `EMAIL_LINKS_TO_ADMIN`) wait on the
 admin page for an admin to pass on.
 
 ## Phone app API and auth
