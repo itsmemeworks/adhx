@@ -228,6 +228,8 @@ function feedResults(items: FeedItem[]): SearchResultItem[] {
 function emptyState(
   source: PlaySource,
   load: Load,
+  /** This server can bring in X bookmarks (it has X app keys, or you're linked). */
+  xBookmarks = true,
 ): {
   title: string
   body: string
@@ -312,12 +314,20 @@ function emptyState(
       href: '/channels',
     }
   if (source.recent || source.feed === 'mine')
-    return {
-      title: 'Nothing kept yet',
-      body: 'No algorithm is going to fill this for you. Paste a link to a post from X, Instagram, TikTok, YouTube, Reddit and more, or bring in your X bookmarks.',
-      action: 'Bring in X bookmarks',
-      href: '/settings?sync=1',
-    }
+    return xBookmarks
+      ? {
+          title: 'Nothing kept yet',
+          body: 'No algorithm is going to fill this for you. Paste a link to a post from X, Instagram, TikTok, YouTube, Reddit and more, or bring in your X bookmarks.',
+          action: 'Bring in X bookmarks',
+          href: '/settings?sync=1',
+        }
+      : {
+          title: 'Nothing kept yet',
+          body: 'No algorithm is going to fill this for you. Paste a link to a post from X, Instagram, TikTok, YouTube, Reddit and more, or share it to ADHX from your phone.',
+          action: 'Paste',
+          href: '/channels',
+          paste: true,
+        }
   return {
     title: 'Nothing to play here',
     body: 'Nothing matches that yet. Try describing it another way.',
@@ -1872,7 +1882,7 @@ export function TheaterV2({
     )
   }
   if (load.status !== 'ready' || !current) {
-    const empty = emptyState(source, load)
+    const empty = emptyState(source, load, !!(me?.xConnected || me?.xAvailable))
     return (
       <div className="flex min-h-dvh flex-col bg-nx-stage font-nx-sans text-nx-cream">
         <NxHeader current={navHere} />
@@ -2273,6 +2283,9 @@ export function TheaterV2({
               src={cover}
               alt=""
               aria-hidden
+              // X refuses its pictures to other sites, and a refused load is
+              // cached for every other <img> of the same picture.
+              referrerPolicy="no-referrer"
               className="pointer-events-none absolute -inset-[60px] h-[calc(100%+120px)] w-[calc(100%+120px)] max-w-none object-cover blur-[48px] brightness-[0.32] saturate-[1.2]"
             />
           )}
@@ -3439,7 +3452,7 @@ export function TheaterV2({
           </div>
         )}
       </div>
-      <header className="pointer-events-none fixed inset-x-0 top-0 z-[41] flex items-center gap-2.5 bg-gradient-to-b from-black/60 to-transparent px-4 pb-6 pt-[max(12px,env(safe-area-inset-top))] md:h-[72px] md:gap-4 md:border-b md:border-white/[0.08] md:bg-nx-bg md:bg-none md:px-8 md:py-0 lg:gap-7">
+      <header className="pointer-events-none fixed inset-x-0 top-0 z-[41] flex items-center gap-2 bg-gradient-to-b from-black/60 to-transparent px-4 pb-6 pt-[max(12px,env(safe-area-inset-top))] md:h-[72px] md:gap-4 md:border-b md:border-white/[0.08] md:bg-nx-bg md:bg-none md:px-8 md:py-0 lg:gap-7">
         {/* Phones: Gob, New · Channels · Live, and one tool. */}
         <PhoneGob className="pointer-events-auto md:hidden" />
         <PhoneTabs
@@ -3459,12 +3472,16 @@ export function TheaterV2({
             className="pointer-events-auto lg:hidden"
           />
         )}
-        {/* Phones show one tool (the feed's filter wins); tablets have room for both. */}
+        {/* Phones show one tool (the feed's filter wins); tablets have room for both.
+            Signed out, phones show Sign in instead: search needs an account anyway. */}
         <RoundIconButton
           label="Search"
           icon={PhoneSearchIcon}
           onClick={openQuickSearch}
-          className={cn('pointer-events-auto lg:hidden', source.feed && 'hidden md:flex')}
+          className={cn(
+            'pointer-events-auto lg:hidden',
+            (source.feed || (!me && !authLoading)) && 'hidden md:flex',
+          )}
         />
         {/* Wide screens paste with ⌘V (the pill kept for keyboards); below lg it's in ⋯. */}
         <PasteButton

@@ -871,6 +871,7 @@ export function ChannelChip({
                   key={resultKey(t)}
                   src={cover}
                   alt=""
+                  referrerPolicy="no-referrer"
                   className="block h-[13px] w-[13px] object-cover"
                 />
               ) : (

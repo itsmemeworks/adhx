@@ -126,6 +126,7 @@ export function BestMatch({
       )}
     >
       <img
+        referrerPolicy="no-referrer"
         src={cover}
         alt=""
         aria-hidden

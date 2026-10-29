@@ -279,7 +279,8 @@ export function judgeQueue(
   if (q.working) parts.push(`${q.working} working`)
   if (q.waiting) parts.push(`${q.waiting} waiting`)
   if (q.retrying) parts.push(`${q.retrying} retrying later`)
-  if (q.failed) parts.push(`${q.failed} failed`)
+  // Downloads that gave up wait for their saver on Processing, under Need you.
+  if (q.failed) parts.push(q.id === 'downloads' ? `${q.failed} need you` : `${q.failed} failed`)
   const summary = parts.length ? `${parts.join(', ')}.` : 'All caught up.'
   return { state: q.failed > 0 ? 'warn' : 'ok', summary }
 }

@@ -45,6 +45,7 @@ export function GettingReadyStage({
           src={cover}
           alt=""
           aria-hidden
+          referrerPolicy="no-referrer"
           className="absolute -inset-[30px] h-[calc(100%+60px)] w-[calc(100%+60px)] max-w-none object-cover [filter:blur(18px)_brightness(0.42)_saturate(1.1)]"
         />
       )}

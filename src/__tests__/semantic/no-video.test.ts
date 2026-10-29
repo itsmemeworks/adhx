@@ -64,3 +64,31 @@ describe('sampleVideoFrames with no video to sample', () => {
     )
   })
 })
+
+describe('fetchImageBytes for a picture that isn’t kept', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('', { status: 404 })),
+    )
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('gives up on a picture whose download gave up', async () => {
+    job('vimeo', '3', 'unavailable')
+    const { fetchImageBytes, MediaGoneError } = await import('@/lib/semantic/media')
+    await expect(fetchImageBytes('/api/files/vimeo/3/poster')).rejects.toBeInstanceOf(
+      MediaGoneError,
+    )
+  })
+
+  it('waits for a picture still being downloaded', async () => {
+    job('vimeo', '4', 'pending')
+    const { fetchImageBytes, MediaUnavailableError } = await import('@/lib/semantic/media')
+    await expect(fetchImageBytes('/api/files/vimeo/4/poster')).rejects.toBeInstanceOf(
+      MediaUnavailableError,
+    )
+  })
+})

@@ -74,7 +74,7 @@ function TweetStatic({
     <article data-content="tweet">
       <header>
         <a href={sourceUrl}>
-          {authorAvatarUrl && <img src={authorAvatarUrl} alt="" />}
+          {authorAvatarUrl && <img referrerPolicy="no-referrer" src={authorAvatarUrl} alt="" />}
           <p>{authorName || username}</p>
           <p>@{username}</p>
         </a>

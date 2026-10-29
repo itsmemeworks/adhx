@@ -36,10 +36,6 @@ function retryAt(iso: string | null): string {
   return `will try again at ${time}${sameDay ? '' : ' tomorrow'}`
 }
 
-function lowerFirst(s: string): string {
-  return s ? s[0].toLowerCase() + s.slice(1) : s
-}
-
 function seenAgo(iso: string | null): string {
   if (!iso) return 'Not seen yet'
   const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000))
@@ -131,9 +127,7 @@ export function ProcessingView({ data, server }: { data: ProcessingBoard; server
         <Kpi
           label="Need you"
           value={fmt(data.needYou)}
-          foot={
-            data.needYou ? lowerFirst(data.needYouFirst ?? 'Gave up downloading') : 'Nothing stuck'
-          }
+          foot={data.needYou ? (data.needYouFirst ?? 'Gave up downloading') : 'Nothing stuck'}
           footAccent={data.needYou > 0}
         />
         <Kpi label="Failed" value={fmt(data.failed.total)} foot={retryAt(data.failed.nextAt)} />

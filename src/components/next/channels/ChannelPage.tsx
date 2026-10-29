@@ -128,6 +128,7 @@ export function ChannelPage({
           <div className="relative h-[430px] overflow-hidden md:h-[340px] md:rounded-[22px]">
             {heroImage && (
               <img
+                referrerPolicy="no-referrer"
                 src={heroImage}
                 alt=""
                 aria-hidden

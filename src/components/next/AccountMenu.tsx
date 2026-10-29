@@ -115,7 +115,7 @@ export function AccountMenu({
       <a
         href={`/start?${new URLSearchParams({ returnTo: `${window.location.pathname}${window.location.search}` })}`}
         className={cn(
-          'flex h-10 shrink-0 items-center whitespace-nowrap rounded-full bg-nx-cream px-4 text-sm font-extrabold text-black md:h-11',
+          'flex h-10 shrink-0 items-center whitespace-nowrap rounded-full bg-nx-cream px-3 text-sm font-extrabold text-black md:h-11 md:px-4',
           className,
         )}
       >

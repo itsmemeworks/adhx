@@ -50,7 +50,13 @@ function MomentCard({ m }: { m: LiveMomentCard }) {
       <span className="relative flex h-[92px]">
         {[0, 1, 2].map((i) =>
           m.covers[i] ? (
-            <img key={i} src={m.covers[i]} alt="" className="block h-full w-1/3 object-cover" />
+            <img
+              referrerPolicy="no-referrer"
+              key={i}
+              src={m.covers[i]}
+              alt=""
+              className="block h-full w-1/3 object-cover"
+            />
           ) : (
             <span key={i} className="block h-full w-1/3 bg-nx-plate" />
           ),
