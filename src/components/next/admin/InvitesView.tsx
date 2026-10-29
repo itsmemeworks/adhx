@@ -233,10 +233,11 @@ export function InvitesView({ data }: { data: InvitesBoard }) {
         </Card>
       </div>
 
-      <div className="grid flex-1 grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+      {/* Side by side only with room for the whole Links table beside the card. */}
+      <div className="grid flex-1 grid-cols-[minmax(0,1fr)] gap-4 2xl:grid-cols-[minmax(0,1fr)_360px]">
         <Card className="min-w-0 overflow-hidden">
           <div className="px-4 pb-1.5 pt-3.5">
-            <CardHead title="Links" note={`${data.waiting} waiting · ${data.used} used`} />
+            <CardHead title="Links" note={`${data.waiting} open · ${data.used} used`} />
           </div>
           <TableBox>
             <table className="w-full min-w-[640px] border-collapse">
@@ -305,7 +306,7 @@ export function InvitesView({ data }: { data: InvitesBoard }) {
                           {groupState(l.group, l.state)}
                         </Chip>
                       ) : l.state === 'waiting' ? (
-                        <Chip>Waiting</Chip>
+                        <Chip>Open</Chip>
                       ) : l.usedBy && l.usedByWaiting ? (
                         <Chip tone="accent">{`${l.usedBy.username} is waiting`}</Chip>
                       ) : l.usedBy ? (

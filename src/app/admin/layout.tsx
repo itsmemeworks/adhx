@@ -42,10 +42,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       sql`SELECT COUNT(*) AS n FROM keep_jobs WHERE status = 'unavailable' AND accepted_at IS NULL`,
     ),
     system: await systemProblems(now),
-    invites: count(sql`
-      SELECT COUNT(*) AS n FROM invites i JOIN users m ON m.id = i.created_by
-      WHERE i.used_by IS NULL AND i.revoked_at IS NULL AND i.expires_at > ${now}
-        AND m.approval = 'approved'`),
+    // People who joined by a link and wait to be let in (Invites → Waiting for
+    // you); an open link needs nothing from you.
+    invites: waitingCount(now),
   }
   return (
     <AdminShell badges={badges} server={serverInfo()}>
