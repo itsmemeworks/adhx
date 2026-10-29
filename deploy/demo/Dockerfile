@@ -5,6 +5,7 @@ ARG ADHX_IMAGE=ghcr.io/itsmemeworks/adhx:latest
 FROM ${ADHX_IMAGE}
 COPY --chown=nextjs:nodejs e2e/parity /app/e2e/parity
 COPY --chown=nextjs:nodejs site/public/media /app/site/public/media
+COPY --chown=nextjs:nodejs site/public/avatars /app/site/public/avatars
 COPY --chown=nextjs:nodejs deploy/demo /app/deploy/demo
 EXPOSE 8080
 CMD ["sh", "/app/deploy/demo/start.sh"]

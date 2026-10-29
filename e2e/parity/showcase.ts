@@ -30,6 +30,7 @@ interface Credit {
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '../..')
 const SITE_MEDIA = path.join(ROOT, 'site/public/media')
+const SITE_AVATARS = path.join(ROOT, 'site/public/avatars')
 export const SHOWCASE_MEDIA = path.join(
   process.env.PARITY_OUT_DIR || path.join(HERE, '.out'),
   'showcase-media',
@@ -54,6 +55,26 @@ export async function buildShowcaseMedia(): Promise<void> {
     }
     copy(c.video, 'video-1.mp4')
     copy(c.poster, 'poster.jpg')
+  }
+}
+
+/**
+ * Everyone's picture in the showcase and the demo: the drawings adhx.com uses
+ * (site/public/avatars, named by username), stored as an uploaded picture.
+ */
+export async function seedShowcaseAvatars(people: Array<{ id: string; username: string }>) {
+  // Imported here: the store opens the database, which env.ts must not.
+  const { storeAvatar, AVATAR_SIZE } = await import('../../src/lib/avatar/store')
+  const { default: sharp } = await import('sharp')
+  for (const p of people) {
+    const file = path.join(SITE_AVATARS, `${p.username}.svg`)
+    if (!fs.existsSync(file)) continue
+    const jpeg = await sharp(fs.readFileSync(file), { density: 300 })
+      .resize(AVATAR_SIZE, AVATAR_SIZE)
+      .flatten({ background: '#ffffff' })
+      .jpeg({ quality: 90 })
+      .toBuffer()
+    await storeAvatar(p.id, jpeg, 'upload')
   }
 }
 

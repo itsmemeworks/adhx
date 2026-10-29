@@ -163,7 +163,7 @@ can go on the site: `site/public/shots` came from it (web at 1440 × 900 through
 only; phones as in [`e2e/devices`](../devices/README.md)). It ignores
 `PARITY_MEDIA_SRC`. The server's own saves land in the understanding queue
 while it starts, so clear `understanding_queue` before capturing if the
-"on their way" pill shows.
+"on their way" pill shows. Everyone also gets a picture: the drawings in `site/public/avatars` (by username), stored as an uploaded avatar, so the demo and adhx.com show the same faces.
 
 ## Captures never change the server
 

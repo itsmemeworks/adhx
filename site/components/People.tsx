@@ -4,14 +4,16 @@ import { cn } from './cn'
 /**
  * The fictional friends on one ADHX server, as they appear in the mockups.
  * Faces are Gob shaped, like the app's: a rounded square (38% corners)
- * tilted −4°, with a black initial.
+ * tilted −4°, showing each person's picture: original drawings in the spirit
+ * of internet animals (public/avatars, also each person's picture in the
+ * demo, see e2e/parity/seed.ts).
  */
 export const PEOPLE = {
-  ana: { name: 'Ana', initial: 'A', color: '#ff8fa3' },
-  ben: { name: 'Ben', initial: 'B', color: '#7fd1ae' },
-  mum: { name: 'Mum', initial: 'M', color: '#ffb35c' },
-  jo: { name: 'Jo', initial: 'J', color: '#c4a7ff' },
-  you: { name: 'You', initial: 'P', color: '#6b8cff' },
+  ana: { name: 'Ana', initial: 'A', color: '#ff8fa3', avatar: 'ana' },
+  ben: { name: 'Ben', initial: 'B', color: '#7fd1ae', avatar: 'ben' },
+  mum: { name: 'Mum', initial: 'M', color: '#ffb35c', avatar: 'mum' },
+  jo: { name: 'Jo', initial: 'J', color: '#c4a7ff', avatar: 'jo' },
+  you: { name: 'You', initial: 'P', color: '#6b8cff', avatar: 'pete' },
 } as const
 
 export type PersonId = keyof typeof PEOPLE
@@ -43,7 +45,7 @@ export function Face({
     <span
       aria-hidden
       className={cn(
-        'inline-flex shrink-0 select-none items-center justify-center font-extrabold leading-none text-black',
+        'relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden font-extrabold leading-none text-black',
         className,
       )}
       style={{
@@ -57,7 +59,12 @@ export function Face({
         ...style,
       }}
     >
-      {p.initial}
+      <img
+        src={`/avatars/${p.avatar}.svg`}
+        alt=""
+        decoding="async"
+        className="absolute inset-0 h-full w-full"
+      />
     </span>
   )
 }
