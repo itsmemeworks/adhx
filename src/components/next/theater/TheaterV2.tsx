@@ -37,13 +37,11 @@ import {
   ChevronLeft,
   ChevronUp,
   Ellipsis,
-  Image as ImageIcon,
   Maximize,
   Minimize,
   Pause,
   Play,
   Plus,
-  Send,
   Share,
   SkipBack,
   SkipForward,
@@ -53,7 +51,6 @@ import {
   Radio,
   Sparkles,
   Target,
-  Video,
   Volume2,
   VolumeX,
   Waves,
@@ -1385,24 +1382,27 @@ export function TheaterV2({
         kind === 'photo' ? 'photo' : null,
       )
       if (!url) return false
+      // Signed out: sign in, then land on this post's own page, which saves
+      // it (`?save=1`), whichever queue it was playing in.
+      const signIn = () => {
+        const returnTo = `${previewPath(
+          current.post.platform ?? 'twitter',
+          current.post.author,
+          current.post.id,
+          kind === 'photo' ? 'photo' : null,
+        )}?save=1`
+        window.location.assign(`/start?${new URLSearchParams({ returnTo })}`)
+        return false
+      }
+      // Known to be signed out: straight there, without a save that can only fail.
+      if (!authLoading && !me?.authenticated) return signIn()
       try {
         const res = await fetch('/api/bookmarks/add', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(opts.private ? { url, private: true } : { url }),
         })
-        if (res.status === 401) {
-          // Signed out: sign in, then land on this post's own page, which
-          // saves it (`?save=1`), whichever queue it was playing in.
-          const returnTo = `${previewPath(
-            current.post.platform ?? 'twitter',
-            current.post.author,
-            current.post.id,
-            kind === 'photo' ? 'photo' : null,
-          )}?save=1`
-          window.location.assign(`/start?${new URLSearchParams({ returnTo })}`)
-          return false
-        }
+        if (res.status === 401) return signIn()
         const data = (await res.json().catch(() => null)) as { error?: string } | null
         if (!res.ok || data?.error) throw new Error(data?.error || 'save failed')
         setSavedNow((s) => new Set(s).add(currentKey))
@@ -1414,7 +1414,7 @@ export function TheaterV2({
         return false
       }
     },
-    [current, saved, kind, currentKey, flash],
+    [current, saved, kind, currentKey, flash, authLoading, me?.authenticated],
   )
 
   /** "Just for me": save it privately, or switch an existing save. */
@@ -2217,7 +2217,6 @@ export function TheaterV2({
     ) : (
       button
     )
-  const ShareIcon = isVideo ? Video : kind === 'photo' ? ImageIcon : Send
 
   return (
     <>
@@ -2994,7 +2993,7 @@ export function TheaterV2({
                     }}
                     className={railStyle()}
                   >
-                    <ShareIcon aria-hidden className="h-[22px] w-[22px]" />
+                    <Share aria-hidden className="h-[22px] w-[22px]" />
                   </button>,
                   'Share',
                 )}

@@ -573,10 +573,10 @@ export function WhyPanel({
 const PHONE_TABS: { id: NavId; label: string; href: string }[] = [
   { id: 'new', label: 'Home', href: '/play?feed=new' },
   { id: 'channels', label: 'Channels', href: '/channels' },
-  { id: 'now', label: 'Live', href: '/now' },
+  { id: 'now', label: 'Right now', href: '/now' },
 ]
 
-/** New · Channels · Live, with New's unseen count on its corner (phones). */
+/** Home · Channels · Right now (the bottom nav's names), with New's unseen count on its corner (phones). */
 export function PhoneTabs({
   current,
   unseen,

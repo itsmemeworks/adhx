@@ -306,11 +306,29 @@ describe('TheaterV2', () => {
     expect(screen.getAllByRole('button', { name: 'Mute' }).length).toBeGreaterThan(0)
   })
 
+  /** A signed-in account, with every other request answered as before. */
+  const signedIn = () => {
+    invalidateAuthMe()
+    const answer = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) =>
+      String(url).includes('/api/auth/me')
+        ? new Response(
+            JSON.stringify({ authenticated: true, user: { id: 'u1' }, identities: {} }),
+            { status: 200 },
+          )
+        : answer(url, init),
+    )
+  }
+
   it('notifies the media player after a manual save succeeds', async () => {
+    signedIn()
     const saved = vi.fn()
     window.addEventListener('nx-post-saved', saved)
     try {
       render(<TheaterV2 source={{ ...source, start: 'twitter:3' }} />)
+      await waitFor(() =>
+        expect(fetchMock.mock.calls.some(([u]) => String(u).includes('/api/auth/me'))).toBe(true),
+      )
       await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('3'))
       fireEvent.click(screen.getByRole('button', { name: 'Save' }))
       await waitFor(() => expect(saved).toHaveBeenCalledOnce())
@@ -318,6 +336,37 @@ describe('TheaterV2', () => {
       expect(screen.getByRole('button', { name: 'Saved. Add to a channel' })).toBeInTheDocument()
     } finally {
       window.removeEventListener('nx-post-saved', saved)
+    }
+  })
+
+  it('signed out, Save goes straight to sign in without trying to save', async () => {
+    invalidateAuthMe()
+    const answer = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) =>
+      String(url).includes('/api/auth/me')
+        ? new Response(JSON.stringify({ authenticated: false }), { status: 200 })
+        : answer(url, init),
+    )
+    const assign = vi.fn()
+    const realLocation = window.location
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...realLocation, assign },
+    })
+    try {
+      render(<TheaterV2 source={{ ...source, start: 'twitter:3' }} />)
+      await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('3'))
+      await waitFor(() =>
+        expect(fetchMock.mock.calls.some(([u]) => String(u).includes('/api/auth/me'))).toBe(true),
+      )
+      await act(async () => {})
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      await waitFor(() => expect(assign).toHaveBeenCalledOnce())
+      expect(String(assign.mock.calls[0][0])).toMatch(/^\/start\?returnTo=.*save%3D1/)
+      expect(fetchMock.mock.calls.some(([u]) => String(u) === '/api/bookmarks/add')).toBe(false)
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: realLocation })
+      invalidateAuthMe()
     }
   })
 
