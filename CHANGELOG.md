@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.2](https://github.com/itsmemeworks/adhx/compare/v2.14.1...v2.14.2) (2026-10-30)
+
+
+### Bug Fixes
+
+* keep the signed-in header on a 360px phone ([#689](https://github.com/itsmemeworks/adhx/issues/689)) ([2319987](https://github.com/itsmemeworks/adhx/commit/23199873bdb7a27ef90c7271b3eb7a2f2b05de69))
+
 ## [2.14.1](https://github.com/itsmemeworks/adhx/compare/v2.14.0...v2.14.1) (2026-10-30)
 
 
