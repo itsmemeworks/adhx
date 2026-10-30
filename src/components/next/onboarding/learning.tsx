@@ -176,6 +176,13 @@ function Ring({ progress, size = 26 }: { progress: number; size?: number }) {
   )
 }
 
+/**
+ * For the ring inside NxHeader: on phones the header's on-their-way pill
+ * already counts posts still being learned, and both with Paste didn't fit
+ * (the header ran 30px off a 390px screen).
+ */
+export const LEARNING_IN_HEADER = 'hidden md:flex'
+
 /** The quiet ring. Renders nothing once everything is understood. */
 export function LearningPill({
   status,

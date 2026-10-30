@@ -6,7 +6,12 @@ import { Lock, Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { FeedItem } from '@/components/feed/types'
 import { autoPlayHref, channelPlayHref, recentPlayHref } from '../theater/queue'
-import { LearningPill, LearningSheet, useLearningStatus } from '../onboarding/learning'
+import {
+  LEARNING_IN_HEADER,
+  LearningPill,
+  LearningSheet,
+  useLearningStatus,
+} from '../onboarding/learning'
 import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
 import { ChannelCover, NxHeader, TopChannels, channelTitle, tilesFromPosts } from './ChannelParts'
 import { NxImage } from '../primitives'
@@ -109,7 +114,11 @@ export function ChannelsScreen() {
   return (
     <div className="min-h-dvh bg-nx-bg font-nx-sans text-nx-cream">
       <NxHeader>
-        <LearningPill status={learning.status} onOpen={() => setLearningOpen(true)} />
+        <LearningPill
+          status={learning.status}
+          onOpen={() => setLearningOpen(true)}
+          className={LEARNING_IN_HEADER}
+        />
         {/* Desktop pastes anywhere on the page (⌘V), the pill kept for keyboards; phones need it. */}
         <PasteButton onClick={paste.pasteFromClipboard} keyboardOnlyFrom="md" />
       </NxHeader>

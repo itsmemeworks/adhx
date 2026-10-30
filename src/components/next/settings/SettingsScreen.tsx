@@ -20,7 +20,12 @@ import { IosShortcutSettingsCard } from '@/components/IosShortcutInstall'
 import { AndroidSettingsCard } from '@/components/AndroidInstall'
 import { cn } from '@/lib/utils'
 import { NxHeader } from '../channels/ChannelParts'
-import { LearningPill, LearningSheet, useLearningStatus } from '../onboarding/learning'
+import {
+  LEARNING_IN_HEADER,
+  LearningPill,
+  LearningSheet,
+  useLearningStatus,
+} from '../onboarding/learning'
 import { useXSync } from '../onboarding/useXSync'
 import { AccountCard, type AuthMe } from './AccountCard'
 import { DangerZone } from './DangerZone'
@@ -223,7 +228,11 @@ export function SettingsScreen() {
   return (
     <div className="min-h-dvh bg-nx-bg font-nx-sans text-nx-cream">
       <NxHeader>
-        <LearningPill status={learning.status} onOpen={() => setLearningOpen(true)} />
+        <LearningPill
+          status={learning.status}
+          onOpen={() => setLearningOpen(true)}
+          className={LEARNING_IN_HEADER}
+        />
       </NxHeader>
 
       <main className="mx-auto w-full max-w-[1280px] px-4 pb-16 pt-3 md:px-8 md:pt-5 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-x-[26px]">
