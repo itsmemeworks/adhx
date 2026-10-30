@@ -5,6 +5,24 @@ phones, newest run first. Each run says what was tested on which device and
 build. A row not listed was not run. Bugs found are fixed in the same change,
 with the fix named. How to drive the phones: [`e2e/devices`](../../e2e/devices/README.md).
 
+## 30 October 2026 (Fly round 3, 2.14.4)
+
+- **Server:** 2.14.4 from `deploy/fly` on a new app. **Phones:** Debug builds
+  from `main`, freshly installed, paired to round 2's deleted server.
+
+| Journey                                    | Row | iPhone                      | Android                          |
+| ------------------------------------------ | --- | --------------------------- | -------------------------------- |
+| Join from a group link                     | –   | Pass                        | Pass                             |
+| Connect this phone from a dead pairing     | P06 | Pass: starts on post 1 of 9 | Pass (see the note)              |
+| Share a new post with a note               | P02 | –                           | Pass                             |
+| React with words; it reaches another phone | P19 | Pass                        | Pass: under Channels → Reactions |
+| A send from the web leads Home             | –   | Pass: "pete sent you this"  | –                                |
+| Search                                     | P01 | –                           | Pass                             |
+
+No bugs found. Android refused one code once because a newer code for the same
+account had replaced it (by design); the test phone had many stale ADHX tabs
+open at the same address.
+
 ## 30 October 2026 (Fly round 2, 2.14.3)
 
 - **Server:** 2.14.3 from `deploy/fly` on a new app (dedicated CPU, 4 GB).

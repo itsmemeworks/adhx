@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-30 — Fly round 3 on 2.14.4: a clean run
+
+- Fresh install from the recipe on 2.14.4; the scripted web pass (owner setup, seed, group link, a third friend, widths at 360 and 390, speed, admin labels, the locked-Vimeo reason, text posts not "listening", held sign-in links) passed 26 of 26.
+- Phones, freshly reinstalled and paired to round 2's deleted server: both joined from the group link, connected with one tap, started on post 1 (the iPhone's caught-up landing didn't recur), shared with a note, reacted across phones, got a send and searched. No product bugs found.
+- One Android code was refused once: a newer code replaces the old one by design (the tests say so), and the test phone had 16 stale ADHX tabs at the same address. Close old tabs before a device run.
+
 ## 2026-10-30 — Fly round 2 on 2.14.3
 
 - Fresh install from the updated recipe (dedicated CPU, 4 GB, swap): no prompts or warnings, pages 45–970 ms while the server learned its first saves. A scripted web pass (owner setup, seed, group link, a third friend, widths, speed, admin labels, held sign-in links) passed 20 of 24; all four failures were one bug.
