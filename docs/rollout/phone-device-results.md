@@ -5,6 +5,30 @@ phones, newest run first. Each run says what was tested on which device and
 build. A row not listed was not run. Bugs found are fixed in the same change,
 with the fix named. How to drive the phones: [`e2e/devices`](../../e2e/devices/README.md).
 
+## 30 October 2026 (Fly round 2, 2.14.3)
+
+- **Server:** 2.14.3 from `deploy/fly` on a new app (dedicated CPU, 4 GB).
+- **iPhone 16 Pro** and **Galaxy A13**, Debug builds from `main`, both still
+  paired to round 1's deleted server, as Ana and Ben.
+
+| Journey                                       | Row | iPhone                                   | Android                          |
+| --------------------------------------------- | --- | ---------------------------------------- | -------------------------------- |
+| Join from a group link (stale session cookie) | –   | Pass: brand fonts, name typed cleanly    | Pass                             |
+| Connect this phone from a dead pairing        | P06 | Pass (once landed on caught-up, see log) | Pass                             |
+| Settings → Phone app → Connect this phone     | –   | Pass                                     | Pass                             |
+| Share a new post with a note                  | P02 | –                                        | Pass: the note is on the save    |
+| React with words; it reaches another phone    | P19 | Pass                                     | Pass: under Channels → Reactions |
+| A send from the web leads Home                | –   | Pass: "pete sent you this", Reply        | –                                |
+| A post that couldn't be kept says why         | –   | Fix 1                                    | Fix 1                            |
+| Search by meaning                             | P01 | Pass: "dog on a boat" by picture         | –                                |
+
+Bugs found and fixed:
+
+1. **"Taken down or made private on Vimeo"** for a Vimeo that only couldn't
+   be kept (DRM). The server now says why, as Processing does.
+2. **The owner's phone header ran off screen** while the server was learning
+   (web; found by the width check).
+
 ## 30 October 2026 (a fresh Fly install)
 
 - **Server:** 2.14.2 installed from `deploy/fly` exactly as written, on a new
