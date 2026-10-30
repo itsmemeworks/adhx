@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-30 — Fly round 6 on 2.14.5: the closing perfect run
+
+- Same image as round 5 (the README change shipped no app code). Fresh install from the recipe; web pass 26 of 26. Both apps freshly reinstalled from `main` and paired to round 5's deleted server: join, first-tap connect, start on post 1, a share with a note, a send, a reaction reaching the other phone, search by picture and by words. Nothing failed or needed a retry.
+- The iPhone's caught-up landing (rounds 1 and 2) didn't recur in four connect → Start watching cycles, the first under its original conditions (fresh install, dead pairing); 15 clean runs since. Closed as not reproducible.
+- Before each device run on a recreated address: close old ADHX tabs on the Android and flush Chrome's socket pool and host cache (`chrome://net-internals`).
+
 ## 2026-10-30 — Fly round 5 on 2.14.5: a clean run, and the install section redone
 
 - Fresh install of 2.14.5 from the recipe: web pass 26 of 26 (all 11 seed saves landed). Phones, paired to round 4's deleted server: both joined from the group link, connected on the first tap, started on post 1, shared with notes, a reaction reached the other phone, a send led Home, search found by picture and words. No product bugs.
