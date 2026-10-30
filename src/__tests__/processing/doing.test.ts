@@ -159,8 +159,8 @@ beforeEach(() => {
     attempts: 1,
     nextAttemptAt: later(60_000),
   })
-  // Ana's: kept, being listened to.
-  save(ANA, 'listening')
+  // Ana's: a video, kept, being listened to.
+  save(ANA, 'listening', { category: 'video' })
   keep('listening', 'done')
   queue('listening', 'speech')
   queue('listening', 'text')
@@ -223,6 +223,18 @@ describe('GET /api/activity/processing', () => {
     expect(items.finished).toMatchObject({ status: 'ready', step: 7, stepLabel: 'Ready' })
     // Named savers, newest first; signed-in members only.
     expect(ben.stuck.savers.map((s) => s.username)).toEqual(['ben'])
+  })
+
+  it('a words-only post isn’t "listening" or on its way while its skipped jobs wait', async () => {
+    const before = (await doing('all', ANA)).summary.onTheirWay
+    // Every post gets every kind of job; the worker skips these for a text post.
+    save(ANA, 'wordsonly', { category: 'text' })
+    keep('wordsonly', 'done')
+    queue('wordsonly', 'speech')
+    queue('wordsonly', 'screen')
+    const { items, summary } = await doing('all', ANA)
+    expect(byId(items).wordsonly).toMatchObject({ status: 'ready', step: 7 })
+    expect(summary.onTheirWay).toBe(before)
   })
 
   it('offers Retry and Keep the link only to people who saved it', async () => {

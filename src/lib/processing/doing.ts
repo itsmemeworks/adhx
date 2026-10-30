@@ -164,6 +164,9 @@ export function keepReason(lastError: string | null, platform: string): string {
   return `${network} wouldn’t hand it over.`
 }
 
+/** Categories with no picture, video or sound to learn from. */
+const WORDS_ONLY = new Set(['text', 'tweet', 'article'])
+
 function kindNoun(category: string | null): string {
   if (category === 'video') return 'video'
   if (category === 'photo') return 'photo'
@@ -377,7 +380,11 @@ export async function processingActivity(
     const row = copy.get(c.k)
     if (!row) continue
     const job = keep.get(c.k)
-    const q = queue.get(c.k) ?? []
+    // Every post gets every kind of job; the worker skips speech and text on
+    // screen for words-only posts when it reaches them. Until then they mustn't
+    // show a text post as "Listening to what's said" or keep it on its way.
+    const wordsOnly = WORDS_ONLY.has(row.category ?? 'tweet')
+    const q = (queue.get(c.k) ?? []).filter((r) => !(wordsOnly && isExtractKind(r.kind)))
     const conv = conversions.get(c.k) ?? []
     const results = learned.get(c.k) ?? new Map()
     const qKinds = new Set(q.map((r) => r.kind))
