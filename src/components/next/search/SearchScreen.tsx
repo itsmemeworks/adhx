@@ -233,11 +233,16 @@ function postsWord(n: number): string {
   return n === 1 ? 'one post' : `${n} posts`
 }
 
-/** Beside a few results: where ADHX looked, what it found, and that it all stayed home. */
+/**
+ * Beside a few results: where ADHX looked, what it found, and what left the
+ * server. Nothing did, unless Jev sorted the top results (`refined`): then the
+ * search words and those posts' public words went to it.
+ */
 function HowFound({
   items,
   query,
   understood,
+  refined,
   ready,
   total,
   className,
@@ -245,6 +250,7 @@ function HowFound({
   items: SearchResultItem[]
   query: string
   understood: boolean
+  refined: boolean
   ready: number | null
   total: number | null
   className?: string
@@ -321,11 +327,13 @@ function HowFound({
         <span className="flex items-center gap-2.5">
           <Server aria-hidden className="h-5 w-5 shrink-0 text-nx-accent" />
           <span className="text-[15px] font-extrabold">
-            All on your server. Nothing sent anywhere.
+            {refined ? 'Understood on your server.' : 'All on your server. Nothing sent anywhere.'}
           </span>
         </span>
         <span className="text-[13px] leading-normal text-nx-ink-faint">
-          No cloud, no ad tech, nobody else’s computer.
+          {refined
+            ? 'To sort the best few, your search words and those posts’ public words went to Jev.'
+            : 'No cloud, no ad tech, nobody else’s computer.'}
         </span>
         {ready !== null && total !== null && total > 0 && (
           <>
@@ -336,7 +344,8 @@ function HowFound({
               />
             </span>
             <span className="text-xs font-semibold text-nx-ink-faint">
-              {`${ready.toLocaleString('en-GB')} of ${total.toLocaleString('en-GB')} saves searchable`}
+              {/* Every save is searchable by its words at once; `ready` counts the fully learned. */}
+              {`${ready.toLocaleString('en-GB')} of your ${total.toLocaleString('en-GB')} saves fully learned`}
             </span>
           </>
         )}
@@ -740,6 +749,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
                 items={items}
                 query={state.q}
                 understood={!!data?.understood}
+                refined={!!data?.refined}
                 ready={learning.status?.ready ?? null}
                 total={learning.status?.totalSaves ?? null}
                 className="hidden xl:flex"

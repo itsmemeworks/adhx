@@ -181,7 +181,7 @@ export function OverviewView({ data, server }: { data: OverviewBoard; server: st
             <span className="whitespace-nowrap text-[13px] text-nx-ink-soft">{helper}</span>
             {h.understoodPct !== null && (
               <span className="whitespace-nowrap text-[13px] text-nx-ink-soft">
-                {`Understood ${h.understoodPct}%`}
+                {`Words understood ${h.understoodPct}%`}
               </span>
             )}
             <Link

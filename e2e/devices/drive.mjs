@@ -326,7 +326,8 @@ async function android(op, args) {
     case 'stop':
       adb('shell', 'am', 'force-stop', PACKAGE)
       return console.log('✓')
-    case 'clear':
+    // Not `clear`: that name empties a field (above), so this one never ran.
+    case 'wipe':
       adb('shell', 'pm', 'clear', PACKAGE)
       return console.log('✓')
     case 'install':

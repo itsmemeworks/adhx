@@ -84,7 +84,7 @@ export function WaitingClient({
               <Gob size={72} mood="busy" className="mt-1 shrink-0" />
             </div>
             <p className="m-0 text-[17px] leading-[1.45] text-nx-ink-soft">
-              {`${inviter ? `${inviter} invited you. ` : ''}Here, ${who} says yes first. This page moves on by itself.`}
+              {`${inviter ? `${inviter} invited you. ` : ''}On this ADHX, ${who} says yes to new people first. This page moves on by itself.`}
             </p>
             <div
               role="status"

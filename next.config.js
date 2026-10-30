@@ -131,13 +131,14 @@ const nextConfig = {
     },
     {
       // Invite pages (not /invite/done or /invite/waiting): script-free, token kept off referrers.
+      // Keep in step with scriptFreePage's own CSP (src/lib/auth/link-page.ts): this one wins.
       source: '/invite/:token((?!(?:done|waiting)$)[^/]+)',
       headers: [
         { key: 'Referrer-Policy', value: 'same-origin' },
         {
           key: 'Content-Security-Policy',
           value:
-            "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+            "default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
         },
       ],
     },
@@ -150,7 +151,7 @@ const nextConfig = {
         {
           key: 'Content-Security-Policy',
           value:
-            "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+            "default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
         },
       ],
     },

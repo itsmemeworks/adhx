@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-30 — A fresh Fly install, walked end to end
+
+- Installed 2.14.2 from `deploy/fly` on a new app, set up the owner, saved 11 real posts, let two friends in from a group link without email, and connected the iPhone and the Android by "Connect this phone". Full results: [phone device results](rollout/phone-device-results.md).
+- **2 GB ran out:** while a new server learned its first saves, the models, a download and FFmpeg used all 2 GB with no swap, and pages stopped answering. The recipe is now 4 GB with 1 GB of swap; the volume step names its region and `--yes`, and the health check's grace fits Fly's 60 s cap.
+- **Shared CPUs throttle:** the first downloads, an FFmpeg re-encode of a 4K YouTube video and the models used up the burst; steal reached 186% and pages took 0.5–6 s. A dedicated `performance-1x` answered in 55–130 ms, so the recipe now asks for one dedicated CPU (owner's call). FFmpeg re-encodes and yt-dlp also run at nice 10 like the model worker (`keep/background.ts`). Still open: whether kept video should stop at 1080p (yt-dlp sorts by resolution first, so it fetched 4K VP9 and re-encoded it).
+- **Fixed:** iPhone said "Can't load Home" after a connect link moved it to a new server (Home kept the old pairing's state; `RootView` keys it on `connectionId`). Invite and sign-in link pages now load the brand fonts (`public/fonts`, `font-src 'self'`). Invite name field has `autocorrect="off"`. The shared-saves notice drops "now"; "Keep @name" hides while the box holds it; the waiting page reads plainer; Search's privacy line says what went to Jev when it sorted results, and its count is "fully learned"; Admin says "Words understood", "1 core" and "With copies" for local converting. `drive.mjs android wipe` (it was a second, unreachable `clear`).
+- **Noted, not changed:** every post gets every learning job, so a text post shows "Listening to what's said" and counts as on its way until the worker skips it; members see that count over the feed. The web's red live dot is always on, unlike the apps.
+
 ## 2026-10-30 — The signed-in header fits a 360px phone
 
 - Launch check on 2.14.1: with the on-their-way pill showing, the signed-in header on Live and Channels was 372px wide, so on 360px Androids the avatar ran off the edge and the page zoomed out. Paste is now its icon alone under 380px (still read as "Paste"), and under 340px the logo keeps the face and drops the name. Checked at 320, 360, 390 and 1440 on a production build: no page wider than the screen, avatar 16px from the edge.

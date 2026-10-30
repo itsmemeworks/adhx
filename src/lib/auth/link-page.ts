@@ -57,6 +57,8 @@ export function scriptFreePage(options: {
     `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(options.title)}</title><style>
+@font-face{font-family:'Instrument Serif';font-weight:400;font-display:swap;src:url(/fonts/InstrumentSerif-Regular.ttf) format('truetype')}
+@font-face{font-family:'Hanken Grotesk';font-weight:400 800;font-display:swap;src:url(/fonts/HankenGrotesk-latin-variable.woff2) format('woff2')}
 html{color-scheme:dark;font-family:'Hanken Grotesk',system-ui,sans-serif;background:#0f0e0c;color:#f4f1ea}
 body{margin:0;min-height:100dvh;display:flex;justify-content:center;padding:20px 24px 32px;box-sizing:border-box}
 main{width:min(100%,440px);display:flex;flex-direction:column}
@@ -89,7 +91,8 @@ button:focus-visible,a:focus-visible{outline:3px solid white;outline-offset:4px}
         'X-Robots-Tag': 'noindex, nofollow, noarchive',
         'X-Content-Type-Options': 'nosniff',
         'Content-Security-Policy':
-          "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+          // font-src: the app's own faces, copied to public/fonts (next/font's files have hashed names).
+          "default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
       },
     },
   )

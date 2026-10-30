@@ -150,10 +150,12 @@ Back up the `/data` volume consistently: stop ADHX before copying it, or use SQL
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/itsmemeworks/adhx/main/deploy/fly/fly.toml
 fly launch --copy-config --no-deploy --name your-adhx
-fly volumes create adhx_data --size 50 --app your-adhx
+fly volumes create adhx_data --size 50 --region lhr --yes --app your-adhx
 fly deploy --app your-adhx
-fly logs --app your-adhx | grep setup
+fly logs --app your-adhx --no-tail | grep setup
 ```
+
+The recipe asks for one dedicated CPU and 4 GB (`performance-1x`). Shared CPUs cost less, but a new ADHX does its heaviest work first (downloading, converting and learning everything you save on day one), and Fly throttles shared CPUs once their burst runs out, which made pages take seconds. Use the same region in `fly.toml` and the volume step.
 
 Fly gives the app its address (`https://your-adhx.fly.dev`); set `NEXT_PUBLIC_APP_URL` once you put your own domain on it. Keep `min_machines_running = 1`. The download queue, the hourly X sync and Right now all run inside the app.
 

@@ -8,6 +8,8 @@ final class AppModel: ObservableObject {
 
     @Published private(set) var isConnected = Store.isConnected
     @Published private(set) var server: URL? = Store.server
+    /// Changes with every pairing, so Home starts over on a new ADHX.
+    @Published private(set) var connectionId = Store.connectionId
     @Published private(set) var username: String? = Store.username
     @Published private(set) var records: [ShareRecord] = History.all()
     @Published private(set) var waiting = OfflineQueue.count
@@ -35,6 +37,7 @@ final class AppModel: ObservableObject {
     func reload() {
         isConnected = Store.isConnected
         server = Store.server
+        connectionId = Store.connectionId
         username = Store.username
         records = History.all()
         waiting = OfflineQueue.count

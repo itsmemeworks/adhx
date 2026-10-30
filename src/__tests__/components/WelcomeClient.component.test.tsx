@@ -102,6 +102,8 @@ describe('WelcomeClient', () => {
     claimResponse = jsonResponse({ ok: true, username: 'j0hndoe' })
     render(<WelcomeClient suggestedUsername="j0hndoe" returnTo="/now" />)
     const input = screen.getByLabelText('Username') as HTMLInputElement
+    // Unchanged, Claim @j0hndoe says it already: no second button.
+    expect(screen.queryByRole('button', { name: /Keep @j0hndoe/ })).toBeNull()
 
     fireEvent.change(input, { target: { value: 'somethingelse' } })
     fireEvent.click(screen.getByRole('button', { name: /Keep @j0hndoe/ }))

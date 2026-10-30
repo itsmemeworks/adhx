@@ -3,6 +3,7 @@ import fs from 'fs/promises'
 import os from 'os'
 import path from 'path'
 import { ffmpegPath } from '@/lib/media/ffmpeg'
+import { inBackground } from './background'
 import { maxFileSize, mediaDir, ytdlpCookies, ytdlpCookiesText, ytdlpPath } from './config'
 import { parseProgressLine, PROGRESS_TEMPLATE } from './progress'
 
@@ -175,6 +176,7 @@ function exec(args: string[], timeoutMs: number, onLine?: (line: string) => void
         reject(new YtdlpError(message, isPermanent(message)))
       },
     )
+    inBackground(child)
     if (onLine) {
       // Progress goes to stderr in quiet mode (`--print` implies it), stdout otherwise.
       child.stdout?.on('data', eachLine(onLine))

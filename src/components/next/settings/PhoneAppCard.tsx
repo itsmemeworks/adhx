@@ -118,7 +118,12 @@ export function PhoneAppCard() {
           <li className="flex items-start gap-3">
             <Step n={2} />
             <div className="flex flex-col gap-1">
-              <span className="text-[15px] font-bold">Open it and scan this code</span>
+              <span className="text-[15px] font-bold">
+                <span className="md:hidden">
+                  Open it here with Connect this phone, or scan the code
+                </span>
+                <span className="hidden md:inline">Open it and scan this code</span>
+              </span>
               <span className="text-[13px] leading-relaxed text-nx-ink/65">
                 The code connects the app to this ADHX. It works once, for 10 minutes.
               </span>

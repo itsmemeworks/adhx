@@ -64,7 +64,18 @@ function Node({
 }
 
 /** A queue inside the server box: what's left, coloured by its state. */
-function QueueNode({ title, left, state }: { title: string; left: number; state: CheckState }) {
+function QueueNode({
+  title,
+  left,
+  state,
+  offLabel = 'Off',
+}: {
+  title: string
+  left: number
+  state: CheckState
+  /** What an off queue says instead of a count. */
+  offLabel?: string
+}) {
   return (
     <span className="flex min-w-0 flex-col gap-0.5 rounded-[14px] bg-nx-plate px-3 py-2.5">
       <span className="flex items-center gap-1.5">
@@ -75,7 +86,7 @@ function QueueNode({ title, left, state }: { title: string; left: number; state:
         className="text-[22px] font-extrabold leading-none"
         style={{ color: STATE_COLOUR[state] }}
       >
-        {state === 'off' ? 'Off' : fmt(left)}
+        {state === 'off' ? offLabel : fmt(left)}
       </span>
       <span className="text-[11px] text-nx-ink-faint">{state === 'off' ? '' : 'left to do'}</span>
     </span>
@@ -167,7 +178,7 @@ export function SystemMap({ data }: { data: SystemBoard }) {
               <span className="text-xs text-nx-ink-faint">
                 {[
                   host.label !== host.hostname ? host.hostname : null,
-                  `${host.cpu} · ${host.cores} cores`,
+                  `${host.cpu} · ${host.cores} ${host.cores === 1 ? 'core' : 'cores'}`,
                   `${bytesLabel(usedMemory)} of ${bytesLabel(host.memory.total)} memory used`,
                   `load ${host.load[0]}`,
                   `${data.server.platform}${host.container ? ', in Docker' : ''}`,
@@ -208,7 +219,8 @@ export function SystemMap({ data }: { data: SystemBoard }) {
                 state={queue('conversions')?.state ?? 'off'}
               />
             ) : (
-              <QueueNode title="Converting" left={0} state="off" />
+              // Here a video is converted while its copy is kept, not in a queue of its own.
+              <QueueNode title="Converting" left={0} state="off" offLabel="With copies" />
             )}
             <QueueNode
               title="Understanding"
