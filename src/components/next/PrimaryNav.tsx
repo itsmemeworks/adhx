@@ -54,8 +54,9 @@ export function NxLogo({ className, busy = false }: { className?: string; busy?:
     >
       {/* The body fills 76 of Gob's 96 units: 40 draws the boards' ~32px mark. */}
       <Gob size={40} mood={busy || working ? 'busy' : 'idle'} className="-mx-1" />
-      {/* Tablets keep the mark and drop the name, so the header stays one row. */}
-      <span className="font-nx-serif text-[30px] leading-none text-nx-cream md:max-lg:hidden">
+      {/* Tablets and the narrowest phones keep the mark and drop the name, so
+          the header stays one row. */}
+      <span className="font-nx-serif text-[30px] leading-none text-nx-cream max-[339px]:hidden md:max-lg:hidden">
         adhx
       </span>
     </Link>

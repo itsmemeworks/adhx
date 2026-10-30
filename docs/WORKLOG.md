@@ -6,6 +6,11 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-30 — The signed-in header fits a 360px phone
+
+- Launch check on 2.14.1: with the on-their-way pill showing, the signed-in header on Live and Channels was 372px wide, so on 360px Androids the avatar ran off the edge and the page zoomed out. Paste is now its icon alone under 380px (still read as "Paste"), and under 340px the logo keeps the face and drops the name. Checked at 320, 360, 390 and 1440 on a production build: no page wider than the screen, avatar 16px from the edge.
+- Open issue 560 (text over YouTube in My saves on phones) predates the current theater; no caption covers the video now. Check its link, then close it.
+
 ## 2026-10-30 — Pairing snapshots, revoked grants and bounded cache maintenance
 
 - Follow-up review found a queue/client capture race, stale sign-out responses and media grants surviving account bans. iOS now captures a pairing/client before reading queued entries, checks each entry and discards late replies. Conditional sign-out is serialized with pairing across the app and extension; an atomic `connection.json` holds only the epoch/server, never the Keychain credential.
