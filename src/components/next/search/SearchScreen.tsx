@@ -345,7 +345,7 @@ function HowFound({
             </span>
             <span className="text-xs font-semibold text-nx-ink-faint">
               {/* Every save is searchable by its words at once; `ready` counts the fully learned. */}
-              {`${ready.toLocaleString('en-GB')} of ${total.toLocaleString('en-GB')} of your saves fully learned`}
+              {`${ready.toLocaleString('en-GB')} of your ${total.toLocaleString('en-GB')} saves fully learned`}
             </span>
           </>
         )}
