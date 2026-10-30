@@ -65,7 +65,7 @@ like numbers or `true`/`false` are parsed; `[…]` and `{…}` are JSON.
 | `swipe`                        | `dir=up\|down\|left\|right`, on the screen or an element                   | `dir=`, or `x1= y1= x2= y2= ms=`                               |
 | `exists`                       | `label=`… `timeout=` → `{"exists":true}`                                   | The same, with Android's keys                                  |
 | `launch`                       | Starts ADHX Share (`args=[…]`, `env={…}`)                                  | Starts ADHX                                                    |
-| `terminate` / `stop`           | Ends the app                                                               | `stop` force-stops it; `clear` wipes its data                  |
+| `terminate` / `stop`           | Ends the app                                                               | `stop` force-stops it; `wipe` clears its data                  |
 | `target`                       | `bundle=com.apple.mobilesafari` to drive another app, `bundle=adhx` back   | –                                                              |
 | `open`                         | `url=` (a deep link or a web page)                                         | `url=` as a VIEW intent                                        |
 | `share`                        | –                                                                          | `text=` (a link) to ADHX's share screen, like the share sheet  |

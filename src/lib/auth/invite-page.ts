@@ -77,7 +77,7 @@ export function inviteJoinPage(options: {
     before: `<div class="chip"><span class="face" aria-hidden="true" style="background:${faceColour(options.inviterUsername ?? options.inviter)}">${initial}</span><span><b>${inviter} invited you</b><small>to their ADHX, for friends only</small></span></div>`,
     content: `<form action="/invite/${escapeHtml(options.token)}" method="post">
          <label for="username">Your name</label>
-         <input class="field" id="username" name="username" value="${escapeHtml(options.name)}" required minlength="3" maxlength="${USERNAME_MAX_LENGTH}" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="${options.error ? 'name-error' : 'name-hint'}"${options.error ? ' aria-invalid="true" autofocus' : ''}>
+         <input class="field" id="username" name="username" value="${escapeHtml(options.name)}" required minlength="3" maxlength="${USERNAME_MAX_LENGTH}" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" aria-describedby="${options.error ? 'name-error' : 'name-hint'}"${options.error ? ' aria-invalid="true" autofocus' : ''}>
          ${error}
          <button type="submit">Join<span aria-hidden="true">→</span></button>
        </form>

@@ -5,6 +5,40 @@ phones, newest run first. Each run says what was tested on which device and
 build. A row not listed was not run. Bugs found are fixed in the same change,
 with the fix named. How to drive the phones: [`e2e/devices`](../../e2e/devices/README.md).
 
+## 30 October 2026 (a fresh Fly install)
+
+- **Server:** 2.14.2 installed from `deploy/fly` exactly as written, on a new
+  Fly app in London (then this branch, built on Fly), empty volume. The owner
+  set it up from the setup link in the log; 11 real posts from YouTube, Vimeo,
+  TikTok, X and SoundCloud. No email service.
+- **iPhone 16 Pro**, Debug build from `main`, still paired to an old test
+  server, as Ana. **Samsung Galaxy A13**, Debug build from `main`, wiped, as
+  Ben. Both joined from one group link opened in the phone's browser.
+
+| Journey                                                   | Row | iPhone                                         | Android                                    |
+| --------------------------------------------------------- | --- | ---------------------------------------------- | ------------------------------------------ |
+| Join from a group link, wait, get let in                  | –   | Pass: the page moved on by itself              | Pass                                       |
+| Connect this phone (no typing)                            | P01 | Pass after fix 1 ("Open in ADHX Share?")       | Pass: "Connected to pete's ADHX"           |
+| Play the feed                                             | P01 | Pass                                           | Pass                                       |
+| Share a new post from another app                         | P02 | –                                              | Pass once the server recovered (2 GB, see the worklog) |
+| React with words; it reaches another phone                | P19 | Pass: "this gnome is me on mondays"            | Pass: under Channels → Reactions           |
+| Search by meaning                                         | P01 | –                                              | Pass: "elephants at the zoo"               |
+| Channels: Your people (ring and count)                    | –   | –                                              | Pass                                       |
+| Sign in without email: link in the log and on Admin       | –   | (web)                                          | (web)                                      |
+
+Bugs found and fixed:
+
+1. **The iPhone said "Can't load Home" after connecting to a new server.**
+   A connect link while already connected paired the phone anew, but Home
+   stayed mounted with what it had loaded from the old, unreachable server.
+   Home now starts over with each pairing. Android already did.
+2. **The invite page used the phone's stock fonts**, and Safari's predictive
+   text slipped a word into the name. The link pages now load ADHX's own
+   faces, and the name field turns autocorrect off.
+
+Not run: Live moments (too few saves at once to form one), removing a phone,
+and the iPhone share sheet (needs a hand).
+
 ## 30 October 2026 (review fixes and polish)
 
 - **Server:** a production build of this branch (2.13.1 plus the review fixes

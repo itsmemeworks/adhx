@@ -176,7 +176,7 @@ describe('SharedSavesNotice', () => {
 
   it('tells members once, and remembers the dismissal', () => {
     const { unmount } = render(<SharedSavesNotice />)
-    expect(screen.getByText(/Your saves are now shared with your people\./)).toBeInTheDocument()
+    expect(screen.getByText(/Your saves are shared with your people\./)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Got it' }))
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
     expect(window.localStorage.getItem(SHARED_SAVES_NOTICE_KEY)).toBe('1')

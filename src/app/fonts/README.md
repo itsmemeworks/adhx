@@ -21,3 +21,7 @@ To update, download the source files from an explicitly selected upstream revisi
 | `InstrumentSerif-Italic.ttf`       | `ofl/instrumentserif/InstrumentSerif-Italic.ttf`            | `08939b8bdf534afec24ae0ef5e03f948940cd9a8fe08e7fecbad040e62327385` |
 
 `HankenGrotesk-latin-variable.woff2` and its adjacent license predate this vendoring change. Its original source is the [Hanken Grotesk project](https://github.com/marcologous/hanken-grotesk), named in the license. Both applications reuse this existing file.
+
+## Copies in `public/fonts`
+
+`InstrumentSerif-Regular.ttf` and `HankenGrotesk-latin-variable.woff2` (with their OFL files) are also in `public/fonts/`, byte for byte. The script-free link pages (`src/lib/auth/link-page.ts`: invites and sign-in links) can't use `next/font`'s hashed files, so they load these by a fixed path. Update both copies together.

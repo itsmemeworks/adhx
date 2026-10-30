@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import QRCode from 'qrcode'
-import { QrCode, RefreshCw } from 'lucide-react'
+import { QrCode, RefreshCw, Smartphone } from 'lucide-react'
 import { IN_CARD, PRIMARY } from './parts'
 
 /**
@@ -152,6 +152,11 @@ export function PairCodeBox({
           <span className="text-xs text-nx-ink/55" role="status">
             {left === 1 ? '1 minute left' : `${left} minutes left`}
           </span>
+          {/* On the phone itself there's nothing to scan with: open the app instead, as /invite/done does. */}
+          <a href={pairing.link} className={`${PRIMARY} mt-1 w-full whitespace-nowrap md:hidden`}>
+            <Smartphone aria-hidden className="h-[18px] w-[18px]" />
+            <span>Connect this phone</span>
+          </a>
         </>
       ) : (
         <div

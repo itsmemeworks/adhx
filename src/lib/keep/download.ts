@@ -13,6 +13,7 @@ import { downloadTo, imageExt, MEDIA_HOSTS, openGraph, TakenDown } from './fetch
 import { posterFrame } from './poster'
 import { probeMedia, type Probed } from './probe'
 import { execFile } from 'child_process'
+import { inBackground } from './background'
 import { ffmpegPath } from '@/lib/media/ffmpeg'
 import { remoteProcessing } from '@/lib/processing/config'
 import { absolutePath, mimeFor, postDir, slotFor, type KeptKind, type NewKeptFile } from './store'
@@ -316,7 +317,7 @@ async function toH264(file: string, probed: Probed, onStart?: () => void): Promi
   const out = file.replace(/\.[^.]+$/, '') + '.h264.mp4'
   const bin = await ffmpegPath()
   await new Promise<void>((resolve, reject) => {
-    execFile(
+    const child = execFile(
       bin,
       [
         '-hide_banner',
@@ -350,6 +351,7 @@ async function toH264(file: string, probed: Probed, onStart?: () => void): Promi
       (error, _o, stderr) =>
         error ? reject(new Error(`Re-encode failed: ${String(stderr).slice(0, 300)}`)) : resolve(),
     )
+    inBackground(child)
   })
   await fs.rm(file, { force: true })
   return out

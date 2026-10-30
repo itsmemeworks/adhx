@@ -12,6 +12,10 @@ struct RootView: View {
                 NavigationStack {
                     LibraryHome()
                 }
+                // A connect link while already connected pairs anew: without
+                // this, Home kept what it had loaded (or failed to) from the
+                // old ADHX and said "Can't load Home".
+                .id(model.connectionId)
                 .transition(.opacity)
                 .fullScreenCover(isPresented: $model.welcome) {
                     ConnectedView()

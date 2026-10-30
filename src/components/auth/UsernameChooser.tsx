@@ -62,6 +62,8 @@ export function UsernameChooser({
   const debounceRef = useRef<number | null>(null)
 
   const sanitized = sanitizeUsername(value)
+  // While the box still holds the suggestion, Claim already says "@suggestion".
+  const keepShown = showKeepSuggestion && sanitized !== suggestedUsername
 
   useEffect(() => {
     onSanitizedChange?.(sanitized)
@@ -183,7 +185,7 @@ export function UsernameChooser({
           {submitting ? 'Claiming…' : `Claim @${sanitized || '...'}`}
         </button>
 
-        {showKeepSuggestion && (
+        {keepShown && (
           <button
             type="button"
             disabled={submitting}
@@ -253,7 +255,7 @@ export function UsernameChooser({
             Cancel
           </button>
         )}
-        {showKeepSuggestion && (
+        {keepShown && (
           <button
             type="button"
             disabled={submitting}

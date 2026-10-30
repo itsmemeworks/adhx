@@ -23,8 +23,9 @@ function remember(): void {
 }
 
 /**
- * Once, for signed-in members: saves are shared with your people now (they
- * joined the shared feed on upgrade), and how to keep one to yourself.
+ * Once, for signed-in members: saves are shared with your people (older
+ * accounts joined the shared feed on upgrade), and how to keep one to
+ * yourself. No "now": most people reading it joined after that.
  */
 export function SharedSavesNotice() {
   const { me } = useAuthMe()
@@ -48,7 +49,7 @@ export function SharedSavesNotice() {
         <Users className="h-5 w-5" strokeWidth={2} />
       </span>
       <p className="m-0 min-w-0 flex-1 text-[15px] leading-[1.35]">
-        <span className="font-extrabold">Your saves are now shared with your people.</span>
+        <span className="font-extrabold">Your saves are shared with your people.</span>
         <span>{' Make any of them private from the post’s ⋯ menu.'}</span>
       </p>
       <button

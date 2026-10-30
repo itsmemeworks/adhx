@@ -3,11 +3,17 @@
 #
 #   curl -fsSLO https://raw.githubusercontent.com/itsmemeworks/adhx/main/deploy/fly/fly.toml
 #   fly launch --copy-config --no-deploy --name your-adhx
-#   fly volumes create adhx_data --size 20 --app your-adhx
+#   fly volumes create adhx_data --size 20 --region lhr --yes --app your-adhx
 #   fly deploy --app your-adhx
-#   fly logs --app your-adhx | grep setup
+#   fly logs --app your-adhx --no-tail | grep setup
+#
+# Use the same region in both places. One volume is right: ADHX is one
+# machine with one SQLite file.
 
 primary_region = 'lhr'
+
+# A cushion for the moments a download, a conversion and the models overlap.
+swap_size_mb = 1024
 
 [build]
   image = 'ghcr.io/itsmemeworks/adhx:latest'
@@ -29,13 +35,14 @@ primary_region = 'lhr'
   [[http_service.checks]]
     interval = '15s'
     timeout = '5s'
-    grace_period = '90s'
+    grace_period = '60s'
     method = 'get'
     path = '/api/health'
 
-# Search by meaning keeps its models in memory: 2 GB works, 4 GB is comfortable.
+# Search by meaning keeps its models in memory. 2 GB ran out on a new server
+# learning its first saves (the web pages stopped answering), so 4 GB.
 [[vm]]
-  memory = '2gb'
+  memory = '4gb'
   cpu_kind = 'shared'
   cpus = 2
 
