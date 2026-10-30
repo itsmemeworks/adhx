@@ -282,7 +282,8 @@ export function PasteButton({
       )}
     >
       <ClipboardPaste aria-hidden className="h-4 w-4" strokeWidth={2.2} />
-      <span>Paste</span>
+      {/* Under 380px the header can't fit the word beside the on-their-way pill. */}
+      <span className="max-[379px]:sr-only">Paste</span>
     </button>
   )
   if (!keyboardOnlyFrom) return pill
