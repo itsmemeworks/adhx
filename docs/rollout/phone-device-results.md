@@ -36,6 +36,9 @@ Bugs found and fixed:
 2. **Android's Live tab always had a red dot**, even with nothing live. It
    now shows only while a moment is live, as on the iPhone, and says so to
    TalkBack.
+3. **Android's Your people clipped a friend's yellow ring and count.** Each
+   face sat in a 62dp clipped column inside a 68dp ring. The columns are 68dp
+   now, unclipped, at the same 76dp pitch.
 
 Not run: a share made offline and sent after re-pairing (the iPhone share
 sheet needs a hand), and a note added while a share is still queued on a
