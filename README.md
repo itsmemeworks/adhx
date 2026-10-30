@@ -149,24 +149,49 @@ Open the link it prints, add your email and pick your name: you're the owner. Th
 
 ### One click, wherever you host
 
-| Where                                                   | How                                                                                                                                                                      |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Any Linux server                                        | `curl -fsSL https://raw.githubusercontent.com/itsmemeworks/adhx/main/deploy/install.sh \| sudo sh` ([what it does](deploy/install.sh))                                   |
-| Any Linux server with a domain, HTTPS included          | `curl -fsSL https://raw.githubusercontent.com/itsmemeworks/adhx/main/deploy/install.sh \| sudo ADHX_DOMAIN=adhx.example.com sh`                                          |
-| A new server at Hetzner, DigitalOcean, Vultr, Linode, … | Paste [`deploy/cloud-init.yaml`](deploy/cloud-init.yaml) into **User data** when you create it                                                                           |
-| Render                                                  | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/itsmemeworks/adhx) (Standard plan + disk) |
-| Railway                                                 | [Two-minute recipe](deploy/railway/README.md)                                                                                                                            |
-| Fly.io                                                  | [`deploy/fly`](deploy/fly/fly.toml): four commands                                                                                                                       |
-| Portainer                                               | **Settings → App Templates**, URL `https://raw.githubusercontent.com/itsmemeworks/adhx/main/deploy/portainer/templates.json`; then **App Templates → ADHX**              |
-| CapRover                                                | **One-Click Apps → >> TEMPLATE <<**, paste [`deploy/caprover/adhx.yml`](deploy/caprover/adhx.yml)                                                                        |
-| Zeabur                                                  | [Template](deploy/zeabur/template.yaml) (button once it's published)                                                                                                     |
-| Dokploy, Coolify, CasaOS, Synology, TrueNAS             | Paste [`deploy/one-click/docker-compose.yml`](deploy/one-click/docker-compose.yml)                                                                                       |
-| Your own Compose, with Caddy for HTTPS                  | [`deploy/vps`](deploy/vps/docker-compose.yml): `ADHX_DOMAIN=adhx.example.com docker compose up -d`                                                                       |
-| Unraid                                                  | [Container template](deploy/unraid/adhx.xml)                                                                                                                             |
-| Umbrel                                                  | [App folder](deploy/umbrel/adhx) (not in the Umbrel store yet)                                                                                                           |
-| UGREEN NAS                                              | [UGOS Pro walkthrough](deploy/nas/ugreen.md)                                                                                                                             |
+**Any Linux server.** One command installs Docker if it's missing, keeps ADHX in `/opt/adhx` and prints the link that makes you the owner ([what it does](deploy/install.sh)):
 
-The installer sets up Docker if it's missing, keeps ADHX in `/opt/adhx` and prints the link that makes you the owner. Run it again to update; add `ADHX_DOMAIN` later and it moves to HTTPS with everything kept.
+```bash
+curl -fsSL https://raw.githubusercontent.com/itsmemeworks/adhx/main/deploy/install.sh | sudo sh
+```
+
+Have a domain? Put `ADHX_DOMAIN=adhx.example.com` after `sudo` and it sets up HTTPS too. Run the command again to update.
+
+**A cloud platform:**
+
+<p>
+<a href="https://render.com/deploy?repo=https://github.com/itsmemeworks/adhx"><img alt="Deploy to Render" src="https://render.com/images/deploy-to-render-button.svg" height="28"></a>
+<a href="deploy/railway/README.md"><img alt="Railway" src="https://img.shields.io/badge/Railway-0B0D0E?style=for-the-badge&logo=railway&logoColor=white" height="28"></a>
+<a href="deploy/README.md#flyio"><img alt="Fly.io" src="https://img.shields.io/badge/Fly.io-24175B?style=for-the-badge&logo=flydotio&logoColor=white" height="28"></a>
+<a href="deploy/README.md#zeabur"><img alt="Zeabur" src="https://img.shields.io/badge/Zeabur-2D2D2D?style=for-the-badge" height="28"></a>
+</p>
+
+**A new cloud server.** Paste [`deploy/cloud-init.yaml`](deploy/cloud-init.yaml) into **User data** when you create it:
+
+<p>
+<a href="deploy/README.md#a-new-cloud-server"><img alt="Hetzner" src="https://img.shields.io/badge/Hetzner-D50C2D?style=for-the-badge&logo=hetzner&logoColor=white" height="28"></a>
+<a href="deploy/README.md#a-new-cloud-server"><img alt="DigitalOcean" src="https://img.shields.io/badge/DigitalOcean-0080FF?style=for-the-badge&logo=digitalocean&logoColor=white" height="28"></a>
+<a href="deploy/README.md#a-new-cloud-server"><img alt="Vultr" src="https://img.shields.io/badge/Vultr-007BFC?style=for-the-badge&logo=vultr&logoColor=white" height="28"></a>
+<a href="deploy/README.md#a-new-cloud-server"><img alt="Akamai (Linode)" src="https://img.shields.io/badge/Akamai_%28Linode%29-0096D6?style=for-the-badge&logo=akamai&logoColor=white" height="28"></a>
+</p>
+
+**A home server or NAS:**
+
+<p>
+<a href="deploy/README.md#portainer"><img alt="Portainer" src="https://img.shields.io/badge/Portainer-13BEF9?style=for-the-badge&logo=portainer&logoColor=white" height="28"></a>
+<a href="deploy/README.md#caprover"><img alt="CapRover" src="https://img.shields.io/badge/CapRover-ED5B26?style=for-the-badge&logo=caprover&logoColor=white" height="28"></a>
+<a href="deploy/README.md#dokploy-coolify-casaos-synology-and-truenas"><img alt="Coolify" src="https://img.shields.io/badge/Coolify-6B16ED?style=for-the-badge&logo=coolify&logoColor=white" height="28"></a>
+<a href="deploy/README.md#dokploy-coolify-casaos-synology-and-truenas"><img alt="Dokploy" src="https://img.shields.io/badge/Dokploy-2D2D2D?style=for-the-badge" height="28"></a>
+<a href="deploy/README.md#dokploy-coolify-casaos-synology-and-truenas"><img alt="CasaOS" src="https://img.shields.io/badge/CasaOS-2D2D2D?style=for-the-badge" height="28"></a>
+<a href="deploy/README.md#dokploy-coolify-casaos-synology-and-truenas"><img alt="Synology" src="https://img.shields.io/badge/Synology-B5B5B6?style=for-the-badge&logo=synology&logoColor=black" height="28"></a>
+<a href="deploy/README.md#dokploy-coolify-casaos-synology-and-truenas"><img alt="TrueNAS" src="https://img.shields.io/badge/TrueNAS-0095D5?style=for-the-badge&logo=truenas&logoColor=white" height="28"></a>
+<a href="deploy/README.md#unraid"><img alt="Unraid" src="https://img.shields.io/badge/Unraid-F15A2C?style=for-the-badge&logo=unraid&logoColor=white" height="28"></a>
+<a href="deploy/README.md#umbrel"><img alt="Umbrel" src="https://img.shields.io/badge/Umbrel-5351FB?style=for-the-badge&logo=umbrel&logoColor=white" height="28"></a>
+<a href="deploy/README.md#ugreen-nas"><img alt="UGREEN NAS" src="https://img.shields.io/badge/UGREEN_NAS-2D2D2D?style=for-the-badge" height="28"></a>
+<a href="deploy/README.md#your-own-compose-with-caddy-for-https"><img alt="Compose + Caddy" src="https://img.shields.io/badge/Compose_%2B_Caddy-1F88C0?style=for-the-badge&logo=caddy&logoColor=white" height="28"></a>
+</p>
+
+Every logo opens that host's steps in [`deploy/`](deploy/README.md).
 
 Wherever it runs, the first screen asks for a setup code. It's in the server log, or in the host's dashboard when the template made one (`SETUP_CODE`). That way, reaching a fresh server first isn't enough to take it over.
 

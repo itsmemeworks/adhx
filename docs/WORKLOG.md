@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-30 — Fly round 5 on 2.14.5: a clean run, and the install section redone
+
+- Fresh install of 2.14.5 from the recipe: web pass 26 of 26 (all 11 seed saves landed). Phones, paired to round 4's deleted server: both joined from the group link, connected on the first tap, started on post 1, shared with notes, a reaction reached the other phone, a send led Home, search found by picture and words. No product bugs.
+- Test-rig lessons, not app bugs: after deleting and recreating the same Fly address, Android cached the old answer (Chrome got 503 from the dead app until its socket pool and host cache were flushed in `chrome://net-internals`); scripted shares opened before a card closed stack ShareActivity cards, so notes typed into the wrong one.
+- Owner asked for the README's install table to be clickable logos: it's now one copyable command, then rows of branded links (cloud platforms, new cloud servers, home server or NAS) into a new `deploy/README.md` with each host's steps.
+
 ## 2026-10-30 — Fly round 4 on 2.14.4: SoundCloud, and two loose ends closed
 
 - Fresh install again; the web pass was 25 of 26: SoundCloud answered this Fly machine's address with 403 (yt-dlp and the page), and the save said "SoundCloud post not available". `describeNetworkPostOrWhy` now tells a gone post from a network that won't answer; the add path answers 503 "didn't answer this server. Try again in a bit." with no code, so the phones queue the share.
