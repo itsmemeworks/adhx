@@ -15,16 +15,16 @@ with the fix named. How to drive the phones: [`e2e/devices`](../../e2e/devices/R
   server, as Ana. **Samsung Galaxy A13**, Debug build from `main`, wiped, as
   Ben. Both joined from one group link opened in the phone's browser.
 
-| Journey                                                   | Row | iPhone                                         | Android                                    |
-| --------------------------------------------------------- | --- | ---------------------------------------------- | ------------------------------------------ |
-| Join from a group link, wait, get let in                  | –   | Pass: the page moved on by itself              | Pass                                       |
-| Connect this phone (no typing)                            | P01 | Pass after fix 1 ("Open in ADHX Share?")       | Pass: "Connected to pete's ADHX"           |
-| Play the feed                                             | P01 | Pass                                           | Pass                                       |
-| Share a new post from another app                         | P02 | –                                              | Pass once the server recovered (2 GB, see the worklog) |
-| React with words; it reaches another phone                | P19 | Pass: "this gnome is me on mondays"            | Pass: under Channels → Reactions           |
-| Search by meaning                                         | P01 | –                                              | Pass: "elephants at the zoo"               |
-| Channels: Your people (ring and count)                    | –   | –                                              | Pass                                       |
-| Sign in without email: link in the log and on Admin       | –   | (web)                                          | (web)                                      |
+| Journey                                             | Row | iPhone                                   | Android                                                |
+| --------------------------------------------------- | --- | ---------------------------------------- | ------------------------------------------------------ |
+| Join from a group link, wait, get let in            | –   | Pass: the page moved on by itself        | Pass                                                   |
+| Connect this phone (no typing)                      | P01 | Pass after fix 1 ("Open in ADHX Share?") | Pass: "Connected to pete's ADHX"                       |
+| Play the feed                                       | P01 | Pass                                     | Pass                                                   |
+| Share a new post from another app                   | P02 | –                                        | Pass once the server recovered (2 GB, see the worklog) |
+| React with words; it reaches another phone          | P19 | Pass: "this gnome is me on mondays"      | Pass: under Channels → Reactions                       |
+| Search by meaning                                   | P01 | –                                        | Pass: "elephants at the zoo"                           |
+| Channels: Your people (ring and count)              | –   | –                                        | Pass                                                   |
+| Sign in without email: link in the log and on Admin | –   | (web)                                    | (web)                                                  |
 
 Bugs found and fixed:
 

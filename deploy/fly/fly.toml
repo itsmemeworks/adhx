@@ -41,10 +41,13 @@ swap_size_mb = 1024
 
 # Search by meaning keeps its models in memory. 2 GB ran out on a new server
 # learning its first saves (the web pages stopped answering), so 4 GB.
+# A dedicated CPU: on shared CPUs the first downloads, video conversions and
+# models used up Fly's burst within minutes, and pages took 0.5-6 s while it
+# throttled. One dedicated CPU answered in about 0.1 s.
 [[vm]]
   memory = '4gb'
-  cpu_kind = 'shared'
-  cpus = 2
+  cpu_kind = 'performance'
+  cpus = 1
 
 [mounts]
   source = 'adhx_data'
