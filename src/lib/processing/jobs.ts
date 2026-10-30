@@ -207,8 +207,16 @@ export function mediaCacheKey(platform: string, postId: string, file: KeptFile):
   const created = db.all<{ created_at: string }>(
     sql`SELECT created_at FROM kept_files WHERE platform=${platform} AND post_id=${postId} AND slot=${file.slot}`,
   )[0]?.created_at
-  return retainedIdentity(platform, postId, file, created)
+  const key = retainedIdentity(platform, postId, file, created)
+  // Remembered so a later cache hint finds its file without a full scan.
+  db.run(sql`INSERT INTO media_cache_keys(cache_key,platform,post_id,slot,issued_at)
+    VALUES(${key},${platform},${postId},${file.slot},${Date.now()})
+    ON CONFLICT(cache_key) DO UPDATE SET issued_at=excluded.issued_at`)
+  return key
 }
+
+/** The Mac drops a retained original within a day; a week covers any late hint. */
+const CACHE_KEY_DAYS = 7
 
 function retainedIdentity(
   platform: string,
@@ -236,7 +244,16 @@ export function validateMediaCacheKeys(keys: unknown): string[] {
 export function reconcileMediaCache(keys: unknown): string[] {
   const remove = new Set<string>(validateMediaCacheKeys(keys))
   if (!remove.size) return []
+  const now = Date.now()
+  db.run(sql`DELETE FROM media_cache_keys WHERE issued_at<${now - CACHE_KEY_DAYS * 86_400_000}`)
+  // Only the hinted keys are looked up (at most 512), however long the queue.
+  // A key this server never issued, or whose file changed, is released.
+  const keyList = sql.join(
+    [...remove].map((key) => sql`${key}`),
+    sql`,`,
+  )
   const files = db.all<{
+    cache_key: string
     platform: string
     post_id: string
     slot: KeptFile['slot']
@@ -244,15 +261,20 @@ export function reconcileMediaCache(keys: unknown): string[] {
     bytes: number
     created_at: string
   }>(sql`
-    SELECT k.platform,k.post_id,k.slot,k.path,k.bytes,k.created_at FROM kept_files k
-    WHERE EXISTS(SELECT 1 FROM bookmarks b WHERE b.platform=k.platform AND b.id=k.post_id)
+    SELECT c.cache_key,k.platform,k.post_id,k.slot,k.path,k.bytes,k.created_at
+    FROM media_cache_keys c
+    JOIN kept_files k ON k.platform=c.platform AND k.post_id=c.post_id AND k.slot=c.slot
+    WHERE c.cache_key IN (${keyList})
+      AND EXISTS(SELECT 1 FROM bookmarks b WHERE b.platform=k.platform AND b.id=k.post_id)
       AND NOT EXISTS(SELECT 1 FROM moderated_posts m WHERE m.platform=k.platform AND m.bookmark_id=k.post_id AND m.hidden=1)
       AND (EXISTS(SELECT 1 FROM understanding_queue q WHERE q.platform=k.platform AND q.post_id=k.post_id AND q.kind IN ('image','video','speech','screen'))
-        OR EXISTS(SELECT 1 FROM processing_leases l WHERE l.platform=k.platform AND l.post_id=k.post_id AND l.kind IN ('image','video','speech','screen') AND l.expires_at>${Date.now()})
+        OR EXISTS(SELECT 1 FROM processing_leases l WHERE l.platform=k.platform AND l.post_id=k.post_id AND l.kind IN ('image','video','speech','screen') AND l.expires_at>${now})
         OR EXISTS(SELECT 1 FROM media_conversions c WHERE c.platform=k.platform AND c.post_id=k.post_id AND c.slot=k.slot
           AND c.source_path=k.path AND c.source_bytes=k.bytes AND c.source_created_at=k.created_at AND c.status IN ('pending','running')))`)
-  for (const file of files)
-    remove.delete(retainedIdentity(file.platform, file.post_id, file, file.created_at))
+  for (const file of files) {
+    if (retainedIdentity(file.platform, file.post_id, file, file.created_at) === file.cache_key)
+      remove.delete(file.cache_key)
+  }
   return [...remove]
 }
 

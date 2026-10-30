@@ -31,6 +31,7 @@ struct ADHXShareApp: App {
             switch phase {
             case .active:
                 model.reload()
+                ClipboardFiles.sweep()
                 Task {
                     await model.checkConnection()
                     await model.refresh()

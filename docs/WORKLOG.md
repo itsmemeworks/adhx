@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-30 — Launch review follow-ups: nine fixes
+
+- Owner asked to fix the nine open findings from the launch code review (two new, seven carried over). All nine are in one PR.
+- iPhone: shares, waiting links and notes are stamped with the pairing (`Store.connectionId`, new on every connect). Connecting again clears them, and late work from the old pairing is refused, so one account's private link can't go out with another's key. Notes added after a share went are kept on the share (`pendingNote`) and retried. Copy gives the clipboard its own file copies for an hour instead of the sheet's download folder.
+- Server: `/api/files` rechecks access after a tile resize. File tokens now name the phone key and expire in 24 h (`withFileGrant` in `withPhoneKey`), so removing a phone revokes them. Mac conversion reads the saved KEEP switches. Cache hints are looked up by key (`media_cache_keys`) instead of hashing the whole queue. A replayed queued share with a note keeps it, including mid-save or after it lands.
+- Android: Files saves a whole album into a picked folder. The button was already hidden for albums, so the old first-photo-only path was latent. Device hub: phone endpoints need the hub's token (`e2e/devices/.hub-token`); `/status` and `/cmd` stay local.
+- Follow-up: not run on physical phones this time. Re-pair, a late note, Copy then paste after an hour, and Android album to Files are worth a device pass.
+
 ## 2026-10-29 — Release-candidate run: production build, real posts, both phones
 
 - Owner asked for full web and USB phone testing before launch. Ran a production build of `main` (2.13.0) the way the image starts it, on an empty data folder with no email service, models on and real posts from X, YouTube, Vimeo and TikTok; owner via the setup code, a group link, two friends joining from phone browsers. iPhone 16 Pro (Ana, `DeviceDriver`) and Galaxy A13 (owner, then Ben, `adb reverse`); a sub-agent swept every page as signed out, owner and member at desktop and phone sizes. Results: `docs/rollout/phone-device-results.md`.

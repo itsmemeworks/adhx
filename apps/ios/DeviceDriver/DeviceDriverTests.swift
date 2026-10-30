@@ -9,10 +9,12 @@ import XCTest
 /// `e2e/devices/README.md`. Without `ADHX_DRIVER_URL` the test skips, so it
 /// never runs by accident.
 ///
-/// Run it with `e2e/devices/ios.sh` (which passes the URL as
-/// `TEST_RUNNER_ADHX_DRIVER_URL`), never in CI.
+/// Run it with `e2e/devices/ios.sh` (which passes the URL and the hub's token as
+/// `TEST_RUNNER_ADHX_DRIVER_URL` and `TEST_RUNNER_ADHX_DRIVER_TOKEN`), never in CI.
 final class DeviceDriverTests: XCTestCase {
     private var base: URL!
+    /// The hub's token (`e2e/devices/.hub-token`, passed by `ios.sh`).
+    private var token = ""
     private lazy var adhx = XCUIApplication()
     private lazy var current: XCUIApplication = adhx
 
@@ -21,7 +23,11 @@ final class DeviceDriverTests: XCTestCase {
         guard let raw = env["ADHX_DRIVER_URL"], let url = URL(string: raw) else {
             throw XCTSkip("Set TEST_RUNNER_ADHX_DRIVER_URL to drive the phone.")
         }
+        guard let token = env["ADHX_DRIVER_TOKEN"], !token.isEmpty else {
+            throw XCTSkip("Set TEST_RUNNER_ADHX_DRIVER_TOKEN to the hub's token (ios.sh does).")
+        }
         base = url
+        self.token = token
         Self.skipWaitingForIdle()
         continueAfterFailure = true
         executionTimeAllowance = 6 * 60 * 60
@@ -315,6 +321,7 @@ final class DeviceDriverTests: XCTestCase {
 
     private func next() -> [String: Any]? {
         var request = URLRequest(url: base.appendingPathComponent("next"))
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 40
         return send(request)
     }
@@ -330,6 +337,7 @@ final class DeviceDriverTests: XCTestCase {
         var request = URLRequest(url: base.appendingPathComponent(String(path.dropFirst())))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
         request.timeoutInterval = 30
         return send(request)

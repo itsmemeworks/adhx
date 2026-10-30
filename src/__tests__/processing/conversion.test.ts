@@ -568,3 +568,33 @@ describe('remote conversion retaining originals', () => {
     })
   })
 })
+
+describe('the conversion switches saved in Admin → System', () => {
+  afterEach(async () => {
+    const extras = await import('@/lib/settings/extras')
+    extras.__resetExtrasCache()
+  })
+
+  it.each(['KEEP_H264', 'KEEP_MEDIA'] as const)(
+    'hands out no job with %s saved off',
+    async (name) => {
+      const extras = await import('@/lib/settings/extras')
+      extras.__resetExtrasCache()
+      await saved()
+      extras.setExtra(name, 'off')
+      expect(await claim()).toBeNull()
+    },
+  )
+
+  it('a saved H.264 on wins over the environment’s off', async () => {
+    const extras = await import('@/lib/settings/extras')
+    extras.__resetExtrasCache()
+    await saved()
+    vi.stubEnv('KEEP_H264', 'off')
+    extras.setExtra('KEEP_H264', 'on')
+    expect((await claim())?.kind).toBe('convert')
+    expect(instance.sqlite.prepare('SELECT status FROM media_conversions').get()).toEqual({
+      status: 'running',
+    })
+  })
+})

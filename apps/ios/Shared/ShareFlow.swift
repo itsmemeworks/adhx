@@ -48,6 +48,8 @@ final class ShareFlow: ObservableObject {
 
     private(set) var server: URL?
     private var recordId: String?
+    /// The pairing this share was made under (`Store.connectionId`).
+    private var connection: String?
     private var saveTask: Task<Void, Never>?
     private var pollTask: Task<Void, Never>?
     private var queueId: String?
@@ -146,6 +148,7 @@ final class ShareFlow: ObservableObject {
             return
         }
         recordId = record.id
+        connection = record.connection
         phase = .saving
         saveTask = Task { [weak self] in
             await self?.save(with: client, link: link, recordId: record.id)
@@ -161,20 +164,30 @@ final class ShareFlow: ObservableObject {
 
     /// The note goes with the save once the card closes: on the saved post
     /// (`/api/app/note`) when it has landed, else with the same share again
-    /// (same link and request id) after the first has been answered.
+    /// (same link and request id) after the first has been answered. It's kept
+    /// with the share first, so the app sends it later if this try doesn't
+    /// (offline, or the extension closed): `Flusher` and `StatusRefresher`.
     private func sendNote() {
         guard noteTask == nil, let text = Saver.clean(note), let client, let link, let recordId else { return }
         switch phase {
-        case .saving, .saved, .alreadySaved: break
+        case .saving, .saved, .alreadySaved, .offline: break
         default: return
         }
+        History.update(id: recordId) { $0.pendingNote = text }
+        // Waiting for a connection: it goes with the link.
+        if phase == .offline { return }
         let first = saveTask
         noteTask = Task { [weak self] in
             await first?.value
-            if let r = self?.result {
-                _ = try? await client.setNote(platform: r.platform, id: r.id, note: text)
-            } else {
-                _ = try? await client.save(url: link, deferPublish: true, requestId: recordId, note: text)
+            do {
+                if let r = self?.result {
+                    _ = try await client.setNote(platform: r.platform, id: r.id, note: text)
+                } else {
+                    _ = try await client.save(url: link, deferPublish: true, requestId: recordId, note: text)
+                }
+                History.update(id: recordId) { if $0.pendingNote == text { $0.pendingNote = nil } }
+            } catch {
+                // Kept on the share; the app tries again.
             }
         }
     }
@@ -205,7 +218,8 @@ final class ShareFlow: ObservableObject {
             // a second job. StatusRefresher keeps the original privacy intent.
             if queueId == nil {
                 History.update(id: recordId) { $0.stage = .queued }
-                OfflineQueue.add(id: recordId, link: link, isPrivate: privacyTouched ? justForMe : nil)
+                OfflineQueue.add(id: recordId, link: link, isPrivate: privacyTouched ? justForMe : nil,
+                                 connection: connection)
             }
             phase = .offline
         } catch APIError.badKey(let message) {

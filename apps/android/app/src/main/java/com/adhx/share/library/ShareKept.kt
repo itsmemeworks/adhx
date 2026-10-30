@@ -5,6 +5,8 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
+import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
 import com.adhx.share.data.ConnectionStore
 import com.adhx.share.net.AdhxApi
@@ -52,6 +54,26 @@ object ShareKept {
             val clip = ClipData.newRawUri(null, uris[0]).apply { uris.drop(1).forEach { addItem(ClipData.Item(it)) } }
             intent.setType(type).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION).clipData = clip
             return intent
+        }
+    }
+
+    /**
+     * Copy every file into the folder at [tree] (picked with OpenDocumentTree).
+     * Returns how many were saved; a name already there gets the system's
+     * "(1)" rather than replacing it.
+     */
+    fun saveToFolder(context: Context, tree: Uri, files: List<java.io.File>): Int {
+        val resolver = context.contentResolver
+        val folder = runCatching {
+            DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
+        }.getOrNull() ?: return 0
+        return files.count { file ->
+            val type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase())
+                ?: "application/octet-stream"
+            runCatching {
+                val target = DocumentsContract.createDocument(resolver, folder, type, file.name) ?: return@runCatching false
+                resolver.openOutputStream(target)?.use { out -> file.inputStream().use { it.copyTo(out) } } != null
+            }.getOrDefault(false)
         }
     }
 

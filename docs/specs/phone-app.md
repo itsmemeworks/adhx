@@ -452,7 +452,10 @@ width, height, durationMs }], article, savers, isPrivate }`
 - A post that is only Just for me has files only its owners can fetch. On the
   owner's own `isPrivate` posts, the `/api/files` URLs in `media` (and the
   Shared lately `posterUrl`) carry a `k=` file token, because a video player
-  can't send the phone key: keep the query string when resolving them.
+  can't send the phone key: keep the query string when resolving them. A
+  token belongs to the phone key that fetched the list and lasts 24 hours;
+  removing that phone, or the save, stops it working. Images and playback
+  that can send `Authorization` keep working after it expires.
 - `sourceUrl` is the post on its own network ("Open original").
 - `why` (feed items only): the feed's reason, shown over the bottom row when
   the faces can't say it (`sent`, `like`) and always in Why this one.

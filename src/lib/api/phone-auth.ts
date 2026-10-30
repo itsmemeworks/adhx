@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { accessKeyFromHeader } from '@/lib/auth/access-keys'
+import { withFileGrant } from '@/lib/keep/file-access'
 
 /**
  * The phone app's routes (`/api/app/*`) sign requests with a phone key
@@ -58,7 +59,7 @@ export function withPhoneKey(
   return async (request: Request) => {
     const caller = await phoneCaller(request)
     if (!caller) return badKey()
-    return handler(request, caller)
+    return withFileGrant(caller, () => handler(request, caller))
   }
 }
 
@@ -74,7 +75,7 @@ export function withPhoneKeyOrSession<C = unknown>(
     if (request.headers.get('authorization')) {
       const caller = await phoneCaller(request)
       if (!caller) return badKey()
-      return handler(request, caller.userId, ctx as C)
+      return withFileGrant(caller, () => handler(request, caller.userId, ctx as C))
     }
     const { getCurrentUserId } = await import('@/lib/auth/session')
     const userId = await getCurrentUserId()

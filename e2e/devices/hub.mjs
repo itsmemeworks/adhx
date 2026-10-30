@@ -7,11 +7,24 @@
  *   node e2e/devices/hub.mjs            # listens on port 3700, IPv4 and IPv6
  *
  * The phone reaches it over the LAN, so commands are accepted only from this
- * Mac (loopback); the phone can only fetch them and answer.
+ * Mac (loopback), and only the driver may fetch them and answer: it sends
+ * the hub's token (`Authorization: Bearer …`), which the hub makes at start
+ * and writes to `e2e/devices/.hub-token` (owner-only) for `ios.sh` to hand
+ * the driver. Anything else on the network gets 401.
  */
+import crypto from 'node:crypto'
+import fs from 'node:fs'
 import http from 'node:http'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const PORT = Number(process.env.DEVICE_HUB_PORT || 3700)
+const TOKEN_FILE =
+  process.env.DEVICE_HUB_TOKEN_FILE ||
+  path.join(path.dirname(fileURLToPath(import.meta.url)), '.hub-token')
+const TOKEN = process.env.DEVICE_HUB_TOKEN || crypto.randomBytes(32).toString('base64url')
+fs.writeFileSync(TOKEN_FILE, TOKEN, { mode: 0o600 })
+fs.chmodSync(TOKEN_FILE, 0o600)
 const queue = []
 const waiting = new Map() // command cid → resolve(result)
 let poller = null // the phone's pending GET /next
@@ -41,6 +54,13 @@ const readBody = (req) =>
 const loopback = (req) =>
   ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress)
 
+/** The driver: it carries the hub's token. */
+const expected = Buffer.from(`Bearer ${TOKEN}`)
+const driver = (req) => {
+  const given = Buffer.from(String(req.headers.authorization || ''))
+  return given.length === expected.length && crypto.timingSafeEqual(given, expected)
+}
+
 function hand() {
   if (!poller || queue.length === 0) return
   const { res, timer } = poller
@@ -51,6 +71,10 @@ function hand() {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://hub')
+  const phonePath = ['/next', '/hello', '/result'].includes(url.pathname)
+  if (phonePath && !driver(req)) return json(res, 401, { ok: false, error: 'not the driver' })
+  if (!phonePath && !loopback(req))
+    return json(res, 403, { ok: false, error: 'only from this Mac' })
   if (req.method === 'GET' && url.pathname === '/next') {
     lastSeen = Date.now()
     if (poller) {
@@ -91,7 +115,6 @@ const server = http.createServer(async (req, res) => {
     })
   }
   if (req.method === 'POST' && url.pathname === '/cmd') {
-    if (!loopback(req)) return json(res, 403, { ok: false, error: 'commands only from this Mac' })
     const command = { ...(await readBody(req)), cid: `c${++seq}` }
     const timeoutMs = Number(command.hubTimeout || 120) * 1000
     const result = await new Promise((resolve) => {

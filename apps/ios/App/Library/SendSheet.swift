@@ -433,9 +433,10 @@ struct SendSheet: View {
     /// The file itself on the clipboard, to paste into any chat.
     private func copyFiles() {
         guard let files = model.export?.files, !files.isEmpty else { return }
-        let providers = files.compactMap { NSItemProvider(contentsOf: $0.url) }
-        guard !providers.isEmpty else { return }
-        UIPasteboard.general.itemProviders = providers
+        guard ClipboardFiles.put(files) else {
+            say("Couldn’t copy that. Free some space and try again.")
+            return
+        }
         say(files.count > 1 ? "Photos copied. Paste them into any chat." : "Copied. Paste it into any chat.")
         dismiss()
     }
@@ -537,5 +538,54 @@ private enum WhatsApp {
         var top = scene?.windows.first(where: \.isKeyWindow)?.rootViewController
         while let next = top?.presentedViewController { top = next }
         return top
+    }
+}
+
+/// Files on the clipboard outlive this sheet: the app you paste into reads
+/// them whenever the paste happens, long after the sheet (and its download
+/// folder) is gone. So the clipboard gets its own copies (APFS clones, so no
+/// extra space), kept for an hour, as long as the clipboard item itself lasts.
+/// The next copy replaces them, and the app sweeps any past their hour.
+enum ClipboardFiles {
+    static let lifetime: TimeInterval = 60 * 60
+
+    private static var root: URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("adhx-clipboard", isDirectory: true)
+    }
+
+    /// Puts copies of the files on the clipboard. False when they couldn't be copied.
+    static func put(_ files: [KeptFiles.File]) -> Bool {
+        // The clipboard holds one thing at a time.
+        sweep(everything: true)
+        let directory = root.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        guard (try? FileManager.default.createDirectory(
+            at: directory, withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )) != nil else { return false }
+        var providers: [NSItemProvider] = []
+        for file in files {
+            let copy = directory.appendingPathComponent(file.url.lastPathComponent)
+            guard (try? FileManager.default.copyItem(at: file.url, to: copy)) != nil,
+                  let provider = NSItemProvider(contentsOf: copy) else { continue }
+            providers.append(provider)
+        }
+        guard !providers.isEmpty else {
+            try? FileManager.default.removeItem(at: directory)
+            return false
+        }
+        UIPasteboard.general.setItemProviders(providers, localOnly: false,
+                                              expirationDate: Date().addingTimeInterval(lifetime))
+        return true
+    }
+
+    /// Removes clipboard copies past their hour (all of them with `everything`).
+    static func sweep(everything: Bool = false) {
+        guard let folders = try? FileManager.default.contentsOfDirectory(
+            at: root, includingPropertiesForKeys: [.creationDateKey]) else { return }
+        let cutoff = Date().addingTimeInterval(-lifetime)
+        for folder in folders {
+            let made = (try? folder.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
+            if everything || made < cutoff { try? FileManager.default.removeItem(at: folder) }
+        }
     }
 }

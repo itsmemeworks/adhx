@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { serverSecret } from '@/lib/auth/server-secret'
 import { sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
@@ -10,8 +11,10 @@ import { visibleSave } from '@/lib/people/savers'
  * Shared posts are served to anyone who asks, as before (previews, phones and
  * the web all load them by URL). A post whose only saves are Just for me is
  * its owners' alone: a signed-in owner (session or phone key) or a request
- * carrying the post's file token (`?k=`), which the server adds only to an
- * owner's own media URLs, because phone video players can't send headers.
+ * carrying a file token (`?k=`), which the server adds only to an owner's own
+ * media URLs on their phone, because phone video players can't send headers.
+ * A token is tied to the phone key it was issued to and lasts a day: removing
+ * the phone, or the save, stops it working.
  * Anyone else gets exactly what an unsaved post would get, so a stranger
  * can't learn that someone saved it.
  */
@@ -66,29 +69,69 @@ export function ownsSave(userId: string, platform: string, id: string): boolean 
   )
 }
 
-function secret(): string {
-  return serverSecret()
+/** Whose phone the current request's file links are for (set by `withPhoneKey`). */
+export interface FileGrant {
+  userId: string
+  keyId: string
 }
 
-/** The post's file token: covers every slot of that one post, never another. */
-export function fileToken(platform: string, id: string): string {
+// On globalThis: Next bundles a route and the modules it imports as separate copies.
+const g = globalThis as unknown as { __adhxFileGrants?: AsyncLocalStorage<FileGrant> }
+const grants = (g.__adhxFileGrants ??= new AsyncLocalStorage<FileGrant>())
+
+/** Runs a phone request so the private media URLs it hands out carry this key's tokens. */
+export function withFileGrant<T>(grant: FileGrant, fn: () => T): T {
+  return grants.run(grant, fn)
+}
+
+/** Long enough to play through a feed; the apps also send their key with each file. */
+export const FILE_TOKEN_MS = 24 * 60 * 60 * 1000
+
+const KEY_ID = /^[A-Za-z0-9_-]{1,64}$/
+
+function signature(platform: string, id: string, keyId: string, expires: string): string {
   return crypto
-    .createHmac('sha256', secret())
-    .update(`kept-file:${platform}:${id}`)
+    .createHmac('sha256', serverSecret())
+    .update(`kept-file:v2:${platform}:${id}:${keyId}:${expires}`)
     .digest('base64url')
     .slice(0, 32)
 }
 
-export function validFileToken(platform: string, id: string, token: string | null): boolean {
-  if (!token || token.length !== 32) return false
-  const expected = Buffer.from(fileToken(platform, id))
-  const given = Buffer.from(token)
-  return given.length === expected.length && crypto.timingSafeEqual(given, expected)
+/** A file token for one post's files, for one phone key, until `expires` (ms). */
+export function fileToken(
+  platform: string,
+  id: string,
+  keyId: string,
+  expires = Date.now() + FILE_TOKEN_MS,
+): string {
+  const at = Math.ceil(expires / 1000).toString(36)
+  return `${at}.${keyId}.${signature(platform, id, keyId, at)}`
 }
 
 /**
- * Adds the post's file token to one of its own `/api/files` URLs (other URLs
- * are returned as they are). Only for an owner's view of their own save.
+ * True while the token is unexpired, its phone key still exists, and that
+ * key's account still has its own save of the post.
+ */
+export function validFileToken(platform: string, id: string, token: string | null): boolean {
+  const [at, keyId, sig, extra] = token?.split('.') ?? []
+  if (extra !== undefined || !at || !keyId || !sig || !KEY_ID.test(keyId)) return false
+  if (!/^[0-9a-z]{1,10}$/.test(at)) return false
+  const expires = Number.parseInt(at, 36) * 1000
+  const now = Date.now()
+  if (!(expires > now) || expires > now + FILE_TOKEN_MS + 60_000) return false
+  const expected = Buffer.from(signature(platform, id, keyId, at))
+  const given = Buffer.from(sig)
+  if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) return false
+  const [key] = db.all<{ user_id: string }>(
+    sql`SELECT user_id FROM access_keys WHERE id = ${keyId} AND scope = 'phone' LIMIT 1`,
+  )
+  return !!key && ownsSave(key.user_id, platform, id)
+}
+
+/**
+ * Adds a file token to one of the post's own `/api/files` URLs (other URLs
+ * are returned as they are). Only for an owner's view of their own save, and
+ * only inside a phone request (`withFileGrant`): the web sends its session.
  */
 export function withFileToken(
   url: string | null | undefined,
@@ -96,10 +139,12 @@ export function withFileToken(
   id: string,
 ): string | null {
   if (!url) return url ?? null
+  const grant = grants.getStore()
+  if (!grant) return url
   const prefix = `/api/files/${encodeURIComponent(platform)}/${encodeURIComponent(id)}/`
   if (!url.startsWith(prefix)) return url
   const [path, query = ''] = url.split('?', 2)
   const params = new URLSearchParams(query)
-  params.set('k', fileToken(platform, id))
+  params.set('k', fileToken(platform, id, grant.keyId))
   return `${path}?${params.toString()}`
 }

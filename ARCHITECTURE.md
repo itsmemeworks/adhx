@@ -529,9 +529,12 @@ another person's pending request; the admin can still approve or decline it.
 **Just for me reaches files too.** `src/lib/keep/file-access.ts` decides who
 may fetch `/api/files/{platform}/{id}/{slot}`: a shared post (or a quoted copy)
 is served to anyone; a post whose only saves are Just for me only to an owner
-(session, phone key, or the post's HMAC file token, which `toPhonePost` and
-Shared lately add to the owner's own URLs because phone video players can't
-send headers), with `private, no-store`. Anyone else gets the answer for an
+(session, phone key, or an HMAC file token, which `toPhonePost` and Shared
+lately add to the owner's own URLs because phone video players can't send
+headers; it names the requesting phone key and expires in 24 hours, so
+removing the phone revokes it), with `private, no-store`. Access is checked
+again after any wait (a download, a poster, a tile's resize), just before the
+bytes go out. Anyone else gets the answer for an
 unsaved post, and why a file is missing is only told to members. The send
 sheet's `has` counts shared saves only; X sync and Keep this channel apply Just
 for me by default. **Known exception**, documented in

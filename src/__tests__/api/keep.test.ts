@@ -164,9 +164,14 @@ describe('kept media', () => {
       testInstance.sqlite.prepare("DELETE FROM bookmarks WHERE id='parent'").run()
       expect((await get('/api/files/twitter/quote/video-1?v=2')).status).not.toBe(200)
       const { fileToken } = await import('@/lib/keep/file-access')
+      const { createAccessKey } = await import('@/lib/auth/access-keys')
+      const phone = createAccessKey('owner', 'Phone', 'phone')!
       expect(
-        (await get(`/api/files/twitter/quote/video-1?k=${fileToken('twitter', 'quote')}&v=2`))
-          .status,
+        (
+          await get(
+            `/api/files/twitter/quote/video-1?k=${fileToken('twitter', 'quote', phone.id)}&v=2`,
+          )
+        ).status,
       ).toBe(404)
     })
 
@@ -192,6 +197,34 @@ describe('kept media', () => {
       expect(own.headers.get('cache-control')).toBe('private, no-store')
       await own.text()
     })
+
+    it.each(['private', 'hide', 'delete'] as const)(
+      'serves no tile copy when the post goes %s while it is being made',
+      async (change) => {
+        const thumbs = await import('@/lib/keep/thumb')
+        save('reddit', 'tile')
+        keep('reddit', 'tile', 'photo-1', 'photo bytes', 'image/jpeg')
+        const spy = vi.spyOn(thumbs, 'thumbFor').mockImplementationOnce(async (file) => {
+          const sqlite = testInstance.sqlite
+          if (change === 'private')
+            sqlite.prepare("UPDATE bookmarks SET is_private=1 WHERE id='tile'").run()
+          if (change === 'delete') sqlite.prepare("DELETE FROM bookmarks WHERE id='tile'").run()
+          if (change === 'hide')
+            sqlite
+              .prepare(
+                "INSERT INTO moderated_posts(platform,bookmark_id,hidden,created_at,created_by) VALUES('reddit','tile',1,?,'admin')",
+              )
+              .run(now())
+          return { file, size: 11, modified: Date.now() }
+        })
+        try {
+          viewer = null
+          expect((await get('/api/files/reddit/tile/photo-1?w=320')).status).toBe(404)
+        } finally {
+          spy.mockRestore()
+        }
+      },
+    )
 
     it('serves a small copy of a kept picture for a tile (?w=) and reuses it', async () => {
       save('reddit', 'pic')
@@ -408,7 +441,10 @@ describe('kept media', () => {
 
     it('serves a Just for me post only to its owner, uncached, and hides it from everyone else', async () => {
       const { fileToken } = await import('@/lib/keep/file-access')
+      const { createAccessKey, deleteAccessKey } = await import('@/lib/auth/access-keys')
       save('youtube', 'secret', 'alice', now(), { userId: 'owner', isPrivate: true })
+      const ownerPhone = createAccessKey('owner', 'Phone', 'phone')!
+      const otherPhone = createAccessKey('u1', 'Phone', 'phone')!
       keep('youtube', 'secret', 'video-1', 'private video', 'video/mp4')
       keep('youtube', 'secret', 'poster', 'private poster', 'image/jpeg')
 
@@ -420,10 +456,13 @@ describe('kept media', () => {
         expect(await video.json()).toEqual({ error: 'Not found' })
         expect((await get('/api/files/youtube/secret/poster?v=2')).status).toBe(404)
         // A wrong or another post's token doesn't help.
-        const wrong = await get(
-          `/api/files/youtube/secret/video-1?k=${fileToken('youtube', 'other')}`,
-        )
-        expect(wrong.status).toBe(404)
+        for (const k of [
+          fileToken('youtube', 'other', ownerPhone.id),
+          fileToken('youtube', 'secret', otherPhone.id),
+          fileToken('youtube', 'secret', 'no-such-key'),
+        ]) {
+          expect((await get(`/api/files/youtube/secret/video-1?k=${k}`)).status).toBe(404)
+        }
       }
 
       // The owner signed in on the web.
@@ -435,13 +474,18 @@ describe('kept media', () => {
 
       // A phone player, which sends no key: the token on the owner's own URL.
       viewer = null
-      const phone = await get(
-        `/api/files/youtube/secret/video-1?k=${fileToken('youtube', 'secret')}`,
-        { range: 'bytes=0-6' },
-      )
+      const k = fileToken('youtube', 'secret', ownerPhone.id)
+      const phone = await get(`/api/files/youtube/secret/video-1?k=${k}`, { range: 'bytes=0-6' })
       expect(phone.status).toBe(206)
       expect(phone.headers.get('Cache-Control')).toBe('private, no-store')
       expect(await phone.text()).toBe('private')
+
+      // Removing the phone stops the URLs it was given, and so does a day passing.
+      expect(deleteAccessKey('owner', ownerPhone.id, 'phone')).toBe(true)
+      expect((await get(`/api/files/youtube/secret/video-1?k=${k}`)).status).toBe(404)
+      const again = createAccessKey('owner', 'Phone', 'phone')!
+      const expired = fileToken('youtube', 'secret', again.id, Date.now() - 1000)
+      expect((await get(`/api/files/youtube/secret/video-1?k=${expired}`)).status).toBe(404)
 
       // Once someone shares a save of it, it's served to anyone as before.
       save('youtube', 'secret', 'alice', now(), { userId: 'u1' })

@@ -175,8 +175,16 @@ enum Store {
 
     static var isConnected: Bool { server != nil && key != nil }
 
+    /// Which pairing shares, notes and history belong to. Every connect makes a
+    /// new one, so nothing one account left waiting is ever sent with another
+    /// account's key, or shown under it. Installs paired before this existed
+    /// are `legacy` until they next connect.
+    static var connectionId: String { d.string(forKey: "connectionId") ?? legacyConnection }
+    static let legacyConnection = "legacy"
+
     static func connect(server: URL, result: PairResult) {
         ResumeStore.clear()
+        beginConnection()
         Keychain.save(result.key)
         self.server = server
         lastServer = Links.displayHost(server)
@@ -186,9 +194,19 @@ enum Store {
         avatarSource = nil
     }
 
+    /// A new pairing, possibly another account: start with nothing from the
+    /// old one. Late work from the old pairing carries its old id and is dropped.
+    static func beginConnection() {
+        d.set(UUID().uuidString, forKey: "connectionId")
+        History.clear()
+        OfflineQueue.clear()
+        KnownPeople.clear()
+    }
+
     /// Forgets the key, the list and anything waiting.
     static func disconnect() {
         ResumeStore.clear()
+        d.removeObject(forKey: "connectionId")
         Keychain.delete()
         server = nil
         username = nil
@@ -250,6 +268,10 @@ struct ShareRecord: Codable, Identifiable, Equatable {
 
     var id: String = UUID().uuidString
     var link: String
+    /// The pairing it was shared under (`Store.connectionId`); nil before pairings had ids.
+    var connection: String? = Store.connectionId
+    /// Words added after the share went, until the server has them.
+    var pendingNote: String?
     /// The server took it and is saving it in the background.
     var queueId: String?
     var platform: String?
@@ -354,6 +376,9 @@ struct ShareRecord: Codable, Identifiable, Equatable {
         updatedAt = Date()
     }
 
+    /// Shared under the pairing this phone has now.
+    var isCurrent: Bool { (connection ?? Store.legacyConnection) == Store.connectionId }
+
     /// Saved, but its copy may still change.
     var needsStatus: Bool {
         stage == .saved && postId != nil && platform != nil && !KeepStatus.final.contains(status ?? "")
@@ -378,10 +403,12 @@ enum History {
 
     /// Atomic files avoid torn reads. Unlike UserDefaults' cached whole-array value,
     /// each process reads the latest committed intent before taking the write lock.
+    /// This pairing's shares only; another pairing's are dropped on the next write.
     static func all() -> [ShareRecord] {
         guard let data = (try? Data(contentsOf: file)) ?? AppGroup.defaults.data(forKey: key),
               let records = try? JSONDecoder().decode([ShareRecord].self, from: data) else { return [] }
-        return records
+        let current = Store.connectionId
+        return records.filter { ($0.connection ?? Store.legacyConnection) == current }
     }
 
     private static func locked<R>(unavailable: R, _ body: () -> R) -> R {
@@ -413,9 +440,11 @@ enum History {
         }
     }
 
+    /// Refuses a share made under an earlier pairing.
     @discardableResult
     static func upsert(_ record: ShareRecord) -> Bool {
-        locked(unavailable: false) {
+        guard record.isCurrent else { return false }
+        return locked(unavailable: false) {
             var records = all()
             if let i = records.firstIndex(where: { $0.id == record.id }) { records[i] = record }
             else { records.insert(record, at: 0) }
@@ -449,15 +478,19 @@ enum OfflineQueue {
         var queuedAt = Date()
         /// Send it "Just for me" (nil: as the server likes, shared).
         var isPrivate: Bool?
+        /// The pairing it was shared under; only that pairing's key sends it.
+        var connection: String?
     }
 
     private static let key = "queue"
     private static let lock = NSLock()
 
+    /// This pairing's waiting links only.
     static func all() -> [Entry] {
         guard let data = AppGroup.defaults.data(forKey: key),
               let entries = try? JSONDecoder().decode([Entry].self, from: data) else { return [] }
-        return entries
+        let current = Store.connectionId
+        return entries.filter { ($0.connection ?? Store.legacyConnection) == current }
     }
 
     private static func write(_ entries: [Entry]) {
@@ -468,11 +501,15 @@ enum OfflineQueue {
 
     static var count: Int { all().count }
 
-    static func add(id: String, link: String, isPrivate: Bool? = nil) {
+    /// `connection`: the pairing the share was made under. A share from an
+    /// earlier pairing is never queued under this one.
+    static func add(id: String, link: String, isPrivate: Bool? = nil, connection: String?) {
         lock.lock(); defer { lock.unlock() }
+        let connection = connection ?? Store.legacyConnection
+        guard connection == Store.connectionId else { return }
         var entries = all()
         guard !entries.contains(where: { $0.id == id }) else { return }
-        entries.append(Entry(id: id, link: link, isPrivate: isPrivate))
+        entries.append(Entry(id: id, link: link, isPrivate: isPrivate, connection: connection))
         write(entries)
     }
 
@@ -512,9 +549,12 @@ actor Flusher {
         let entries = OfflineQueue.all()
         guard !entries.isEmpty else { return .nothingToSend }
         guard let client = Store.client() else { return .notConnected }
+        let connection = Store.connectionId
 
         var sent = 0
         for entry in entries {
+            // Paired again meanwhile: this key isn't the one these links were shared under.
+            guard Store.connectionId == connection else { return .notConnected }
             // An earlier POST may have committed its receipt before the app died
             // removing this queue entry. Resume it through StatusRefresher instead.
             if History.all().first(where: { $0.id == entry.id })?.queueId != nil {
@@ -522,8 +562,12 @@ actor Flusher {
                 continue
             }
             do {
-                let answer = try await client.save(url: entry.link, private: History.all().first { $0.id == entry.id }?.wantsPrivate ?? entry.isPrivate, deferPublish: true, requestId: entry.id)
+                let held = History.all().first { $0.id == entry.id }
+                let answer = try await client.save(url: entry.link, private: held?.wantsPrivate ?? entry.isPrivate,
+                                                   deferPublish: true, requestId: entry.id, note: held?.pendingNote)
+                guard Store.connectionId == connection else { return .notConnected }
                 let record: (inout ShareRecord) -> Void = { record in
+                    if record.pendingNote == held?.pendingNote { record.pendingNote = nil }
                     switch answer {
                     case .saved(let result): record.apply(result)
                     case .queued(let id):
@@ -567,7 +611,8 @@ actor Flusher {
         where record.queueId == nil &&
             (record.stage == .queued || (record.stage == .saving && record.updatedAt < cutoff)) {
             History.update(id: record.id) { $0.stage = .queued }
-            OfflineQueue.add(id: record.id, link: record.link, isPrivate: record.wantsPrivate)
+            OfflineQueue.add(id: record.id, link: record.link, isPrivate: record.wantsPrivate,
+                             connection: record.connection)
         }
     }
 }
@@ -587,7 +632,9 @@ enum StatusRefresher {
 
     static func refresh() async {
         guard let client = Store.client() else { return }
+        let connection = Store.connectionId
         for record in History.all() where record.stage == .saving || record.publishPending == true {
+            guard Store.connectionId == connection else { return }
             guard let queueId = record.queueId else { continue }
             do {
                 if record.publishPending == true {
@@ -607,7 +654,26 @@ enum StatusRefresher {
                 return  // offline or key gone: try next time
             }
         }
+        // A note added after the share went, which didn't reach the server then.
+        for record in History.all() where record.pendingNote != nil {
+            guard Store.connectionId == connection else { return }
+            guard let note = record.pendingNote else { continue }
+            do {
+                if record.stage == .saved, let platform = record.platform, let id = record.postId {
+                    _ = try await client.setNote(platform: platform, id: id, note: note)
+                } else if record.stage == .saving, record.queueId != nil {
+                    // The same share again (link and request id): the server keeps the note.
+                    _ = try await client.save(url: record.link, deferPublish: true, requestId: record.id, note: note)
+                } else {
+                    continue
+                }
+                History.update(id: record.id) { if $0.pendingNote == note { $0.pendingNote = nil } }
+            } catch {
+                return  // offline or key gone: try next time
+            }
+        }
         for record in History.all() where record.needsStatus {
+            guard Store.connectionId == connection else { return }
             guard let platform = record.platform, let id = record.postId else { continue }
             do {
                 let status = try await client.status(platform: platform, id: id)
