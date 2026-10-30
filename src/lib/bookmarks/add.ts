@@ -22,7 +22,7 @@ import {
   networkSourceUrl,
   type NetworkPost,
 } from '@/lib/platform/networks'
-import { describeNetworkPost } from '@/lib/keep/describe'
+import { describeNetworkPostOrWhy } from '@/lib/keep/describe'
 import { retainedDescription } from '@/lib/keep/retained'
 import { reconcileKeptMedia } from '@/lib/keep/metadata'
 import { keptFilesFor } from '@/lib/keep/store'
@@ -599,15 +599,24 @@ async function addNetworkPost(
     )
   }
 
-  const described =
-    retainedDescription(platform, post.id) ??
-    (await describeNetworkPost(platform, post.id, post.author))
-  if (!described) {
-    return NextResponse.json(
-      { error: `${networkLabel(platform)} post not available` },
-      { status: 404 },
-    )
+  const retained = retainedDescription(platform, post.id)
+  const found = retained
+    ? { described: retained }
+    : await describeNetworkPostOrWhy(platform, post.id, post.author)
+  if (!('described' in found)) {
+    // A network that won't answer this server (a blocked address, a 403) isn't
+    // a missing post: 503 with no code, so the phones queue it and try again.
+    return found.why === 'unreachable'
+      ? NextResponse.json(
+          { error: `${networkLabel(platform)} didn’t answer this server. Try again in a bit.` },
+          { status: 503 },
+        )
+      : NextResponse.json(
+          { error: `${networkLabel(platform)} post not available` },
+          { status: 404 },
+        )
   }
+  const described = found.described
 
   const now = new Date().toISOString()
   const author = (post.author || described.author || platform).slice(0, 100)

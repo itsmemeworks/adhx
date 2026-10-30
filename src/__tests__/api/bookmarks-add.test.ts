@@ -63,8 +63,13 @@ vi.mock('@/lib/media/tnktok', async () => {
 })
 
 const mockDescribeNetworkPost = vi.fn()
+const mockWhy = vi.fn((): 'gone' | 'unreachable' => 'gone')
 vi.mock('@/lib/keep/describe', () => ({
   describeNetworkPost: (...args: unknown[]) => mockDescribeNetworkPost(...args),
+  describeNetworkPostOrWhy: async (...args: unknown[]) => {
+    const described = await mockDescribeNetworkPost(...args)
+    return described ? { described } : { why: mockWhy() }
+  },
 }))
 
 vi.mock('@/lib/keep/worker', () => ({ wakeKeep: vi.fn() }))
@@ -680,6 +685,18 @@ describe('POST /api/bookmarks/add — YouTube (link network)', () => {
     mockDescribeNetworkPost.mockResolvedValue(null)
     const res = await POST(createRequest({ url: `https://youtu.be/${VIDEO_ID}` }))
     expect(res.status).toBe(404)
+    expect(testInstance.db.select().from(schema.bookmarks).all()).toHaveLength(0)
+  })
+
+  it('503s (try again) when the network won’t answer this server', async () => {
+    mockDescribeNetworkPost.mockResolvedValue(null)
+    mockWhy.mockReturnValueOnce('unreachable')
+    const res = await POST(createRequest({ url: `https://youtu.be/${VIDEO_ID}` }))
+    expect(res.status).toBe(503)
+    // No code: the phones read a bare 503 as "offline" and queue the share.
+    const body = await res.json()
+    expect(body.code).toBeUndefined()
+    expect(body.error).toBe('YouTube didn’t answer this server. Try again in a bit.')
     expect(testInstance.db.select().from(schema.bookmarks).all()).toHaveLength(0)
   })
 })

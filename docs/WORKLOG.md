@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-30 — Fly round 4 on 2.14.4: SoundCloud, and two loose ends closed
+
+- Fresh install again; the web pass was 25 of 26: SoundCloud answered this Fly machine's address with 403 (yt-dlp and the page), and the save said "SoundCloud post not available". `describeNetworkPostOrWhy` now tells a gone post from a network that won't answer; the add path answers 503 "didn't answer this server. Try again in a bit." with no code, so the phones queue the share.
+- Android's refused code, reproduced: the page showed a code whose hash wasn't the stored one; a second code for the same account had replaced it. With the 7 stale ADHX tabs from earlier rounds closed, a new friend's waiting → You're in made exactly one code, matching the page, and connected first time. One code per account is by design; stale tabs on the test phone were minting.
+- The iPhone's caught-up landing (seen twice early on) didn't recur in 11 more connect → Start watching runs across rounds 3 and 4, including both conditions it appeared under. Not reproducible; no speculative fix.
+
 ## 2026-10-30 — Fly round 3 on 2.14.4: a clean run
 
 - Fresh install from the recipe on 2.14.4; the scripted web pass (owner setup, seed, group link, a third friend, widths at 360 and 390, speed, admin labels, the locked-Vimeo reason, text posts not "listening", held sign-in links) passed 26 of 26.

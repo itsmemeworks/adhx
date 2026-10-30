@@ -32,6 +32,10 @@ vi.mock('@/lib/semantic', () => ({ noteSaved: vi.fn(), PRIORITY: { sync: 1, urge
 const mockDescribe = vi.fn()
 vi.mock('@/lib/keep/describe', () => ({
   describeNetworkPost: (...args: unknown[]) => mockDescribe(...args),
+  describeNetworkPostOrWhy: async (...args: unknown[]) => {
+    const described = await mockDescribe(...args)
+    return described ? { described } : { why: 'gone' }
+  },
 }))
 vi.mock('@/lib/keep/worker', () => ({ wakeKeep: () => {}, keepCutoff: () => null }))
 
