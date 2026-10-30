@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.4](https://github.com/itsmemeworks/adhx/compare/v2.14.3...v2.14.4) (2026-10-30)
+
+
+### Bug Fixes
+
+* what fly round 2 ran into ([#693](https://github.com/itsmemeworks/adhx/issues/693)) ([1d74292](https://github.com/itsmemeworks/adhx/commit/1d74292b56c1aa1aea8b2161e61eed1f8e49f6ce))
+
 ## [2.14.3](https://github.com/itsmemeworks/adhx/compare/v2.14.2...v2.14.3) (2026-10-30)
 
 
