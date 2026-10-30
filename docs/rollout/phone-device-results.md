@@ -5,6 +5,23 @@ phones, newest run first. Each run says what was tested on which device and
 build. A row not listed was not run. Bugs found are fixed in the same change,
 with the fix named. How to drive the phones: [`e2e/devices`](../../e2e/devices/README.md).
 
+## 30 October 2026 (Fly round 5, 2.14.5)
+
+- **Server:** 2.14.5 from `deploy/fly` on a new app. **Phones:** Debug builds
+  from `main`, paired to round 4's deleted server.
+
+| Journey                                    | Row | iPhone                         | Android                      |
+| ------------------------------------------ | --- | ------------------------------ | ---------------------------- |
+| Join from a group link                     | –   | Pass                           | Pass                         |
+| Connect this phone from a dead pairing     | P06 | Pass: first tap, post 1 of 9   | Pass: first tap, post 1 of 9 |
+| Share a new post with a note               | P02 | –                              | Pass                         |
+| React with words; it reaches another phone | P19 | Pass                           | Pass                         |
+| A send from the web leads Home             | –   | Pass: "pete sent you this"     | –                            |
+| Search                                     | P01 | Pass: "dog on a boat", picture | Pass: "elephants at the zoo" |
+
+No bugs found. Recreating the same address left Android Chrome talking to the
+deleted app (HTTP 503) until its socket pool and host cache were flushed.
+
 ## 30 October 2026 (Fly round 3, 2.14.4)
 
 - **Server:** 2.14.4 from `deploy/fly` on a new app. **Phones:** Debug builds
