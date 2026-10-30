@@ -1,6 +1,6 @@
 {
   "name": "adhx",
-  "version": "2.14.2",
+  "version": "2.14.3",
   "description": "Your friends have better taste than the algorithm. A private, self-hosted feed of the best posts from every network, picked by your closest friends and family.",
   "type": "module",
   "packageManager": "pnpm@10.34.7",

@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.3](https://github.com/itsmemeworks/adhx/compare/v2.14.2...v2.14.3) (2026-10-30)
+
+
+### Bug Fixes
+
+* what a fresh fly install and two new friends ran into ([#691](https://github.com/itsmemeworks/adhx/issues/691)) ([7493a68](https://github.com/itsmemeworks/adhx/commit/7493a6870835180727e2c7bd9238a1024f3c808c))
+
 ## [2.14.2](https://github.com/itsmemeworks/adhx/compare/v2.14.1...v2.14.2) (2026-10-30)
 
 
