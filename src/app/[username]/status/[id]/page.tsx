@@ -10,7 +10,7 @@ import {
 import { buildSharedSeed, stubTweetTheaterItem } from '@/lib/theater/shared-seed'
 import { getCachedTweet, resolveTweetShared } from '@/lib/theater/resolve-shared-preview'
 import { SharedPreviewPage, MODERATED_PAGE_METADATA } from '@/lib/theater/shared-preview'
-import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { appUrl } from '@/lib/routes/app-url'
 import { readPostModeration } from '@/lib/admin/moderation'
 
 interface Props {
@@ -67,13 +67,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!tweet) {
     return {
-      title: 'Post unavailable - ADHX',
+      title: 'Post unavailable',
       description: 'This post is no longer available on X.',
       robots: { index: false },
     }
   }
 
-  const baseUrl = PUBLIC_BASE_URL
+  const baseUrl = appUrl()
   const canonicalUrl = `${baseUrl}/${username}/status/${id}`
 
   const title = buildTweetTitle(tweet, tweet.author.screen_name)

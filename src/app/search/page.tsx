@@ -9,7 +9,7 @@ import { stateFromParams } from '@/components/next/search/model'
  */
 export const dynamic = 'force-dynamic'
 
-export const metadata = { title: 'Search · adhx', robots: { index: false } }
+export const metadata = { title: 'Search', robots: { index: false } }
 
 export default async function SearchPage({
   searchParams,

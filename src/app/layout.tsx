@@ -5,7 +5,7 @@ import { AppShell } from '@/components/AppShell'
 import { DemoBar } from '@/components/next/demo/DemoBar'
 import { demoMode } from '@/lib/demo/mode'
 import { jsonLdScriptContent } from '@/lib/utils/structured-data'
-import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { appUrl } from '@/lib/routes/app-url'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { siteRobots } from '@/lib/settings/public-pages'
 
@@ -91,12 +91,12 @@ const hankenGrotesk = localFont({
   preload: false,
 })
 
-const siteUrl = PUBLIC_BASE_URL
 const siteDescription =
   'Every app wants your attention. ADHX just wants your friends’ opinions. Keep the best posts from X, Instagram, TikTok, YouTube, Reddit and more on a server you run, and find any of them by describing what you remember.'
 
-const siteMetadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+// Absolute links use this server's own address, read per request: a prebuilt
+// image has no address compiled in.
+const siteMetadata: Omit<Metadata, 'metadataBase'> = {
   title: {
     default: 'ADHX - Your friends have better taste than the algorithm.',
     template: '%s | ADHX',
@@ -122,11 +122,10 @@ const siteMetadata: Metadata = {
   publisher: 'ADHX',
   applicationName: 'ADHX',
   generator: 'Next.js',
-  referrer: 'origin-when-cross-origin',
+  referrer: 'same-origin',
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: siteUrl,
     siteName: 'ADHX',
     title: 'ADHX - Your friends have better taste than the algorithm.',
     description: siteDescription,
@@ -153,7 +152,13 @@ const siteMetadata: Metadata = {
 // Per request: whether search engines may list this ADHX is the owner's
 // switch (Admin → System), off on a new server. Pages only ever narrow it.
 export function generateMetadata(): Metadata {
-  return { ...siteMetadata, robots: siteRobots() }
+  const siteUrl = appUrl()
+  return {
+    ...siteMetadata,
+    metadataBase: new URL(siteUrl),
+    openGraph: { ...siteMetadata.openGraph, url: siteUrl },
+    robots: siteRobots(),
+  }
 }
 
 export const viewport: Viewport = {
@@ -165,7 +170,7 @@ export const viewport: Viewport = {
 }
 
 // JSON-LD structured data for SEO
-const jsonLd = {
+const appJsonLd = (siteUrl: string) => ({
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
   name: 'ADHX',
@@ -173,7 +178,7 @@ const jsonLd = {
   operatingSystem: 'Web',
   description:
     'Save posts from X, Instagram, TikTok, YouTube and ten more networks, with their videos and photos kept on your own server, and find any of them by describing what you remember.',
-  url: PUBLIC_BASE_URL,
+  url: siteUrl,
   offers: {
     '@type': 'Offer',
     price: '0',
@@ -186,28 +191,29 @@ const jsonLd = {
     'See what your friends are saving right now',
     'Share from your phone with the ADHX Share app',
   ],
-}
+})
 
 // Sitewide WebSite schema (distinct from the SoftwareApplication block above).
 // No SearchAction: in-app search is authed-only, so a fake search URL here
 // would be worse than omitting the property.
-const websiteJsonLd = {
+const websiteJsonLd = (siteUrl: string) => ({
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: 'ADHX',
-  url: PUBLIC_BASE_URL,
+  url: siteUrl,
   publisher: {
     '@type': 'Organization',
     name: 'ADHX',
-    logo: `${PUBLIC_BASE_URL}/logo-paper.png`,
+    logo: `${siteUrl}/logo-paper.png`,
   },
-}
+})
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // This immutable, ban-aware server identity binds the RSC payload to the
   // account that was authorized to render it. AppShell does not trust a
   // refreshed payload until /api/auth/me settles to this exact same ID.
   const serverAccountId = await getCurrentUserId()
+  const siteUrl = appUrl()
   // Browser translation stays ENABLED on purpose (owner decision): reading a
   // Spanish tweet in English is a feature, not a hazard to be switched off.
   // What it costs us is that Chrome/Safari replace the text nodes React owns
@@ -219,11 +225,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(appJsonLd(siteUrl)) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(websiteJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(websiteJsonLd(siteUrl)) }}
         />
       </head>
       <body

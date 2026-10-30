@@ -80,6 +80,7 @@ export function ReactionsRow() {
               >
                 {tile?.img ? (
                   <img
+                    referrerPolicy="no-referrer"
                     src={tile.img}
                     alt=""
                     className="absolute inset-0 h-full w-full object-cover"

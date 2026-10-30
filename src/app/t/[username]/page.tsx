@@ -14,7 +14,7 @@ import {
   ProfileLayout,
   SECONDARY_ACTION,
 } from '@/components/next/profile/ProfileParts'
-import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { appUrl } from '@/lib/routes/app-url'
 
 /**
  * `/t/{username}` — public curator profile page.
@@ -32,8 +32,6 @@ export const dynamic = 'force-dynamic'
 interface Props {
   params: Promise<{ username: string }>
 }
-
-const BASE_URL = PUBLIC_BASE_URL
 
 type ProfileLoadResult = PublicProfileResult | { status: 'redirect'; username: string }
 
@@ -59,12 +57,13 @@ async function loadProfile(usernameParam: string): Promise<ProfileLoadResult> {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const baseUrl = appUrl()
   const { username } = await params
   const result = await loadProfile(username)
 
   if (result.status === 'not_found' || result.status === 'redirect') {
     return {
-      title: `@${username} — ADHX`,
+      title: `@${username}`,
       description: 'A curator on ADHX.',
     }
   }
@@ -75,7 +74,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = collectionNames
     ? `${profile.publicTagCount} public channel${profile.publicTagCount === 1 ? '' : 's'} by @${profile.username}: ${collectionNames}.`
     : `Public channels by @${profile.username} on ADHX.`
-  const canonicalUrl = `${BASE_URL}/t/${profile.username}`
+  const canonicalUrl = `${baseUrl}/t/${profile.username}`
 
   return {
     title,
@@ -89,13 +88,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: canonicalUrl,
       images: profile.avatarUrl
         ? [{ url: profile.avatarUrl, alt: `@${profile.username} on ADHX` }]
-        : [{ url: `${BASE_URL}/og-logo.png`, width: 1200, height: 630, alt: 'ADHX' }],
+        : [{ url: `${baseUrl}/og-logo.png`, width: 1200, height: 630, alt: 'ADHX' }],
     },
     twitter: {
       card: 'summary',
       title,
       description,
-      images: [profile.avatarUrl || `${BASE_URL}/og-logo.png`],
+      images: [profile.avatarUrl || `${baseUrl}/og-logo.png`],
     },
   }
 }
@@ -109,13 +108,14 @@ function formatMemberSince(iso: string | null): string | null {
 }
 
 export default async function CuratorProfilePage({ params }: Props) {
+  const baseUrl = appUrl()
   const { username } = await params
   const [result, viewerId] = await Promise.all([loadProfile(username), getCurrentUserId()])
   if (result.status === 'redirect') permanentRedirect(`/t/${result.username}`)
   if (result.status === 'not_found') notFound()
 
   const { profile } = result
-  const canonicalUrl = `${BASE_URL}/t/${profile.username}`
+  const canonicalUrl = `${baseUrl}/t/${profile.username}`
   const memberSince = formatMemberSince(profile.memberSince)
   // Three states for both the top-right pill and the footer pitch block
   // (owner review: "why am I seeing Make your own as an authenticated
@@ -129,7 +129,7 @@ export default async function CuratorProfilePage({ params }: Props) {
     name: `@${profile.username} — channels on ADHX`,
     description: `${profile.publicTagCount} public channel${profile.publicTagCount === 1 ? '' : 's'} by @${profile.username} on ADHX.`,
     url: canonicalUrl,
-    baseUrl: BASE_URL,
+    baseUrl,
     items: profile.collections.map((c) => ({ url: c.href, name: `#${c.tag}` })),
   })
   // ProfilePage doesn't have its own schema.org type distinct from generic

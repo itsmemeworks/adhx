@@ -9,7 +9,7 @@ import { NowScreen } from '@/components/next/moments/NowScreen'
 export const dynamic = 'force-dynamic'
 
 export const metadata = {
-  title: 'Right now · adhx',
+  title: 'Right now',
   description:
     'What people are saving on ADHX, grouped into moments as it happens. Tune in and new saves play as they land.',
   openGraph: {

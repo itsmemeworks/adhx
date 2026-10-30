@@ -67,6 +67,7 @@ object Copy {
     const val BROWSE_CHANNELS = "Browse channels"
     const val SEE_LIVE = "See what’s live"
     const val WATCH_AGAIN = "Watch it all again"
+    const val PLAY_MY_SAVES = "Play my saves"
     const val FEED_CANT_LOAD = "The feed didn’t load. Try again."
 
     /** "12 from Ana, Ben and Mum today" on the caught-up card. */

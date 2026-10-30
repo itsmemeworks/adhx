@@ -5,6 +5,55 @@ phones, newest run first. Each run says what was tested on which device and
 build. A row not listed was not run. Bugs found are fixed in the same change,
 with the fix named. How to drive the phones: [`e2e/devices`](../../e2e/devices/README.md).
 
+## 29 October 2026 (release candidate)
+
+- **Server:** a production build of `main` (2.13.0) on a Mac, started as the
+  image starts it (migrate, then serve), on an empty data folder: no email
+  service, models on, real posts saved from X, YouTube, Vimeo and TikTok. The
+  owner set it up with the setup code from the log, made a group link, and
+  two friends joined from phone browsers and were let in.
+- **iPhone 16 Pro**, Debug build, as Ana, over the USB tunnel. Driven by the
+  `DeviceDriver` UI test.
+- **Samsung Galaxy A13** (SM-A137F), Android 14, Debug build, first as the
+  owner, then as Ben, over `adb reverse`.
+
+| Journey                                                     | Row | iPhone                                             | Android                                             |
+| ----------------------------------------------------------- | --- | -------------------------------------------------- | --------------------------------------------------- |
+| Sign in by email on a server without email                  | P15 | –                                                  | Pass: points to the pairing code                    |
+| Pair with a typed code from Settings → Phone app            | P01 | Pass: "Connected to pete’s ADHX", their real saves | Pass                                                |
+| Home for a lone owner                                       | –   | Fix 3                                              | Fix 3                                               |
+| Play real kept media (X, YouTube, TikTok)                   | P01 | Pass                                               | Pass after fix 1                                    |
+| Remove this phone, then pair as someone else                | P06 | –                                                  | Pass: Ben's feed, none of the owner's phone history |
+| Search by meaning                                           | P01 | Pass: "fluffy dog on a boat" finds the TikTok dog  | Pass: "Nothing close; nearest first" when it isn't  |
+| React; the reaction reaches another phone                   | P19 | Pass: stored once                                  | Pass: "ana replied · now" on Ben's phone            |
+| Share a new post from another app                           | P02 | –                                                  | Pass: kept (30 MB), "ana and pete will see it"      |
+| Channels: Reactions, Your people                            | –   | Pass                                               | Pass                                                |
+| "On its way" and "Needs you" for someone else's failed save | –   | Fix 2                                              | Fix 2                                               |
+| Settings: version line, no Invite row for a member          | P22 | Pass                                               | Pass: "ADHX Share 2.13.0"                           |
+
+Bugs found and fixed:
+
+1. **A TikTok was marked kept with nothing kept.** Its first download failed
+   for a reason that wasn't about the post (FFmpeg missing); the keeper fell
+   back to the page's preview, found no pictures and gave up for good. Such
+   failures now retry (`collectGeneric` in `src/lib/keep/download.ts`).
+2. **Everyone was told about the owner's DRM-locked Vimeo save.** Ana and Ben
+   saw "1 needs you" / "1 on its way" for a post only the owner could act on.
+   A post that couldn't be kept or learned now counts only for its saver
+   (`doing-state.ts`, `doing.ts`).
+3. **A new ADHX opened on "Nothing new yet."** Every install starts with one
+   person, whose own saves don't count as new. Home now offers Play my saves
+   there on the web, iPhone and Android.
+
+The web sweep on the same server (signed out, owner and member; 1440 px and
+iPhone 14) also fixed shared links pointing at adhx.com, blank X thumbnails,
+Sign in pushed off phone screens and X import offered without X; see the
+worklog.
+
+Not run here: the iPhone share sheet (the driver can't pick ADHX in it),
+offline sharing, Live moments (too few saves to form one) and release-signed
+builds.
+
 ## 28 October 2026
 
 - **Server:** the parity test world (`pnpm parity:serve`, LAN mode) from this

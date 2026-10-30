@@ -149,7 +149,7 @@ beforeEach(() => {
   save(BEN, 'secret', { isPrivate: true })
   keep('secret', 'unavailable', { lastError: 'This video is private' })
   queue('secret', 'text')
-  // Shared by both; Ben's download gave up (private on X), so it needs someone.
+  // Ben's shared save whose download gave up (private on X): it needs Ben.
   save(BEN, 'stuck')
   keep('stuck', 'unavailable', { lastError: 'ERROR: Private video. Sign in', attempts: 6 })
   // Ben's: failed once, retrying later.
@@ -190,9 +190,11 @@ describe('GET /api/activity/processing', () => {
   it('never shows or counts another member’s private save', async () => {
     const { items, summary } = await doing('all', ANA)
     const ids = items.map((i) => i.id).sort()
-    expect(ids).toEqual(['downloading', 'finished', 'learnwait', 'listening', 'retrying', 'stuck'])
+    expect(ids).toEqual(['downloading', 'finished', 'learnwait', 'listening', 'retrying'])
     expect(JSON.stringify(items)).not.toContain('secret')
-    expect(summary.needsYou).toBe(1)
+    // Ben's stuck post needs Ben; Ana can do nothing about it, so it isn't on her way.
+    expect(summary.needsYou).toBe(0)
+    expect((await doing('all', BEN)).summary.needsYou).toBe(2)
     // Ben sees his own private one, named as his.
     const ben = byId((await doing('all', BEN)).items)
     expect(ben.secret.savers).toEqual([expect.objectContaining({ username: 'ben', isYou: true })])
@@ -200,12 +202,13 @@ describe('GET /api/activity/processing', () => {
 
   it('says where each post is and why', async () => {
     const items = byId((await doing('all', ANA)).items)
+    const ben = byId((await doing('all', BEN)).items)
     expect(items.downloading).toMatchObject({
       status: 'working',
       step: 2,
       stepLabel: 'Keeping a copy',
     })
-    expect(items.stuck).toMatchObject({
+    expect(ben.stuck).toMatchObject({
       status: 'needs_you',
       step: 2,
       reason: 'It’s private on X.',
@@ -219,12 +222,12 @@ describe('GET /api/activity/processing', () => {
     expect(items.learnwait).toMatchObject({ status: 'waiting', step: 6 })
     expect(items.finished).toMatchObject({ status: 'ready', step: 7, stepLabel: 'Ready' })
     // Named savers, newest first; signed-in members only.
-    expect(items.stuck.savers.map((s) => s.username)).toEqual(['ben'])
+    expect(ben.stuck.savers.map((s) => s.username)).toEqual(['ben'])
   })
 
   it('offers Retry and Keep the link only to people who saved it', async () => {
     const ana = byId((await doing('all', ANA)).items)
-    expect(ana.stuck).toMatchObject({ retry: false, keepLinkOnly: false })
+    expect(ana.stuck).toBeUndefined()
     const ben = byId((await doing('all', BEN)).items)
     expect(ben.stuck).toMatchObject({ retry: true, keepLinkOnly: true })
     expect(ben.retrying.retry).toBe(true)
@@ -368,7 +371,7 @@ it('does not let recent ready items hide older work, or count another account’
   const all = await doing('all', ANA)
   expect(all.items.some((i) => i.id === 'older-work')).toBe(true)
   expect(all.items.some((i) => i.id.startsWith('private-'))).toBe(false)
-  expect(all.summary.onTheirWay).toBe(6)
+  expect(all.summary.onTheirWay).toBe(5)
 })
 
 it('answers summary polls without hydrating post media or faces', async () => {
@@ -379,7 +382,7 @@ it('answers summary polls without hydrating post media or faces', async () => {
     const { GET } = await import('@/app/api/activity/processing/route')
     const response = await GET(new NextRequest(`${BASE}/api/activity/processing?summary=1`))
     const body = await response.json()
-    expect(body.summary.onTheirWay).toBe(5)
+    expect(body.summary.onTheirWay).toBe(4)
     expect(body).not.toHaveProperty('items')
     expect(hydrate).not.toHaveBeenCalled()
   } finally {

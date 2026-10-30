@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { invalidateAuthMe } from '@/components/auth/useAuthMe'
 import { render, screen, within, fireEvent, waitFor, act } from '@testing-library/react'
 import type { FeedItem, MediaItem } from '@/components/feed/types'
 
@@ -750,16 +751,43 @@ describe('TheaterV2', () => {
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
 
-  it('offers a way to bring saves in when My saves is empty', async () => {
-    fetchMock.mockImplementation(
-      async () => new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }),
+  const emptySaves = (xAvailable: boolean) => {
+    // useAuthMe caches the account for the whole page: start from a fresh one.
+    invalidateAuthMe()
+    fetchMock.mockImplementation(async (url: string) =>
+      String(url).includes('/api/auth/me')
+        ? new Response(
+            JSON.stringify({
+              authenticated: true,
+              user: null,
+              identities: {},
+              xConnected: false,
+              xAvailable,
+            }),
+            { status: 200 },
+          )
+        : new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }),
     )
+  }
+
+  it('offers a way to bring saves in when My saves is empty', async () => {
+    emptySaves(true)
     render(<TheaterV2 source={{ ...source, recent: true }} />)
     expect(await screen.findByText('Nothing kept yet')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Bring in X bookmarks' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Bring in X bookmarks' })).toHaveAttribute(
       'href',
       '/settings?sync=1',
     )
+  })
+
+  it('offers Paste, not X bookmarks, on a server without X', async () => {
+    emptySaves(false)
+    render(<TheaterV2 source={{ ...source, recent: true }} />)
+    expect(await screen.findByText('Nothing kept yet')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.queryByRole('link', { name: 'Bring in X bookmarks' })).not.toBeInTheDocument(),
+    )
+    expect(screen.getAllByRole('button', { name: 'Paste' }).length).toBeGreaterThan(0)
   })
 
   it('plays only the chosen group', async () => {

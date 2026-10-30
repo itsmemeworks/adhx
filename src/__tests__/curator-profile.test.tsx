@@ -102,7 +102,7 @@ describe('Curator profile route: /t/[username]', () => {
         params: Promise.resolve({ username: 'nobody' }),
       })
 
-      expect(metadata.title).toBe('@nobody — ADHX')
+      expect(metadata.title).toBe('@nobody')
     })
 
     it('builds rich metadata listing collection names', async () => {

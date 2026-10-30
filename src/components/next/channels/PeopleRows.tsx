@@ -74,7 +74,14 @@ function NewPill({ count, className }: { count: number; className?: string }) {
 
 function Tile({ tile, className }: { tile: CoverTile | undefined; className?: string }) {
   if (tile?.img) {
-    return <img src={tile.img} alt="" className={cn('h-full w-full object-cover', className)} />
+    return (
+      <img
+        referrerPolicy="no-referrer"
+        src={tile.img}
+        alt=""
+        className={cn('h-full w-full object-cover', className)}
+      />
+    )
   }
   return (
     <span

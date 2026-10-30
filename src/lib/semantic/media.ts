@@ -119,6 +119,22 @@ async function noVideoToSample(videoPath: string): Promise<Error | null> {
   return null
 }
 
+/** The post at a kept-files path is one its download gave up on. */
+async function keepGaveUp(path: string): Promise<boolean> {
+  const m = path.match(/^\/api\/files\/([a-z]{1,16})\/([^/?]+)\//)
+  if (!m) return false
+  const { db } = await import('@/lib/db')
+  const { keepJobs } = await import('@/lib/db/schema')
+  const { and, eq } = await import('drizzle-orm')
+  const [job] = db
+    .select({ status: keepJobs.status })
+    .from(keepJobs)
+    .where(and(eq(keepJobs.platform, m[1]), eq(keepJobs.postId, decodeURIComponent(m[2]))))
+    .limit(1)
+    .all()
+  return job?.status === 'unavailable'
+}
+
 async function proxyStatusFollowing(source: string): Promise<number | null> {
   try {
     const response = await fetch(source, {
@@ -155,8 +171,10 @@ export async function fetchImageBytes(url: string): Promise<Uint8Array> {
         timeoutMs: IMAGE_TIMEOUT_MS,
       })
   if (!response.ok) {
-    // Not downloaded yet, and no proxy for this network: try again later.
     if (url.startsWith('/api/files/') && response.status === 404) {
+      // The download gave up (DRM, private, gone): there's no picture coming.
+      if (await keepGaveUp(url)) throw new MediaGoneError('Its picture couldn’t be downloaded')
+      // Not downloaded yet, and no proxy for this network: try again later.
       throw new MediaUnavailableError('Not downloaded yet')
     }
     const Failure = GONE.has(response.status) ? MediaGoneError : MediaUnavailableError

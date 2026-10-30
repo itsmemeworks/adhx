@@ -16,7 +16,7 @@ import { StartScreen } from '@/components/next/onboarding/StartScreen'
  */
 export const dynamic = 'force-dynamic'
 
-export const metadata = { title: 'Get started · adhx', robots: { index: false } }
+export const metadata = { title: 'Get started', robots: { index: false } }
 
 export default async function StartPage({
   searchParams,

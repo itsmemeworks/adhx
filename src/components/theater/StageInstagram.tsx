@@ -259,6 +259,8 @@ export function StageInstagram({
               <iframe
                 src={instagramEmbedUrl(id)}
                 title="Instagram Reel"
+                // Instagram's embed wants to know which site it's on.
+                referrerPolicy="strict-origin-when-cross-origin"
                 allow="autoplay; encrypted-media"
                 className="h-full w-full border-0"
               />

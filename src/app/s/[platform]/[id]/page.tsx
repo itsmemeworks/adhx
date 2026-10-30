@@ -48,7 +48,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const who = saved?.authorName || saved?.author || (by && BY.test(by) ? by : null)
   const firstLine = saved?.text?.split('\n')[0]?.slice(0, 90)
   return {
-    title: `${firstLine || (who ? `${label} post by ${who}` : `${label} post`)} - ADHX`,
+    title: `${firstLine || (who ? `${label} post by ${who}` : `${label} post`)}`,
     description: saved?.text?.slice(0, 160) || `A ${label} post, kept on ADHX.`,
     alternates: { canonical: networkSourceUrl(platform, id, who) ?? undefined },
     robots: { index: false },

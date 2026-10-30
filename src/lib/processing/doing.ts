@@ -340,7 +340,7 @@ export async function processingActivity(
   for (const r of rows) {
     const k = key(r.platform, r.id)
     if (!wanted.has(k)) continue
-    if (r.userId === viewerId) mine.add(k)
+    if (r.userId === viewerId && r.source !== 'quoted') mine.add(k)
     const current = copy.get(k)
     if (!current || r.userId === viewerId) copy.set(k, r)
   }
@@ -409,6 +409,8 @@ export async function processingActivity(
       ([, v]) => v.status === 'failed' && Date.parse(v.at) >= now - LEARN_FAILED_FOR_MS,
     )
 
+    // Only the saver can do anything about a post that couldn't be kept.
+    if (keepFailedForGood && !mine.has(c.k)) continue
     if (keepFailedForGood) {
       step = 2
       status = 'needs_you'
@@ -474,7 +476,7 @@ export async function processingActivity(
         if (step === 6 && qKinds.has('video') && seg && seg.segments > 0)
           percent = Math.round((seg.next / seg.segments) * 100)
       }
-    } else if (failedLearning.length > 0) {
+    } else if (failedLearning.length > 0 && mine.has(c.k)) {
       step = failedLearning.some(([k]) => k === 'speech')
         ? 4
         : failedLearning.some(([k]) => k === 'screen')

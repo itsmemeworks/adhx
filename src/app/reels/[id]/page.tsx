@@ -18,7 +18,7 @@ import {
 } from '@/lib/theater/shared-preview'
 import { readPostModeration } from '@/lib/admin/moderation'
 import { getSavedPreviewDisplay } from '@/lib/theater/saved-preview'
-import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { appUrl } from '@/lib/routes/app-url'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -76,7 +76,7 @@ export async function generateInstagramPreviewMetadata(
   const moderation = readPostModeration('instagram', id)
   if (!moderation.ok || moderation.value) return MODERATED_PAGE_METADATA
 
-  const baseUrl = PUBLIC_BASE_URL
+  const baseUrl = appUrl()
   const saved = getSavedPreviewDisplay('instagram', id)
   const metadataStatus = saved ? null : await getInstagramMetadataStatus(id, pathHint)
 
@@ -85,7 +85,7 @@ export async function generateInstagramPreviewMetadata(
     const noun = pathHint === 'post' ? 'Instagram post' : 'Instagram Reel'
     const canonicalUrl = `${baseUrl}/${pathHint === 'post' ? 'p' : 'reels'}/${id}`
     return unavailablePreviewMetadata({
-      title: permanent ? `${noun} unavailable - ADHX` : `${noun} - ADHX`,
+      title: permanent ? `${noun} unavailable` : `${noun}`,
       description: permanent
         ? `This ${noun} is no longer available.`
         : `This ${noun} preview is temporarily unavailable.`,

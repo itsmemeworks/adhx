@@ -8,7 +8,7 @@ import { SetupScreen } from '@/components/next/onboarding/SetupScreen'
  */
 export const dynamic = 'force-dynamic'
 
-export const metadata = { title: 'Set up · adhx', robots: { index: false } }
+export const metadata = { title: 'Set up', robots: { index: false } }
 
 export default async function SetupPage({
   searchParams,

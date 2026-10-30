@@ -11,7 +11,7 @@ import { FriendChannelPage } from '@/components/next/channels/FriendChannelPage'
  */
 export const dynamic = 'force-dynamic'
 
-export const metadata = { title: 'Channels · adhx', robots: { index: false, follow: false } }
+export const metadata = { title: 'Channels', robots: { index: false, follow: false } }
 
 const USERNAME = /^[A-Za-z0-9_]{1,40}$/
 

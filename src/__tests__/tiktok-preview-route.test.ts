@@ -42,7 +42,7 @@ vi.mock('@/lib/theater/resolve-shared-preview', () => ({
 }))
 
 vi.mock('@/lib/theater/shared-preview', () => ({
-  MODERATED_PAGE_METADATA: { title: 'Post removed - ADHX' },
+  MODERATED_PAGE_METADATA: { title: 'Post removed' },
   SharedPreviewPage: () => null,
   sharedPreviewSeed: mocks.sharedPreviewSeed,
 }))
@@ -55,8 +55,8 @@ vi.mock('@/lib/theater/saved-preview', () => ({
   getSavedPreviewDisplay: mocks.getSavedPreviewDisplay,
 }))
 
-vi.mock('@/lib/routes/base-url', () => ({
-  PUBLIC_BASE_URL: 'https://adhx.com',
+vi.mock('@/lib/routes/app-url', () => ({
+  appUrl: () => 'https://adhx.example.org',
 }))
 
 describe('TikTok preview route parameter normalization', () => {

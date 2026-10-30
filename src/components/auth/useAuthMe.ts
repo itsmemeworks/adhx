@@ -26,6 +26,8 @@ export interface AuthMe {
     email: { email: string } | null
   }
   xConnected: boolean
+  /** The server has X app keys, so X can be linked for bookmarks. */
+  xAvailable?: boolean
   isAdmin?: boolean
 }
 

@@ -44,7 +44,8 @@ export function activityState(
     UNION SELECT platform,post_id FROM post_extracted_text WHERE status='failed' AND created_at>=${failed}
     UNION SELECT platform,id FROM bookmarks WHERE processed_at>=${recent}
   ), visible AS (
-    SELECT c.platform,c.post_id AS id,MAX(b.processed_at) AS savedAt
+    SELECT c.platform,c.post_id AS id,MAX(b.processed_at) AS savedAt,
+      MAX(b.user_id = ${viewerId} AND COALESCE(b.source, '') != 'quoted') AS mine
     FROM cand c JOIN bookmarks b ON b.platform=c.platform AND b.id=c.post_id
     WHERE ${visible} GROUP BY c.platform,c.post_id
   ), queued AS (
@@ -89,7 +90,7 @@ export function activityState(
   ), states AS (
     SELECT platform,id,savedAt,
       CASE WHEN keep_failed OR keep_active THEN 2 WHEN converting THEN 3
-        WHEN queued>0 THEN queue_step WHEN failed_step IS NOT NULL THEN failed_step ELSE 7 END AS step,
+        WHEN queued>0 THEN queue_step WHEN failed_step IS NOT NULL AND mine THEN failed_step ELSE 7 END AS step,
       CASE
         WHEN keep_failed THEN 'needs_you'
         WHEN keep_active THEN CASE WHEN keep_status='failed' OR
@@ -98,9 +99,10 @@ export function activityState(
           OR conversion_wait THEN 'waiting' ELSE 'working' END
         WHEN queued>0 THEN CASE WHEN NOT COALESCE(queue_live,0) AND
           (queue_wait OR ${options.remoteOffline ? 1 : 0}=1) THEN 'waiting' ELSE 'working' END
-        WHEN failed_step IS NOT NULL THEN 'needs_you' ELSE 'ready'
+        WHEN failed_step IS NOT NULL AND mine THEN 'needs_you' ELSE 'ready'
       END AS status
-    FROM facts
+    -- Only the saver can do anything about a post that couldn't be kept.
+    FROM facts WHERE mine OR NOT keep_failed
   )`
   const summary = db.get<Counts>(sql`${cte} SELECT
     COALESCE(SUM(status!='ready'),0) AS onTheirWay,

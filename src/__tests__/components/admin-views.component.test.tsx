@@ -330,7 +330,7 @@ describe('ProcessingView', () => {
       'href',
       '/admin/system',
     )
-    expect(screen.getByText('it’s private on Instagram.')).toBeInTheDocument()
+    expect(screen.getByText('It’s private on Instagram.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Pause new work' }))
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(

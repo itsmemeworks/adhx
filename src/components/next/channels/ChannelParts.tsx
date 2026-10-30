@@ -45,6 +45,7 @@ export function ChannelCover({
     >
       {shown[0]?.img && (
         <img
+          referrerPolicy="no-referrer"
           src={shown[0].img}
           alt=""
           className="absolute -inset-8 h-[calc(100%+64px)] w-[calc(100%+64px)] object-cover blur-[30px] brightness-[0.5] saturate-[1.2]"

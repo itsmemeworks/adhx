@@ -11,7 +11,7 @@ import type { SharedResolveResult } from './shared-resolve'
 export { recordHumanPreview } from './record-human-preview'
 
 export const MODERATED_PAGE_METADATA: Metadata = {
-  title: 'Post removed - ADHX',
+  title: 'Post removed',
   description: 'This post was removed from ADHX.',
   robots: { index: false },
 }

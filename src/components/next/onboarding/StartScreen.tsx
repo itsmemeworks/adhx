@@ -177,7 +177,8 @@ function SentStep({
             <span>This ADHX doesn’t send email. Ask whoever runs it for the sign-in link for </span>
             <span className="font-bold text-nx-ink">{email}</span>
             <span>
-              . The link lasts 60 minutes. Open it in your normal browser and press Sign in.
+              . The link lasts 60 minutes. Open it in your normal browser and press Sign in. If you
+              run this ADHX, it’s also in the server log, on the line starting “[sign-in]”.
             </span>
           </span>
         ) : (

@@ -20,6 +20,10 @@ vi.mock('@/lib/media/proxy', () => ({
   readResponseBodyWithLimit: mocks.readResponseBodyWithLimit,
 }))
 
+vi.mock('@/lib/routes/app-url', () => ({
+  appUrl: () => 'https://adhx.example.org',
+}))
+
 vi.mock('next/og', () => ({
   ImageResponse: class MockImageResponse {
     element: ReactElement
@@ -78,7 +82,7 @@ async function renderRoute(username = 'curator', tag = 'good-stuff') {
   const result = (await GET(
     {
       nextUrl: new URL(
-        `https://adhx.com/api/og/playlist/${encodeURIComponent(username)}/${encodeURIComponent(tag)}`,
+        `https://adhx.example.org/api/og/playlist/${encodeURIComponent(username)}/${encodeURIComponent(tag)}`,
       ),
     } as never,
     {
@@ -173,7 +177,7 @@ describe('playlist social-card route', () => {
     mocks.getPublicTagCollection.mockResolvedValue(
       collection([
         item('1', {
-          thumbnailUrl: 'https://adhx.com/api/og/playlist/curator/good-stuff',
+          thumbnailUrl: 'https://adhx.example.org/api/og/playlist/curator/good-stuff',
           text: 'Safe text fallback',
           contentType: 'text',
         }),
@@ -206,7 +210,7 @@ describe('playlist social-card route', () => {
       const { html } = await renderRoute('secret-owner', 'secret-tag')
 
       expect(html).toContain('Your friends have better taste than the algorithm.')
-      expect(html).toContain('adhx.com')
+      expect(html).toContain('adhx.example.org')
       expect(html).not.toContain('secret-owner')
       expect(html).not.toContain('secret-tag')
     },
@@ -217,7 +221,7 @@ describe('playlist social-card route', () => {
     const { GET } = await import('@/app/api/og/playlist/[username]/[tag]/route')
     const result = (await GET(
       {
-        nextUrl: new URL('https://adhx.com/api/og/playlist/brand/card?generic=1'),
+        nextUrl: new URL('https://adhx.example.org/api/og/playlist/brand/card?generic=1'),
       } as never,
       {
         params: Promise.resolve({ username: 'brand', tag: 'card' }),
