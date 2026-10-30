@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.5](https://github.com/itsmemeworks/adhx/compare/v2.14.4...v2.14.5) (2026-10-30)
+
+
+### Bug Fixes
+
+* say try again when a network won't answer this server ([#696](https://github.com/itsmemeworks/adhx/issues/696)) ([37d79dc](https://github.com/itsmemeworks/adhx/commit/37d79dcfea95e1e8d96f2b326a78c6bb0c3ef950))
+
 ## [2.14.4](https://github.com/itsmemeworks/adhx/compare/v2.14.3...v2.14.4) (2026-10-30)
 
 
