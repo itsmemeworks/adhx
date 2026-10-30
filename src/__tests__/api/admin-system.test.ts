@@ -342,6 +342,46 @@ describe('settings', () => {
     expect(extra('TYPESAFE_API_KEY')).toBeNull()
   })
 
+  it('takes a pasted cookies.txt, keeps it encrypted, and shows only the sites', async () => {
+    const cookies = [
+      '# Netscape HTTP Cookie File',
+      '.tiktok.com\tTRUE\t/\tTRUE\t1893456000\tsessionid\tsecret-tiktok-session',
+      '#HttpOnly_.www.instagram.com\tTRUE\t/\tTRUE\t1893456000\tsessionid\tsecret-ig-session',
+    ].join('\n')
+    // Big enough to be a real browser's export, past the usual 2,000 characters.
+    const big = `${cookies}\n${'.example.com\tTRUE\t/\tFALSE\t0\tx\ty\n'.repeat(200)}`
+    expect((await system({ action: 'set', name: 'YTDLP_COOKIES', value: big })).status).toBe(200)
+    const { ytdlpCookiesText, hasYtdlpCookies } = await import('@/lib/keep/config')
+    expect(ytdlpCookiesText()).toBe(big.trim())
+    expect(hasYtdlpCookies()).toBe(true)
+
+    const raw = testInstance.sqlite
+      .prepare("SELECT value FROM server_settings WHERE key = 'extra.YTDLP_COOKIES'")
+      .get() as { value: string }
+    expect(raw.value).not.toContain('secret-tiktok-session')
+    const board = await systemBoard(NOW)
+    expect(JSON.stringify(board)).not.toContain('secret-tiktok-session')
+    expect(settingRow(board, 'YTDLP_COOKIES')).toMatchObject({
+      source: 'admin',
+      value: 'For example.com, instagram.com, tiktok.com',
+    })
+    expect(settingRow(board, 'YTDLP_COOKIES')?.edit?.value).toBeNull()
+
+    const wrong = await system({ action: 'set', name: 'YTDLP_COOKIES', value: 'sessionid=abc' })
+    expect(wrong.status).toBe(409)
+    expect((await wrong.json()).error).toMatch(/cookies.txt/)
+    expect(ytdlpCookiesText()).toBe(big.trim())
+
+    // Cleared, a file named by the environment is used again.
+    vi.stubEnv('YTDLP_COOKIES', '/data/cookies.txt')
+    await system({ action: 'set', name: 'YTDLP_COOKIES', value: null })
+    expect(ytdlpCookiesText()).toBeNull()
+    expect(settingRow(await systemBoard(NOW), 'YTDLP_COOKIES')).toMatchObject({
+      source: 'env',
+      value: 'From a file',
+    })
+  })
+
   it('beats the environment, and clearing goes back to it', async () => {
     vi.stubEnv('RESEND_API_KEY', 're_from_env')
     expect(settingRow(await systemBoard(NOW), 'RESEND_API_KEY')?.source).toBe('env')

@@ -1,16 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import type { SettingGroupView, SettingView } from '@/lib/admin/boards/system'
 import type { ExtraView } from '@/lib/settings/extras'
 import { cn } from '@/lib/utils'
 import { useAdminAction } from './actions'
-import { BTN_SM, Card, CardHead, FIELD, FIELD_INPUT, LABEL, PRIMARY_SM } from './parts'
+import { BTN_SM, Card, CardHead, FIELD, FIELD_INPUT, PRIMARY_SM } from './parts'
 
 /**
- * Admin → System's settings: every one once. Rows with Change apply in a few
- * seconds and beat the server's environment; the rest are read when ADHX
- * starts, so they're changed in the environment.
+ * Admin → System's settings: every one once, a tab per group. Rows with
+ * Change apply in a few seconds and beat the server's environment; the rest
+ * are read when ADHX starts, so they're changed in the environment.
  */
 
 const SOURCE: Record<SettingView['source'], string> = {
@@ -43,8 +43,27 @@ function Editor({ edit, onDone }: { edit: ExtraView; onDone: () => void }) {
         {edit.label}
       </label>
       <span className="flex flex-wrap gap-2">
-        <span className={cn(FIELD, 'min-w-0 flex-1 basis-[220px]')}>
-          {edit.kind === 'choice' ? (
+        <span
+          className={cn(
+            FIELD,
+            'min-w-0 flex-1 basis-[220px]',
+            // A cookies.txt is many lines: a box, the width of the row.
+            edit.kind === 'cookies' && 'h-auto basis-full items-stretch rounded-[16px] py-1',
+          )}
+        >
+          {edit.kind === 'cookies' ? (
+            <textarea
+              id={id}
+              rows={6}
+              autoComplete="off"
+              spellCheck={false}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="# Netscape HTTP Cookie File"
+              className={cn(FIELD_INPUT, 'min-h-[132px] resize-y py-2 font-mono sm:text-[12px]')}
+              autoFocus
+            />
+          ) : edit.kind === 'choice' ? (
             <select
               id={id}
               value={value}
@@ -78,10 +97,15 @@ function Editor({ edit, onDone }: { edit: ExtraView; onDone: () => void }) {
             />
           )}
         </span>
+        {edit.kind === 'cookies' && <CookiesFile onRead={setValue} />}
         <button
           type="submit"
           className={PRIMARY_SM}
-          disabled={!!busy || !value.trim() || (edit.kind !== 'secret' && value === edit.value)}
+          disabled={
+            !!busy ||
+            !value.trim() ||
+            (edit.kind !== 'secret' && edit.kind !== 'cookies' && value === edit.value)
+          }
         >
           Save
         </button>
@@ -105,6 +129,31 @@ function Editor({ edit, onDone }: { edit: ExtraView; onDone: () => void }) {
         </span>
       )}
     </form>
+  )
+}
+
+/** "Choose a file": reads a cookies.txt into the box (it never leaves the page until Save). */
+function CookiesFile({ onRead }: { onRead: (text: string) => void }) {
+  const input = useRef<HTMLInputElement>(null)
+  return (
+    <>
+      <input
+        ref={input}
+        type="file"
+        accept=".txt,text/plain"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) void file.text().then(onRead)
+          e.target.value = ''
+        }}
+      />
+      <button type="button" className={BTN_SM} onClick={() => input.current?.click()}>
+        Choose a file
+      </button>
+    </>
   )
 }
 
@@ -207,32 +256,84 @@ function TestButton({ service }: { service: 'jev' | 'email' }) {
   )
 }
 
+/** "Keeping copies" → "keeping-copies", for the tab ids. */
+const slug = (group: string) => group.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+
 export function SystemSettings({ groups }: { groups: SettingGroupView[] }) {
+  const [active, setActive] = useState(groups[0]?.group)
+  const tabs = useRef<(HTMLButtonElement | null)[]>([])
+  const base = useId()
+  const current = groups.find((g) => g.group === active) ?? groups[0]
+  // Arrow keys move along the tabs, as a tab list should.
+  const move = (from: number, by: number) => {
+    const next = (from + by + groups.length) % groups.length
+    setActive(groups[next].group)
+    tabs.current[next]?.focus()
+  }
   return (
     <Card className="min-w-0 overflow-hidden" as="section" labelledBy="system-settings">
-      <div className="flex flex-col gap-1 px-[18px] pb-3 pt-4">
+      <div className="flex flex-col gap-3 px-[18px] pb-3 pt-4">
         <CardHead id="system-settings" title="Settings" />
         <p className="m-0 text-[13px] text-nx-ink-faint">
-          Anything with Change applies in a few seconds, no restart, and beats the server’s
-          environment. The rest are read when ADHX starts: change those in the environment and
-          restart. Keys are stored encrypted and never shown again.
+          Change applies in seconds and beats the environment. The rest are read at start.
         </p>
+        <div
+          role="tablist"
+          aria-label="Settings"
+          className="flex w-max max-w-full gap-0.5 overflow-x-auto rounded-full bg-nx-bg p-1"
+        >
+          {groups.map((g, i) => {
+            const on = g.group === current?.group
+            return (
+              <button
+                key={g.group}
+                ref={(el) => {
+                  tabs.current[i] = el
+                }}
+                type="button"
+                role="tab"
+                id={`${base}-tab-${slug(g.group)}`}
+                aria-selected={on}
+                aria-controls={`${base}-panel`}
+                tabIndex={on ? 0 : -1}
+                onClick={() => setActive(g.group)}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowRight') move(i, 1)
+                  else if (e.key === 'ArrowLeft') move(i, -1)
+                  else return
+                  e.preventDefault()
+                }}
+                className={cn(
+                  'flex h-9 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-sm',
+                  on
+                    ? 'bg-nx-cream font-extrabold text-nx-on-cream'
+                    : 'font-semibold text-nx-ink-soft hover:text-nx-ink',
+                )}
+              >
+                <span>{g.group}</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-x-2 xl:grid-cols-2">
-        {groups.map((g) => (
-          <div key={g.group} className="min-w-0">
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-t border-white/[0.06] px-[18px] py-2.5">
-              <p className={cn(LABEL, 'm-0')}>{g.group}</p>
-              {g.test && <TestButton service={g.test} />}
+      {current && (
+        <div
+          role="tabpanel"
+          id={`${base}-panel`}
+          aria-labelledby={`${base}-tab-${slug(current.group)}`}
+        >
+          {current.test && (
+            <div className="flex justify-end border-t border-white/[0.06] px-[18px] py-2.5">
+              <TestButton service={current.test} />
             </div>
-            <ul className="m-0 list-none p-0">
-              {g.rows.map((r) => (
-                <Row key={r.label} row={r} />
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
+          )}
+          <ul className="m-0 grid list-none grid-cols-[minmax(0,1fr)] gap-x-2 p-0 xl:grid-cols-2">
+            {current.rows.map((r) => (
+              <Row key={r.label} row={r} />
+            ))}
+          </ul>
+        </div>
+      )}
     </Card>
   )
 }

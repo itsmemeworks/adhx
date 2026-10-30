@@ -90,9 +90,16 @@ export function TheaterStaticList({
                   <span>{name}</span>
                   {item.text ? <p>{item.text}</p> : null}
                   {item.thumbnailUrl ? (
-                    <img src={item.thumbnailUrl} alt="" referrerPolicy="no-referrer" />
+                    <img
+                      src={item.thumbnailUrl}
+                      alt=""
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                    />
                   ) : null}
-                  {item.saveCount ? <span>{item.saveCount} saves</span> : null}
+                  {item.saveCount ? (
+                    <span>{`${item.saveCount} ${item.saveCount === 1 ? 'save' : 'saves'}`}</span>
+                  ) : null}
                 </a>
               </li>
             )

@@ -42,6 +42,7 @@ import {
   Pause,
   Play,
   Plus,
+  Send,
   Share,
   SkipBack,
   SkipForward,
@@ -227,6 +228,8 @@ function emptyState(
   load: Load,
   /** This server can bring in X bookmarks (it has X app keys, or you're linked). */
   xBookmarks = true,
+  /** Your own username, so your own "friend" channel isn't taken for someone who left. */
+  you: string | null = null,
 ): {
   title: string
   body: string
@@ -245,6 +248,13 @@ function emptyState(
       body: 'People have moved on. See what they’re saving now.',
       action: 'Right now',
       href: '/now',
+    }
+  if (source.friend && you && source.friend.username.toLowerCase() === you.toLowerCase())
+    return {
+      title: 'That’s you',
+      body: 'Your own saves are in My saves.',
+      action: 'My saves',
+      href: '/play?recent=1',
     }
   if (source.friend && missing)
     return {
@@ -1882,7 +1892,12 @@ export function TheaterV2({
     )
   }
   if (load.status !== 'ready' || !current) {
-    const empty = emptyState(source, load, !!(me?.xConnected || me?.xAvailable))
+    const empty = emptyState(
+      source,
+      load,
+      !!(me?.xConnected || me?.xAvailable),
+      me?.user?.username ?? null,
+    )
     return (
       <div className="flex min-h-dvh flex-col bg-nx-stage font-nx-sans text-nx-cream">
         <NxHeader current={navHere} />
@@ -2993,7 +3008,7 @@ export function TheaterV2({
                     }}
                     className={railStyle()}
                   >
-                    <Share aria-hidden className="h-[22px] w-[22px]" />
+                    <Send aria-hidden className="h-[22px] w-[22px]" />
                   </button>,
                   'Share',
                 )}

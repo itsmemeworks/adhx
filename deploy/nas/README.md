@@ -251,9 +251,15 @@ signed-in accounts" until the server can see them. To let it:
    watch everything you want kept, nothing more).
 2. Export that site's cookies as `cookies.txt` (Netscape format) with a
    cookies-export extension you trust.
-3. Put the file in the data folder, readable only by the ADHX user (UID 1001),
-   and set `YTDLP_COOKIES=/data/yt-dlp-cookies.txt` in `.env`.
-4. Recreate the container, then tap **Retry** on the post.
+3. In ADHX, open **Admin → System → Settings → Keeping copies**, choose
+   **Change** on **Signed-in cookies**, and paste the file or choose it. It's
+   stored encrypted and used from the next download, no restart.
+4. Tap **Retry** on the post. When downloads start asking to sign in again,
+   export fresh cookies and replace them the same way.
+
+Or, without the admin page: put the file in the data folder, readable only by
+the ADHX user (UID 1001), set `YTDLP_COOKIES=/data/yt-dlp-cookies.txt` in
+`.env` and recreate the container. Cookies pasted in Admin win over the file.
 
 Downloader retries distinguish a temporary network failure from a missing post.
 A sign-in page or a private/deleted post's preview image is never archived as

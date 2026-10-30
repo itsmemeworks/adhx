@@ -509,7 +509,7 @@ Short notes on what is easy to get wrong. Each links to the full description.
   new outside call in `trackServiceCall`.
 - **Settings in Admin → System** (`EXTRAS` in `src/lib/settings/extras.ts`:
   Jev, email, X app keys and sync interval, `SERVER_LABEL`, the `KEEP_*`
-  switches, `INDEXING_LEVEL`, speech / text on screen, `ALLOWED_EMAILS`,
+  switches, yt-dlp's signed-in cookies (`YTDLP_COOKIES`), `INDEXING_LEVEL`, speech / text on screen, `ALLOWED_EMAILS`,
   `PUBLIC_PAGES`). Read
   them only through `setting()` / `extra()`, never `process.env`, and on every
   use (no module-level constants): a saved, encrypted `server_settings`

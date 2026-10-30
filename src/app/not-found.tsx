@@ -1,5 +1,10 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { NxLogo } from '@/components/next/PrimaryNav'
+
+// Its own title: without one the 404 took the site's long default through the
+// template ("ADHX - Your friends … | ADHX").
+export const metadata: Metadata = { title: 'Not found', robots: { index: false } }
 
 /**
  * 404, in the new look. It can show at any address, so it covers the whole

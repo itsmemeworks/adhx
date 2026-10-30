@@ -155,7 +155,11 @@ export function Kpi({
         {value}
       </span>
       <span
-        className={cn('truncate text-[13px]', footAccent ? 'text-nx-accent' : 'text-nx-ink-faint')}
+        // Wraps on phones, where two tiles share the row; one line from md up.
+        className={cn(
+          'text-[13px] leading-snug md:truncate',
+          footAccent ? 'text-nx-accent' : 'text-nx-ink-faint',
+        )}
       >
         {foot ?? '\u00a0'}
       </span>

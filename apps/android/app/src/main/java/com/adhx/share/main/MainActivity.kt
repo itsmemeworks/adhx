@@ -271,6 +271,7 @@ private fun ConnectedApp(
                 // A channel sits under Channels: home's row with Channels lit, and a tab goes home to it.
                 header = {
                     val feedUi by feed.feed.collectAsStateWithLifecycle()
+                    val liveUi by feed.live.collectAsStateWithLifecycle()
                     HomeHeader(
                         tab = HomeTab.Channels,
                         onTab = { t ->
@@ -281,6 +282,7 @@ private fun ConnectedApp(
                         onSearch = { library.open(Route.Search) },
                         overMedia = false,
                         newBadge = newBadge(feedUi, feed.feedPage),
+                        liveDot = liveUi.moments.any { it.live },
                     )
                 },
             )

@@ -800,7 +800,11 @@ export function RightNow({
           <span className="shrink-0 text-[11px] font-extrabold tracking-[.14em] text-nx-ink-faint">
             JUST SAVED
           </span>
-          <ul aria-live="polite" className="m-0 flex min-w-0 list-none gap-2 overflow-hidden p-0">
+          <ul
+            aria-live="polite"
+            // Swipes sideways on a phone, where one or two chips fit.
+            className="m-0 flex min-w-0 list-none gap-2 overflow-x-auto overscroll-x-contain p-0 [scrollbar-width:none]"
+          >
             {stream.map((item) => (
               <StreamChip
                 key={item.id}

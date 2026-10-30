@@ -5,6 +5,42 @@ phones, newest run first. Each run says what was tested on which device and
 build. A row not listed was not run. Bugs found are fixed in the same change,
 with the fix named. How to drive the phones: [`e2e/devices`](../../e2e/devices/README.md).
 
+## 30 October 2026 (review fixes and polish)
+
+- **Server:** a production build of this branch (2.13.1 plus the review fixes
+  and the launch polish), on the 29 October data folder.
+- **iPhone 16 Pro**, Debug build `2.13.1 +2`, re-paired from an old test
+  server to Ana over the USB tunnel. Driven by `DeviceDriver` through the hub,
+  which now needs its token.
+- **Samsung Galaxy A13**, Debug build `2.13.1 +2`, re-paired from an old test
+  server to Ben over `adb reverse`.
+
+| Journey                                                  | Row | iPhone                                         | Android                             |
+| -------------------------------------------------------- | --- | ---------------------------------------------- | ----------------------------------- |
+| Remove this phone from an unreachable server, pair again | P06 | Pass: Shared lately empty, new account's saves | Pass                                |
+| Play real kept media                                     | P01 | Pass                                           | Pass                                |
+| A removed phone's private-file links stop working        | –   | Pass on the server: 200, then 404 once removed | (same)                              |
+| Send the photos of a 4-photo album to Files              | –   | –                                              | Pass: all four in the chosen folder |
+| Copy a video to paste into a chat                        | –   | "Copied"; pasting elsewhere not checked        | –                                   |
+| Share with a note from another app                       | P02 | –                                              | Pass: the note is on the save       |
+| Search by meaning                                        | P01 | Pass: "zoo" finds "Me at the zoo" by picture   | –                                   |
+| Share icon is one paper plane                            | –   | Fix 1                                          | Pass                                |
+| Live's red dot only while something is live              | –   | Pass                                           | Fix 2                               |
+| Channels, Live                                           | –   | Pass                                           | Pass                                |
+
+Bugs found and fixed:
+
+1. **The iPhone's Share showed a camera on videos** (and a photo on photos),
+   which read as "record". It's a paper plane for every kind now, as on
+   Android and the web.
+2. **Android's Live tab always had a red dot**, even with nothing live. It
+   now shows only while a moment is live, as on the iPhone, and says so to
+   TalkBack.
+
+Not run: a share made offline and sent after re-pairing (the iPhone share
+sheet needs a hand), and a note added while a share is still queued on a
+phone (covered by server tests).
+
 ## 29 October 2026 (release candidate)
 
 - **Server:** a production build of `main` (2.13.0) on a Mac, started as the
