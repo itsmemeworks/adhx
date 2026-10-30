@@ -33,6 +33,14 @@ The other way in needs no website: **Sign in with email** on Connect asks
 `POST /api/app/signin/verify` for the same phone key (see API below). The
 pairing code and QR stay for servers that don't send email.
 
+On iOS, the host app and share extension serialize credential changes through a
+shared file lock. An atomic `connection.json` records the pairing epoch and
+server only; the phone key stays in Keychain. A request captures those together
+before loading queued work, and checks the epoch after every response (including
+errors). Re-pairing and disconnecting invalidate the old epoch first. Queued
+shares also carry their originating epoch, so an old entry cannot be sent with
+a new account's client, and an old rejection cannot sign out the new pairing.
+
 ## Phone keys
 
 Phone keys are rows in `access_keys` with `scope = 'phone'` (the Search from
@@ -46,7 +54,9 @@ Just for me files (`/api/files/...`) only; a search key is not accepted
 there, and a phone key is not accepted by `/api/agent/search`. A phone key
 acts only for its own account: it reads that account's saves, and everyone's
 saves only where a signed-in member could (`/api/app/search?scope=everyone`). Removing a phone in Settings deletes
-its key.
+its key. Private-media file grants also require that the key's account exists,
+is approved and is not banned on every file request; another member's retained
+private copy never keeps an ineligible account's grant alive.
 
 ## API
 

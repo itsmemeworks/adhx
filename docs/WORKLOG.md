@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-30 — Pairing snapshots, revoked grants and bounded cache maintenance
+
+- Follow-up review found a queue/client capture race, stale sign-out responses and media grants surviving account bans. iOS now captures a pairing/client before reading queued entries, checks each entry and discards late replies. Conditional sign-out is serialized with pairing across the app and extension; an atomic `connection.json` holds only the epoch/server, never the Keychain credential.
+- Regression coverage drives the real iOS client/flusher through an isolated transport, including a pairing change during key capture and late success/401. Test Keychain/defaults are isolated from personal credentials. The native workflow runs the new suite.
+- Private file grants require a live approved, unbanned owner and phone key in one indexed query; tests cover ban, pending/declined approval and deletion with a second private saver.
+- Worker cache-key renewals write at most once per minute per generation. Expired-key cleanup removes at most 256 rows per reconciliation; expired hints are released immediately even before their rows are swept. No model, queue priority or worker protocol changes.
+- Local: 4,042 Vitest tests, typecheck/format, native pairing and queued-privacy suites, and unsigned iOS app/extension build pass; lint has no errors. Hosted CI pending. No physical-phone run or deployment.
+
 ## 2026-10-30 — Launch polish, admin settings tabs, cookies from admin, device run
 
 - Owner asked for the polish list, both phones updated, and a full web plus USB phone run. Ran a production build of this branch on the 29 October data; a sub-agent swept every page (signed out, owner, member; 1280 and 390/360); both phones were re-paired from a stopped server (iPhone as Ana, Galaxy A13 as Ben). Results: `docs/rollout/phone-device-results.md`.

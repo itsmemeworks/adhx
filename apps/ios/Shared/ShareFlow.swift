@@ -50,6 +50,7 @@ final class ShareFlow: ObservableObject {
     private var recordId: String?
     /// The pairing this share was made under (`Store.connectionId`).
     private var connection: String?
+    private var connectionIsCurrent: Bool { connection.map { Store.connectionId == $0 } ?? false }
     private var saveTask: Task<Void, Never>?
     private var pollTask: Task<Void, Never>?
     private var queueId: String?
@@ -127,14 +128,17 @@ final class ShareFlow: ObservableObject {
         }
         self.link = link
         platform = Network.guess(from: link)
-        guard let client = Store.client() else {
+        guard let captured = Store.captureConnection() else {
             phase = .notConnected
             return
         }
+        let client = captured.client
         server = client.server
         self.client = client
+        connection = captured.id
 
         var record = ShareRecord(link: link)
+        record.connection = captured.id
         // Settings → "Just for me by default": the switch starts on and the
         // share goes out private.
         if Prefs.justForMeByDefault {
@@ -179,12 +183,14 @@ final class ShareFlow: ObservableObject {
         let first = saveTask
         noteTask = Task { [weak self] in
             await first?.value
+            guard self?.connectionIsCurrent == true else { return }
             do {
                 if let r = self?.result {
                     _ = try await client.setNote(platform: r.platform, id: r.id, note: text)
                 } else {
                     _ = try await client.save(url: link, deferPublish: true, requestId: recordId, note: text)
                 }
+                guard self?.connectionIsCurrent == true else { return }
                 History.update(id: recordId) { if $0.pendingNote == text { $0.pendingNote = nil } }
             } catch {
                 // Kept on the share; the app tries again.
@@ -194,7 +200,10 @@ final class ShareFlow: ObservableObject {
 
     private func save(with client: ADHXClient, link: String, recordId: String) async {
         do {
-            switch try await client.save(url: link, private: privacyTouched ? justForMe : nil, deferPublish: true, requestId: recordId) {
+            guard connectionIsCurrent else { return }
+            let answer = try await client.save(url: link, private: privacyTouched ? justForMe : nil, deferPublish: true, requestId: recordId)
+            guard connectionIsCurrent else { return }
+            switch answer {
             case .saved(let r):
                 landed(r, client: client)
             case .queued(let id):
@@ -210,10 +219,12 @@ final class ShareFlow: ObservableObject {
                 privacyBusy = true
                 defer { privacyBusy = false }
                 try await client.queuedPrivacy(id: id, private: intent.wantsPrivate, intentVersion: intent.intentVersion)
+                guard connectionIsCurrent else { return }
                 History.update(id: recordId) { $0.acknowledgePrivacy(version: intent.intentVersion, private: intent.wantsPrivate) }
                 if !closeRequested { waitForServer(client: client, queueId: id) }
             }
         } catch APIError.offline, APIError.slow {
+            guard connectionIsCurrent else { return }
             // Once accepted, retry its acknowledgement rather than enqueueing
             // a second job. StatusRefresher keeps the original privacy intent.
             if queueId == nil {
@@ -223,10 +234,11 @@ final class ShareFlow: ObservableObject {
             }
             phase = .offline
         } catch APIError.badKey(let message) {
-            Keychain.delete()
+            guard let connection, Store.ifCurrent(connection, { Store.disconnect() }) else { return }
             History.update(id: recordId) { $0.fail(.badKey(message)) }
             phase = .notConnected
         } catch let error as APIError {
+            guard connectionIsCurrent else { return }
             History.update(id: recordId) { $0.fail(error) }
             failed(code: error.code, message: error.message)
         } catch {
@@ -236,6 +248,7 @@ final class ShareFlow: ObservableObject {
 
     /// Saved: show it, and how its copy is coming along.
     private func landed(_ r: SaveResult, client: ADHXClient) {
+        guard connectionIsCurrent else { return }
         if let recordId { History.update(id: recordId) { $0.apply(r) } }
         result = r
         platform = r.platform
@@ -277,7 +290,7 @@ final class ShareFlow: ObservableObject {
                 guard !Task.isCancelled else { return }
                 do {
                     let progress = try await client.queuedSave(id: queueId)
-                    guard let self else { return }
+                    guard let self, self.connectionIsCurrent else { return }
                     switch progress.state {
                     case "saved":
                         if let post = progress.post { self.landed(post, client: client) }
@@ -305,7 +318,7 @@ final class ShareFlow: ObservableObject {
             while !Task.isCancelled {
                 do {
                     let status = try await client.status(platform: platform, id: id)
-                    guard let self else { return }
+                    guard let self, self.connectionIsCurrent else { return }
                     self.keep = status
                     if let recordId = self.recordId {
                         History.update(id: recordId) { $0.apply(status) }
@@ -336,6 +349,7 @@ final class ShareFlow: ObservableObject {
     /// The switch on the card. Before the post has landed it's remembered (and
     /// sent with a waiting link); after, it goes to `/api/app/private`.
     func setJustForMe(_ on: Bool) {
+        guard connectionIsCurrent else { return }
         touch()
         guard on != justForMe, !privacyBusy else { return }
         let intent: ShareRecord?
@@ -353,9 +367,12 @@ final class ShareFlow: ObservableObject {
             privacyBusy = true
             privacyTask = Task { [weak self] in
                 do {
+                    guard self?.connectionIsCurrent == true else { return }
                     try await client.queuedPrivacy(id: queueId, private: on, intentVersion: intent.intentVersion)
+                    guard self?.connectionIsCurrent == true else { return }
                     History.update(id: recordId) { $0.acknowledgePrivacy(version: intent.intentVersion, private: on) }
                 } catch {
+                    guard self?.connectionIsCurrent == true else { return }
                     self?.privacyError = "Couldn’t change that. Try again."
                 }
                 self?.privacyBusy = false
@@ -368,16 +385,16 @@ final class ShareFlow: ObservableObject {
     }
 
     private func sendPrivacy(_ on: Bool, platform: String, id: String) {
-        guard let client else { return }
+        guard let client, connectionIsCurrent else { return }
         privacyBusy = true
         Task { [weak self] in
             do {
                 let now = try await client.setPrivate(platform: platform, id: id, private: on)
-                guard let self else { return }
+                guard let self, self.connectionIsCurrent else { return }
                 self.justForMe = now
                 if let recordId = self.recordId { History.update(id: recordId) { $0.isPrivate = now } }
             } catch {
-                guard let self else { return }
+                guard let self, self.connectionIsCurrent else { return }
                 self.justForMe = !on
                 self.privacyError = "Couldn’t change that. Try again."
             }

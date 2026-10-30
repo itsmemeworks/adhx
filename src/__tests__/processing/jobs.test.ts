@@ -500,3 +500,50 @@ it('looks up a cache hint by its key, however long the media queue is', () => {
   // Scanning and hashing 50,000 files took about 130 ms; a key lookup is far under 1 ms.
   expect(performance.now() - start).toBeLessThan(40)
 }, 20_000)
+
+it('refreshes an issued cache key at most once a minute without changing its identity', async () => {
+  await saved('video')
+  const { mediaCacheKey } = await import('@/lib/processing/jobs')
+  const { keptFilesFor } = await import('@/lib/keep/store')
+  const file = keptFilesFor('twitter', '100')[0]
+  vi.useFakeTimers({ toFake: ['Date'] })
+  try {
+    vi.setSystemTime(new Date('2026-10-30T00:00:00Z'))
+    const changes = () =>
+      (instance.sqlite.prepare('SELECT total_changes() AS n').get() as { n: number }).n
+    const before = changes()
+    const first = mediaCacheKey('twitter', '100', file)
+    for (let i = 0; i < 100; i++) expect(mediaCacheKey('twitter', '100', file)).toBe(first)
+    expect(changes() - before).toBe(1)
+    vi.advanceTimersByTime(60_000)
+    expect(mediaCacheKey('twitter', '100', file)).toBe(first)
+    expect(changes() - before).toBe(2)
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+it('bounds expired-key cleanup and releases an unswept expired hint for an active file', async () => {
+  await saved('video')
+  const { mediaCacheKey } = await import('@/lib/processing/jobs')
+  const { keptFilesFor } = await import('@/lib/keep/store')
+  await enqueuePosts([{ platform: 'twitter', postId: '100' }], PRIORITY.sync, ['video'])
+  const hint = mediaCacheKey('twitter', '100', keptFilesFor('twitter', '100')[0])
+  instance.sqlite
+    .prepare('UPDATE media_cache_keys SET issued_at=? WHERE cache_key=?')
+    .run(Date.now() - 7 * 86_400_000 - 60_000, hint)
+  const expired = Date.now() - 8 * 86_400_000
+  const add = instance.sqlite.prepare(
+    "INSERT INTO media_cache_keys(cache_key,platform,post_id,slot,issued_at) VALUES(?,'youtube','old','video-1',?)",
+  )
+  instance.sqlite.transaction(() => {
+    for (let i = 0; i < 1000; i++) add.run(i.toString(16).padStart(64, '0'), expired)
+  })()
+  expect(reconcileMediaCache([hint])).toEqual([hint])
+  expect(instance.sqlite.prepare('SELECT count(*) AS n FROM media_cache_keys').get()).toEqual({
+    n: 745,
+  })
+  expect(
+    instance.sqlite.prepare('SELECT cache_key FROM media_cache_keys WHERE cache_key=?').get(hint),
+  ).toBeDefined()
+})

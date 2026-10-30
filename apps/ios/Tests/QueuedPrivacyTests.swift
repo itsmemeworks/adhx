@@ -20,6 +20,13 @@ struct QueuedPrivacyTests {
             }
             return
         }
+        #if ADHX_HISTORY_TEST
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        setenv("ADHX_HISTORY_TEST_DIRECTORY", directory.path, 1)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        setenv("ADHX_STORAGE_TEST_SUITE", "adhx-storage-\(directory.lastPathComponent)", 1)
+        Store.beginConnection()
+        #endif
         // Save notes decode loosely: present, missing, blank or too long.
         let noted = try JSONDecoder().decode([Saver].self, from: Data(#"""
             [{"username":"ben","note":"  you're welcome "},{"username":"ana"},{"username":"jo","note":""},
@@ -54,9 +61,6 @@ struct QueuedPrivacyTests {
         let old = try JSONDecoder().decode(ShareRecord.self, from: Data(#"{"id":"old","link":"https://example.com","stage":"saving","createdAt":0,"updatedAt":0}"#.utf8))
         precondition(old.intentVersion == 1 && old.wantsPrivate == nil)
         #if ADHX_HISTORY_TEST
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        setenv("ADHX_HISTORY_TEST_DIRECTORY", directory.path, 1)
-        defer { try? FileManager.default.removeItem(at: directory) }
         var shared = ShareRecord(link: "https://example.com/concurrent")
         shared.id = "concurrent"
         shared.queue("receipt")

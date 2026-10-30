@@ -209,9 +209,11 @@ export function mediaCacheKey(platform: string, postId: string, file: KeptFile):
   )[0]?.created_at
   const key = retainedIdentity(platform, postId, file, created)
   // Remembered so a later cache hint finds its file without a full scan.
+  const issuedAt = Date.now()
   db.run(sql`INSERT INTO media_cache_keys(cache_key,platform,post_id,slot,issued_at)
-    VALUES(${key},${platform},${postId},${file.slot},${Date.now()})
-    ON CONFLICT(cache_key) DO UPDATE SET issued_at=excluded.issued_at`)
+    VALUES(${key},${platform},${postId},${file.slot},${issuedAt})
+    ON CONFLICT(cache_key) DO UPDATE SET issued_at=excluded.issued_at
+    WHERE media_cache_keys.issued_at <= ${issuedAt - 60_000}`)
   return key
 }
 
@@ -245,7 +247,13 @@ export function reconcileMediaCache(keys: unknown): string[] {
   const remove = new Set<string>(validateMediaCacheKeys(keys))
   if (!remove.size) return []
   const now = Date.now()
-  db.run(sql`DELETE FROM media_cache_keys WHERE issued_at<${now - CACHE_KEY_DAYS * 86_400_000}`)
+  const cutoff = now - CACHE_KEY_DAYS * 86_400_000
+  // Bound maintenance too: an idle worker returning after a long absence
+  // must not delete an entire expired history in the web process at once.
+  db.run(sql`DELETE FROM media_cache_keys WHERE cache_key IN (
+    SELECT cache_key FROM media_cache_keys WHERE issued_at < ${cutoff}
+    ORDER BY issued_at LIMIT 256
+  )`)
   // Only the hinted keys are looked up (at most 512), however long the queue.
   // A key this server never issued, or whose file changed, is released.
   const keyList = sql.join(
@@ -264,7 +272,7 @@ export function reconcileMediaCache(keys: unknown): string[] {
     SELECT c.cache_key,k.platform,k.post_id,k.slot,k.path,k.bytes,k.created_at
     FROM media_cache_keys c
     JOIN kept_files k ON k.platform=c.platform AND k.post_id=c.post_id AND k.slot=c.slot
-    WHERE c.cache_key IN (${keyList})
+    WHERE c.cache_key IN (${keyList}) AND c.issued_at >= ${cutoff}
       AND EXISTS(SELECT 1 FROM bookmarks b WHERE b.platform=k.platform AND b.id=k.post_id)
       AND NOT EXISTS(SELECT 1 FROM moderated_posts m WHERE m.platform=k.platform AND m.bookmark_id=k.post_id AND m.hidden=1)
       AND (EXISTS(SELECT 1 FROM understanding_queue q WHERE q.platform=k.platform AND q.post_id=k.post_id AND q.kind IN ('image','video','speech','screen'))
