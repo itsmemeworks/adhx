@@ -439,9 +439,49 @@ describe('kept media', () => {
       }
     })
 
+    it.each(['ban', 'pending', 'declined', 'delete'] as const)(
+      'revokes a private file grant after account %s, even with another private saver',
+      async (change) => {
+        const { fileToken } = await import('@/lib/keep/file-access')
+        const { createAccessKey } = await import('@/lib/auth/access-keys')
+        testInstance.sqlite
+          .prepare(
+            "INSERT INTO users(id,username) VALUES('grant-owner','grantowner'),('grant-other','grantother')",
+          )
+          .run()
+        save('youtube', 'grant-copy', 'alice', now(), { userId: 'grant-owner', isPrivate: true })
+        save('youtube', 'grant-copy', 'bob', now(), { userId: 'grant-other', isPrivate: true })
+        keep('youtube', 'grant-copy', 'video-1', 'private bytes', 'video/mp4')
+        const phone = createAccessKey('grant-owner', 'Phone', 'phone')!
+        const url = `/api/files/youtube/grant-copy/video-1?k=${fileToken('youtube', 'grant-copy', phone.id)}`
+        viewer = null
+        const before = await get(url)
+        expect(before.status).toBe(200)
+        await before.text()
+        if (change === 'ban')
+          testInstance.sqlite
+            .prepare(
+              "INSERT INTO user_bans(user_id,created_at,created_by) VALUES('grant-owner',?,'admin')",
+            )
+            .run(now())
+        else if (change === 'delete')
+          testInstance.sqlite.prepare("DELETE FROM users WHERE id='grant-owner'").run()
+        else
+          testInstance.sqlite
+            .prepare("UPDATE users SET approval=? WHERE id='grant-owner'")
+            .run(change)
+        const after = await get(url)
+        expect(after.status).toBe(404)
+        expect(await after.text()).not.toContain('private bytes')
+      },
+    )
+
     it('serves a Just for me post only to its owner, uncached, and hides it from everyone else', async () => {
       const { fileToken } = await import('@/lib/keep/file-access')
       const { createAccessKey, deleteAccessKey } = await import('@/lib/auth/access-keys')
+      testInstance.sqlite
+        .prepare("INSERT OR IGNORE INTO users(id,username) VALUES('owner','owner'),('u1','alice')")
+        .run()
       save('youtube', 'secret', 'alice', now(), { userId: 'owner', isPrivate: true })
       const ownerPhone = createAccessKey('owner', 'Phone', 'phone')!
       const otherPhone = createAccessKey('u1', 'Phone', 'phone')!

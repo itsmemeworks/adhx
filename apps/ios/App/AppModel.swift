@@ -146,30 +146,34 @@ final class AppModel: ObservableObject {
     /// Checks the key still works; on 401 bad_key goes back to Connect.
     /// `quietly` keeps showing the current state until there's an answer.
     func checkConnection(quietly: Bool = false) async {
-        guard let client = Store.client() else {
+        guard let captured = Store.captureConnection() else {
             reload()
             return
         }
+        let client = captured.client
         if !quietly { connection = .checking }
         do {
             let me = try await client.me()
+            guard captured.isCurrent else { return }
             if let phone = me.name { Store.phoneName = phone }
             YourFace.shared.update(me)
             connection = .connected
             reload()
         } catch APIError.badKey {
-            disconnect()
+            Store.ifCurrent(captured.id) { disconnect() }
         } catch {
+            guard captured.isCurrent else { return }
             connection = .unreachable
         }
     }
 
     /// Sends waiting links, then refreshes kept-copy statuses.
     func refresh() async {
-        guard Store.isConnected else { return }
+        guard let captured = Store.captureConnection() else { return }
         let outcome = await Flusher.shared.flush()
+        guard captured.isCurrent else { return }
         if case .badKey = outcome {
-            disconnect()
+            Store.ifCurrent(captured.id) { disconnect() }
             return
         }
         reload()
@@ -215,22 +219,23 @@ final class AppModel: ObservableObject {
     /// phone may still be listed on the web.
     func removeThisPhone() async {
         guard !removing else { return }
+        guard let captured = Store.captureConnection() else { return }
         let host = server.map(Links.displayHost)
         removing = true
         defer { removing = false }
         var reached = true
-        if let client = Store.client() {
-            do {
-                try await client.removeThisPhone()
-            } catch APIError.badKey {
-                // Already removed on the server.
-            } catch {
-                // Offline, slow, or an older ADHX without this: still forget it here.
-                reached = false
-            }
+        let client = captured.client
+        do {
+            try await client.removeThisPhone()
+        } catch APIError.badKey {
+            // Already removed on the server.
+        } catch {
+            // Offline, slow, or an older ADHX without this: still forget it here.
+            reached = false
         }
+        guard captured.isCurrent else { return }
         removedNote = reached ? nil : Self.couldNotReach(host)
-        disconnect()
+        Store.ifCurrent(captured.id) { disconnect() }
     }
 
     static func couldNotReach(_ host: String?) -> String {

@@ -358,3 +358,14 @@ settings establish different things; check all before a bulk import.
 | Upload validation and promotion       | [`result/route.ts`](../src/app/api/processing/result/route.ts), [`conversion.ts`](../src/lib/processing/conversion.ts)                                                             |
 | Model pin and runtime                 | [`config.ts`](../src/lib/semantic/config.ts), [`model.ts`](../src/lib/semantic/model.ts)                                                                                           |
 | Speech and on-screen text             | [`extract-model.ts`](../src/lib/semantic/extract-model.ts), [`extract-media.ts`](../src/lib/semantic/extract-media.ts), [`extract-clean.ts`](../src/lib/semantic/extract-clean.ts) |
+
+### Cache-key maintenance
+
+The server looks up retained-original cache hints by their issued key. Reissuing
+the same generation refreshes its timestamp at most once per minute, avoiding
+repeated SQLite writes for vision, speech and screen-text consumers. Each
+reconciliation sweeps at most 256 expired key records. A hint older than seven
+days is released immediately even if its record awaits a later sweep, so an
+idle helper returning after a long absence cannot trigger one large cleanup
+transaction in the web process. These records are reuse hints, not media-access
+credentials, and neither the worker protocol nor media-generation hashes change.

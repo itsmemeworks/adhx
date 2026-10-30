@@ -50,17 +50,29 @@ enum AppGroup {
     /// Group defaults when the group is usable, else this process's own
     /// defaults (unsigned simulator builds).
     static let defaults: UserDefaults = {
+        #if ADHX_HISTORY_TEST
+        return UserDefaults(suiteName: ProcessInfo.processInfo.environment["ADHX_STORAGE_TEST_SUITE"] ?? "adhx-storage-tests")!
+        #else
         if let id,
            FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: id) != nil,
            let shared = UserDefaults(suiteName: id) {
             return shared
         }
         return .standard
+        #endif
     }()
 }
 
 /// The phone key, in the Keychain, shared through the App Group access group.
 enum Keychain {
+    #if ADHX_HISTORY_TEST
+    static var testValue: String?
+    static var beforeRead: (() -> Void)?
+    @discardableResult static func save(_ key: String) -> Bool { testValue = key; return true }
+    static func read() -> String? { let hook = beforeRead; beforeRead = nil; hook?(); return testValue }
+    static func delete() { testValue = nil }
+    #else
+
     private static let service = "adhx.phone-key"
     private static let account = "phone-key"
 
@@ -131,6 +143,7 @@ enum Keychain {
         SecItemDelete(query(group: nil) as CFDictionary)
         AppGroup.defaults.removeObject(forKey: simulatorKey)
     }
+    #endif
 }
 
 /// Who this phone is connected to.
@@ -173,56 +186,123 @@ enum Store {
 
     static var key: String? { Keychain.read() }
 
-    static var isConnected: Bool { server != nil && key != nil }
+    static var isConnected: Bool { captureConnection() != nil }
 
-    /// Which pairing shares, notes and history belong to. Every connect makes a
-    /// new one, so nothing one account left waiting is ever sent with another
-    /// account's key, or shown under it. Installs paired before this existed
-    /// are `legacy` until they next connect.
-    static var connectionId: String { d.string(forKey: "connectionId") ?? legacyConnection }
+    /// A client and its pairing are captured together, before reading queued links.
+    struct Connection {
+        let id: String
+        let client: ADHXClient
+        var isCurrent: Bool { Store.connectionId == id }
+    }
+
+    private struct Binding: Codable {
+        let id: String
+        let server: URL?
+    }
+    private static let connectionLock = NSRecursiveLock()
+    private static var lockDepth = 0
+    private static var bindingFile: URL { History.storageDirectory.appendingPathComponent("connection.json") }
     static let legacyConnection = "legacy"
 
+    // Atomic metadata avoids UserDefaults' per-process cache when the app pairs
+    // again while its extension is still finishing. Credentials stay in Keychain.
+    private static func binding() -> Binding {
+        do { return try JSONDecoder().decode(Binding.self, from: Data(contentsOf: bindingFile)) }
+        catch CocoaError.fileReadNoSuchFile {
+            return Binding(id: d.string(forKey: "connectionId") ?? legacyConnection, server: server)
+        } catch { return Binding(id: "unavailable", server: nil) }
+    }
+    static var connectionId: String { binding().id }
+
+    /// Shared with the extension: no capture or conditional sign-out may straddle
+    /// a credential replacement. Recursive only within this process/thread.
+    private static func locked<R>(unavailable: R, _ body: () -> R) -> R {
+        connectionLock.lock(); defer { connectionLock.unlock() }
+        if lockDepth > 0 { return body() }
+        do { try FileManager.default.createDirectory(at: History.storageDirectory,
+            withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700]) }
+        catch { return unavailable }
+        let fd = open(bindingFile.appendingPathExtension("lock").path, O_CREAT | O_RDWR, 0o600)
+        guard fd >= 0 else { return unavailable }
+        defer { close(fd) }
+        guard flock(fd, LOCK_EX) == 0 else { return unavailable }
+        defer { flock(fd, LOCK_UN) }
+        lockDepth += 1
+        defer { lockDepth -= 1 }
+        return body()
+    }
+
+    static func captureConnection() -> Connection? {
+        locked(unavailable: nil) {
+            let before = binding()
+            guard let server = before.server, let key = Keychain.read(),
+                  binding().id == before.id else { return nil }
+            return Connection(id: before.id, client: ADHXClient(server: server, key: key))
+        }
+    }
+
+    @discardableResult
+    static func ifCurrent(_ id: String, _ update: () -> Void) -> Bool {
+        locked(unavailable: false) {
+            guard connectionId == id else { return false }
+            update()
+            return true
+        }
+    }
+
     static func connect(server: URL, result: PairResult) {
-        ResumeStore.clear()
-        beginConnection()
-        Keychain.save(result.key)
-        self.server = server
-        lastServer = Links.displayHost(server)
-        username = result.username
-        phoneName = result.name
-        avatarUrl = nil
-        avatarSource = nil
+        beginConnection {
+            ResumeStore.clear()
+            self.server = nil
+            guard Keychain.save(result.key) else { return }
+            self.server = server
+            lastServer = Links.displayHost(server)
+            username = result.username
+            phoneName = result.name
+            avatarUrl = nil
+            avatarSource = nil
+        }
     }
 
-    /// A new pairing, possibly another account: start with nothing from the
-    /// old one. Late work from the old pairing carries its old id and is dropped.
-    static func beginConnection() {
-        d.set(UUID().uuidString, forKey: "connectionId")
-        History.clear()
-        OfflineQueue.clear()
-        KnownPeople.clear()
+    /// Invalidate old work first; publish the complete new binding last. A failed
+    /// write leaves no usable client rather than mixing servers and credentials.
+    static func beginConnection(_ replace: () -> Void = {}) {
+        _ = locked(unavailable: false) {
+            let id = UUID().uuidString
+            func write(_ server: URL?) -> Bool {
+                do {
+                    try JSONEncoder().encode(Binding(id: id, server: server))
+                        .write(to: bindingFile, options: .atomic)
+                    d.set(id, forKey: "connectionId")
+                    return true
+                } catch { return false }
+            }
+            guard write(nil) else { return false }
+            History.clear()
+            OfflineQueue.clear()
+            KnownPeople.clear()
+            replace()
+            return write(server)
+        }
     }
 
-    /// Forgets the key, the list and anything waiting.
+    /// Forgets this pairing. A disconnect also gets a new epoch (never back to
+    /// "legacy"), so a late callback cannot match a disconnected legacy session.
     static func disconnect() {
-        ResumeStore.clear()
-        d.removeObject(forKey: "connectionId")
-        Keychain.delete()
-        server = nil
-        username = nil
-        avatarUrl = nil
-        avatarSource = nil
-        phoneName = nil
-        History.clear()
-        OfflineQueue.clear()
-        KnownPeople.clear()
-        Prefs.justForMeByDefault = false
+        beginConnection {
+            ResumeStore.clear()
+            Keychain.delete()
+            server = nil
+            username = nil
+            avatarUrl = nil
+            avatarSource = nil
+            phoneName = nil
+            Prefs.justForMeByDefault = false
+        }
     }
 
-    static func client() -> ADHXClient? {
-        guard let server, let key else { return nil }
-        return ADHXClient(server: server, key: key)
-    }
+    static func client() -> ADHXClient? { captureConnection()?.client }
+
 }
 
 /// Choices in Settings that this phone keeps (in the App Group, so the Share
@@ -401,6 +481,8 @@ enum History {
         return base.appendingPathComponent("history.json")
     }()
 
+    static var storageDirectory: URL { file.deletingLastPathComponent() }
+
     /// Atomic files avoid torn reads. Unlike UserDefaults' cached whole-array value,
     /// each process reads the latest committed intent before taking the write lock.
     /// This pairing's shares only; another pairing's are dropped on the next write.
@@ -443,8 +525,8 @@ enum History {
     /// Refuses a share made under an earlier pairing.
     @discardableResult
     static func upsert(_ record: ShareRecord) -> Bool {
-        guard record.isCurrent else { return false }
         return locked(unavailable: false) {
+            guard record.isCurrent else { return false }
             var records = all()
             if let i = records.firstIndex(where: { $0.id == record.id }) { records[i] = record }
             else { records.insert(record, at: 0) }
@@ -545,24 +627,27 @@ actor Flusher {
         running = true
         defer { running = false }
 
+        let captured = Store.captureConnection()
         rescueStuckSaves()
         let entries = OfflineQueue.all()
         guard !entries.isEmpty else { return .nothingToSend }
-        guard let client = Store.client() else { return .notConnected }
-        let connection = Store.connectionId
+        guard let captured else { return .notConnected }
+        let client = captured.client
+        let connection = captured.id
 
         var sent = 0
         for entry in entries {
             // Paired again meanwhile: this key isn't the one these links were shared under.
-            guard Store.connectionId == connection else { return .notConnected }
+            guard captured.isCurrent,
+                  (entry.connection ?? Store.legacyConnection) == connection else { return .notConnected }
+            let held = History.all().first { $0.id == entry.id }
             // An earlier POST may have committed its receipt before the app died
             // removing this queue entry. Resume it through StatusRefresher instead.
-            if History.all().first(where: { $0.id == entry.id })?.queueId != nil {
+            if held?.queueId != nil {
                 OfflineQueue.remove(id: entry.id)
                 continue
             }
             do {
-                let held = History.all().first { $0.id == entry.id }
                 let answer = try await client.save(url: entry.link, private: held?.wantsPrivate ?? entry.isPrivate,
                                                    deferPublish: true, requestId: entry.id, note: held?.pendingNote)
                 guard Store.connectionId == connection else { return .notConnected }
@@ -589,10 +674,13 @@ actor Flusher {
                 OfflineQueue.remove(id: entry.id)
                 sent += 1
             } catch APIError.offline, APIError.slow {
+                guard captured.isCurrent else { return .notConnected }
                 return .stillOffline(sent: sent)
             } catch APIError.badKey {
+                guard captured.isCurrent else { return .notConnected }
                 return .badKey
             } catch let error as APIError {
+                guard captured.isCurrent else { return .notConnected }
                 OfflineQueue.remove(id: entry.id)
                 History.update(id: entry.id) { $0.fail(error) }
             } catch {
@@ -623,30 +711,35 @@ enum StatusRefresher {
     /// the server now that it has it.
     private static func applyWantedPrivacy(_ record: ShareRecord, landed progress: QueuedSave,
                                            client: ADHXClient) async {
-        guard progress.state == "saved", let queueId = record.queueId,
+        guard record.isCurrent, progress.state == "saved", let queueId = record.queueId,
               let wanted = record.wantsPrivate else { return }
         guard (try? await client.queuedPrivacy(id: queueId, private: wanted, intentVersion: record.intentVersion)) != nil
         else { return }
+        guard record.isCurrent else { return }
         History.update(id: record.id) { $0.acknowledgePrivacy(version: record.intentVersion, private: wanted) }
     }
 
     static func refresh() async {
-        guard let client = Store.client() else { return }
-        let connection = Store.connectionId
+        guard let captured = Store.captureConnection() else { return }
+        let client = captured.client
+        let connection = captured.id
         for record in History.all() where record.stage == .saving || record.publishPending == true {
             guard Store.connectionId == connection else { return }
             guard let queueId = record.queueId else { continue }
             do {
                 if record.publishPending == true {
                     try await client.queuedPrivacy(id: queueId, private: record.wantsPrivate, intentVersion: record.intentVersion)
+                    guard captured.isCurrent else { return }
                     History.update(id: record.id) { $0.acknowledgePrivacy(version: record.intentVersion, private: record.wantsPrivate) }
                 }
                 let progress = try await client.queuedSave(id: queueId)
+                guard captured.isCurrent else { return }
                 History.update(id: record.id) { $0.apply(progress) }
                 if record.publishPending != true {
                     await applyWantedPrivacy(record, landed: progress, client: client)
                 }
             } catch APIError.server(let httpStatus, _, _) where httpStatus == 404 {
+                guard captured.isCurrent else { return }
                 History.update(id: record.id) {
                     $0.fail(.server(status: 404, code: "failed", message: APIError.fallbackMessage(for: "failed")))
                 }
@@ -667,6 +760,7 @@ enum StatusRefresher {
                 } else {
                     continue
                 }
+                guard captured.isCurrent else { return }
                 History.update(id: record.id) { if $0.pendingNote == note { $0.pendingNote = nil } }
             } catch {
                 return  // offline or key gone: try next time
@@ -677,8 +771,10 @@ enum StatusRefresher {
             guard let platform = record.platform, let id = record.postId else { continue }
             do {
                 let status = try await client.status(platform: platform, id: id)
+                guard captured.isCurrent else { return }
                 History.update(id: record.id) { $0.apply(status) }
             } catch APIError.server(let httpStatus, _, _) where httpStatus == 404 {
+                guard captured.isCurrent else { return }
                 History.update(id: record.id) { $0.status = "gone" }
             } catch {
                 return  // offline or key gone: try next time

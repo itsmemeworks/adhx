@@ -122,10 +122,25 @@ export function validFileToken(platform: string, id: string, token: string | nul
   const expected = Buffer.from(signature(platform, id, keyId, at))
   const given = Buffer.from(sig)
   if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) return false
-  const [key] = db.all<{ user_id: string }>(
-    sql`SELECT user_id FROM access_keys WHERE id = ${keyId} AND scope = 'phone' LIMIT 1`,
+  // One indexed read, re-run even for a warm file: a retained private copy
+  // owned by someone else must not keep a banned account's grant alive.
+  return (
+    db.all(sql`
+    SELECT 1 FROM access_keys k JOIN users u ON u.id = k.user_id
+    WHERE k.id = ${keyId} AND k.scope = 'phone' AND u.approval = 'approved'
+      AND NOT EXISTS (SELECT 1 FROM user_bans b WHERE b.user_id = u.id)
+      AND EXISTS (
+        SELECT 1 FROM bookmarks b
+        WHERE b.user_id = u.id AND b.platform = ${platform} AND b.id = ${id}
+          AND (COALESCE(b.source, '') != 'quoted' OR EXISTS (
+            SELECT 1 FROM bookmarks p WHERE p.user_id = b.user_id AND p.platform = b.platform
+              AND p.quoted_tweet_id = b.id AND COALESCE(p.source, '') != 'quoted'
+              AND NOT EXISTS (SELECT 1 FROM moderated_posts m
+                WHERE m.platform = p.platform AND m.bookmark_id = p.id AND m.hidden = 1)
+          ))
+      ) LIMIT 1
+  `).length > 0
   )
-  return !!key && ownsSave(key.user_id, platform, id)
 }
 
 /**

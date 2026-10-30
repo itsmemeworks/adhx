@@ -411,8 +411,14 @@ struct ADHXClient {
     /// Search can take a while on a small server (the model runs there).
     static let searchTimeout: TimeInterval = 60
 
+    #if ADHX_HISTORY_TEST
+    static var testProtocolClasses: [AnyClass] = []
+    #endif
     private static let session: URLSession = {
         let config = URLSessionConfiguration.ephemeral
+        #if ADHX_HISTORY_TEST
+        config.protocolClasses = testProtocolClasses
+        #endif
         config.timeoutIntervalForRequest = timeout
         config.timeoutIntervalForResource = searchTimeout + 5
         config.waitsForConnectivity = false
