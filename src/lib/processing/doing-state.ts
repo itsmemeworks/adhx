@@ -59,6 +59,11 @@ export function activityState(
       MAX(q.kind IN ('text','image','video') AND l.id IS NOT NULL) AS learn_live
     FROM understanding_queue q LEFT JOIN processing_leases l
       ON l.platform=q.platform AND l.post_id=q.post_id AND l.kind=q.kind AND l.expires_at>${now}
+    -- As in doing.ts: a words-only post's speech and screen jobs are skipped
+    -- when the worker reaches them, so they don't keep it on its way.
+    WHERE NOT (q.kind IN ('speech','screen') AND EXISTS (
+      SELECT 1 FROM bookmarks wb WHERE wb.platform=q.platform AND wb.id=q.post_id
+        AND COALESCE(wb.category,'tweet') IN ('text','tweet','article')))
     GROUP BY q.platform,q.post_id
   ), conversions AS (
     SELECT platform,post_id,MAX(status IN ('pending','running')) AS active,

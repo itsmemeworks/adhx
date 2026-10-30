@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuthMe } from '@/components/auth'
 import { recentPlayHref } from '../theater/queue'
-import { LearningPill, LearningSheet, useLearningStatus } from './learning'
+import { LEARNING_IN_HEADER, LearningPill, LearningSheet, useLearningStatus } from './learning'
 import { PasteButton, usePasteToSave } from './usePasteToSave'
 
 /**
@@ -31,7 +31,11 @@ function Tools() {
   })
   return (
     <>
-      <LearningPill status={learning.status} onOpen={() => setLearningOpen(true)} />
+      <LearningPill
+        status={learning.status}
+        onOpen={() => setLearningOpen(true)}
+        className={LEARNING_IN_HEADER}
+      />
       {/* Desktop pastes anywhere on the page (⌘V), the pill kept for keyboards; phones need it. */}
       <PasteButton onClick={paste.pasteFromClipboard} keyboardOnlyFrom="md" />
       {mounted &&

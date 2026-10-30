@@ -407,12 +407,15 @@ describe('kept media', () => {
       save('vimeo', '2')
       testInstance.sqlite
         .prepare(
-          `INSERT INTO keep_jobs (platform, post_id, status, attempts, updated_at) VALUES ('vimeo', '2', 'unavailable', 9, ?)`,
+          `INSERT INTO keep_jobs (platform, post_id, status, attempts, last_error, updated_at) VALUES ('vimeo', '2', 'unavailable', 9, 'ERROR: [vimeo] 2: This video is DRM protected', ?)`,
         )
         .run(now())
       const gone = await get('/api/files/vimeo/2/video-1?v=2')
       expect(gone.status).toBe(410)
-      expect((await gone.json()).reason).toMatch(/couldn’t be downloaded/)
+      // Processing's words, not "taken down" (the phones' fallback): it still plays on Vimeo.
+      const reason = (await gone.json()).reason
+      expect(reason).toBe('Vimeo locks this one.')
+      expect(reason).not.toContain('DRM')
 
       save('vimeo', '3')
       testInstance.sqlite

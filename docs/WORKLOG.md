@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-30 — Fly round 2 on 2.14.3
+
+- Fresh install from the updated recipe (dedicated CPU, 4 GB, swap): no prompts or warnings, pages 45–970 ms while the server learned its first saves. A scripted web pass (owner setup, seed, group link, a third friend, widths, speed, admin labels, held sign-in links) passed 20 of 24; all four failures were one bug.
+- **Fixed:** the owner's phone header ran 19–30 px off screen when the learning ring joined the on-their-way pill and Paste; on phones the ring now only shows where the header has no pill (`LEARNING_IN_HEADER`). A post whose download gave up told the phones "taken down or made private" even when it still plays on its network; the files route now gives Processing's reason (`keep/reason.ts`). Text posts no longer show "Listening to what's said" or count as on their way while their skipped speech and screen jobs wait.
+- Phones: both joined from the group link with brand fonts and clean names, connected from a dead round-1 pairing, played, reacted, shared with a note, got a send, searched. Once each in rounds 1 and 2 the iPhone opened Home on the caught-up page right after connecting; three tries to reproduce it failed. Watch for it in round 3.
+
 ## 2026-10-30 — A fresh Fly install, walked end to end
 
 - Installed 2.14.2 from `deploy/fly` on a new app, set up the owner, saved 11 real posts, let two friends in from a group link without email, and connected the iPhone and the Android by "Connect this phone". Full results: [phone device results](rollout/phone-device-results.md).

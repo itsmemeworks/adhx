@@ -14,7 +14,7 @@ import { appPost, qualityLabel } from '@/lib/app/phone-app'
 import { networkLabel } from '@/lib/platform/networks'
 import { keepEnabled, keepMinFreeBytes } from '@/lib/keep/config'
 import { isKeepConverting, keepProgress } from '@/lib/keep/progress'
-import { isSignInOnly } from '@/lib/keep/ytdlp'
+import { keepReason } from '@/lib/keep/reason'
 import { freeDiskBytes, KEEP_MAX_ATTEMPTS, wakeKeep } from '@/lib/keep/worker'
 import { seenBy, saversFor } from '@/lib/people/savers'
 import type { Saver } from '@/lib/people/types'
@@ -135,34 +135,16 @@ type ConversionRow = {
   updated_at: string
 }
 
+export { keepReason }
+
 const key = (platform: string, id: string) => `${platform}:${id}`
 
 function iso(ms: number): string {
   return new Date(ms).toISOString()
 }
 
-/** Plain words for why a download failed. */
-export function keepReason(lastError: string | null, platform: string): string {
-  const network = networkLabel(platform)
-  const e = lastError ?? ''
-  if (/yt-dlp is not installed/i.test(e))
-    return 'This server can’t download yet: yt-dlp is missing.'
-  if (/copyright|dmca/i.test(e)) return `${network} took this down after a copyright claim.`
-  if (isSignInOnly(e)) return `${network} only shows this one to signed-in accounts.`
-  if (/private|login|log in|sign in|cookies/i.test(e)) return `It’s private on ${network}.`
-  if (/drm/i.test(e)) return `${network} locks this one.`
-  if (/too large|larger than|max-?filesize/i.test(e)) return 'It’s too big to keep.'
-  if (/conversion failed/i.test(e))
-    return 'It wouldn’t convert to play everywhere. The original is kept.'
-  if (/nothing was downloaded|no video|not a video|no media|nothing to keep/i.test(e))
-    return 'There’s nothing to download at this link.'
-  if (/unavailable|removed|deleted|does not exist|\b404\b|\b410\b|gone/i.test(e))
-    return `It’s gone from ${network}.`
-  if (/429|too many requests|rate.?limit/i.test(e)) return `${network} asked us to slow down.`
-  if (/time(d)? ?out|ETIMEDOUT|ECONNRESET|socket|network|5\d\d/i.test(e))
-    return `${network} is slow to answer.`
-  return `${network} wouldn’t hand it over.`
-}
+/** Categories with no picture, video or sound to learn from. */
+const WORDS_ONLY = new Set(['text', 'tweet', 'article'])
 
 function kindNoun(category: string | null): string {
   if (category === 'video') return 'video'
@@ -377,7 +359,11 @@ export async function processingActivity(
     const row = copy.get(c.k)
     if (!row) continue
     const job = keep.get(c.k)
-    const q = queue.get(c.k) ?? []
+    // Every post gets every kind of job; the worker skips speech and text on
+    // screen for words-only posts when it reaches them. Until then they mustn't
+    // show a text post as "Listening to what's said" or keep it on its way.
+    const wordsOnly = WORDS_ONLY.has(row.category ?? 'tweet')
+    const q = (queue.get(c.k) ?? []).filter((r) => !(wordsOnly && isExtractKind(r.kind)))
     const conv = conversions.get(c.k) ?? []
     const results = learned.get(c.k) ?? new Map()
     const qKinds = new Set(q.map((r) => r.kind))
