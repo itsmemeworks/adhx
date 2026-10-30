@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.1](https://github.com/itsmemeworks/adhx/compare/v2.14.0...v2.14.1) (2026-10-30)
+
+
+### Bug Fixes
+
+* isolate pairing callbacks and bound media cache maintenance ([#687](https://github.com/itsmemeworks/adhx/issues/687)) ([6b34bbc](https://github.com/itsmemeworks/adhx/commit/6b34bbca3d1c53348d5a4f4aa1c2ef411522b216))
+
 ## [2.14.0](https://github.com/itsmemeworks/adhx/compare/v2.13.1...v2.14.0) (2026-10-30)
 
 
