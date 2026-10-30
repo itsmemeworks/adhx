@@ -99,7 +99,31 @@ struct QueuedPrivacyTests {
         precondition(OfflineQueue.all().first { $0.id == secondQueued.id }?.isPrivate == true)
         History.clear()
         OfflineQueue.clear()
+        // Pairing again (perhaps as someone else) leaves nothing from the old
+        // pairing to show or send, and late work from it is refused.
+        Store.beginConnection()
+        var fromA = ShareRecord(link: "https://example.com/account-a-private")
+        fromA.stage = .queued
+        fromA.choosePrivacy(true)
+        fromA.pendingNote = "for a only"
+        precondition(History.upsert(fromA))
+        OfflineQueue.add(id: fromA.id, link: fromA.link, isPrivate: true, connection: fromA.connection)
+        precondition(History.all().count == 1 && OfflineQueue.all().count == 1)
+        Store.beginConnection()
+        precondition(History.all().isEmpty && OfflineQueue.all().isEmpty)
+        precondition(!History.upsert(fromA), "A share from the old pairing must not come back")
+        OfflineQueue.add(id: fromA.id, link: fromA.link, isPrivate: true, connection: fromA.connection)
+        precondition(OfflineQueue.all().isEmpty)
+        precondition(History.update(id: fromA.id) { $0.stage = .saved } == nil)
+        if case .nothingToSend = await Flusher.shared.flush() {} else {
+            preconditionFailure("Nothing from the old pairing may be sent")
+        }
+        // Records from before pairings had ids belong to that first pairing only.
+        let legacy = try JSONDecoder().decode(ShareRecord.self, from: Data(#"{"id":"legacy","link":"https://example.com","stage":"saving","createdAt":0,"updatedAt":0}"#.utf8))
+        precondition(legacy.connection == nil && !legacy.isCurrent)
+        History.clear()
+        OfflineQueue.clear()
         #endif
-        print("iOS queued privacy: state restoration, version guards, cross-process writes and pending retention passed")
+        print("iOS queued privacy: state restoration, version guards, cross-process writes, pending retention and pairing scope passed")
     }
 }

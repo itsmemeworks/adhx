@@ -6,6 +6,7 @@ import { db, runInTransaction } from '@/lib/db'
 import { bookmarks, phoneSaveQueue, users } from '@/lib/db/schema'
 import { addBookmark } from '@/lib/bookmarks/add'
 import { privateByDefault, setSavePrivate, type SaveOptions } from '@/lib/bookmarks/privacy'
+import { setSaveNote } from '@/lib/bookmarks/note'
 import { isLinkNetwork } from '@/lib/platform/networks'
 import { wakeKeep } from '@/lib/keep/worker'
 import { captureException } from '@/lib/sentry'
@@ -93,6 +94,19 @@ export function enqueueSave(
         )
         .get()
       if (!existing || existing.url !== url) throw new QueuedSaveConflict()
+      // The same share again with a note (the phone adds it once the card
+      // closes): keep it, and put it on the post if that has already landed.
+      if (options.note !== undefined) {
+        const note = options.note ?? ''
+        if (existing.note !== note) {
+          db.update(phoneSaveQueue)
+            .set({ note, updatedAt: iso })
+            .where(eq(phoneSaveQueue.id, existing.id))
+            .run()
+          if (existing.status === 'saved' && existing.platform && existing.postId)
+            setSaveNote(userId, existing.platform, existing.postId, note || null)
+        }
+      }
       return queuedSave(userId, existing.id)!
     }
     return queuedSave(userId, id)!
@@ -231,6 +245,9 @@ export async function runQueuedSave(row: typeof phoneSaveQueue.$inferSelect): Pr
       })
       const latest = db.select().from(phoneSaveQueue).where(eq(phoneSaveQueue.id, row.id)).get()
       if (latest) publishQueuedSave(latest)
+      // A note that arrived while this save was running.
+      if (latest && latest.note !== null && latest.note !== row.note)
+        setSaveNote(row.userId, platform, postId, latest.note || null)
     })
     // Link-network saves already woke the downloader; start the others now.
     if (!data.isDuplicate && !isLinkNetwork(platform)) wakeKeep()

@@ -75,5 +75,6 @@ deploy/nas/data/
 # Design parity harness (e2e/parity): scratch DB, media, captures
 e2e/parity/.out/
 .next-parity/
-# Real-phone driving (e2e/devices): screenshots
+# Real-phone driving (e2e/devices): screenshots and the hub's token
 e2e/devices/.out/
+e2e/devices/.hub-token

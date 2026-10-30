@@ -6,7 +6,8 @@ import { sql } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
 import { readPostModeration } from '@/lib/admin/moderation'
 import { absolutePath, keptFilesFor, type Slot } from '@/lib/keep/store'
-import { mediaDir } from '@/lib/keep/config'
+import { keepH264, mediaDir } from '@/lib/keep/config'
+import { settingOff } from '@/lib/settings/value'
 import { reconcileKeptMedia } from '@/lib/keep/metadata'
 import { probeMedia } from '@/lib/keep/probe'
 import { MAX_ATTEMPTS, PRIORITY, SEMANTIC_MODEL_VERSION } from '@/lib/semantic/config'
@@ -170,8 +171,8 @@ export async function claimConversionJob(
   if (typeof workerId !== 'string' || !/^[A-Za-z0-9._ -]{1,80}$/.test(workerId))
     throw new ProcessingInputError('Invalid worker name')
   if (!remoteProcessing()) return null
-  const disabled = (flag: string | undefined) => ['off', '0', 'false'].includes(flag || '')
-  if (disabled(process.env['KEEP_H264'])) {
+  // The switches as Admin → System has them: a saved value wins over the env.
+  if (!keepH264()) {
     runInTransaction(() => {
       const rows = db.all<Conversion>(
         sql`SELECT * FROM media_conversions WHERE status IN ('pending','running','failed')`,
@@ -182,7 +183,7 @@ export async function claimConversionJob(
     })
     return null
   }
-  if (disabled(process.env['KEEP_MEDIA'])) return null
+  if (settingOff('KEEP_MEDIA')) return null
   await recoverConversionFiles()
   return runInTransaction(() => {
     // A deleted/replaced generation is never revived by a late worker result.

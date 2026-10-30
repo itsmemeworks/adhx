@@ -209,6 +209,17 @@ export const UNDERSTANDING_DDL = `
   );
   CREATE INDEX IF NOT EXISTS media_conversions_due ON media_conversions(status,next_attempt_at,expires_at);
 
+  -- The cache keys handed to the Mac helper, so its cache hints are looked up
+  -- by key instead of hashing every queued file (jobs.ts reconcileMediaCache).
+  CREATE TABLE IF NOT EXISTS media_cache_keys (
+    cache_key TEXT PRIMARY KEY,
+    platform TEXT NOT NULL,
+    post_id TEXT NOT NULL,
+    slot TEXT NOT NULL,
+    issued_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS media_cache_keys_issued ON media_cache_keys(issued_at);
+
   CREATE TRIGGER IF NOT EXISTS conversion_last_save_deleted
   AFTER DELETE ON bookmarks
   WHEN NOT EXISTS (SELECT 1 FROM bookmarks WHERE platform=OLD.platform AND id=OLD.id)

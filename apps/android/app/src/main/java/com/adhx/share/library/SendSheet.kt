@@ -102,8 +102,9 @@ fun SendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDis
         scope.launch { state.hide() }.invokeOnCompletion { onDismiss() }
     }
 
+    // One file: Files asks where to put it, under its own name.
     val createFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(ready?.type ?: "*/*")) { uri ->
-        val file = ready?.files?.firstOrNull()
+        val file = ready?.files?.singleOrNull()
         if (uri != null && file != null) {
             scope.launch {
                 val ok = withContext(Dispatchers.IO) {
@@ -114,10 +115,28 @@ fun SendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDis
             }
         }
     }
+    // An album: Files asks for a folder, and every photo goes into it.
+    val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
+        val files = ready?.files.orEmpty()
+        if (tree != null && files.isNotEmpty()) {
+            scope.launch {
+                val saved = withContext(Dispatchers.IO) { ShareKept.saveToFolder(context, tree, files) }
+                onNotice(
+                    when (saved) {
+                        files.size -> "${files.size} photos saved to Files"
+                        0 -> "Couldn’t save them there"
+                        else -> "Saved $saved of ${files.size} photos. Try the rest again."
+                    },
+                )
+                close()
+            }
+        }
+    }
 
     fun go(target: Target, files: ShareKept.Ready) {
         when (target) {
-            Target.Files -> createFile.launch(files.files.first().name)
+            Target.Files ->
+                if (files.files.size == 1) createFile.launch(files.files.first().name) else pickFolder.launch(null)
             Target.More -> {
                 ShareKept.send(context, files.intent())
                 close()
@@ -197,10 +216,8 @@ fun SendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDis
                         onNotice(copyLink(context, post, server))
                         close()
                     }
-                    // One file can be saved somewhere; an album goes through More.
-                    if (ShareKept.files(post, server).size == 1) {
-                        Choice(Glyphs.Folder, "Files", waiting = pending == Target.Files) { pick(Target.Files) }
-                    }
+                    // One file is saved where you choose; an album into a folder you choose.
+                    Choice(Glyphs.Folder, "Files", waiting = pending == Target.Files) { pick(Target.Files) }
                     if (SaveToPhone.supported) Choice(Glyphs.Photo, "Save to phone", waiting = saving) { pick(Target.Phone) }
                     Choice(Glyphs.More, "More", waiting = pending == Target.More) { pick(Target.More) }
                 }

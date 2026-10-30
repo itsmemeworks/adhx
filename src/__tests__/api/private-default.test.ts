@@ -571,3 +571,52 @@ it('a retried queue acknowledgement cannot undo a newer web privacy choice', asy
   updateQueuedPrivacy(ANA, queued.id)
   expect(saved(id)!.isPrivate).toBe(true)
 })
+
+describe('a note sent with the same share again', () => {
+  it('is kept while the save waits, and lands on the post', async () => {
+    const { enqueueSave, saveQueueTick } = await import('@/lib/app/save-queue')
+    const id = 'Y9aytLYBajw'
+    const requestId = 'late-note-request-01'
+    const first = enqueueSave(ANA, `https://youtu.be/${id}`, undefined, {
+      deferPublish: true,
+      requestId,
+    })
+    const again = enqueueSave(ANA, `https://youtu.be/${id}`, undefined, {
+      deferPublish: true,
+      requestId,
+      note: 'this is so you',
+    })
+    expect(again.id).toBe(first.id)
+    expect(testInstance.db.select().from(schema.phoneSaveQueue).all()).toMatchObject([
+      { note: 'this is so you' },
+    ])
+    await saveQueueTick()
+    expect(saved(id)!.note).toBe('this is so you')
+  })
+
+  it('goes straight onto a post that already landed, and leaves it alone when not sent', async () => {
+    const { enqueueSave, saveQueueTick } = await import('@/lib/app/save-queue')
+    const id = 'Y9aytLYBajw'
+    const requestId = 'late-note-request-02'
+    const url = `https://youtu.be/${id}`
+    enqueueSave(ANA, url, undefined, { deferPublish: true, requestId })
+    await saveQueueTick()
+    expect(saved(id)!.note).toBeNull()
+    enqueueSave(ANA, url, undefined, { deferPublish: true, requestId, note: 'later words' })
+    expect(saved(id)!.note).toBe('later words')
+    enqueueSave(ANA, url, undefined, { deferPublish: true, requestId })
+    expect(saved(id)!.note).toBe('later words')
+  })
+
+  it('reaches the post when it arrives while the save is running', async () => {
+    const { enqueueSave, saveQueueTick } = await import('@/lib/app/save-queue')
+    const id = 'Y9aytLYBajw'
+    const requestId = 'late-note-request-03'
+    const url = `https://youtu.be/${id}`
+    enqueueSave(ANA, url, undefined, { deferPublish: true, requestId })
+    const working = saveQueueTick()
+    enqueueSave(ANA, url, undefined, { deferPublish: true, requestId, note: 'mid-save' })
+    await working
+    expect(saved(id)!.note).toBe('mid-save')
+  })
+})

@@ -239,7 +239,10 @@ The app and the extension are separate programs, so they share through an App
 Group, `group.<your prefix>`:
 
 - The server address, the Shared lately list and the waiting links live in the
-  App Group's shared settings.
+  App Group's shared settings. Each share and waiting link is stamped with the
+  pairing it was made under; connecting again (to another account, or the same
+  one) starts with an empty list and queue, and anything an earlier pairing
+  left in flight is dropped rather than sent with the new key.
 - The phone key lives in the Keychain, in the App Group's access group, so
   both can read it. It's readable after the phone's first unlock so waiting
   links can go in the background.

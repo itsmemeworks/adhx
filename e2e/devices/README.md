@@ -6,13 +6,13 @@ server, one step at a time. You can run the journeys in
 hand, or an agent can run them for you. Nothing here touches your real server,
 your data or `:3001`.
 
-| Piece                             | What it does                                                                                                              |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm parity:serve` (LAN mode)    | The [parity](../parity/README.md) test world (Pete, Ana, Ben, Mum, Jo, their saves and channels), reachable by the phones |
-| `pnpm parity:pair <member>`       | A fresh pairing code for one member, as Settings → Phone app would show it                                                |
-| `hub.mjs`                         | Passes commands from this Mac to the iPhone driver, and answers back                                                      |
-| `ios.sh`                          | Builds ADHX Share and the `DeviceDriver` UI test, installs both on the iPhone and keeps the driver running                |
-| `drive.mjs <ios\|android> <op> …` | One step: read the screen, tap, type, swipe, take a screenshot. Android goes straight over adb                            |
+| Piece                             | What it does                                                                                                               |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm parity:serve` (LAN mode)    | The [parity](../parity/README.md) test world (Pete, Ana, Ben, Mum, Jo, their saves and channels), reachable by the phones  |
+| `pnpm parity:pair <member>`       | A fresh pairing code for one member, as Settings → Phone app would show it                                                 |
+| `hub.mjs`                         | Passes commands from this Mac to the iPhone driver, and answers back; only the driver, with the hub's token, can take them |
+| `ios.sh`                          | Builds ADHX Share and the `DeviceDriver` UI test, installs both on the iPhone and keeps the driver running                 |
+| `drive.mjs <ios\|android> <op> …` | One step: read the screen, tap, type, swipe, take a screenshot. Android goes straight over adb                             |
 
 ## Once
 
@@ -35,8 +35,8 @@ PARITY_HOST=:: PARITY_PUBLIC_ORIGIN=http://$(ipconfig getifaddr en0):3600 \
   PARITY_MEDIA_SRC=/path/to/adhx/data/media pnpm parity:serve
 
 # 2. The hub, then the iPhone driver (xcrun devicectl list devices for the UDID)
-node e2e/devices/hub.mjs
-IOS_UDID=<udid> e2e/devices/ios.sh
+node e2e/devices/hub.mjs          # writes its token to e2e/devices/.hub-token
+IOS_UDID=<udid> e2e/devices/ios.sh  # hands that token to the driver
 
 # 3. The Android app
 (cd apps/android && ./gradlew assembleDebug)

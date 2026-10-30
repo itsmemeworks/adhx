@@ -5,7 +5,8 @@
 #   IOS_UDID=<udid> e2e/devices/ios.sh
 #
 # Needs apps/ios/Config/Local.xcconfig with your team (see apps/ios/README.md),
-# the phone unlocked, trusted and in Developer Mode, and hub.mjs running.
+# the phone unlocked, trusted and in Developer Mode, and hub.mjs running (it
+# writes the token the driver needs to e2e/devices/.hub-token).
 # DEVICE_HUB_HOST is how the phone reaches this Mac: by default the address of
 # the USB tunnel Xcode keeps to a wired iPhone, else this Mac's Wi-Fi address.
 # If the driver stops (a crash, an app kill), it starts again; `drive.mjs ios
@@ -26,6 +27,11 @@ if [[ -z "${DEVICE_HUB_HOST:-}" ]]; then
   fi
 fi
 export TEST_RUNNER_ADHX_DRIVER_URL="http://${DEVICE_HUB_HOST}:${DEVICE_HUB_PORT:-3700}/"
+# The hub's token, so only this driver can take its commands and answer them.
+TOKEN_FILE="${DEVICE_HUB_TOKEN_FILE:-e2e/devices/.hub-token}"
+[[ -s "$TOKEN_FILE" ]] || { echo "[ios] start e2e/devices/hub.mjs first (no $TOKEN_FILE)" >&2; exit 1; }
+TEST_RUNNER_ADHX_DRIVER_TOKEN="$(cat "$TOKEN_FILE")"
+export TEST_RUNNER_ADHX_DRIVER_TOKEN
 DERIVED="${DERIVED_DATA:-${TMPDIR:-/tmp}/adhx-device-driver}"
 common=(-project apps/ios/ADHXShare.xcodeproj -scheme "ADHX Device Driver"
   -destination "id=${IOS_UDID}" -derivedDataPath "$DERIVED" -allowProvisioningUpdates)

@@ -27,6 +27,7 @@ import {
   planProcessingVideo,
   heartbeat,
   failProcessingJob,
+  reconcileMediaCache,
 } from '@/lib/processing/jobs'
 import { remoteActivity } from '@/lib/processing/activity'
 import { workerAuthorized } from '@/lib/processing/auth'
@@ -474,3 +475,28 @@ it('invalidates a media lease when actual retained media changes', async () => {
   instance.sqlite.prepare("UPDATE kept_files SET bytes=18 WHERE post_id='100'").run()
   await expect(heartbeat(job.id, job.lease)).rejects.toThrow('Post changed')
 })
+
+it('looks up a cache hint by its key, however long the media queue is', () => {
+  const now = '2026-10-28T00:00:00Z'
+  const bookmark = instance.sqlite.prepare(
+    "INSERT INTO bookmarks(user_id,platform,id,author,text,tweet_url,processed_at) VALUES('queue','youtube',?,'author','text','',?)",
+  )
+  const file = instance.sqlite.prepare(
+    "INSERT INTO kept_files(platform,post_id,slot,path,mime,bytes,created_at) VALUES('youtube',?,'video-1',?,'video/mp4',1,?)",
+  )
+  const queued = instance.sqlite.prepare(
+    "INSERT INTO understanding_queue(platform,post_id,kind,priority,attempts,enqueued_at,next_attempt_at) VALUES('youtube',?,'video',1,0,?,?)",
+  )
+  instance.sqlite.transaction(() => {
+    for (let i = 0; i < 50_000; i++) {
+      bookmark.run(`q${i}`, now)
+      file.run(`q${i}`, `q${i}.mp4`, now)
+      queued.run(`q${i}`, now, now)
+    }
+  })()
+  const unknown = 'f'.repeat(64)
+  const start = performance.now()
+  expect(reconcileMediaCache([unknown])).toEqual([unknown])
+  // Scanning and hashing 50,000 files took about 130 ms; a key lookup is far under 1 ms.
+  expect(performance.now() - start).toBeLessThan(40)
+}, 20_000)

@@ -184,7 +184,8 @@ function parseRange(header: string | null, size: number): { start: number; end: 
  * smaller WebP copy made once and kept beside the original (`thumb.ts`).
  *
  * A post whose only saves are Just for me is served to its owners only (their
- * session or phone key, or the post's `?k=` file token) and never cached. To
+ * session or phone key, or a `?k=` file token issued to one of their phones)
+ * and never cached. To
  * anyone else it looks exactly like a post nobody saved, and why a file isn't
  * here is only said to members (`src/lib/keep/file-access.ts`).
  */
@@ -241,22 +242,6 @@ export async function GET(
   // A video kept before stills were taken on download: make its poster now.
   if (!kept && retainedAllowed && slot === 'poster') kept = await ensurePoster(platform, id)
   if (kept) {
-    // Waiting for a download/poster crosses asynchronous boundaries. Privacy,
-    // deletion and moderation may have changed while this request was waiting.
-    let currentAccess = keptFileAccess(platform, id)
-    const token = validFileToken(platform, id, request.nextUrl.searchParams.get('k'))
-    if (currentAccess === 'private' && !token) await callerId()
-    currentAccess = keptFileAccess(platform, id)
-    privateToOwner =
-      currentAccess === 'private' && (token || (!!caller && ownsSave(caller, platform, id)))
-    const currentModeration = readPostModeration(platform, id)
-    if (
-      currentAccess === 'unsaved' ||
-      (currentAccess === 'private' && !privateToOwner) ||
-      !currentModeration.ok ||
-      currentModeration.value
-    )
-      return notFound()
     let file: string
     let size: number
     let modified: number
@@ -277,6 +262,25 @@ export async function GET(
       modified = thumb.modified
       mime = 'image/webp'
     }
+    // Waiting for a download, a poster or a tile's copy crosses asynchronous
+    // boundaries: privacy, deletion and moderation may have changed meanwhile.
+    // Checked last: nothing is awaited between the final reads and the response.
+    const token = validFileToken(platform, id, request.nextUrl.searchParams.get('k'))
+    let currentAccess = keptFileAccess(platform, id)
+    if (currentAccess === 'private' && !token) {
+      await callerId()
+      currentAccess = keptFileAccess(platform, id)
+    }
+    privateToOwner =
+      currentAccess === 'private' && (token || (!!caller && ownsSave(caller, platform, id)))
+    const currentModeration = readPostModeration(platform, id)
+    if (
+      currentAccess === 'unsaved' ||
+      (currentAccess === 'private' && !privateToOwner) ||
+      !currentModeration.ok ||
+      currentModeration.value
+    )
+      return notFound()
     const headers: Record<string, string> = {
       'Content-Type': mime,
       'Accept-Ranges': 'bytes',
