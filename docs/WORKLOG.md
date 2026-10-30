@@ -6,6 +6,11 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-30 — Fly round 7 on 2.14.5: the release builds pass too
+
+- Same journeys as round 6, on the shipped phone builds instead of Debug ones: the release APK on the Android, the release IPA on the iPhone (re-signed for a development profile; the test iPhone has no TestFlight). Web 26 of 26; join, first-tap connect, shares (the iPhone through the real share sheet), sends, reactions both ways and search all passed. No bugs.
+- A repeat share of the same post kept one save. The Fly app was deleted afterwards; the fix-and-release loop ends here.
+
 ## 2026-10-30 — Fly round 6 on 2.14.5: the closing perfect run
 
 - Same image as round 5 (the README change shipped no app code). Fresh install from the recipe; web pass 26 of 26. Both apps freshly reinstalled from `main` and paired to round 5's deleted server: join, first-tap connect, start on post 1, a share with a note, a send, a reaction reaching the other phone, search by picture and by words. Nothing failed or needed a retry.

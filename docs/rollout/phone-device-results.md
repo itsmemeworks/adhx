@@ -5,6 +5,25 @@ phones, newest run first. Each run says what was tested on which device and
 build. A row not listed was not run. Bugs found are fixed in the same change,
 with the fix named. How to drive the phones: [`e2e/devices`](../../e2e/devices/README.md).
 
+## 30 October 2026 (Fly round 7, 2.14.5: the release builds)
+
+- **Server:** 2.14.5 from `deploy/fly` on a new app. **Phones:** the 2.14.5
+  release builds from the GitHub release: the signed APK on the Android, the
+  sideload IPA on the iPhone (re-signed with a development profile, since the
+  test iPhone has no TestFlight).
+
+| Journey                                    | Row | iPhone                                   | Android                      |
+| ------------------------------------------ | --- | ---------------------------------------- | ---------------------------- |
+| Join from a group link                     | –   | Pass                                     | Pass                         |
+| Connect this phone                         | P06 | Pass: first tap, post 1 of 9             | Pass: first tap, post 1 of 9 |
+| Share a new post                           | P02 | Pass: share sheet, Vimeo; repeat deduped | Pass: with "release note"    |
+| A send from the web reaches the phone      | –   | Pass                                     | Pass                         |
+| React with words; it reaches another phone | P19 | Pass                                     | Pass: "ana replied"          |
+| Search                                     | P01 | Pass: "synth", 2 found                   | Pass: "synth", 2 found       |
+
+Web pass 26 of 26. No bugs found. The share card closes itself 3 seconds after
+"Saved", so a save that's already done shows no card.
+
 ## 30 October 2026 (Fly round 6, 2.14.5: the closing run)
 
 - **Server:** 2.14.5 from `deploy/fly` on a new app. **Phones:** Debug builds
