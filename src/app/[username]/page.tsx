@@ -45,10 +45,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params
   const profile = await loadProfile(username)
   if (!profile) {
-    return {
-      title: 'ADHX - Your friends have better taste than the algorithm.',
-      description: 'Every app wants your attention. ADHX just wants your friends’ opinions.',
-    }
+    // Shows the 404: titled like it (the template adds "| ADHX").
+    return { title: 'Not found', robots: { index: false } }
   }
 
   const displayName = profile.authorName

@@ -174,7 +174,7 @@ export const EXTRAS = {
     group: 'Keeping copies',
     label: 'Signed-in cookies',
     kind: 'cookies',
-    help: 'For posts TikTok, Instagram or Facebook only show to signed-in people. Export cookies.txt from a browser signed in to them (a cookies.txt extension does it) and paste or choose the file. Stored encrypted; replace it when downloads start asking to sign in again.',
+    help: 'For posts TikTok, Instagram or Facebook only show signed-in people: a cookies.txt from a browser signed in to them. Stored encrypted.',
     maxLength: 1_000_000,
     check: (v) =>
       cookieLines(v).length > 0 && cookieLines(v).every((line) => line.split('\t').length === 7)
