@@ -9,6 +9,7 @@ import { absolutePath, isSlot, keptFile, type KeptFile, type Slot } from '@/lib/
 import { keepJobs } from '@/lib/db/schema'
 import { proxySrc } from '@/lib/keep/src'
 import { wakeKeep } from '@/lib/keep/worker'
+import { keepReason } from '@/lib/keep/reason'
 import { ensurePoster } from '@/lib/keep/poster'
 import { canShrink, thumbFor, thumbWidth } from '@/lib/keep/thumb'
 import { keptFileAccess, ownsSave, validFileToken } from '@/lib/keep/file-access'
@@ -63,13 +64,16 @@ const THUMB_WAIT_MS = 4_000
  */
 function notKeptReason(platform: string, id: string): { status: 404 | 410; reason: string } | null {
   const [job] = db
-    .select({ status: keepJobs.status })
+    .select({ status: keepJobs.status, lastError: keepJobs.lastError })
     .from(keepJobs)
     .where(and(eq(keepJobs.platform, platform), eq(keepJobs.postId, id)))
     .limit(1)
     .all()
   if (job?.status === 'unavailable') {
-    return { status: 410, reason: 'This one couldn’t be downloaded. The original may still play.' }
+    // Why, as Processing says it ("Vimeo locks this one."): fixed phrases, never
+    // the error itself. The phones fall back to "taken down" without it, which
+    // was wrong for a post that still plays on its network.
+    return { status: 410, reason: keepReason(job.lastError, platform) }
   }
   if (job?.status === 'failed') {
     return { status: 404, reason: 'This one couldn’t be downloaded yet. ADHX will try again.' }
