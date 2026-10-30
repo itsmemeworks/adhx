@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -102,6 +103,10 @@ fun HomeScreen(
     val ui by feed.feed.collectAsStateWithLifecycle()
     // Away from New the count stays where you left the feed.
     val badge = newBadge(ui, feed.feedPage)
+    // Live's red dot only while something is live (as on the iPhone).
+    val live by feed.live.collectAsStateWithLifecycle()
+    LaunchedEffect(feed) { if (!live.loadedOnce) feed.loadLive() }
+    val liveDot = live.moments.any { it.live }
     when (tab) {
         HomeTab.New -> NewTab(
             feed = feed,
@@ -112,10 +117,10 @@ fun HomeScreen(
             header = { b, atEnd, strip ->
                 if (atEnd) {
                     // A solid page (caught up, loading): the same row, on the surface colour.
-                    HomeHeader(tab, onTab, actions.onSettings, actions.onSearch, overMedia = false, newBadge = b)
+                    HomeHeader(tab, onTab, actions.onSettings, actions.onSearch, overMedia = false, newBadge = b, liveDot = liveDot)
                 } else {
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                        HomeHeader(tab, onTab, actions.onSettings, actions.onSearch, overMedia = true, newBadge = b)
+                        HomeHeader(tab, onTab, actions.onSettings, actions.onSearch, overMedia = true, newBadge = b, liveDot = liveDot)
                         // The lineup's strip: which part is playing, under the tabs.
                         if (strip != null) {
                             Box(Modifier.padding(top = 2.dp, bottom = 22.dp)) { strip() }
@@ -134,11 +139,11 @@ fun HomeScreen(
             },
         )
         HomeTab.Channels -> Box(Modifier.fillMaxSize().background(AdhxColors.Bg)) {
-            ChannelsTab(feed, connection.server, actions, header = { HomeHeader(tab, onTab, actions.onSettings, actions.onSearch, overMedia = false, newBadge = badge) })
+            ChannelsTab(feed, connection.server, actions, header = { HomeHeader(tab, onTab, actions.onSettings, actions.onSearch, overMedia = false, newBadge = badge, liveDot = liveDot) })
             BottomFade()
         }
         HomeTab.Live -> Box(Modifier.fillMaxSize().background(AdhxColors.Bg)) {
-            LiveTab(feed, connection.server, actions, header = { HomeHeader(tab, onTab, actions.onSettings, actions.onSearch, overMedia = false, newBadge = badge) })
+            LiveTab(feed, connection.server, actions, header = { HomeHeader(tab, onTab, actions.onSettings, actions.onSearch, overMedia = false, newBadge = badge, liveDot = liveDot) })
             BottomFade()
         }
     }
@@ -191,6 +196,8 @@ fun HomeHeader(
     onSearch: () -> Unit,
     overMedia: Boolean,
     newBadge: String? = null,
+    /** Something is live right now: Live gets its red dot. */
+    liveDot: Boolean = false,
 ) {
     val statusTop = WindowInsets.statusBars.getTop(androidx.compose.ui.platform.LocalDensity.current).toFloat()
     Box(
@@ -237,6 +244,7 @@ fun HomeHeader(
                 tab = tab,
                 onTab = onTab,
                 newBadge = newBadge,
+                liveDot = liveDot,
                 background = if (overMedia) Color.Black.copy(alpha = 0.5f) else AdhxColors.Surface,
             )
             Spacer(Modifier.weight(1f))
@@ -258,6 +266,7 @@ private fun HomeTabs(
     tab: HomeTab,
     onTab: (HomeTab) -> Unit,
     newBadge: String?,
+    liveDot: Boolean,
     background: Color,
 ) {
     // Not clipped: the badge reaches past the pill's edge.
@@ -281,7 +290,11 @@ private fun HomeTabs(
                         .background(if (on) AdhxColors.Cream else Color.Transparent)
                         .selectable(selected = on, role = Role.Tab, onClick = { onTab(t) })
                         .semantics {
-                            contentDescription = if (t == HomeTab.New) Copy.newTabDescription(badge) else label
+                            contentDescription = when {
+                                t == HomeTab.New -> Copy.newTabDescription(badge)
+                                t == HomeTab.Live && liveDot -> "$label, something’s on now"
+                                else -> label
+                            }
                             if (on && t == HomeTab.New) {
                                 onClick(label = Copy.FILTER_TITLE) {
                                     onTab(t)
@@ -293,7 +306,7 @@ private fun HomeTabs(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (t == HomeTab.Live) {
+                    if (t == HomeTab.Live && liveDot) {
                         Box(Modifier.size(7.dp).clip(CircleShape).background(AdhxColors.Live))
                         Spacer(Modifier.width(6.dp))
                     }

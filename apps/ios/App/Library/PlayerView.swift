@@ -766,17 +766,9 @@ private struct PostPage: View {
         }
     }
 
-    /// The file the Save button keeps: the video, or the photo on screen.
-    /// Share shows what it sends: the video, the photos, the sound or the words.
-    private var shareIcon: String {
-        guard hasMedia else { return "text.quote" }
-        switch post.kind {
-        case "video": return "video"
-        case "audio": return "waveform"
-        case "photo": return post.media.count > 1 ? "photo.stack" : "photo"
-        default: return "square.and.arrow.up"
-        }
-    }
+    /// Share is one paper plane whatever it sends (as on Android and the web):
+    /// a camera on videos read as "record".
+    private var shareIcon: String { "paperplane" }
 
     /// A video, sound or photos your ADHX keeps (anything else is words).
     private var hasMedia: Bool { !KeptFiles.sources(of: post, server: server).isEmpty }

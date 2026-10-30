@@ -8,7 +8,16 @@ import type { MomentsSnapshot, MomentView } from '@/components/next/moments/live
  * ("LIVE · 3 saves in 10 min"), and keeps the totals for everyone else.
  */
 
-const state = vi.hoisted(() => ({ snapshot: null as unknown }))
+const state = vi.hoisted(() => ({ snapshot: null as unknown, authenticated: true }))
+
+vi.mock('@/components/auth', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/components/auth')>()),
+  useAuthMe: () => ({
+    me: { authenticated: state.authenticated },
+    loading: false,
+    refresh: async () => {},
+  }),
+}))
 
 vi.mock('@/components/next/moments/live', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/next/moments/live')>()
@@ -106,5 +115,39 @@ describe('Right now with many moments', () => {
     const below = container.querySelector('.lg\\:col-span-2')
     expect(below).not.toBeNull()
     expect(below!.querySelectorAll('article').length).toBe(3)
+  })
+})
+
+describe('Right now when nothing is trending', () => {
+  const quiet = (): MomentsSnapshot => ({ ...snapshot(moment()), moments: [] })
+
+  it('offers members Browse channels and Play my saves', () => {
+    state.authenticated = true
+    state.snapshot = quiet()
+    render(<RightNow headingLevel="h1" />)
+    expect(screen.getByRole('link', { name: 'Browse channels' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Play my saves' })).toBeInTheDocument()
+  })
+
+  it('offers signed-out visitors nothing that would only bounce to sign in', () => {
+    state.authenticated = false
+    state.snapshot = quiet()
+    render(<RightNow headingLevel="h1" />)
+    expect(screen.getByText(/Nothing’s trending yet/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Browse channels' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Play my saves' })).not.toBeInTheDocument()
+    state.authenticated = true
+  })
+})
+
+describe('the Just saved strip', () => {
+  it('shows a post once, however many people save it', () => {
+    const item = (id: string, key: string) =>
+      ({ id, key, at: new Date().toISOString(), post: {}, to: null }) as never
+    let s = { ...snapshot(moment()), stream: [] } as MomentsSnapshot
+    s = applyEvent(s, { type: 'save', item: item('twitter:1@a', 'twitter:1') } as never)
+    s = applyEvent(s, { type: 'save', item: item('twitter:2@a', 'twitter:2') } as never)
+    s = applyEvent(s, { type: 'save', item: item('twitter:1@b', 'twitter:1') } as never)
+    expect(s.stream.map((x) => x.key)).toEqual(['twitter:1', 'twitter:2'])
   })
 })

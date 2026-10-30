@@ -3,7 +3,7 @@ import fs from 'fs/promises'
 import os from 'os'
 import path from 'path'
 import { ffmpegPath } from '@/lib/media/ffmpeg'
-import { maxFileSize, mediaDir, ytdlpCookies, ytdlpPath } from './config'
+import { maxFileSize, mediaDir, ytdlpCookies, ytdlpCookiesText, ytdlpPath } from './config'
 import { parseProgressLine, PROGRESS_TEMPLATE } from './progress'
 
 /**
@@ -116,18 +116,22 @@ function eachLine(onLine: (line: string) => void): (chunk: Buffer | string) => v
 }
 
 /**
- * A private copy of the owner's cookies file for one run: yt-dlp writes the
- * cookies it ends with back to the file it's given, and runs overlap. No
- * file (or none readable): run without, as if it were unset.
+ * A private copy of the owner's cookies for one run (the ones pasted in
+ * Admin → System, else the `YTDLP_COOKIES` file): yt-dlp writes the cookies
+ * it ends with back to the file it's given, and runs overlap. None (or a file
+ * that can't be read): run without, as if unset.
  */
 async function cookiesCopy(): Promise<{ file: string; remove: () => Promise<void> } | null> {
-  const source = ytdlpCookies()
-  if (!source) return null
+  const pasted = ytdlpCookiesText()
+  const source = pasted ? null : ytdlpCookies()
+  if (!pasted && !source) return null
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'adhx-cookies-'))
   const remove = () => fs.rm(dir, { recursive: true, force: true })
   try {
     const file = path.join(dir, 'cookies.txt')
-    await fs.copyFile(source, file)
+    if (pasted)
+      await fs.writeFile(file, pasted.endsWith('\n') ? pasted : `${pasted}\n`, { mode: 0o600 })
+    else await fs.copyFile(source!, file)
     await fs.chmod(file, 0o600)
     return { file, remove }
   } catch {

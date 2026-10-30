@@ -47,6 +47,8 @@ function conversionPending(platform: string, id: string, slot: Slot): boolean {
   )
 }
 
+const NOBODY_SAVED = 'Nobody here has saved this yet. Save it to watch it here.'
+
 const WAIT_MS = 25_000
 /**
  * A tile's picture (`?w=`) waits less: a shimmer that lasts 25 s reads as a
@@ -79,9 +81,7 @@ function notKeptReason(platform: string, id: string): { status: 404 | 410; reaso
     .where(and(eq(bookmarks.platform, platform), eq(bookmarks.id, id)))
     .limit(1)
     .all()
-  return saved
-    ? null
-    : { status: 404, reason: 'Nobody here has saved this yet. Save it to watch it here.' }
+  return saved ? null : { status: 404, reason: NOBODY_SAVED }
 }
 
 function findKept(platform: string, id: string, slot: Slot): KeptFile | null {
@@ -328,8 +328,10 @@ export async function GET(
   if (!hidden) wakeKeep()
   if (meanwhile) return handOff(meanwhile)
   // Why it isn't here is for members: to a stranger it would say whether
-  // anyone on this server saved the post.
-  if (!hidden && /^(video|audio)-/.test(slot) && (await callerId())) {
+  // anyone on this server saved the post. Someone else's Just for me save
+  // gets exactly what a post nobody saved gets.
+  if (/^(video|audio)-/.test(slot) && (await callerId())) {
+    if (hidden) return NextResponse.json({ reason: NOBODY_SAVED }, { status: 404 })
     const why = notKeptReason(platform, id)
     if (why) return NextResponse.json({ reason: why.reason }, { status: why.status })
   }

@@ -92,7 +92,8 @@ export function applyEvent(snapshot: MomentsSnapshot, event: MomentEvent): Momen
         forming: snapshot.forming.filter((f) => f.id !== event.formingId),
       }
     case 'save': {
-      const stream = [event.item, ...snapshot.stream.filter((x) => x.id !== event.item.id)].slice(
+      // One card per post: a second save of it moves it to the front.
+      const stream = [event.item, ...snapshot.stream.filter((x) => x.key !== event.item.key)].slice(
         0,
         12,
       )

@@ -453,7 +453,8 @@ describe('kept media', () => {
         viewer = who
         const video = await get('/api/files/youtube/secret/video-1?v=2')
         expect(video.status).toBe(404)
-        expect(await video.json()).toEqual({ error: 'Not found' })
+        const nobody = await get('/api/files/youtube/never-saved/video-1?v=2')
+        expect(await video.json()).toEqual(await nobody.json())
         expect((await get('/api/files/youtube/secret/poster?v=2')).status).toBe(404)
         // A wrong or another post's token doesn't help.
         for (const k of [

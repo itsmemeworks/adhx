@@ -10,7 +10,7 @@ import {
   fetchTweetResult,
   type FxTwitterResponse,
 } from '@/lib/media/fxembed'
-import { ytdlpCookies } from '@/lib/keep/config'
+import { hasYtdlpCookies } from '@/lib/keep/config'
 import { ytdlpInfo } from '@/lib/keep/ytdlp'
 import { fetchOgMetadata } from '@/lib/utils/og-fetch'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
@@ -120,7 +120,7 @@ export async function addTweet(
     const tweet =
       fx.ok && fx.data.tweet
         ? fx.data.tweet
-        : !fx.ok && (!fx.gone || ytdlpCookies())
+        : !fx.ok && (!fx.gone || hasYtdlpCookies())
           ? await tweetFromYtdlp(parsed.author, parsed.tweetId)
           : null
     if (!tweet && !fx.ok && fx.gone) {

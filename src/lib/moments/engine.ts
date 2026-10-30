@@ -599,8 +599,10 @@ async function recompute(): Promise<void> {
     )
     if (chosen && s.stream.length === 0) {
       const posts = await loadPosts(chosen.newest.map((n) => n.key))
+      // One card per post: several people saving it is still one post.
+      const seen = new Set<string>()
       s.stream = chosen.newest
-        .filter((n) => posts.has(n.key))
+        .filter((n) => posts.has(n.key) && !seen.has(n.key) && !!seen.add(n.key))
         .map((n) => {
           const m = moments.find((x) => x.members.has(n.key))
           return {
@@ -766,7 +768,8 @@ async function processNewSaves(): Promise<void> {
     // A big import shouldn't flood the strip: a few per look, the rest still count.
     if (streamed < 6) {
       streamed++
-      s.stream = [item, ...s.stream.filter((x) => x.id !== item.id)].slice(0, STREAM_LENGTH)
+      // A post saved again moves to the front instead of showing twice.
+      s.stream = [item, ...s.stream.filter((x) => x.key !== item.key)].slice(0, STREAM_LENGTH)
       emit({
         type: 'save',
         item,

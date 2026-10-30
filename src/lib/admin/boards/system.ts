@@ -5,14 +5,7 @@ import path from 'node:path'
 import { promisify } from 'node:util'
 import { sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import {
-  keepBackfill,
-  keepEnabled,
-  keepMinFreeBytes,
-  mediaDir,
-  ytdlpCookies,
-  ytdlpPath,
-} from '@/lib/keep/config'
+import { keepBackfill, keepEnabled, keepMinFreeBytes, mediaDir, ytdlpPath } from '@/lib/keep/config'
 import { keepWorkerStatus } from '@/lib/keep/worker'
 import { ffmpegPath } from '@/lib/media/ffmpeg'
 import { indexingPaused, remoteProcessing } from '@/lib/processing/config'
@@ -645,7 +638,6 @@ function settingsView(
       after: [
         fixedRow('Media folder', mediaDir(), 'MEDIA_DIR'),
         fixedRow('yt-dlp', ytdlpPath(), 'YTDLP_PATH'),
-        fixedRow('Cookies file', ytdlpCookies() ? 'Set' : 'Not set', 'YTDLP_COOKIES'),
         fixedRow('FFmpeg', process.env['FFMPEG_PATH']?.trim() || 'From PATH', 'FFMPEG_PATH'),
       ],
     },
@@ -1033,7 +1025,10 @@ export async function systemBoard(
                 ? 'Free some space on the media disk, or lower “Stop when free disk is under” in Settings.'
                 : `Check that the ${q.where === 'this server' ? 'processes below are running' : 'Mac helper is connected'}, then the server log.`
           : q.failed > 0 && q.state === 'warn'
-            ? 'Processing → Retry failed tries them all again.'
+            ? q.id === 'downloads'
+              ? // Gave up for good: Retry failed doesn't touch these; the saver decides.
+                'Each saver sees theirs under Needs you; Posts → Retry tries one again.'
+              : 'Processing → Retry failed tries them all again.'
             : null,
     })
   }

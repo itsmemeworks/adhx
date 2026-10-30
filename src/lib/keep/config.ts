@@ -1,5 +1,5 @@
 import path from 'path'
-import { setting, settingOff } from '../settings/value'
+import { envSetting, setting, settingOff, storedSetting } from '../settings/value'
 
 /**
  * Kept media: ADHX downloads every saved post's pictures, video and sound
@@ -42,11 +42,21 @@ export function ytdlpPath(): string {
 }
 
 /**
- * A cookies file from a browser signed in to the networks (Netscape
- * `cookies.txt`), for posts they only show to signed-in viewers. Unset: none.
+ * Cookies from a browser signed in to the networks (Netscape `cookies.txt`),
+ * for posts they only show to signed-in viewers. Pasted in Admin → System
+ * (stored encrypted, `ytdlpCookiesText`) wins over a file named by the
+ * environment's `YTDLP_COOKIES` (`ytdlpCookies`, a path). Unset: none.
  */
+export function ytdlpCookiesText(): string | null {
+  return storedSetting('YTDLP_COOKIES')
+}
+
 export function ytdlpCookies(): string | null {
-  return process.env['YTDLP_COOKIES']?.trim() || null
+  return envSetting('YTDLP_COOKIES')
+}
+
+export function hasYtdlpCookies(): boolean {
+  return !!(ytdlpCookiesText() || ytdlpCookies())
 }
 
 export function maxFileSize(): string {

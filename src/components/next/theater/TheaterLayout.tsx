@@ -576,7 +576,7 @@ const PHONE_TABS: { id: NavId; label: string; href: string }[] = [
   { id: 'now', label: 'Live', href: '/now' },
 ]
 
-/** New · Channels · Live, with New's unseen count on its corner (phones). */
+/** Home · Channels · Live (the phone bottom nav's names), with New's unseen count on its corner (phones). */
 export function PhoneTabs({
   current,
   unseen,
@@ -603,7 +603,8 @@ export function PhoneTabs({
             href={tab.href}
             aria-current={on ? 'page' : undefined}
             className={cn(
-              'relative flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-[15px]',
+              // Tighter under 380px so the header keeps its 16px edge on the smallest phones.
+              'relative flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[15px] min-[380px]:px-3.5',
               on ? 'bg-nx-cream font-extrabold text-nx-on-cream' : 'font-semibold text-nx-ink',
             )}
           >

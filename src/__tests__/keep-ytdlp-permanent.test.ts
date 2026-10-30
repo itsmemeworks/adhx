@@ -127,4 +127,37 @@ describe('running yt-dlp', () => {
       vi.doUnmock('@/lib/media/ffmpeg')
     }
   })
+
+  it('uses cookies pasted in Admin → System before the environment’s file', async () => {
+    vi.resetModules()
+    const pasted = '# Netscape HTTP Cookie File\n.tiktok.com\tTRUE\t/\tTRUE\t0\tsid\tpasted\n'
+    const seen: { text: string; mode: number }[] = []
+    vi.doMock('child_process', () => ({
+      execFile: (
+        _bin: string,
+        args: string[],
+        _opts: unknown,
+        done: (e: null, out: string) => void,
+      ) => {
+        const copy = args[args.indexOf('--cookies') + 1]
+        seen.push({ text: fs.readFileSync(copy, 'utf8'), mode: fs.statSync(copy).mode & 0o777 })
+        done(null, '{}')
+        return { stdout: null, stderr: null }
+      },
+    }))
+    vi.doMock('@/lib/media/ffmpeg', () => ({ ffmpegPath: async () => '/usr/bin/ffmpeg' }))
+    vi.stubEnv('YTDLP_COOKIES', '/nowhere/cookies.txt')
+    const { installStoredSettings } = await import('@/lib/settings/value')
+    installStoredSettings(() => new Map([['YTDLP_COOKIES', pasted]]))
+    try {
+      const { ytdlpInfo } = await import('@/lib/keep/ytdlp')
+      await ytdlpInfo('https://www.tiktok.com/@a/video/3')
+      expect(seen).toEqual([{ text: pasted, mode: 0o600 }])
+    } finally {
+      installStoredSettings(() => new Map())
+      vi.unstubAllEnvs()
+      vi.doUnmock('child_process')
+      vi.doUnmock('@/lib/media/ffmpeg')
+    }
+  })
 })

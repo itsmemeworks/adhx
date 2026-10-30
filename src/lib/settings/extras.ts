@@ -22,7 +22,7 @@ import { envSetting, installStoredSettings, setting, storedSetting } from './val
  * directly for these names.
  */
 
-export type SettingKind = 'text' | 'secret' | 'choice' | 'number' | 'list'
+export type SettingKind = 'text' | 'secret' | 'choice' | 'number' | 'list' | 'cookies'
 
 export type SettingGroup =
   'Sign-in and email' | 'Keeping copies' | 'Understanding' | 'Jev' | 'X' | 'This server'
@@ -45,12 +45,37 @@ export interface ExtraSpec {
   check?: (value: string) => string | null
   /** The value in words, for the page. */
   show?: (value: string) => string
+  /** Longest value accepted (default 2,000 characters). */
+  maxLength?: number
 }
 
 const ON_OFF = [
   { value: 'on', label: 'On' },
   { value: 'off', label: 'Off' },
 ] as const
+
+/** The cookie lines of a Netscape cookies.txt (comments and blanks dropped). */
+export function cookieLines(text: string): string[] {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && (!line.startsWith('#') || line.startsWith('#HttpOnly_')))
+}
+
+/** The sites a cookies.txt signs in to, like "tiktok.com, instagram.com". */
+export function cookieSites(text: string): string[] {
+  const sites = new Set<string>()
+  for (const line of cookieLines(text)) {
+    const host = line
+      .split('\t')[0]
+      .replace(/^#HttpOnly_/, '')
+      .replace(/^\./, '')
+      .toLowerCase()
+    const parts = host.split('.').filter(Boolean)
+    if (parts.length) sites.add(parts.slice(-2).join('.'))
+  }
+  return [...sites].sort()
+}
 
 const isOff = (v: string) => ['off', '0', 'false'].includes(v.toLowerCase())
 const onOff = (v: string) => (isOff(v) ? 'Off' : 'On')
@@ -144,6 +169,17 @@ export const EXTRAS = {
     min: 0,
     max: 100_000,
     show: (v) => `${v} GB`,
+  },
+  YTDLP_COOKIES: {
+    group: 'Keeping copies',
+    label: 'Signed-in cookies',
+    kind: 'cookies',
+    help: 'For posts TikTok, Instagram or Facebook only show signed-in people: a cookies.txt from a browser signed in to them. Stored encrypted.',
+    maxLength: 1_000_000,
+    check: (v) =>
+      cookieLines(v).length > 0 && cookieLines(v).every((line) => line.split('\t').length === 7)
+        ? null
+        : 'That isn’t a cookies.txt. Export one in Netscape format: one cookie a line, seven columns.',
   },
   KEEP_H264: {
     group: 'Keeping copies',
@@ -249,6 +285,8 @@ export function isExtraName(value: unknown): value is ExtraName {
 const PREFIX = 'extra.'
 const CACHE_MS = 5_000
 const MAX_LENGTH = 2_000
+/** Kept encrypted and never sent back to the page. */
+const isSecret = (spec: ExtraSpec) => spec.kind === 'secret' || spec.kind === 'cookies'
 
 const g = globalThis as unknown as {
   __adhxExtras?: { at: number; values: Map<string, string> }
@@ -267,7 +305,7 @@ function stored(): Map<string, string> {
       const name = row.key.slice(PREFIX.length)
       if (!isExtraName(name)) continue
       try {
-        values.set(name, EXTRAS[name].kind === 'secret' ? decryptToken(row.value) : row.value)
+        values.set(name, isSecret(EXTRAS[name]) ? decryptToken(row.value) : row.value)
       } catch {
         // Saved under another server secret: treat it as unset.
       }
@@ -297,7 +335,7 @@ export class ExtraError extends Error {}
 
 /** Why a value can't be saved, or null. */
 function problemWith(spec: ExtraSpec, value: string): string | null {
-  if (value.length > MAX_LENGTH) return 'That’s too long.'
+  if (value.length > (spec.maxLength ?? MAX_LENGTH)) return 'That’s too long.'
   if (spec.kind === 'choice' && !spec.choices?.some((c) => c.value === value))
     return `Choose ${spec.choices?.map((c) => c.label.toLowerCase()).join(' or ')}.`
   if (spec.kind === 'number') {
@@ -319,7 +357,7 @@ export function setExtra(name: ExtraName, value: string | null): void {
   } else {
     const problem = problemWith(spec, clean)
     if (problem) throw new ExtraError(problem)
-    writeServerSetting(key, spec.kind === 'secret' ? encryptToken(clean) : clean)
+    writeServerSetting(key, isSecret(spec) ? encryptToken(clean) : clean)
   }
   g.__adhxExtras = undefined
 }
@@ -347,7 +385,7 @@ export interface ExtraView {
 export function extrasView(): ExtraView[] {
   return (Object.keys(EXTRAS) as ExtraName[]).map((name) => {
     const spec: ExtraSpec = EXTRAS[name]
-    const secret = spec.kind === 'secret'
+    const secret = isSecret(spec)
     const source = extraSource(name) ?? 'default'
     const raw = extra(name) ?? spec.fallback ?? null
     return {
@@ -365,7 +403,12 @@ export function extrasView(): ExtraView[] {
       shown: secret
         ? source === 'default'
           ? 'Not set'
-          : 'Set'
+          : spec.kind === 'cookies'
+            ? // Pasted here, or the environment's YTDLP_COOKIES file.
+              source === 'admin'
+              ? `For ${cookieSites(raw ?? '').join(', ') || 'some sites'}`
+              : 'From a file'
+            : 'Set'
         : raw === null
           ? (spec.unset ?? 'Not set')
           : (spec.show?.(raw) ?? raw),

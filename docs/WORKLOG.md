@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-30 — Launch polish, admin settings tabs, cookies from admin, device run
+
+- Owner asked for the polish list, both phones updated, and a full web plus USB phone run. Ran a production build of this branch on the 29 October data; a sub-agent swept every page (signed out, owner, member; 1280 and 390/360); both phones were re-paired from a stopped server (iPhone as Ana, Galaxy A13 as Ben). Results: `docs/rollout/phone-device-results.md`.
+- Polish: `/favicon.ico`; Share is one paper plane on web and iPhone (was a camera on videos); signed-out Right now has no member-only buttons, and signed-out Save goes straight to sign-in with no 401 POST; Just saved shows each post once and scrolls on phones; phone surfaces (theater tabs, bottom nav) say **Live**, since "Right now" pushed the theater's last control off a 360px screen (desktop keeps Right now); Android's Live dot only while something is live.
+- Owner asked: Admin → System settings are tabs per group; signed-in cookies (`YTDLP_COOKIES`, kind `cookies`) can be pasted or chosen there, stored encrypted, written to yt-dlp's per-run private copy, winning over the env file.
+- Sweep fixes: someone else's Just for me post now answers members exactly like an unsaved post (it used to differ: a leak); unknown profiles and the 404 titled "Not found"; your own friend channel says "That's you"; admin tiles wrap on phones; download give-ups point to Posts → Retry.
+- Verified live: a removed phone's tokened file URL goes 200 → 404; Android album → Files saved all 4; iPhone Copy says Copied (paste not checked).
+- Follow-ups: `/moments/{unknown}` fetches twice and answers 200; the iPhone share-sheet paths (offline share after re-pair, queued late note) still need a hand on the phone.
+
 ## 2026-10-30 — Launch review follow-ups: nine fixes
 
 - Owner asked to fix the nine open findings from the launch code review (two new, seven carried over). All nine are in one PR.

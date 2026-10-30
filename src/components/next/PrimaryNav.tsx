@@ -17,9 +17,10 @@ import { QuickSearch, openQuickSearch } from './QuickSearch'
 
 export type NavId = 'new' | 'now' | 'channels' | 'saves' | 'search'
 
-export const NAV: { id: NavId; label: string; href: string }[] = [
+/** `short`: the name on phones, where Right now didn't fit the theater's tabs (the apps say Live too). */
+export const NAV: { id: NavId; label: string; short?: string; href: string }[] = [
   { id: 'new', label: 'Home', href: '/play?feed=new' },
-  { id: 'now', label: 'Right now', href: '/now' },
+  { id: 'now', label: 'Right now', short: 'Live', href: '/now' },
   { id: 'channels', label: 'Channels', href: '/channels' },
   { id: 'saves', label: 'My saves', href: '/play?recent=1' },
   { id: 'search', label: 'Search', href: '/search' },
@@ -151,7 +152,7 @@ export function BottomNav({
                 <Icon aria-hidden className="h-[22px] w-[22px]" strokeWidth={on ? 2.4 : 2} />
                 {n.id === 'now' && <LiveDot className="absolute -right-1 -top-0.5 h-1.5 w-1.5" />}
               </span>
-              <span>{n.label}</span>
+              <span>{n.short ?? n.label}</span>
             </Link>
           )
         })}

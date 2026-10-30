@@ -35,7 +35,8 @@ describe('primary navigation', () => {
     const links = within(screen.getByRole('navigation', { name: 'Main' })).getAllByRole('link')
     expect(links.map((l) => [l.textContent, l.getAttribute('href')])).toEqual([
       ['Home', '/play?feed=new'],
-      ['Right now', '/now'],
+      // Right now's short name on phones, as in the theater's tabs and the apps.
+      ['Live', '/now'],
       ['Channels', '/channels'],
       ['My saves', '/play?recent=1'],
       ['Search', '/search'],
@@ -46,6 +47,6 @@ describe('primary navigation', () => {
   it('lights New for the feed', () => {
     render(<BottomNav current="new" />)
     expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('link', { name: 'Right now' })).not.toHaveAttribute('aria-current')
+    expect(screen.getByRole('link', { name: 'Live' })).not.toHaveAttribute('aria-current')
   })
 })

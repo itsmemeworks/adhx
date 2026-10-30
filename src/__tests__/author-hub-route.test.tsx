@@ -67,17 +67,17 @@ describe('Author hub route: /[username]', () => {
   })
 
   describe('generateMetadata', () => {
-    it('falls back to default metadata for an invalid handle', async () => {
+    it('titles an invalid handle as the 404 it shows', async () => {
       const { generateMetadata } = await import('@/app/[username]/page')
 
       const metadata = await generateMetadata({
         params: Promise.resolve({ username: 'invalid-handle!' }),
       })
 
-      expect(metadata.title).toBe('ADHX - Your friends have better taste than the algorithm.')
+      expect(metadata.title).toBe('Not found')
     })
 
-    it('falls back to default metadata when the author has no public profile', async () => {
+    it('titles an author with no public profile as the 404 it shows', async () => {
       const { getAuthorProfile } = await import('@/lib/authors/query')
       vi.mocked(getAuthorProfile).mockResolvedValue(null)
 
@@ -87,7 +87,7 @@ describe('Author hub route: /[username]', () => {
         params: Promise.resolve({ username: 'nobody' }),
       })
 
-      expect(metadata.title).toBe('ADHX - Your friends have better taste than the algorithm.')
+      expect(metadata.title).toBe('Not found')
     })
 
     it('builds rich metadata from the author profile', async () => {

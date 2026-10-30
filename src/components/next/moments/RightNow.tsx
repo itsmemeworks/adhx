@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { useAuthMe } from '@/components/auth'
 import { BellRing, Play } from 'lucide-react'
 import type { Saver } from '@/lib/people/types'
 import { networkLabel } from '@/lib/platform/networks'
@@ -650,6 +651,8 @@ export function RightNow({
   const Title = headingLevel === 'h1' ? 'h2' : 'h3'
   const page = headingLevel === 'h1'
   const { snapshot, flashes, popped } = useMoments()
+  // Channels and My saves are for members; signed out they'd only bounce to sign in.
+  const member = !!useAuthMe().me?.authenticated
 
   if (!snapshot) {
     return (
@@ -745,20 +748,22 @@ export function RightNow({
           <p className="m-0 text-nx-ink-soft">
             Nothing’s trending yet. When a few people save the same kind of thing, it shows up here.
           </p>
-          <span className="flex flex-wrap justify-center gap-2">
-            <Link
-              href="/channels"
-              className="flex h-11 items-center rounded-full bg-nx-accent px-5 text-sm font-extrabold text-black"
-            >
-              Browse channels
-            </Link>
-            <Link
-              href="/play?recent=1"
-              className="flex h-11 items-center rounded-full border border-white/30 px-5 text-sm font-bold text-nx-ink"
-            >
-              Play my saves
-            </Link>
-          </span>
+          {member && (
+            <span className="flex flex-wrap justify-center gap-2">
+              <Link
+                href="/channels"
+                className="flex h-11 items-center rounded-full bg-nx-accent px-5 text-sm font-extrabold text-black"
+              >
+                Browse channels
+              </Link>
+              <Link
+                href="/play?recent=1"
+                className="flex h-11 items-center rounded-full border border-white/30 px-5 text-sm font-bold text-nx-ink"
+              >
+                Play my saves
+              </Link>
+            </span>
+          )}
         </div>
       ) : (
         <div
@@ -795,7 +800,11 @@ export function RightNow({
           <span className="shrink-0 text-[11px] font-extrabold tracking-[.14em] text-nx-ink-faint">
             JUST SAVED
           </span>
-          <ul aria-live="polite" className="m-0 flex min-w-0 list-none gap-2 overflow-hidden p-0">
+          <ul
+            aria-live="polite"
+            // Swipes sideways on a phone, where one or two chips fit.
+            className="m-0 flex min-w-0 list-none gap-2 overflow-x-auto overscroll-x-contain p-0 [scrollbar-width:none]"
+          >
             {stream.map((item) => (
               <StreamChip
                 key={item.id}

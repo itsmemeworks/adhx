@@ -37,7 +37,6 @@ import {
   ChevronLeft,
   ChevronUp,
   Ellipsis,
-  Image as ImageIcon,
   Maximize,
   Minimize,
   Pause,
@@ -53,7 +52,6 @@ import {
   Radio,
   Sparkles,
   Target,
-  Video,
   Volume2,
   VolumeX,
   Waves,
@@ -230,6 +228,8 @@ function emptyState(
   load: Load,
   /** This server can bring in X bookmarks (it has X app keys, or you're linked). */
   xBookmarks = true,
+  /** Your own username, so your own "friend" channel isn't taken for someone who left. */
+  you: string | null = null,
 ): {
   title: string
   body: string
@@ -248,6 +248,13 @@ function emptyState(
       body: 'People have moved on. See what they’re saving now.',
       action: 'Right now',
       href: '/now',
+    }
+  if (source.friend && you && source.friend.username.toLowerCase() === you.toLowerCase())
+    return {
+      title: 'That’s you',
+      body: 'Your own saves are in My saves.',
+      action: 'My saves',
+      href: '/play?recent=1',
     }
   if (source.friend && missing)
     return {
@@ -1385,24 +1392,27 @@ export function TheaterV2({
         kind === 'photo' ? 'photo' : null,
       )
       if (!url) return false
+      // Signed out: sign in, then land on this post's own page, which saves
+      // it (`?save=1`), whichever queue it was playing in.
+      const signIn = () => {
+        const returnTo = `${previewPath(
+          current.post.platform ?? 'twitter',
+          current.post.author,
+          current.post.id,
+          kind === 'photo' ? 'photo' : null,
+        )}?save=1`
+        window.location.assign(`/start?${new URLSearchParams({ returnTo })}`)
+        return false
+      }
+      // Known to be signed out: straight there, without a save that can only fail.
+      if (!authLoading && !me?.authenticated) return signIn()
       try {
         const res = await fetch('/api/bookmarks/add', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(opts.private ? { url, private: true } : { url }),
         })
-        if (res.status === 401) {
-          // Signed out: sign in, then land on this post's own page, which
-          // saves it (`?save=1`), whichever queue it was playing in.
-          const returnTo = `${previewPath(
-            current.post.platform ?? 'twitter',
-            current.post.author,
-            current.post.id,
-            kind === 'photo' ? 'photo' : null,
-          )}?save=1`
-          window.location.assign(`/start?${new URLSearchParams({ returnTo })}`)
-          return false
-        }
+        if (res.status === 401) return signIn()
         const data = (await res.json().catch(() => null)) as { error?: string } | null
         if (!res.ok || data?.error) throw new Error(data?.error || 'save failed')
         setSavedNow((s) => new Set(s).add(currentKey))
@@ -1414,7 +1424,7 @@ export function TheaterV2({
         return false
       }
     },
-    [current, saved, kind, currentKey, flash],
+    [current, saved, kind, currentKey, flash, authLoading, me?.authenticated],
   )
 
   /** "Just for me": save it privately, or switch an existing save. */
@@ -1882,7 +1892,12 @@ export function TheaterV2({
     )
   }
   if (load.status !== 'ready' || !current) {
-    const empty = emptyState(source, load, !!(me?.xConnected || me?.xAvailable))
+    const empty = emptyState(
+      source,
+      load,
+      !!(me?.xConnected || me?.xAvailable),
+      me?.user?.username ?? null,
+    )
     return (
       <div className="flex min-h-dvh flex-col bg-nx-stage font-nx-sans text-nx-cream">
         <NxHeader current={navHere} />
@@ -2217,7 +2232,6 @@ export function TheaterV2({
     ) : (
       button
     )
-  const ShareIcon = isVideo ? Video : kind === 'photo' ? ImageIcon : Send
 
   return (
     <>
@@ -2994,7 +3008,7 @@ export function TheaterV2({
                     }}
                     className={railStyle()}
                   >
-                    <ShareIcon aria-hidden className="h-[22px] w-[22px]" />
+                    <Send aria-hidden className="h-[22px] w-[22px]" />
                   </button>,
                   'Share',
                 )}

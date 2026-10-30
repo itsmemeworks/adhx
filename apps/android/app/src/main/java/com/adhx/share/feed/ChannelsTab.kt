@@ -140,7 +140,7 @@ fun ChannelsTab(feed: FeedViewModel, server: String, actions: HomeActions, heade
                 }
             }
             item(key = "people") {
-                // Fewer than five (faces and Invite) sit left with a 14dp gap; five spread across
+                // Fewer than five (faces and Invite) sit left, 8dp apart; five spread across
                 // the width; past that it scrolls.
                 val invite = actions.onInvite
                 val count = channels.friends.size + if (invite != null) 1 else 0
@@ -294,10 +294,11 @@ private fun GroupTile(channel: GroupChannel, server: String, onClick: () -> Unit
 @Composable
 private fun PersonBubble(friend: FriendChannel, server: String, onClick: () -> Unit) {
     val fresh = friend.newCount > 0
+    // As wide as the 68dp ring, and not clipped: a 62dp clipped column cut the
+    // ring's sides flat and the count's edge off.
     Column(
         Modifier
-            .width(62.dp)
-            .clip(SquircleShape(16.dp))
+            .width(BUBBLE_WIDTH)
             .clickable(onClick = onClick)
             .clearAndSetSemantics { contentDescription = Copy.friendDescription(friend.label, friend.newCount) },
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -338,8 +339,12 @@ private fun PersonBubble(friend: FriendChannel, server: String, onClick: () -> U
     }
 }
 
+/** A face's (or Invite's) column: the 68dp ring around a 60dp face. */
+private val BUBBLE_WIDTH = 68.dp
+
 /** The gap between faces in Your people when they don't spread across the width. */
-private val PEOPLE_GAP = 14.dp
+// 68 + 8: the same 76dp pitch as the boards' 62dp columns 14dp apart.
+private val PEOPLE_GAP = 8.dp
 
 /** Your people spread across the width only with exactly five (faces and Invite): fewer sit left, more scroll. */
 internal fun peopleRowSpreads(count: Int): Boolean = count == 5
@@ -349,8 +354,7 @@ internal fun peopleRowSpreads(count: Int): Boolean = count == 5
 private fun InviteBubble(onClick: () -> Unit) {
     Column(
         Modifier
-            .width(62.dp)
-            .clip(SquircleShape(16.dp))
+            .width(BUBBLE_WIDTH)
             .clickable(onClick = onClick)
             .semantics(mergeDescendants = true) { },
         horizontalAlignment = Alignment.CenterHorizontally,
