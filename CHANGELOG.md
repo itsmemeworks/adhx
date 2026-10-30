@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.14.0](https://github.com/itsmemeworks/adhx/compare/v2.13.1...v2.14.0) (2026-10-30)
+
+
+### Features
+
+* launch polish, admin settings tabs and cookies from admin ([#685](https://github.com/itsmemeworks/adhx/issues/685)) ([8673a84](https://github.com/itsmemeworks/adhx/commit/8673a846e80ee88c290be00710e4532a185fa7a9))
+
+
+### Bug Fixes
+
+* close the nine launch review findings ([#684](https://github.com/itsmemeworks/adhx/issues/684)) ([bf6db5a](https://github.com/itsmemeworks/adhx/commit/bf6db5a5a5b9e1bcfe718d07554e12c8675863b1))
+
 ## [2.13.1](https://github.com/itsmemeworks/adhx/compare/v2.13.0...v2.13.1) (2026-10-30)
 
 
