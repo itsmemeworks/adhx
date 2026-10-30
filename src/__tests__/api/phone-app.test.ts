@@ -37,6 +37,10 @@ vi.mock('@/lib/semantic/find', () => ({ findPosts: vi.fn() }))
 const mockDescribeNetworkPost = vi.fn()
 vi.mock('@/lib/keep/describe', () => ({
   describeNetworkPost: (...args: unknown[]) => mockDescribeNetworkPost(...args),
+  describeNetworkPostOrWhy: async (...args: unknown[]) => {
+    const described = await mockDescribeNetworkPost(...args)
+    return described ? { described } : { why: 'gone' }
+  },
 }))
 
 const wakeKeep = vi.fn()

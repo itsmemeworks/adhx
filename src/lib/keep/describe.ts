@@ -113,7 +113,23 @@ export async function describeNetworkPost(
   id: string,
   author: string | undefined,
 ): Promise<NetworkPostDescription | null> {
+  const found = await describeNetworkPostOrWhy(platform, id, author)
+  return 'described' in found ? found.described : null
+}
+
+/**
+ * Like describeNetworkPost, but says why there's nothing: `gone` (the network
+ * says so) or `unreachable` (it wouldn't answer this server, say a 403 from a
+ * blocked address, and its page didn't either), so a save can say "try again"
+ * instead of "not available".
+ */
+export async function describeNetworkPostOrWhy(
+  platform: LinkNetwork,
+  id: string,
+  author: string | undefined,
+): Promise<{ described: NetworkPostDescription } | { why: 'gone' | 'unreachable' }> {
   const fallbackAuthor = author || platform
+  let unreachable = false
   const target = { platform, postId: id, author: fallbackAuthor, category: null }
   if (platform !== 'threads') {
     try {
@@ -128,18 +144,20 @@ export async function describeNetworkPost(
         }
         described.author = author || og?.subreddit || 'reddit'
       }
-      return described
+      return { described }
     } catch (error) {
       // No video or sound here (a picture post), or yt-dlp couldn't read it.
-      if (MEDIA_ONLY.has(platform) && error instanceof YtdlpError && error.permanent) return null
+      if (MEDIA_ONLY.has(platform) && error instanceof YtdlpError && error.permanent)
+        return { why: 'gone' }
+      unreachable = !(error instanceof YtdlpError && error.permanent)
     }
   }
   const og = await pageOpenGraph({ platform, postId: id, author: fallbackAuthor, category: null })
-  if (!og) return null
+  if (!og) return { why: unreachable ? 'unreachable' : 'gone' }
   const title = platform === 'threads' || isOnlyAuthor(og.title) ? '' : clean(og.title)
   const text = joinText(title, clean(og.description)).slice(0, MAX_TEXT)
   const mediaOnly = MEDIA_ONLY.has(platform)
-  return {
+  const described: NetworkPostDescription = {
     author: fallbackAuthor,
     authorName: nameFromTitle(og.title) ?? null,
     text,
@@ -150,6 +168,7 @@ export async function describeNetworkPost(
     durationMs: null,
     audioOnly: platform === 'soundcloud',
   }
+  return { described }
 }
 
 async function redditOembed(

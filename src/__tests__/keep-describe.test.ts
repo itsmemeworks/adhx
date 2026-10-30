@@ -57,6 +57,18 @@ describe('describeNetworkPost when yt-dlp fails', () => {
     })
   })
 
+  it('says unreachable, not gone, when yt-dlp was refused and the page too', async () => {
+    const { YtdlpError } = await import('@/lib/keep/ytdlp')
+    ytdlpInfo.mockRejectedValue(new YtdlpError('HTTP Error 403: Forbidden', false))
+    pageOpenGraph.mockResolvedValue(null)
+    const { describeNetworkPostOrWhy } = await import('@/lib/keep/describe')
+    expect(await describeNetworkPostOrWhy('soundcloud', 'a~b', undefined)).toEqual({
+      why: 'unreachable',
+    })
+    ytdlpInfo.mockRejectedValue(new YtdlpError('[youtube] x: Video unavailable', true))
+    expect(await describeNetworkPostOrWhy('youtube', 'x', undefined)).toEqual({ why: 'gone' })
+  })
+
   it('still reads a picture network’s preview as photos', async () => {
     const { YtdlpError } = await import('@/lib/keep/ytdlp')
     ytdlpInfo.mockRejectedValue(new YtdlpError('No video formats found', true))
