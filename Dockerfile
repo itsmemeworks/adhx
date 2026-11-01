@@ -2,7 +2,7 @@
 
 # Shared Node + pnpm toolchain. Keep this version aligned with packageManager.
 # October security floor, including Node's bundled Brotli decoder.
-FROM node:26.12.1-trixie-slim AS base
+FROM node:26.13.0-trixie-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 # Node 25+ no longer bundles Corepack. Bootstrap only the pinned package
@@ -60,7 +60,7 @@ COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
 COPY --from=builder /app/tsconfig.json ./
 
 # Production stage - minimal runtime image
-FROM node:26.12.1-trixie-slim AS runner
+FROM node:26.13.0-trixie-slim AS runner
 
 # Runtime only needs Node. Do not ship the build stage's pnpm/Corepack cache
 # or npm's independent dependency graph; migrations use the local tsx binary.
