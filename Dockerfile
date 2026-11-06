@@ -79,7 +79,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-venv \
     ffmpeg \
     ca-certificates \
+    apt \
     && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libbrotli1)" ge '1.1.0-2+deb13u1' \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libapt-pkg7.0)" ge '3.0.4' \
     && rm -rf /var/lib/apt/lists/*
 
 # yt-dlp in its own virtualenv, pinned. Sites change often: bump this with
