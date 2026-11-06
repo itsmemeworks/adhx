@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-11-06 — Send the video from the share card
+
+- Owner asked to send a saved post's media straight from the ADHX share card, without opening the app. Saved and Already saved now show "Send the video" (photos, sound) for posts with a kept copy: it fetches the post from `/api/app/saves?platform=&id=`, downloads the kept files like the player's Share, and opens the system share sheet over the card. Tapped while the copy is still being kept, it waits ("Sends once it's kept") and goes by itself.
+- iOS: `KeptFiles` moved from `App/Library/SaveToPhotos.swift` to `Shared/KeptFiles.swift` so the extension can use it. Android: the card reuses `ShareKept.prepare`; history now keeps the post's `category` so the label is right before the copy lands.
+- The card no longer closes itself 3 s after Saved (owner's call: it now has something to do after saving).
+- Tested on the iPhone 16 Pro and Galaxy A13 against the parity world, with the keep simulated in its database. Follow-up idea: a test seam for the waiting path on iOS.
+
 ## 2026-10-30 — Fly round 7 on 2.14.5: the release builds pass too
 
 - Same journeys as round 6, on the shipped phone builds instead of Debug ones: the release APK on the Android, the release IPA on the iPhone (re-signed for a development profile; the test iPhone has no TestFlight). Web 26 of 26; join, first-tap connect, shares (the iPhone through the real share sheet), sends, reactions both ways and search all passed. No bugs.

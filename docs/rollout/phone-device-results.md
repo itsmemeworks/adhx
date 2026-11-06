@@ -5,6 +5,18 @@ phones, newest run first. Each run says what was tested on which device and
 build. A row not listed was not run. Bugs found are fixed in the same change,
 with the fix named. How to drive the phones: [`e2e/devices`](../../e2e/devices/README.md).
 
+## 6 November 2026 (Send from the share card, parity world)
+
+- **Server:** the local parity world. **Phones:** Debug builds of this change:
+  the iPhone 16 Pro as Ben, the Galaxy A13 as Ana. The keep was simulated in the
+  test database (the parity world never downloads new saves).
+
+| Journey                                 | Row | iPhone                                      | Android                                         |
+| --------------------------------------- | --- | ------------------------------------------- | ----------------------------------------------- |
+| A new save stays open, untouched        | P23 | Pass                                        | Pass: 10 s, "Kept a copy · 720p"                |
+| Send the video from a kept post         | P23 | Pass: the share sheet opened with the video | Pass: `adhx-youtube-….mp4`, 12.6 MB             |
+| Send while the copy is still being kept | P23 | –                                           | Pass: "Sends once it’s kept", then sheet itself |
+
 ## 30 October 2026 (Fly round 7, 2.14.5: the release builds)
 
 - **Server:** 2.14.5 from `deploy/fly` on a new app. **Phones:** the 2.14.5

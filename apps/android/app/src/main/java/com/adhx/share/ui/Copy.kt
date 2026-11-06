@@ -29,6 +29,27 @@ object Copy {
     // Saved for your people, or just for you (the share card and More).
 
     const val SAVED_SHARED = "Saved for your people"
+
+    // Sending the kept file from the share card.
+    const val SEND_NOT_KEPT = "Your ADHX couldn’t keep a copy of this one."
+    const val SEND_UNREACHABLE = "Couldn’t reach your ADHX. Try again."
+    const val SEND_DIDNT_COME = "Couldn’t get it from your ADHX. Try again."
+    const val SEND_WAITING = "Sends once it’s kept"
+    const val SEND_GETTING = "Getting it ready"
+
+    /** "Send the video": what's kept when the server has said, else the post's kind. */
+    fun sendLabel(category: String?, keep: StatusResponse?): String {
+        val kept = if (keep?.status == KeepStatus.KEPT) keep.kept else null
+        return when {
+            kept != null && kept.videos > 0 -> "Send the video"
+            kept != null && kept.photos > 1 -> "Send the photos"
+            kept != null && kept.photos == 1 -> "Send the photo"
+            kept != null && kept.audio > 0 -> "Send the sound"
+            category == "video" -> "Send the video"
+            category == "photo" -> "Send the photo"
+            else -> "Send the file"
+        }
+    }
     const val ADD_A_NOTE = "Add a note"
     const val NOTE_HINT = "Why they’ll love it"
     const val NOTE_PRIVATE_HINT = "A note to future you"

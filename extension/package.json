@@ -22,6 +22,9 @@
   },
   "packageManager": "pnpm@10.34.7",
   "pnpm": {
+    "overrides": {
+      "follow-redirects@<1.16.2": "^1.16.2"
+    },
     "allowBuilds": {}
   }
 }

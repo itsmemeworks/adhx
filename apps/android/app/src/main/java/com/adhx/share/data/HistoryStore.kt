@@ -31,6 +31,8 @@ data class HistoryItem(
     val author: String? = null,
     val authorName: String? = null,
     val text: String? = null,
+    /** video · photo · text: whether the share card offers to send a file. */
+    val category: String? = null,
     val posterUrl: String? = null,
     val openPath: String? = null,
     val alreadySaved: Boolean = false,
@@ -81,6 +83,7 @@ data class HistoryItem(
         author = post.author,
         authorName = post.authorName,
         text = post.text,
+        category = post.category ?: category,
         posterUrl = post.posterUrl,
         openPath = post.openPath,
         alreadySaved = post.alreadySaved,
@@ -107,7 +110,7 @@ data class HistoryItem(
 
     fun asPost(): SaveResponse? = postId?.let { post ->
         SaveResponse(platform = platform.orEmpty(), id = post, network = network, author = author,
-            authorName = authorName, text = text, posterUrl = posterUrl, openPath = openPath,
+            authorName = authorName, text = text, category = category, posterUrl = posterUrl, openPath = openPath,
             alreadySaved = alreadySaved, savedAt = savedAt, isPrivate = isPrivate)
     }
 

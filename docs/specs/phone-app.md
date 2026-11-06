@@ -1064,15 +1064,22 @@ out so the server's own choice still applies.
    "Saved, just for you") and
    "Keeping a copy · 720p · 60%" with a bar, polling `/api/app/status` every
    1.5 s while the sheet is open. **Open in ADHX** and **Done**. The sheet
-   closes itself 3 s after Saved unless touched.
+   stays until you close it.
 4. **Already saved**: "Already in your saves", "Saved 3 days ago · kept in 4K".
-5. **Not a post** (`422`, or no link at all): "That's not one post" / "ADHX
-   keeps single posts. Open the post itself (a Reel, a photo, a video) and
-   share that." **OK**.
-6. **Offline**: "Saved for later" / "Your ADHX can't be reached right now. This
-   goes as soon as it can." **Done**.
-7. **Not connected**: "Connect the app first" / "Open ADHX Share and sign in
-   with your email, or scan the code in Settings → Phone app on your ADHX."
+
+**Send the video** (Saved and Already saved, for a video, photo or sound post
+whose copy isn't off or unavailable) sends the kept file to another app from the
+card, without opening ADHX. It reads the post from `GET /api/app/saves?platform=&id=`
+and downloads the kept files exactly like the player's Share. While the copy is
+still being kept, a tap says "Sends once it's kept" and goes by itself when the
+status poll says kept. "Getting it ready · 40%" shows while the files come down;
+then the system share sheet opens over the card. On iPhone the card closes once
+the files went somewhere; on Android it stays (the chooser can't tell).
+"Send the photos" / "Send the sound" follow what was kept. 5. **Not a post** (`422`, or no link at all): "That's not one post" / "ADHX
+keeps single posts. Open the post itself (a Reel, a photo, a video) and
+share that." **OK**. 6. **Offline**: "Saved for later" / "Your ADHX can't be reached right now. This
+goes as soon as it can." **Done**. 7. **Not connected**: "Connect the app first" / "Open ADHX Share and sign in
+with your email, or scan the code in Settings → Phone app on your ADHX."
 
 **Just for me** (Saving, Saved and Already saved): off (the default) shows
 "Ana, Ben, Mum and Jo will see it" with their faces (the people the app last
