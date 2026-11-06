@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.15.0](https://github.com/itsmemeworks/adhx/compare/v2.14.5...v2.15.0) (2026-11-06)
+
+
+### Features
+
+* send the video straight from the share card ([#702](https://github.com/itsmemeworks/adhx/issues/702)) ([ab019e1](https://github.com/itsmemeworks/adhx/commit/ab019e189aa60ca89bd4444420fdab85d11f5038))
+
 ## [2.14.5](https://github.com/itsmemeworks/adhx/compare/v2.14.4...v2.14.5) (2026-10-30)
 
 
