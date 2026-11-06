@@ -65,6 +65,7 @@ final class ShareViewController: UIViewController {
 
         flow.onFinish = { [weak self] in self?.finish() }
         flow.onOpen = { [weak self] url in self?.open(url) }
+        flow.onSendFiles = { [weak self] files, done in self?.sendFiles(files, done: done) }
 
         let host = UIHostingController(rootView: ShareSheetScreen(flow: flow).preferredColorScheme(.dark))
         host.view.backgroundColor = .clear
@@ -105,6 +106,17 @@ final class ShareViewController: UIViewController {
             }
         }
         extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+    }
+
+    /// The kept files, on to another app through the system share sheet.
+    private func sendFiles(_ files: [URL], done: @escaping (Bool) -> Void) {
+        let sheet = UIActivityViewController(activityItems: files, applicationActivities: nil)
+        sheet.completionWithItemsHandler = { _, completed, _, _ in done(completed) }
+        // iPad: a popover from the middle of the card's foot.
+        sheet.popoverPresentationController?.sourceView = view
+        sheet.popoverPresentationController?.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.maxY - 120,
+                                                                 width: 1, height: 1)
+        present(sheet, animated: true)
     }
 
     /// Share extensions can't call UIApplication.shared; `extensionContext.open`

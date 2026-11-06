@@ -64,7 +64,6 @@ struct ShareSheetScreen: View {
             if abs(flow.cardHeight - height) > 0.5 { flow.cardHeight = height }
         }
         .foregroundStyle(.white)
-        .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { _ in flow.touch() })
         .gesture(
             DragGesture(minimumDistance: 8)
                 .onChanged { value in drag = max(0, value.translation.height) }
@@ -221,11 +220,63 @@ private struct ProgressBar: View {
 private struct ButtonsRow: View {
     @ObservedObject var flow: ShareFlow
     var body: some View {
-        HStack(spacing: 10) {
-            Button("Open in ADHX") { flow.openInADHX() }
-                .buttonStyle(PillButtonStyle(kind: .raised, fontSize: 16, cornerRadius: cardInnerRadius))
-            Button("Done") { flow.requestClose() }
-                .buttonStyle(PillButtonStyle(kind: .primary, cornerRadius: cardInnerRadius))
+        VStack(spacing: 10) {
+            if flow.canSend { SendButton(flow: flow) }
+            HStack(spacing: 10) {
+                Button("Open in ADHX") { flow.openInADHX() }
+                    .buttonStyle(PillButtonStyle(kind: .raised, fontSize: 16, cornerRadius: cardInnerRadius))
+                Button("Done") { flow.requestClose() }
+                    .buttonStyle(PillButtonStyle(kind: .primary, cornerRadius: cardInnerRadius))
+            }
+        }
+    }
+}
+
+/// Send the kept video or photos straight from the card, through the share
+/// sheet, without opening the app. Tapped before the copy is kept, it waits.
+private struct SendButton: View {
+    @ObservedObject var flow: ShareFlow
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Button { flow.send() } label: {
+                HStack(spacing: 8) {
+                    if busy {
+                        RingSpinner(size: 16, lineWidth: 2, track: .clear)
+                    } else {
+                        Image(systemName: "paperplane")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    Text(label)
+                }
+            }
+            .buttonStyle(PillButtonStyle(kind: .raised, fontSize: 16, cornerRadius: cardInnerRadius))
+            .allowsHitTesting(!busy)
+            .accessibilityLabel(label)
+            if case .failed(let why) = flow.sending {
+                Text(why)
+                    .font(Theme.sans(13))
+                    .foregroundStyle(Theme.warn)
+            }
+        }
+    }
+
+    private var busy: Bool {
+        switch flow.sending {
+        case .waiting, .downloading: return true
+        default: return false
+        }
+    }
+
+    private var label: String {
+        switch flow.sending {
+        case .waiting:
+            if flow.keep?.status == "keeping", let p = flow.keep?.percent { return "Sends once it’s kept · \(p)%" }
+            return "Sends once it’s kept"
+        case .downloading(let fraction):
+            return fraction.map { "Getting it ready · \(Int(($0 * 100).rounded()))%" } ?? "Getting it ready"
+        default:
+            return flow.sendLabel
         }
     }
 }
@@ -527,7 +578,6 @@ private struct NoteField: View {
                 .onChange(of: flow.note) { _, text in
                     if text.count > ShareFlow.noteLimit { flow.note = String(text.prefix(ShareFlow.noteLimit)) }
                 }
-                .onChange(of: focused) { _, now in if now { flow.touch() } }
                 .padding(.horizontal, 16)
                 .frame(height: 48)
                 .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.bg))

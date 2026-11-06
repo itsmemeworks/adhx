@@ -10,6 +10,7 @@ import com.adhx.share.data.HistoryStore
 import com.adhx.share.data.HistoryWriteException
 import com.adhx.share.data.SettingsPrefs
 import com.adhx.share.data.ShareState
+import com.adhx.share.library.ShareKept
 import com.adhx.share.links.Links
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.ApiResult
@@ -17,6 +18,7 @@ import com.adhx.share.net.KeepStatus
 import com.adhx.share.net.SaveResponse
 import com.adhx.share.net.Saver
 import com.adhx.share.net.StatusResponse
+import com.adhx.share.ui.Copy
 import com.adhx.share.work.SaveQueue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +29,16 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 enum class Phase { Saving, Saved, AlreadySaved, NotAPost, Offline, NotConnected, Failed }
+
+/** Sending the kept file from the card itself (WhatsApp, Messages…), without opening the app. */
+sealed interface Sending {
+    data object Idle : Sending
+    /** Tapped before the copy was kept: it goes once it is. */
+    data object Waiting : Sending
+    /** Coming down from your ADHX (0…1; null while the size is unknown). */
+    data class Downloading(val fraction: Float?) : Sending
+    data class Failed(val message: String) : Sending
+}
 
 data class ShareUi(
     val phase: Phase = Phase.Saving,
@@ -44,6 +56,9 @@ data class ShareUi(
     val switching: Boolean = false,
     /** Who will see it (your people), once known. */
     val people: List<Saver> = emptyList(),
+    val sending: Sending = Sending.Idle,
+    /** The kept files, fetched and ready for the system share sheet. */
+    val toSend: ShareKept.Ready? = null,
 )
 
 class ShareViewModel(app: Application) : AndroidViewModel(app) {
@@ -160,6 +175,55 @@ class ShareViewModel(app: Application) : AndroidViewModel(app) {
         SaveQueue.enqueue(context, current.link, id)
     }
 
+    /** Send: the kept file through the share sheet. Before it's kept, it waits for the copy and goes by itself. */
+    fun send() {
+        when (_ui.value.sending) {
+            Sending.Waiting, is Sending.Downloading -> return
+            else -> Unit
+        }
+        val status = _ui.value.keep?.status
+        if (status == KeepStatus.WAITING || status == KeepStatus.KEEPING || status == KeepStatus.RETRYING) {
+            _ui.update { it.copy(sending = Sending.Waiting) }
+            return
+        }
+        startSend()
+    }
+
+    /** The share sheet has the files. */
+    fun sendShown() {
+        _ui.update { it.copy(toSend = null) }
+    }
+
+    private fun keepChanged(status: StatusResponse) {
+        if (_ui.value.sending != Sending.Waiting) return
+        when (status.status) {
+            KeepStatus.KEPT -> startSend()
+            KeepStatus.OFF, KeepStatus.UNAVAILABLE, KeepStatus.NOT_SAVED ->
+                _ui.update { it.copy(sending = Sending.Failed(Copy.SEND_NOT_KEPT)) }
+        }
+    }
+
+    private fun startSend() {
+        val context: Context = getApplication<Application>()
+        val connection = ConnectionStore.get(context).current() ?: return
+        val saved = _ui.value.post ?: return
+        _ui.update { it.copy(sending = Sending.Downloading(null)) }
+        viewModelScope.launch {
+            val post = (AdhxApi(connection).post(saved.platform, saved.id) as? ApiResult.Ok)?.value?.item
+            if (post == null) {
+                _ui.update { it.copy(sending = Sending.Failed(Copy.SEND_UNREACHABLE)) }
+                return@launch
+            }
+            val (ready, why) = ShareKept.prepare(context, connection.server, post, onProgress = { fraction ->
+                _ui.update { if (it.sending is Sending.Downloading) it.copy(sending = Sending.Downloading(fraction)) else it }
+            })
+            _ui.update {
+                if (ready == null) it.copy(sending = Sending.Failed(why ?: Copy.SEND_DIDNT_COME))
+                else it.copy(sending = Sending.Idle, toSend = ready)
+            }
+        }
+    }
+
     private fun storageFailed() {
         _ui.update { it.copy(phase = Phase.Failed,
             message = "Couldn’t remember that choice on this phone. Free some space and try again.") }
@@ -187,6 +251,7 @@ class ShareViewModel(app: Application) : AndroidViewModel(app) {
                         val status = result.value
                         _ui.update { it.copy(keep = status) }
                         history.update(itemId) { it.withStatus(status) }
+                        keepChanged(status)
                         if (KeepStatus.isFinal(status.status)) return@launch
                     }
                     is ApiResult.Failed -> if (result.status == 404) {

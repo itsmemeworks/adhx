@@ -22,8 +22,6 @@ final class ShareFlow: ObservableObject {
     @Published private(set) var result: SaveResult?
     @Published private(set) var keep: StatusResult?
     @Published private(set) var closeRequested = false
-    /// Set once the person touches the sheet; stops the auto close.
-    @Published var touched = false
     /// iOS may show the extension in its own card instead of over the app;
     /// then the backdrop is solid (as on the States boards) instead of dimmed.
     @Published var presentedInCard = false
@@ -55,7 +53,22 @@ final class ShareFlow: ObservableObject {
     private var pollTask: Task<Void, Never>?
     private var queueId: String?
     private var privacyTask: Task<Void, Never>?
-    private var autoCloseTask: Task<Void, Never>?
+
+    /// Sending the kept file from the card itself (WhatsApp, Messages…),
+    /// without opening the app.
+    enum Sending: Equatable {
+        case idle
+        /// Tapped before the copy was kept: it goes once it is.
+        case waiting
+        /// Coming down from your ADHX (0…1; nil while the size is unknown).
+        case downloading(Double?)
+        case failed(String)
+    }
+    @Published private(set) var sending: Sending = .idle
+    private var sendTask: Task<Void, Never>?
+    /// Shows the system share sheet for these files; called back with whether
+    /// they went somewhere.
+    var onSendFiles: (([URL], @escaping (Bool) -> Void) -> Void)?
 
     /// Called once the sheet has animated away.
     var onFinish: (() -> Void)?
@@ -63,7 +76,6 @@ final class ShareFlow: ObservableObject {
     var onOpen: ((URL) -> Void)?
 
     static let pollInterval: UInt64 = 1_500_000_000
-    static let autoCloseDelay: UInt64 = 3_000_000_000
 
     var isSaving: Bool { phase == .saving }
 
@@ -263,7 +275,6 @@ final class ShareFlow: ObservableObject {
             phase = .alreadySaved
         } else {
             phase = .saved
-            scheduleAutoClose()
         }
         startPolling(client: client, platform: r.platform, id: r.id)
     }
@@ -323,6 +334,7 @@ final class ShareFlow: ObservableObject {
                     if let recordId = self.recordId {
                         History.update(id: recordId) { $0.apply(status) }
                     }
+                    self.keepChanged(status)
                     if KeepStatus.final.contains(status.status) { return }
                     failures = 0
                 } catch {
@@ -334,23 +346,12 @@ final class ShareFlow: ObservableObject {
         }
     }
 
-    private func scheduleAutoClose() {
-        guard !UIAccessibility.isVoiceOverRunning else { return }
-        autoCloseTask?.cancel()
-        autoCloseTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: Self.autoCloseDelay)
-            guard let self, !Task.isCancelled, !self.touched, self.phase == .saved else { return }
-            self.requestClose()
-        }
-    }
-
     // MARK: Just for me
 
     /// The switch on the card. Before the post has landed it's remembered (and
     /// sent with a waiting link); after, it goes to `/api/app/private`.
     func setJustForMe(_ on: Bool) {
         guard connectionIsCurrent else { return }
-        touch()
         guard on != justForMe, !privacyBusy else { return }
         let intent: ShareRecord?
         if let recordId {
@@ -402,18 +403,105 @@ final class ShareFlow: ObservableObject {
         }
     }
 
-    // MARK: Actions
+    // MARK: Send the file
 
-    func touch() {
-        guard !touched else { return }
-        touched = true
-        autoCloseTask?.cancel()
+    /// The post has, or will have, a video, photos or a sound your ADHX keeps.
+    var canSend: Bool {
+        guard let r = result, r.category != "text" else { return false }
+        guard let keep else { return true }
+        switch keep.status {
+        case "off", "unavailable", "gone":
+            return false
+        case "kept":
+            // Older servers don't count what they kept; the download decides.
+            guard let k = keep.kept else { return true }
+            return (k.videos ?? 0) + (k.photos ?? 0) + (k.audio ?? 0) > 0
+        default:
+            return true
+        }
     }
+
+    /// "Send the video": what's kept when the server has said, else the post's kind.
+    var sendLabel: String {
+        if keep?.status == "kept", let k = keep?.kept {
+            if (k.videos ?? 0) > 0 { return "Send the video" }
+            if (k.photos ?? 0) > 1 { return "Send the photos" }
+            if (k.photos ?? 0) == 1 { return "Send the photo" }
+            if (k.audio ?? 0) > 0 { return "Send the sound" }
+        }
+        switch result?.category {
+        case "video": return "Send the video"
+        case "photo": return "Send the photo"
+        default: return "Send the file"
+        }
+    }
+
+    /// Send: the kept file through the share sheet. Before it's kept, it waits
+    /// for the copy and goes by itself.
+    func send() {
+        switch sending {
+        case .waiting, .downloading: return
+        default: break
+        }
+        if let status = keep?.status, ["waiting", "keeping", "retrying"].contains(status) {
+            sending = .waiting
+            return
+        }
+        startSend()
+    }
+
+    private func keepChanged(_ status: StatusResult) {
+        guard sending == .waiting else { return }
+        switch status.status {
+        case "kept":
+            startSend()
+        case "off", "unavailable", "gone":
+            sending = .failed("Your ADHX couldn’t keep a copy of this one.")
+        default:
+            break
+        }
+    }
+
+    private func startSend() {
+        guard let r = result, let client, let server, connectionIsCurrent else { return }
+        sending = .downloading(nil)
+        sendTask?.cancel()
+        sendTask = Task { [weak self] in
+            guard let post = try? await client.post(platform: r.platform, id: r.id) else {
+                self?.sendFailed("Couldn’t reach your ADHX. Try again.")
+                return
+            }
+            let export = await KeptFiles.download(post, server: server) { got, total in
+                guard self?.sending != .idle else { return }
+                self?.sending = .downloading(total > 0 ? min(Double(got) / Double(total), 1) : nil)
+            }
+            guard let self, !Task.isCancelled, !self.closeRequested else {
+                export?.cleanup()
+                return
+            }
+            guard let export, !export.files.isEmpty else {
+                self.sendFailed("Couldn’t get it from your ADHX. Try again.")
+                return
+            }
+            self.sending = .idle
+            self.onSendFiles?(export.files.map(\.url)) { [weak self] sent in
+                // The files stay until the other app has taken them.
+                export.cleanup()
+                if sent { self?.requestClose() }
+            }
+        }
+    }
+
+    private func sendFailed(_ message: String) {
+        guard sending != .idle else { return }
+        sending = .failed(message)
+    }
+
+    // MARK: Actions
 
     func requestClose() {
         guard !closeRequested else { return }
         closeRequested = true
-        autoCloseTask?.cancel()
         sendNote()
     }
 
@@ -425,7 +513,7 @@ final class ShareFlow: ObservableObject {
     /// The sheet has gone; stop polling and hand back to the system.
     func didClose() {
         pollTask?.cancel()
-        autoCloseTask?.cancel()
+        sendTask?.cancel()
         Task { [self] in
             await waitForSave()
             onFinish?()
@@ -448,7 +536,6 @@ extension ShareFlow {
                                  savedAt: nil, isPrivate: isPrivate)
         flow.keep = StatusResult(status: "keeping", percent: isPrivate ? 55 : 40)
         flow.justForMe = isPrivate
-        flow.touched = true
         flow.phase = .saved
         return flow
     }

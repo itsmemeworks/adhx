@@ -26,7 +26,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.adhx.share.ui.Glyphs
+import android.content.Intent
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
@@ -74,7 +76,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -106,7 +107,6 @@ import com.adhx.share.ui.SquircleShape
 import com.adhx.share.ui.serifLineBox
 import com.adhx.share.ui.SkeletonBar
 import com.adhx.share.ui.Spinner
-import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 /**
@@ -125,7 +125,6 @@ fun ShareSheetScreen(
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val visible = remember { MutableTransitionState(false).apply { targetState = true } }
-    var touched by remember { mutableStateOf(false) }
     var note by rememberSaveable { mutableStateOf("") }
     // Closing (Done, back, a tap outside, the auto-close) keeps the note: it goes out behind the save.
     val close: () -> Unit = {
@@ -137,15 +136,15 @@ fun ShareSheetScreen(
     val gone = !visible.targetState && !visible.currentState && visible.isIdle
     LaunchedEffect(gone) { if (gone) onFinish() }
 
-    // Saved closes itself after 3 s, unless the sheet was touched.
-    LaunchedEffect(ui.phase, touched) {
-        if (ui.phase == Phase.Saved && !touched) {
-            delay(3_000)
-            close()
-        }
-    }
-
     BackHandler { close() }
+
+    // The kept files are ready: on to the system share sheet, over this card.
+    val context = LocalContext.current
+    LaunchedEffect(ui.toSend) {
+        val ready = ui.toSend ?: return@LaunchedEffect
+        context.startActivity(Intent.createChooser(ready.intent(), null))
+        vm.sendShown()
+    }
 
     Box(
         Modifier
@@ -163,7 +162,7 @@ fun ShareSheetScreen(
             exit = slideOutVertically { it } + fadeOut(),
         ) {
             val card = ui.phase == Phase.Saving || ui.phase == Phase.Saved || ui.phase == Phase.AlreadySaved
-            Sheet(frosted = frosted, onTouched = { touched = true }, onDismiss = close, brand = !card) {
+            Sheet(frosted = frosted, onDismiss = close, brand = !card) {
                 when (ui.phase) {
                     Phase.Saving -> SavingContent(ui, onJustForMe = vm::setJustForMe, note = note, onNote = { note = it })
                     Phase.Saved, Phase.AlreadySaved -> SavedContent(
@@ -176,6 +175,7 @@ fun ShareSheetScreen(
                             close()
                         },
                         onDone = close,
+                        onSend = vm::send,
                     )
                     Phase.NotAPost -> MessageContent(
                         ui = ui,
@@ -213,7 +213,7 @@ private val CardInner = SquircleShape(SquircleShape.nested(28.dp, 20.dp))
 private val BrandInner = SquircleShape(SquircleShape.nested(28.dp, 18.dp))
 
 @Composable
-private fun Sheet(frosted: Boolean, onTouched: () -> Unit, onDismiss: () -> Unit, brand: Boolean = true, content: @Composable () -> Unit) {
+private fun Sheet(frosted: Boolean, onDismiss: () -> Unit, brand: Boolean = true, content: @Composable () -> Unit) {
     val density = LocalDensity.current
     var dragOffset by remember { mutableFloatStateOf(0f) }
     val dragState = rememberDraggableState { delta -> dragOffset = (dragOffset + delta).coerceAtLeast(0f) }
@@ -245,15 +245,6 @@ private fun Sheet(frosted: Boolean, onTouched: () -> Unit, onDismiss: () -> Unit
             .clip(SquircleShape(28.dp))
             .background(AdhxColors.Surface.copy(alpha = glass))
             .border(1.dp, Color.White.copy(alpha = 0.1f), SquircleShape(28.dp))
-            // Any touch on the sheet keeps it open (no auto-close).
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        awaitPointerEvent(PointerEventPass.Initial)
-                        onTouched()
-                    }
-                }
-            }
             // Taps on the sheet itself don't fall through to the dimmed area.
             .pointerInput(Unit) { detectTapGestures { } }
             .padding(if (brand) 18.dp else 20.dp),
@@ -281,6 +272,7 @@ private fun SavedContent(
     onJustForMe: (Boolean) -> Unit,
     onOpen: () -> Unit,
     onDone: () -> Unit,
+    onSend: () -> Unit,
 ) {
     val already = ui.phase == Phase.AlreadySaved
     CardTop(
@@ -297,6 +289,7 @@ private fun SavedContent(
     Audience(ui)
     NoteField(note, onNote, ui.justForMe)
     JustForMeRow(on = ui.justForMe, onChange = onJustForMe, busy = ui.switching, enabled = !ui.switching)
+    if (canSend(ui)) SendButton(ui, onSend)
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(
             Modifier
@@ -319,6 +312,59 @@ private fun SavedContent(
             contentAlignment = Alignment.Center,
         ) {
             Text("Done", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+        }
+    }
+}
+
+/** The post has, or will have, a video, photos or a sound your ADHX keeps. */
+private fun canSend(ui: ShareUi): Boolean {
+    val post = ui.post ?: return false
+    if (post.category == "text") return false
+    val keep = ui.keep ?: return true
+    return when (keep.status) {
+        KeepStatus.OFF, KeepStatus.UNAVAILABLE, KeepStatus.NOT_SAVED, "gone" -> false
+        // Older servers don't count what they kept; the download decides.
+        KeepStatus.KEPT -> keep.kept?.let { it.videos + it.photos + it.audio > 0 } ?: true
+        else -> true
+    }
+}
+
+/**
+ * Send the kept video or photos straight from the card, through the share
+ * sheet, without opening the app. Tapped before the copy is kept, it waits.
+ */
+@Composable
+private fun SendButton(ui: ShareUi, onSend: () -> Unit) {
+    val sending = ui.sending
+    val busy = sending == Sending.Waiting || sending is Sending.Downloading
+    val label = when (sending) {
+        Sending.Waiting -> (if (ui.keep?.status == KeepStatus.KEEPING) ui.keep.percent else null)
+            ?.let { "${Copy.SEND_WAITING} · $it%" } ?: Copy.SEND_WAITING
+        is Sending.Downloading -> sending.fraction?.let { "${Copy.SEND_GETTING} · ${(it * 100).roundToInt()}%" } ?: Copy.SEND_GETTING
+        else -> Copy.sendLabel(ui.post?.category, ui.keep)
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .clip(CardInner)
+                .background(AdhxColors.Plate)
+                .clickable(enabled = !busy, role = Role.Button, onClick = onSend)
+                .semantics { contentDescription = label },
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (busy) {
+                Spinner(size = 16.dp, stroke = 2.dp, track = Color.Transparent)
+            } else {
+                Icon(Glyphs.Send, contentDescription = null, tint = AdhxColors.Ink, modifier = Modifier.size(18.dp))
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Ink, maxLines = 1)
+        }
+        if (sending is Sending.Failed) {
+            Text(sending.message, fontSize = 13.sp, color = AdhxColors.Warn)
         }
     }
 }
