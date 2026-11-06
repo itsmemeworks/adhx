@@ -9,6 +9,9 @@
   },
   "packageManager": "pnpm@10.34.7",
   "pnpm": {
+    "overrides": {
+      "minimatch@10": "^11.0.1"
+    },
     "allowBuilds": {}
   }
 }
